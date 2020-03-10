@@ -16,6 +16,7 @@ optdepends=('geoclue: Geolocation support'
             'gst-plugins-good: media decoding'
             'gst-plugins-bad: media decoding'
             'gst-libav: nonfree media decoding')
+provides=(libjavascriptcoregtk-4.0.so libwebkit2gtk-4.0.so)
 source=(https://webkitgtk.org/releases/webkitgtk-${pkgver}.tar.xz{,.asc})
 sha256sums=('361f3d178f62a9c112cbadfedd46106c34455c26d57a12a28fb3b09178d20e8b'
             'SKIP')
