@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=3.36.0
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -12,7 +12,7 @@ arch=(x86_64)
 license=(GPL2)
 depends=(accountsservice gcr gjs gnome-bluetooth upower gnome-session gnome-settings-daemon
          gnome-themes-extra gsettings-desktop-schemas libcanberra-pulse libgdm libsecret
-         mutter nm-connection-editor unzip gstreamer libibus gnome-autoar)
+         mutter nm-connection-editor unzip gstreamer ibus gnome-autoar)
 makedepends=(gtk-doc gnome-control-center evolution-data-server gobject-introspection git meson
              sassc asciidoc)
 optdepends=('gnome-control-center: System settings'
