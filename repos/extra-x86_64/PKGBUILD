@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=3.36.0
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -12,7 +12,7 @@ arch=(x86_64)
 license=(GPL2)
 depends=(accountsservice gcr gjs gnome-bluetooth upower gnome-session gnome-settings-daemon
          gnome-themes-extra gsettings-desktop-schemas libcanberra-pulse libgdm libsecret
-         mutter nm-connection-editor unzip gstreamer ibus gnome-autoar)
+         mutter nm-connection-editor unzip gstreamer libibus gnome-autoar)
 makedepends=(gtk-doc gnome-control-center evolution-data-server gobject-introspection git meson
              sassc asciidoc)
 optdepends=('gnome-control-center: System settings'
@@ -21,9 +21,11 @@ groups=(gnome)
 install=gnome-shell.install
 _commit=4baa091bc54856b191394c70bcedcd3fb4d1a2b5  # tags/3.36.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
-        "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
+        "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+        1080.patch)
 sha256sums=('SKIP'
-            'SKIP')
+            'SKIP'
+            '2e514ec86160c37c22a01803703a5bf656983634bda02b52e8f6e6542099e070')
 
 pkgver() {
   cd $pkgname
@@ -32,6 +34,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # https://bugs.archlinux.org/task/65771
+  git apply -3 ../1080.patch
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
