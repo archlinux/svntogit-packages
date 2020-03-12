@@ -6,10 +6,10 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
-pkgver=9.2.1+20200130
+pkgver=9.3.0
 _majorver=${pkgver:0:1}
 _islver=0.21
-pkgrel=2
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -18,25 +18,28 @@ makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python g
 checkdepends=(dejagnu inetutils)
 options=(!emptydirs)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-#source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
-_commit=6957d3e4eef1f4243eb23ff62aea06139ef4415a
-source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
+# _commit=6957d3e4eef1f4243eb23ff62aea06139ef4415a
+# source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
+source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
         c89 c99
         gdc_phobos_path.patch
         gdc_artificial_decl.patch
-        gdc_thunk_weak_ref.patch)
+        gdc_thunk_weak_ref.patch
+        fs64270.patch)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('SKIP'
+sha256sums=('71e197867611f6054aa1119b13a0c0abac12834765fe2d81f35ac57f84f742d1'
+            'SKIP'
             '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
             '3862757491160700ac2fb723096f6f636f30320cccc6efd9537149ed348b57d1'
-            '9699d7105375754f0dcf6abff87d09b270565bfc6578a13641770f3fc62d678a')
+            '9699d7105375754f0dcf6abff87d09b270565bfc6578a13641770f3fc62d678a'
+            'f45160f699501568ae9e81127562395dd95b5b4a8e4d55a1615fbb00f9e4deb2')
 
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
@@ -58,7 +61,10 @@ prepare() {
   patch -p1 -i "$srcdir/gdc_phobos_path.patch"
   patch -p1 -i "$srcdir/gdc_artificial_decl.patch"
   patch -p1 -i "$srcdir/gdc_thunk_weak_ref.patch"
-  #sed -i "/GDCFLAGSX=/s/-Wall/-shared-libphobos -Wall/" libphobos/configure
+
+  # Turn off SSP for nostdlib|nodefaultlibs|ffreestanding
+  # https://bugs.archlinux.org/task/64270
+  patch -p1 -i "$srcdir/fs64270.patch"
 
   mkdir -p "$srcdir/gcc-build"
 }
