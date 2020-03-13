@@ -1,18 +1,20 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
-pkgname=gst-plugins-good
+pkgbase=gst-plugins-good
+pkgname=(gst-plugins-good gst-plugin-gtk gst-plugin-qmlgl)
 pkgver=1.16.2
-pkgrel=2
+pkgrel=3
 pkgdesc="GStreamer open-source multimedia framework good plugins"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
 license=(LGPL)
 depends=(libpulse libsoup gst-plugins-base-libs wavpack aalib taglib libdv libshout libvpx
          gdk-pixbuf2 libcaca libavc1394 libiec61883 libxdamage v4l-utils cairo libgudev speex flac
-         libraw1394 lame mpg123 twolame gtk3 qt5-declarative qt5-x11extras qt5-wayland)
-makedepends=(python gtk-doc git meson jack2)
-checkdepends=(gst-plugins-base)
+         libraw1394 lame mpg123 twolame)
+makedepends=(python gtk-doc git meson jack2 gtk3 qt5-{declarative,x11extras,wayland})
+checkdepends=(gst-plugins-base xorg-server-xvfb)
+options=(!emptydirs)
 _commit=ce0723527aa37d5f4d19ef8021c0b2eb8f83b08d  # tags/1.16.2^0
 source=("git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-good.git#commit=$_commit")
 sha256sums=('SKIP')
@@ -36,12 +38,36 @@ build() {
   ninja -C build
 }
 
-check() {
-  meson test -C build --print-errorlogs
-}
+check() (
+  mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
+  export XDG_RUNTIME_DIR
 
-package() {
+  xvfb-run -s '-screen 0 1920x1080x24 -nolisten local +iglx -noreset' \
+    meson test -C build --print-errorlogs
+)
+
+package_gst-plugins-good() {
   depends+=(libjack.so)
 
   DESTDIR="$pkgdir" meson install -C build
+
+  for _x in gtk qmlgl; do
+    mkdir -p "$_x/lib/gstreamer-1.0"
+    _f="lib/gstreamer-1.0/libgst${_x}.so"
+    mv "$pkgdir/usr/$_f" "$_x/$_f"
+  done
+}
+
+package_gst-plugin-gtk() {
+  pkgdesc="GStreamer open-source multimedia framework gtk plugin"
+  depends=(gst-plugins-base-libs gtk3)
+
+  mv gtk "$pkgdir/usr"
+}
+
+package_gst-plugin-qmlgl() {
+  pkgdesc="GStreamer open-source multimedia framework qmlgl plugin"
+  depends=(gst-plugins-base-libs qt5-{declarative,x11extras,wayland})
+
+  mv qmlgl "$pkgdir/usr"
 }
