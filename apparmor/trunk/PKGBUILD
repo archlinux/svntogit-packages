@@ -1,7 +1,8 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
+
 pkgname=apparmor
-pkgver=2.13.3
-pkgrel=4
+pkgver=2.13.4
+pkgrel=1
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
@@ -19,7 +20,7 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/subdomain.conf'
         'etc/apparmor/severity.db')
 source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc})
-sha512sums=('137b2bf026ec655b662e9c264d7d48d878db474a3f1cc5a38bfd7df2f85b682bddb77b091ab5595178231a0a262c9ae9cdd61409461cd889bdee156906ef1141'
+sha512sums=('d42748bf36ae66849f79653a62d499e9d17a97c4d680fb653eb1c379d0593aaa09f7ddfc6f2fa0d2fb468bce05fb25444976f60a5ec24778fdd7ec20d1c13651'
             'SKIP')
 # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB')
@@ -34,13 +35,6 @@ prepare() {
   local libs="${PWD}/libraries/libapparmor/src/.libs"
   sed -e "/PYTHONPATH/ s|utils\ |utils:$path\ LD_LIBRARY_PATH=$libs\ |" \
       -i profiles/Makefile
-  # fix hardcoded install paths: https://gitlab.com/apparmor/apparmor/issues/38
-  sed -e 's|/usr/sbin|/usr/bin|g' \
-      -e 's|/sbin|/usr/bin|g' \
-      -i parser/Makefile
-  # fixing failing autoconf check by removing it
-  sed -e '158,198d' \
-      -i libraries/libapparmor/m4/ac_python_devel.m4
   (
     cd libraries/libapparmor/
     autoreconf -vfi
@@ -74,15 +68,32 @@ build() {
 
 check() {
   cd "$pkgname-$pkgver"
+  echo "INFO: Running check: libraries/libapparmor"
   make -C libraries/libapparmor check
+  echo "INFO: Running check binutils"
   make -C binutils check
-  make -C parser check
-  # only running check-parser, as check-logprof (included in check) fails:
+
+  # disabling parser check as it's broken:
+  # https://gitlab.com/apparmor/apparmor/-/issues/84
+  #  echo "INFO: Running check parser"
+  #  make -C parser check
+
+  # check-logprof (included in check) fails:
   # https://gitlab.com/apparmor/apparmor/issues/36
-  make -C profiles check-parser
+  # echo "INFO: Running check-logprof profiles"
+  # make -C profiles check-logprof
+
+  # disabling profiles check-parser as it's broken:
+  # https://gitlab.com/apparmor/apparmor/-/issues/85
+  # echo "INFO: Running check-parser profiles"
+  # make -C profiles check-parser
+
   # shutil.copytree has a regression
   # https://gitlab.com/apparmor/apparmor/issues/62
-  #  make -C utils check
+  # more breakage with apparmor > 2.13.4
+  # https://gitlab.com/apparmor/apparmor/-/issues/86
+  # echo "INFO: Running check utils"
+  # make -C utils check
 }
 
 package() {
@@ -92,6 +103,8 @@ package() {
   make -C changehat/mod_apparmor DESTDIR="${pkgdir}" install
   make -C binutils DESTDIR="${pkgdir}" install
   make -C parser -j1 DESTDIR="${pkgdir}" \
+                     SBINDIR="${pkgdir}/usr/bin" \
+                     USR_SBINDIR="${pkgdir}/usr/bin" \
                      APPARMOR_BIN_PREFIX="${pkgdir}/usr/lib/apparmor" \
                      install install-systemd
   make -C profiles DESTDIR="${pkgdir}" install
@@ -99,10 +112,13 @@ package() {
                 BINDIR="${pkgdir}/usr/bin" \
                 VIM_INSTALL_PATH="${pkgdir}/usr/share/vim/vimfiles/syntax" \
                 install
-  # strip perl library: https://gitlab.com/apparmor/apparmor/issues/34
+
+  # set file mode to allow the perl library to be stripped:
+  # https://gitlab.com/apparmor/apparmor/issues/34
   find "${pkgdir}/usr/lib/perl5/" \
     -type f -iname "*.so" \
-    -exec strip --strip-unneeded {} \;
+    -exec chmod 755 {} \;
+
   # removing empty core_perl directory:
   # https://gitlab.com/apparmor/apparmor/issues/40
   rm -rv "${pkgdir}"/usr/lib/perl5/*/core_perl
