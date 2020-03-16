@@ -2,7 +2,7 @@
 
 pkgname=apparmor
 pkgver=2.13.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
@@ -19,15 +19,21 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/parser.conf'
         'etc/apparmor/subdomain.conf'
         'etc/apparmor/severity.db')
-source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc})
+source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
+        "${pkgname}-2.13.4-fix_make.patch")
 sha512sums=('d42748bf36ae66849f79653a62d499e9d17a97c4d680fb653eb1c379d0593aaa09f7ddfc6f2fa0d2fb468bce05fb25444976f60a5ec24778fdd7ec20d1c13651'
-            'SKIP')
+            'SKIP'
+            '2591da638aabe37d5e32f0002e9b8a4304affe20174c23baab32802025b832a25fd688d58b58d26877dee40f1953c897cda6d4023e5013b4ca3b100ddd3aedd0')
 # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB')
 _core_perl="/usr/bin/core_perl"
 
 prepare() {
   cd "${pkgname}-${pkgver}"
+  # fix problems in Makefile (header inclusion):
+  # https://gitlab.com/apparmor/apparmor/-/issues/74
+  patch -Np1 -i "../${pkgname}-2.13.4-fix_make.patch"
+
   # fix PYTHONPATH and add LD_LIBRARY_PATH for aa-logprof based check:
   # https://gitlab.com/apparmor/apparmor/issues/39
   local _py3_ver=$(python --version | cut -d " " -f2)
@@ -72,28 +78,18 @@ check() {
   make -C libraries/libapparmor check
   echo "INFO: Running check binutils"
   make -C binutils check
-
-  # disabling parser check as it's broken:
-  # https://gitlab.com/apparmor/apparmor/-/issues/84
-  #  echo "INFO: Running check parser"
-  #  make -C parser check
+  echo "INFO: Running check parser"
+  make -C parser check
 
   # check-logprof (included in check) fails:
   # https://gitlab.com/apparmor/apparmor/issues/36
   # echo "INFO: Running check-logprof profiles"
   # make -C profiles check-logprof
 
-  # disabling profiles check-parser as it's broken:
-  # https://gitlab.com/apparmor/apparmor/-/issues/85
-  # echo "INFO: Running check-parser profiles"
-  # make -C profiles check-parser
-
-  # shutil.copytree has a regression
-  # https://gitlab.com/apparmor/apparmor/issues/62
-  # more breakage with apparmor > 2.13.4
-  # https://gitlab.com/apparmor/apparmor/-/issues/86
-  # echo "INFO: Running check utils"
-  # make -C utils check
+  echo "INFO: Running check-parser profiles"
+  make -C profiles check-parser
+  echo "INFO: Running check utils"
+  make -C utils check
 }
 
 package() {
