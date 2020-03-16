@@ -1,7 +1,7 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=kcalendarcore
-pkgver=5.67.0
+pkgver=5.68.0
 pkgrel=1
 pkgdesc="The KDE calendar access library"
 arch=(x86_64)
@@ -14,7 +14,7 @@ provides=(kcalcore)
 replaces=(kcalcore)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig})
-sha256sums=('b24642e98a0c2459a543eb910e7e964c04724816e52568ab1decbf19ea54fff4'
+sha256sums=('50ffbe4feb9a602c09e130d6f10f0f260fa7625bc266003697895e1d716d6ba9'
             'SKIP')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
