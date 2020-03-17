@@ -1,0 +1,59 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=system-config-printer
+pkgver=1.5.12+33+g23b454ef
+pkgrel=1
+_commit=23b454ef52dd1992fb931a11481e8c25b7c7b755 # master
+pkgdesc="A CUPS printer configuration tool and status applet"
+url="https://github.com/OpenPrinting/system-config-printer"
+arch=('x86_64')
+license=('GPL')
+depends=('python-pycups' 'python-dbus' 'python-pycurl' 'libnotify'
+         'python-requests' 'python-gobject' 'gtk3' 'python-cairo')
+makedepends=('intltool' 'xmlto' 'docbook-xsl' 'desktop-file-utils' 'libsecret' 'git')
+optdepends=('libsecret: password management'
+            'python-pysmbc: SMB browser support'
+            'cups-pk-helper: PolicyKit helper to configure cups with fine-grained privileges')
+source=(#https://github.com/OpenPrinting/system-config-printer/releases/download/$pkgver/system-config-printer-${pkgver}.tar.xz
+        "git+https://github.com/OpenPrinting/system-config-printer.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd ${pkgname} #-${pkgver}
+  # create missing dummy files
+  touch ./{README,ChangeLog}
+  autoreconf -vfi
+}
+
+build() {
+  cd ${pkgname} #-${pkgver}
+  ./configure --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --with-udevdir=/usr/lib/udev --with-udev-rules
+  make
+}
+
+package() {
+  cd ${pkgname} #-${pkgver}
+  make DESTDIR="$pkgdir" install
+
+  # Compile *.pyc
+  find "$pkgdir" -name '*.py' -exec python -mpy_compile {} +
+  # Compile *.pyo
+  find "$pkgdir" -name '*.py' -exec python -O -mpy_compile {} +
+  
+  # new cups 2.0.0 service naming
+  sed -i "s|cups.socket|org.cups.cupsd.socket|g" "$pkgdir"/usr/lib/systemd/system/configure-printer@.service
+
+  # fix dbus policy location - --with-dbusdir doens't work
+  install -dm755 "$pkgdir"/usr/share/dbus-1/system.d
+  mv "$pkgdir"/etc/dbus-1/system.d/* "$pkgdir"/usr/share/dbus-1/system.d
+  rm -rf "$pkgdir"/etc/dbus-1
+}
