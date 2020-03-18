@@ -3,17 +3,21 @@
 
 pkgbase=glibmm
 pkgname=(glibmm glibmm-docs)
-pkgver=2.62.0
+pkgver=2.64.0
 pkgrel=1
 pkgdesc="C++ bindings for GLib"
 url="https://www.gtkmm.org/"
 arch=(x86_64)
 license=(LGPL)
 depends=(glib2 libsigc++)
-makedepends=(git mm-common perl-xml-parser clang)
-_commit=ceff460bbfbca3acf60e6d35cf01961ff988177c  # tags/2.62.0^0
-source=("git+https://gitlab.gnome.org/GNOME/glibmm.git#commit=$_commit")
-sha256sums=('SKIP')
+makedepends=(git mm-common perl-xml-parser clang meson)
+checkdepends=(glib-networking)
+options=(!emptydirs)
+_commit=5e4b8f37de7110f4905ca11961dfe372151df095  # tags/2.64.0^0
+source=("git+https://gitlab.gnome.org/GNOME/glibmm.git#commit=$_commit"
+        header.diff)
+sha256sums=('SKIP'
+            'dd735cb3509bbb3400c150ab64f4791385df5393df3de964f0fcf548dd7d626c')
 
 pkgver() {
   cd $pkgbase
@@ -22,26 +26,34 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
-  NOCONFIGURE=1 ./autogen.sh
+
+  # Missing includes
+  git cherry-pick -n c6e078c3e7d457a9db39073af30af0c65b5145c1
+
+  # Missing header
+  git apply -3 ../header.diff
 }
 
 build() {
-  cd $pkgbase
-  ./configure --prefix=/usr --enable-maintainer-mode
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgbase build -D maintainer-mode=true
+  ninja -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package_glibmm() {
-  cd $pkgbase
-  sed -i -e '/^doc_subdirs/s/^/#/' Makefile
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
+
+  mkdir -p docs/usr/share
+  mv "$pkgdir"/usr/share/{devhelp,doc} docs/usr/share
 }
 
 package_glibmm-docs() {
   pkgdesc+=" (documentation)"
   depends=()
+  options=(!strip)
 
-  cd $pkgbase
-  make -C docs DESTDIR="$pkgdir" install
+  mv docs/* "$pkgdir"
 }
