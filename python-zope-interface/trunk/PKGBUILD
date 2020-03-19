@@ -4,15 +4,16 @@
 
 pkgbase=python-zope-interface
 pkgname=('python-zope-interface' 'python2-zope-interface')
-pkgver=4.7.2
+pkgver=5.0.0
 pkgrel=1
 license=('ZPL')
 arch=('x86_64')
 url="https://pypi.python.org/pypi/zope.interface"
-makedepends=('python-setuptools' 'python2-setuptools')
-checkdepends=('python-zope-event' 'python2-zope-event')
+makedepends=('python-pip' 'python2-pip')
+checkdepends=('python-zope-event' 'python2-zope-event' 'python-zope-testing' 'python2-zope-testing'
+              'python-coverage' 'python2-coverage')
 source=("https://pypi.io/packages/source/z/zope.interface/zope.interface-$pkgver.tar.gz")
-sha512sums=('6c310486084428d00d23e480c3c658c714661e6f6649b949bd674e6a2edb1cc579687646e0ce54f69db4f3a6a1c912f97c5b3ca6b9a04978d7f215c7e77c868a')
+sha512sums=('5010f1b47866d4cdaabe0fee7081feca0922883ad91a4ff2525a467d08facce780fc42d1b9c4bd97516f82fe84e10f2e5bee06c7f324f8e4759e142cd9066eac')
 
 prepare() {
   cp -a zope.interface-${pkgver}{,-py2}
@@ -28,16 +29,16 @@ build() {
 
 check() {
   cd "$srcdir"/zope.interface-$pkgver
-  python setup.py test
+  PYTHONPATH="$PWD/build/lib.linux-x86_64-3.8" python setup.py test
 
   cd "$srcdir"/zope.interface-$pkgver-py2
-  python2 setup.py test
+  PYTHONPATH="$PWD/build/lib.linux-x86_64-2.7" python2 setup.py test
 }
 
 package_python-zope-interface() {
   pkgdesc='Zope Interfaces for Python 3.x'
   depends=('python')
- 
+
   cd zope.interface-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir" --optimize=1
 }
