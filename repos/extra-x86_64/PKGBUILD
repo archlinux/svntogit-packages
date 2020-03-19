@@ -3,8 +3,8 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=9.0.1
-pkgrel=1
-_ocaml_ver=4.09.0
+pkgrel=2
+_ocaml_ver=4.09.1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
