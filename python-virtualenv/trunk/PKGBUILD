@@ -3,43 +3,47 @@
 # Contributor: Daniele Paolella <dp@mcrservice.it>
 
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=16.1.0
-pkgrel=3
+pkgver=16.2.0
+pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
 license=('MIT')
-makedepends=('python-setuptools' 'python-sphinx' 'python2-setuptools' 'python2-sphinx')
-checkdepends=('python-pytest-runner' 'python-mock' 'python2-pytest-runner' 'python2-mock')
+makedepends=('python-setuptools' 'python-sphinx' 'python2-setuptools' 'towncrier')
+checkdepends=('python-pytest-runner' 'python-mock' 'python2-pytest-runner' 'python2-mock'
+              'python-pip' 'python2-pip')
 replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=(${pkgname}-${pkgver}.tar.gz::https://github.com/pypa/virtualenv/archive/${pkgver}.tar.gz)
-sha512sums=('a946b18c6b35fed32329ff398a55f2b3e3bf0b96ff00b11f70255dad9af7a341d0d2b1f5a5a62792bf5a66096401055909afcddfe47302420709abce17e1c151')
+sha512sums=('1c80f1ea693a4223d78571919bf7e33650e569060674cacf880f2142e6cd78a39d2cd2c2310bdbb6968ff0dc2e75ab1245029a0e792228d15dc33569b237d58a')
 
 prepare() {
   cp -a virtualenv-${pkgver}{,-py2}
-  cd virtualenv-${pkgver}-py2
-  sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" src/virtualenv.py
 }
 
 build() {
   (cd virtualenv-${pkgver}
     python setup.py build
-    make -C docs text man
+    export PYTHONPATH="$PWD/build/lib"
+    sphinx-build -b man docs docs/_build/man
+    sphinx-build -b text docs docs/_build/text
   )
   (cd virtualenv-${pkgver}-py2
     python2 setup.py build
-    make -C docs text man
+    export PYTHONPATH="$PWD/build/lib"
+    sphinx-build -b man docs docs/_build/man
+    sphinx-build -b text docs docs/_build/text
   )
 }
 
 check() {
   (cd virtualenv-${pkgver}
-    python setup.py pytest
+    python setup.py pytest --addopts "--deselect tests/test_source_content.py::test_wheel_contains"
   )
   (cd virtualenv-${pkgver}-py2
-    python2 setup.py pytest
+    python2 setup.py pytest --addopts "--deselect tests/test_source_content.py::test_wheel_contains \
+                                       --deselect tests/test_bootstrap.py"
   )
 }
 
