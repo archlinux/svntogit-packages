@@ -3,7 +3,7 @@
 
 pkgname=unison
 pkgver=2.51.2
-pkgrel=6
+pkgrel=7
 pkgdesc='File-synchronization tool'
 #url='https://github.com/bcpierce00/unison/'
 url='https://www.cis.upenn.edu/~bcpierce/unison/'
