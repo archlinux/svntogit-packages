@@ -4,7 +4,7 @@
 
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=20.0.11
+pkgver=20.0.12
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
@@ -17,12 +17,12 @@ makedepends=('python-setuptools' 'python-appdirs' 'python-filelock' 'python-six'
              'python-setuptools-scm' 'python2-setuptools-scm' 'python-sphinx'
              'python-sphinx_rtd_theme' 'python-sphinx-argparse' 'towncrier')
 checkdepends=('python-pytest-mock' 'python2-pytest' 'python2-pytest-mock' 'python-pip' 'python2-pip'
-              'python-coverage' 'python2-coverage' 'fish' 'xonsh')
+              'python-coverage' 'python2-coverage' 'fish' 'tcsh' 'xonsh')
 replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=($pkgbase-$pkgver.tar.gz::https://github.com/pypa/virtualenv/archive/$pkgver.tar.gz)
-sha512sums=('f21ba4bd72633bc2e9abc6fb457e436f5c32b5467824600ad4c4871f5d8a3d18f237a3d1737c2d15c5fed5d9e3ff00b7b7f22a3f549dd59c26c5e575d796d3ec')
+sha512sums=('7cb6e58a89cf68efbc1cc631dd9e6610f90d16f9c41a6c99341852c0895b17f13146b6cdd32c046cab71144f1412e2ab062267486a91929dccf98866cc64adda')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -46,8 +46,7 @@ check() {
     PYTHONPATH="$PWD/build/lib:$PWD/src" python -m pytest
   )
   (cd virtualenv-$pkgver-py2
-    # Our python2 has bad pyc mtime due to makepkg, which fails this test
-    PYTHONPATH="$PWD/build/lib:$PWD/src" python2 -m pytest --deselect tests/unit/create/test_creator.py::test_pyc_only
+    PYTHONPATH="$PWD/build/lib:$PWD/src" python2 -m pytest
   )
 }
 
