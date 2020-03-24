@@ -9,7 +9,7 @@ pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
 arch=('x86_64')
-makedepends=('linux-headers' 'git' 'libfido2')
+makedepends=('linux-headers' 'libfido2')
 depends=('krb5' 'openssl' 'libedit' 'ldns')
 optdepends=('xorg-xauth: X11 forwarding'
             'x11-ssh-askpass: input passphrase in X'
