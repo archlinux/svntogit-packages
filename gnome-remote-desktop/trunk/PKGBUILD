@@ -1,16 +1,17 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=gnome-remote-desktop
-pkgver=0.1.7
-pkgrel=2
+pkgver=0.1.8
+pkgrel=1
 pkgdesc="GNOME Remote Desktop server"
 url="https://wiki.gnome.org/Projects/Mutter/RemoteDesktop"
 arch=(x86_64)
 license=(GPL2)
-depends=(glib2 libpipewire02 systemd libvncserver libsecret libnotify dconf)
+depends=(glib2 pipewire systemd libvncserver libsecret libnotify dconf)
 makedepends=(git meson)
+checkdepends=(xorg-server-xvfb python-dbus python-gobject mutter)
 groups=(gnome)
-_commit=400f790f082dc54bf03d27cf64fcf94b0a1424c9  # tags/0.1.7^0
+_commit=3141a7efec1529f06e2bcc64b68d8bad02d9a4c1  # tags/0.1.8^0
 source=("git+https://gitlab.gnome.org/jadahl/gnome-remote-desktop.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -21,6 +22,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # Disable the Xvfb abstract socket which leaks out of our containers
+  sed -i 's|-noreset|& -nolisten local|' tests/vnc-test-runner.sh
 }
 
 build() {
@@ -28,9 +32,16 @@ build() {
   ninja -C build
 }
 
-check() {
-  meson test -C build
-}
+check() (
+  mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
+  glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/build/src}"
+  export XDG_RUNTIME_DIR GSETTINGS_SCHEMA_DIR
+
+  pipewire &
+  trap "kill $!; wait" EXIT
+
+  meson test -C build --print-errorlogs
+)
 
 package() {
   DESTDIR="$pkgdir" meson install -C build
