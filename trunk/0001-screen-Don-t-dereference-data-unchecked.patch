@@ -1,0 +1,71 @@
+From 07197c413c19e9aa51ccd29051889307650bede7 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 27 Mar 2020 21:59:16 +0000
+Subject: [PATCH] screen: Don't dereference data unchecked
+
+It might be NULL. Here, it causes Terminal to crash when opening a new
+tab.
+
+    #0  terminal_screen_reexec_from_exec_data (error=0x0, cancellable=0x0, cwd=<optimized out>, envv=0x0, data=0x0, screen=0x55c26b5e6a10) at terminal-screen.c:859
+            __func__ = "terminal_screen_reexec_from_screen"
+    #1  terminal_screen_reexec_from_screen (screen=screen@entry=0x55c26b5e6a10, parent_screen=parent_screen@entry=0x55c26b5e67f0, cancellable=cancellable@entry=0x0, error=error@entry=0x0) at terminal-screen.c:859
+            __func__ = "terminal_screen_reexec_from_screen"
+    #2  0x000055c2694b644f in action_new_terminal_cb (action=<optimized out>, parameter=<optimized out>, user_data=0x55c26b5e43b0) at terminal-window.c:409
+            window = 0x55c26b5e43b0
+            priv = <optimized out>
+            app = <optimized out>
+            profiles_list = <optimized out>
+            profile = 0x7fbee8003e10
+            can_toggle = <optimized out>
+            __func__ = "action_new_terminal_cb"
+            mode_str = 0x55c26b318dc0 "tab"
+            uuid_str = 0x55c26b318dc4 "current"
+            mode = TERMINAL_NEW_TERMINAL_MODE_TAB
+            parent_screen = 0x55c26b5e67f0
+            screen = 0x55c26b5e6a10
+    #3  0x00007fbf0538f61a in g_closure_invoke () at /usr/lib/libgobject-2.0.so.0
+    #4  0x00007fbf0537097e in  () at /usr/lib/libgobject-2.0.so.0
+    #5  0x00007fbf05373ab9 in g_signal_emit_valist () at /usr/lib/libgobject-2.0.so.0
+    #6  0x00007fbf053756b0 in g_signal_emit () at /usr/lib/libgobject-2.0.so.0
+    #7  0x00007fbf05440c5e in  () at /usr/lib/libgio-2.0.so.0
+    #8  0x00007fbf05441271 in g_action_activate () at /usr/lib/libgio-2.0.so.0
+    #9  0x00007fbf05aae63f in  () at /usr/lib/libgtk-3.so.0
+    #10 0x00007fbf05aae675 in  () at /usr/lib/libgtk-3.so.0
+    #11 0x00007fbf05aae675 in  () at /usr/lib/libgtk-3.so.0
+    #12 0x00007fbf05807093 in gtk_window_activate_key () at /usr/lib/libgtk-3.so.0
+    #13 0x00007fbf0580c013 in  () at /usr/lib/libgtk-3.so.0
+    #14 0x00007fbf05abde1c in  () at /usr/lib/libgtk-3.so.0
+    #15 0x00007fbf053740a0 in g_signal_emit_valist () at /usr/lib/libgobject-2.0.so.0
+    #16 0x00007fbf053756b0 in g_signal_emit () at /usr/lib/libgobject-2.0.so.0
+    #17 0x00007fbf05826c26 in  () at /usr/lib/libgtk-3.so.0
+    #18 0x00007fbf0596d14a in  () at /usr/lib/libgtk-3.so.0
+    #19 0x00007fbf0597061c in gtk_main_do_event () at /usr/lib/libgtk-3.so.0
+    #20 0x00007fbf05680f84 in  () at /usr/lib/libgdk-3.so.0
+    #21 0x00007fbf05650454 in  () at /usr/lib/libgdk-3.so.0
+    #22 0x00007fbf052949be in g_main_context_dispatch () at /usr/lib/libglib-2.0.so.0
+    #23 0x00007fbf05296831 in  () at /usr/lib/libglib-2.0.so.0
+    #24 0x00007fbf05296871 in g_main_context_iteration () at /usr/lib/libglib-2.0.so.0
+    #25 0x00007fbf0544d2de in g_application_run () at /usr/lib/libgio-2.0.so.0
+    #26 0x000055c2694961f5 in main (argc=<optimized out>, argv=<optimized out>) at server.c:190
+            app = 0x55c26b5a8180
+            r = 0
+---
+ src/terminal-screen.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/terminal-screen.c b/src/terminal-screen.c
+index f1475c41..33fbb5df 100644
+--- a/src/terminal-screen.c
++++ b/src/terminal-screen.c
+@@ -828,7 +828,7 @@ terminal_screen_reexec_from_exec_data (TerminalScreen *screen,
+                                envv ? envv : data ? data->envv : NULL,
+                                data ? data->as_shell : TRUE,
+                                /* If we have command line args, must always pass the cwd from the command line, too */
+-                               data->argv ? data->cwd : cwd ? cwd : data ? data->cwd : NULL,
++                               data && data->argv ? data->cwd : cwd ? cwd : data ? data->cwd : NULL,
+                                NULL /* fd list */, NULL /* fd array */,
+                                NULL, NULL, NULL, /* callback + data + destroy notify */
+                                cancellable,
+-- 
+2.25.2
+
