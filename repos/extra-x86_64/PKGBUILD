@@ -2,69 +2,40 @@
 # Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
-pkgbase=gst-python
-pkgname=(gst-python gst-python2)
+pkgname=gst-python
 pkgver=1.16.2
-pkgrel=1
-pkgdesc="GStreamer Python binding overrides"
+pkgrel=2
+pkgdesc="GStreamer Python bindings"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
 license=(LGPL)
-makedepends=(python-gobject python2-gobject gst-plugins-base-libs git meson)
+depends=(python-gobject gst-plugins-base-libs)
+makedepends=(git meson)
 _commit=5343aeb4151cfca54aa024b53e0cc4e02a27dacf  # tags/1.16.2^0
-source=("git+https://gitlab.freedesktop.org/gstreamer/gst-python.git#commit=$_commit"
-         gst-python-3.8.patch)
-sha256sums=('SKIP'
-            '7c916381f561fde3fade9e86a83e0d7ddb661b3e6116e95467674032a21cf8e7')
+source=("git+https://gitlab.freedesktop.org/gstreamer/gst-python.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgbase
+  cd $pkgname
   git describe --tags | sed 's/-/+/g'
 }
 
 prepare() {
-  cd $pkgbase
-  patch -p1 -i ../gst-python-3.8.patch
-}
-
-_build() {
-  arch-meson $pkgbase build-$1 -D python=/usr/bin/$1
-  ninja -C build-$1
-}
-
-_check() {
-  meson test -C build-$1 --print-errorlogs
-}
-
-_package() {
-  DESTDIR="$pkgdir" meson install -C build-$1
-  $1 -m compileall -d /usr/lib "$pkgdir/usr/lib"
-  $1 -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  cd $pkgname
+  git cherry-pick -n 22f28155d86e27c4134de4ed2861264003fcfd23  # Python 3.8
 }
 
 build() {
-  _build python
-  _build python2
+  arch-meson $pkgname build
+  ninja -C build
 }
 
 check() {
-  _check python
-  _check python2
+  meson test -C build --print-errorlogs
 }
 
-package_gst-python() {
-  pkgdesc="${pkgdesc//Python/Python 3}"
-  depends=(python-gobject gst-plugins-base-libs)
-
-  _package python
-}
-
-package_gst-python2() {
-  pkgdesc="${pkgdesc//Python/Python 2}"
-  depends=(python2-gobject gst-plugins-base-libs)
-
-  _package python2
-
-  # Remove conflicting loader
-  rm -r "$pkgdir/usr/lib/gstreamer-1.0"
+package() {
+  DESTDIR="$pkgdir" meson install -C build
+  python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
 }
