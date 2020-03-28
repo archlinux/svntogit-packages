@@ -11,19 +11,18 @@
 pkgbase=samba
 pkgname=('libwbclient' 'smbclient' 'samba')
 pkgver=4.11.3
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url="https://www.samba.org"
 license=('GPL3')
-makedepends=('python' 'docbook-xsl' 'pkg-config' 'libbsd' 'db' 'popt' 'libcups' 
-             'readline' 'tevent' 'acl' 'libldap' 'libcap' 'ldb>=1.1.15' 'krb5' 'pam'
-             'systemd' 'gnutls>=2.4.1' 'talloc' 'tdb' 'dbus' 'libaio'
+makedepends=('python' 'docbook-xsl' 'pkg-config' 'libbsd' 'db' 'popt' 'libcups'
+             'readline' 'tevent' 'acl' 'libldap' 'libcap' 'ldb' 'krb5' 'pam'
+             'systemd' 'gnutls' 'talloc' 'tdb' 'dbus' 'libaio'
              'perl-parse-yapp' 'libnsl' 'libtirpc' 'rpcsvc-proto' 'jansson')
-source=(https://us1.samba.org/samba/ftp/stable/${pkgbase}-${pkgver}.tar.gz
-        https://us1.samba.org/samba/ftp/stable/${pkgbase}-${pkgver}.tar.asc
+source=(https://us1.samba.org/samba/ftp/stable/${pkgbase}-${pkgver}.tar{.gz,.asc}
         samba.logrotate
         samba.pam
-	samba.conf)
+        samba.conf)
 validpgpkeys=('52FBC0B86D954B0843324CDC6F33915B6568B7EA') #Samba Distribution Verification Key <samba-bugs@samba.org>
 sha512sums=('11882791cf7c4e3155e50732c8b0858312caf9ce90767fa2703cb3bbe41e981035a0e14e658e9f51b67bdf1882cb9bc987a32f4515ae8a9ad0da3270629abe8b'
             'SKIP'
@@ -38,16 +37,16 @@ build() {
   # make install, but the otherwise unsplit pieces can be split)
   _pkgsrc="${srcdir}"/samba-pkg
   rm -rf ${_pkgsrc}
-_samba4_idmap_modules=idmap_ad,idmap_rid,idmap_adex,idmap_hash,idmap_tdb2
-_samba4_pdb_modules=pdb_tdbsam,pdb_ldap,pdb_ads,pdb_smbpasswd,pdb_wbc_sam,pdb_samba4
-_samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,auth_samba4
- cd samba-${pkgver}
+  _samba4_idmap_modules=idmap_ad,idmap_rid,idmap_adex,idmap_hash,idmap_tdb2
+  _samba4_pdb_modules=pdb_tdbsam,pdb_ldap,pdb_ads,pdb_smbpasswd,pdb_wbc_sam,pdb_samba4
+  _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,auth_samba4
+  cd samba-${pkgver}
   ./configure --enable-fhs \
               --prefix=/usr \
               --sysconfdir=/etc \
               --sbindir=/usr/bin \
               --libdir=/usr/lib \
-	      --libexecdir=/usr/lib/samba \
+              --libexecdir=/usr/lib/samba \
               --localstatedir=/var \
               --with-configdir=/etc/samba \
               --with-lockdir=/var/cache/samba \
@@ -64,7 +63,8 @@ _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,a
               --bundled-libraries=!tdb,!talloc,!pytalloc-util,!tevent,!popt,!ldb,!pyldb-util \
               --with-shared-modules=${_samba4_idmap_modules},${_samba4_pdb_modules},${_samba4_auth_modules} \
               --disable-rpath-install \
-	      --with-system-mitkrb5 --with-experimental-mit-ad-dc 
+              --with-system-mitkrb5 \
+              --with-experimental-mit-ad-dc
 
               # Add this to the options once it's working...
                #--with-system-mitkrb5 /opt/heimdal
@@ -78,8 +78,8 @@ _samba4_auth_modules=auth_unix,auth_wbc,auth_server,auth_netlogond,auth_script,a
 }
 
 package_libwbclient() {
-pkgdesc="Samba winbind client library"
-depends=('glibc' 'libbsd')
+  pkgdesc="Samba winbind client library"
+  depends=('glibc' 'libbsd' 'libtevent.so')
   # Use samba-pkg as a staging directory for the split packages
   # (This is so RPATHS and symlinks are generated correctly via
   # make install, but the otherwise unsplit pieces can be split)
@@ -101,8 +101,9 @@ depends=('glibc' 'libbsd')
 package_smbclient() {
 pkgdesc="Tools to access a server's filespace and printers via SMB"
 depends=('popt' 'cifs-utils' 'tdb' "libwbclient>=$pkgver" 'ldb'
-         'tevent' 'libgcrypt' 'python' 'talloc' 'readline' 'gnutls' 
-         'libbsd' 'libldap' 'libcups' 'libarchive' 'libnsl' 'jansson')
+         'tevent' 'libgcrypt' 'python' 'talloc' 'readline' 'gnutls'
+         'libbsd' 'libldap' 'libcups' 'libarchive' 'libnsl' 'jansson'
+         'libldb.so' 'libtdb.so' 'libtevent.so' 'libreadline.so')
 
     _smbclient_bins=('smbclient' 'rpcclient' 'smbspool'
                      'smbtree' 'smbcacls' 'smbcquotas' 'smbget' 'net'
@@ -157,7 +158,8 @@ depends=('popt' 'cifs-utils' 'tdb' "libwbclient>=$pkgver" 'ldb'
 package_samba() {
 pkgdesc="SMB Fileserver and AD Domain server"
 depends=('db>=4.7' 'popt' 'libcups' 'libcap>=2.16' 'gnutls>=2.4.1'
-         'talloc' 'ldb' 'libbsd' 'python' 'iniparser' 'tdb' 'libaio' 'perl-parse-yapp' "smbclient>=$pkgver" 'gpgme')
+         'talloc' 'ldb' 'libbsd' 'python' 'iniparser' 'tdb' 'libaio' 'perl-parse-yapp' "smbclient>=$pkgver" 'gpgme'
+         'libldb.so' 'libtdb.so' 'libtevent.so')
 backup=(etc/logrotate.d/samba
         etc/pam.d/samba
         etc/conf.d/samba)
@@ -205,3 +207,5 @@ sys.path.insert(0, '/usr/lib/python${_pyver}/site-packages')" \
   # copy ldap example
   install -D -m644 "${srcdir}"/samba-${pkgver}/examples/LDAP/samba.schema "${pkgdir}"/usr/share/doc/samba/examples/LDAP/samba.schema
 }
+
+# vim: ts=2 sw=2 et:
