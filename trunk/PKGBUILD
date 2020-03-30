@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.4.28
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -17,6 +17,7 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
   0001-add-sysctl-and-CONFIG-for-unprivileged_userns_clone.patch
+  0001-CVE-2020-8835-Revert-bpf-Provide-better-register-bou.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -26,7 +27,8 @@ validpgpkeys=(
 sha256sums=('c863cc1346348f9a40083b4bc0d34375117b1c401af920994d42e855653ef7a4'
             'SKIP'
             '7a58467b4cf628306a0048993f43508e5da39d8495801602b25b035372651697'
-            'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2')
+            'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2'
+            'c6d203cb728fbe70f8bd60c9448f0cbcb36d8b535fc1cdd59bda4a26ead303bf')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
