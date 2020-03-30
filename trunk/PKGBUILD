@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.5.13.a
+pkgver=5.5.13.b
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -29,7 +29,7 @@ validpgpkeys=(
 )
 sha256sums=('1f3b3614a06bffc9c621c82f98d8ca88c60538a8c6dd77f96f2e7fee310a4ee2'
             'SKIP'
-            '3047509fe8647273baebd027e1ba818e0a02d36ed95722636fe8a0d293aaea5d'
+            '46c7b2f9cbb9cff90f8d9d7a19fe73c8296d18c7eaa31f345e940a9f2a66d67a'
             'SKIP'
             '1621a53bff84524a1f8f99c191d3fb5f5c8a3e301f4860b328518d78eece566c')
 
