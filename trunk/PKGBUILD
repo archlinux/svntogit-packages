@@ -4,7 +4,7 @@
 
 pkgname=kwin
 pkgver=5.18.4.1
-pkgrel=2
+pkgrel=3
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -13,7 +13,7 @@ depends=(kscreenlocker xcb-util-cursor plasma-framework kcmutils breeze kinit qt
 makedepends=(extra-cmake-modules qt5-tools kdoctools)
 optdepends=('qt5-virtualkeyboard: virtual keyboard support for kwin-wayland')
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz"{,.sig})
+source=("https://download.kde.org/stable/plasma/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig})
 install=$pkgname.install
 sha256sums=('693a740976b46aa9fbdb68283b5c887aca70f9f96a357a766fab7a942b5a0d2f'
             'SKIP')
