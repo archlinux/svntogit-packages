@@ -1,0 +1,57 @@
+# Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
+
+pkgname=nftables
+epoch=1
+pkgver=0.9.4
+pkgrel=1
+pkgdesc='Netfilter tables userspace tools'
+arch=('x86_64')
+url='https://netfilter.org/projects/nftables/'
+license=('GPL2')
+depends=('libmnl' 'libnftnl' 'gmp' 'readline' 'ncurses' 'jansson')
+optdepends=('python: Python bindings')
+makedepends=('asciidoc' 'python')
+backup=('etc/nftables.conf')
+validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4') # Netfilter Core Team
+source=("https://netfilter.org/projects/nftables/files/nftables-$pkgver.tar.bz2"{,.sig}
+        'nftables.conf'
+        'nftables.service')
+sha256sums=('08b8683a9db5fba980bc092b75288af98d218bbe8ab446daf2338570d0730f9a'
+            'SKIP'
+            '7b00611bb0533ca2f4abce14e22e9de39c344e241d4eae884c5e594d1b1ce8df'
+            '3c6a34a400022450df0b6e97b3f16eea5cab7741a0e5f16858b46a3e6591b5af')
+
+prepare() {
+  cd $pkgname-$pkgver
+  # apply patch from the source array (should be a pacman feature)
+  local filename
+  for filename in "${source[@]}"; do
+    if [[ "$filename" =~ \.patch$ ]]; then
+      msg2 "Applying patch ${filename##*/}"
+      patch -p1 -N -i "$srcdir/${filename##*/}"
+    fi
+  done
+  :
+}
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/usr/share \
+    --with-json
+  make
+}
+
+package() {
+  pushd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+  popd
+  # basic safe firewall config
+  install -Dm644 nftables.conf "$pkgdir/etc/nftables.conf"
+  # systemd
+  install -Dm644 nftables.service "$pkgdir/usr/lib/systemd/system/nftables.service"
+}
+
+# vim:set ts=2 sw=2 et:
