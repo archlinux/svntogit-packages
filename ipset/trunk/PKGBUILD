@@ -2,7 +2,7 @@
 
 pkgname=ipset
 pkgver=7.6
-pkgrel=1
+pkgrel=2
 pkgdesc='Administration tool for IP sets'
 arch=('x86_64')
 url='http://ipset.netfilter.org/'
@@ -12,8 +12,8 @@ depends=('glibc' 'libmnl')
 backup=("etc/$pkgname.conf")
 source=("git://git.netfilter.org/ipset.git#tag=v$pkgver"
         "$pkgname.service")
-md5sums=('SKIP'
-         'e20fe62881993078591f1bb8b2fa22bb')
+sha256sums=('SKIP'
+            '5a0e326a80fd5ab2d9545faa1189b647cc866c9568ab6a9dd0833ba5863f39ce')
 
 prepare() {
   cd $pkgname
@@ -21,7 +21,7 @@ prepare() {
   local filename
   for filename in "${source[@]}"; do
     if [[ "$filename" =~ \.patch$ ]]; then
-      msg2 "Applying patch ${filename##*/}"
+      echo "Applying patch ${filename##*/}"
       patch -p1 -N -i "$srcdir/${filename##*/}"
     fi
   done
@@ -49,6 +49,9 @@ package() {
     "$pkgdir/usr/lib/systemd/system/$pkgname.service"
   # default config file
   install -Dm 644 /dev/null "$pkgdir/etc/$pkgname.conf"
+  # bash completion
+  install -Dm 644 ipset/utils/ipset_bash_completion/ipset \
+    "$pkgdir/usr/share/bash-completion/completions/ipset"
 }
 
 # vim:set ts=2 sw=2 et:
