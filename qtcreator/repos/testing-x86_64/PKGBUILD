@@ -9,14 +9,14 @@
 pkgname=qtcreator
 pkgver=4.11.2
 _clangver=9.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(LGPL)
 depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine clang=$_clangver qbs clazy syntax-highlighting desktop-file-utils)
 makedepends=(llvm python patchelf)
-options=(docs)
+options=(docs !strip) # https://bugs.archlinux.org/task/66078
 optdepends=('qt5-doc: integrated Qt documentation'
             'qt5-examples: welcome page examples'
             'qt5-translations: for other languages'
