@@ -3,7 +3,7 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=btrfs-progs
-pkgver=5.4
+pkgver=5.4.1
 pkgrel=1
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
@@ -23,12 +23,12 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
         'btrfs-scrub@.timer')
 install=btrfs-progs.install
 options=(!staticlibs)
-sha224sums=('SKIP'
-            '52a095044192383736f2e387ba1528dda78dd8179ff5822d377f37ef'
-            '9a20f841f572d97eaecaa25f5641eee143bc4c5ded79198b15d6691d'
-            '650621f98192cc9c8cc4ecfdcf560db88011dbc07c5df1d7bdae0ae2'
-            'c1477fc473324a7f3057f3e5e258b6462d596d1447fad8651ccb872c'
-            '1425cb4ded552dc69048f46147ecf5d3b8879e65ec0893d0dca149a2')
+sha256sums=('SKIP'
+            'f3e07fb248d608bdad5b63973513211de5daba47aaecfa44d29a836f6e7a9d69'
+            'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
+            '35efeee8590d6d60c711ae9cdc918e4841ab61d10cb02359e65e36ebff95ffc5'
+            '8b1f8a1176141c5c6abe772dcb93cd87c083c7415c856b4fcb563491c9916836'
+            '7cbeebee2a561e468c0ce1d33107fa968da76109df1b693e48b501971a462444')
 
 prepare() {
   cd $pkgname-v$pkgver
