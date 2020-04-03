@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.2.2
-pkgrel=4
+pkgrel=5
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -73,6 +73,7 @@ makedepends=(
 optdepends=(
   'intel-media-sdk: Intel QuickSync support'
   'ladspa: LADSPA filters'
+  'nvidia-utils: Nvidia NVDEC/NVENC support'
 )
 provides=(
   libavcodec.so
