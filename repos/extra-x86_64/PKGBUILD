@@ -4,7 +4,7 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
 pkgver=3.24.17
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -17,13 +17,11 @@ makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
 _commit=4480c0ffc6858f8a324f841a318a6ed4b57dd629  # tags/3.24.17^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
-        reset-xkb-state-on-leave.diff
         settings.ini
         gtk-query-immodules-3.0.hook
         gtk-update-icon-cache.hook
         gtk-update-icon-cache.script)
 sha256sums=('SKIP'
-            '98fec6286ef025795a28182eb5e62812f1a52a6d3a710500e398e9a650f07a39'
             '01fc1d81dc82c4a052ac6e25bf9a04e7647267cc3017bc91f9ce3e63e5eb9202'
             'a0319b6795410f06d38de1e8695a9bf9636ff2169f40701671580e60a108e229'
             '2d435e3bec8b79b533f00f6d04decb1d7c299c6e89b5b175f20be0459f003fe8'
@@ -36,7 +34,6 @@ pkgver() {
 
 prepare() {
   cd gtk
-  git apply -3 ../reset-xkb-state-on-leave.diff
 }
 
 build() {
