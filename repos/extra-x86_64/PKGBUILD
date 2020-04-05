@@ -3,9 +3,9 @@
 # Contributor: James Rayner <iphitus@gmail.com>
 
 pkgbase=nvidia-utils
-pkgname=('nvidia-utils' 'opencl-nvidia')
+pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=440.64
-pkgrel=2
+pkgrel=10
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -13,9 +13,11 @@ options=('!strip')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-utils.sysusers'
+        'kernel-5.6.patch'
         "https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
+            'a622f4d784103d58f30c584976060ba499f794a0852c469da202314842495bdfbbcae8a510b534eec4477590a1181cae1b98d239a54a60ef2bd752b6ca8ebd1b'
             '26156974d9a18456ada329f19e93c2f2abb1c5b12fec47df870a0e5b7788204cf0a745ebfefad6ab50d8f659127722905d5156462d4ce794cc52d796b762bf43')
 
 
@@ -33,6 +35,25 @@ prepare() {
     sh "${_pkg}.run" --extract-only
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
+
+    # https://gitlab.com/snippets/1945940 (Thanks to https://gitlab.com/EULA)
+    patch -Np1 -i ../kernel-5.6.patch
+
+    cd kernel
+    sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
+    sed -i 's/__JOBS/`nproc`/' dkms.conf
+    sed -i 's/__DKMS_MODULES//' dkms.conf
+    sed -i '$iBUILT_MODULE_NAME[0]="nvidia"\
+DEST_MODULE_LOCATION[0]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[1]="nvidia-uvm"\
+DEST_MODULE_LOCATION[1]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[2]="nvidia-modeset"\
+DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[3]="nvidia-drm"\
+DEST_MODULE_LOCATION[3]="/kernel/drivers/video"' dkms.conf
+
+    # Gift for linux-rt guys
+    sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
 }
 
 package_opencl-nvidia() {
@@ -51,6 +72,22 @@ package_opencl-nvidia() {
 
     mkdir -p "${pkgdir}/usr/share/licenses"
     ln -s nvidia-utils "${pkgdir}/usr/share/licenses/opencl-nvidia"
+}
+
+package_nvidia-dkms() {
+    pkgdesc="NVIDIA drivers - module sources"
+    depends=('dkms' "nvidia-utils=$pkgver" 'libglvnd')
+    provides=('NVIDIA-MODULE')
+
+    cd ${_pkg}
+
+    install -dm 755 "${pkgdir}"/usr/src
+    cp -dr --no-preserve='ownership' kernel "${pkgdir}/usr/src/nvidia-${pkgver}"
+
+    echo "blacklist nouveau" |
+        install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
+
+    install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 "${srcdir}/${_pkg}/LICENSE"
 }
 
 package_nvidia-utils() {
