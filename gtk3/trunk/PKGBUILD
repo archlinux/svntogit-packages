@@ -3,8 +3,8 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.17+4+g8c97702a07
-pkgrel=2
+pkgver=3.24.17+15+gdc79e07228
+pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -15,16 +15,15 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra fribidi iso-codes)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
-_commit=8c97702a0771ccb186088ea04478dfc8c6616fe4  # gtk-3-24
+_commit=dc79e07228800dafa1062c959c68afcc7b4a1bef  # gtk-3-24
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
-        1633.patch 1634.patch
+        1638.patch
         settings.ini
         gtk-query-immodules-3.0.hook
         gtk-update-icon-cache.hook
         gtk-update-icon-cache.script)
 sha256sums=('SKIP'
-            '7b7141c53de03d0bd6c73287b27c75e39a8eede1853037f52183c4648805255d'
-            '59f5304bdbeff82fd08e43d1c19afc4c5b65703c36a243909b92681ae1519020'
+            '45be674b2596b16d5778a85a51a31b59b3e3a198daaea34eec4400e4cdb9bd4e'
             '01fc1d81dc82c4a052ac6e25bf9a04e7647267cc3017bc91f9ce3e63e5eb9202'
             'a0319b6795410f06d38de1e8695a9bf9636ff2169f40701671580e60a108e229'
             '2d435e3bec8b79b533f00f6d04decb1d7c299c6e89b5b175f20be0459f003fe8'
@@ -39,16 +38,8 @@ prepare() {
   cd gtk
 
   # https://bugs.archlinux.org/task/66106
-  # https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/1633
-  git apply -3 ../1633.patch
-
-  # https://bugs.archlinux.org/task/66106
-  # https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/1634
-  git apply -3 ../1634.patch
-
-  # https://bugs.archlinux.org/task/66119
-  # https://gitlab.gnome.org/GNOME/gtk/-/issues/2576
-  # no patch yet
+  # https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/1638
+  git apply -3 ../1638.patch
 }
 
 build() {
