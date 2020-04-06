@@ -1,0 +1,81 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Daniel Bermond <dbermond@archlinux.org>
+# Contributor: Chocobo1 <chocobo1@archlinux.net>
+
+pkgname=rav1e
+pkgver=0.3.1
+pkgrel=4
+pkgdesc='An AV1 encoder focused on speed and safety'
+arch=(x86_64)
+url=https://github.com/xiph/rav1e/
+license=(BSD)
+depends=(
+  gcc-libs
+  glibc
+)
+makedepends=(
+  cargo-c
+  git
+  nasm
+  rust
+)
+provides=(librav1e.so)
+source=(
+  git+https://github.com/xiph/rav1e.git#tag=8188671c6258a9be8166d59536abb62d68131390
+  rav1e-${pkgver}.Cargo.lock::https://github.com/xiph/rav1e/releases/download/v${pkgver}/Cargo.lock
+)
+sha256sums=(
+  SKIP
+  5d7d408bdcf69059f07fe060c64d14a1ef2fac42a59350c3dfb3a85a8e94881a
+)
+
+pkgver() {
+  cd rav1e
+
+  git describe --tags | sed 's/^v//'
+}
+
+prepare() {
+  ln -sf ../rav1e-${pkgver}.Cargo.lock rav1e/Cargo.lock
+  cargo fetch \
+    --locked \
+    --manifest-path rav1e/Cargo.toml
+}
+
+build() {
+  cargo build \
+    --release \
+    --frozen \
+    --manifest-path rav1e/Cargo.toml
+  cargo cbuild \
+    --release \
+    --frozen \
+    --prefix=/usr \
+    --manifest-path rav1e/Cargo.toml
+}
+
+check() {
+  cargo test \
+    --release \
+    --frozen \
+    --manifest-path rav1e/Cargo.toml
+}
+
+package() {
+  cd rav1e
+
+  cargo install \
+    --frozen \
+    --offline \
+    --no-track \
+    --path . \
+    --root "${pkgdir}"/usr
+  cargo cinstall \
+    --release \
+    --frozen \
+    --prefix=/usr \
+    --destdir="${pkgdir}" 
+  install -Dm 644 LICENSE PATENTS -t "${pkgdir}"/usr/share/licenses/rav1e/
+}
+
+# vim: ts=2 sw=2 et:
