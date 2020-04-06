@@ -1,0 +1,52 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Ray Rashif <schiv@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=fluidsynth
+pkgver=2.1.2
+pkgrel=1
+pkgdesc="A real-time software synthesizer based on the SoundFont 2 specifications"
+arch=('x86_64')
+url="http://www.fluidsynth.org/"
+license=('LGPL2.1')
+groups=('pro-audio')
+depends=('glibc' 'glib2' 'sdl2')
+makedepends=('alsa-lib' 'cmake' 'dbus' 'doxygen' 'jack' 'ladspa' 'libinstpatch'
+'libpulse' 'libsndfile' 'portaudio' 'readline' 'systemd-libs')
+provides=('libfluidsynth.so' 'soundfont-synthesizer')
+backup=("etc/conf.d/$pkgname")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/v$pkgver.tar.gz")
+sha512sums=('ece3328ee94731f347a03f555fd39ead0a50cb24fef5d90dbff22e74db8344c9a68bfaccb76b873bd18a8ac68ee1d7802571e51c938bbf98e424267376f47eb8')
+
+build() {
+  cd "${pkgname}-${pkgver}"
+  cmake -DCMAKE_INSTALL_PREFIX=/usr \
+        -DFLUID_DAEMON_ENV_FILE=/etc/conf.d/fluidsynth \
+        -Denable-ladspa=ON \
+        -Denable-portaudio=ON \
+        -DLIB_SUFFIX="" \
+        -B build \
+        .
+  make -C build VERBOSE=1
+}
+
+check() {
+  cd "${pkgname}-${pkgver}"
+  make -C build -k check
+}
+
+package() {
+  depends+=('libasound.so' 'libdbus-1.so' 'libinstpatch-1.0.so' 'libjack.so'
+  'libportaudio.so' 'libpulse-simple.so' 'libreadline.so' 'libsndfile.so'
+  'libsystemd.so')
+  cd "${pkgname}-${pkgver}"
+  make -C build DESTDIR="$pkgdir" install
+  # systemd user unit
+  install -vDm 644 "build/${pkgname}.service" \
+    -t "$pkgdir/usr/lib/systemd/user/"
+  # system-wide configuration file
+  install -vDm 644 "build/${pkgname}.conf" "${pkgdir}/etc/conf.d/${pkgname}"
+  # docs
+  install -vDm 644 {AUTHORS,ChangeLog,{CONTRIBUTING,README}.md,THANKS,TODO} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
