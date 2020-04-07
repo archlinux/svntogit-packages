@@ -4,8 +4,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
-pkgver=440.64
-pkgrel=10
+pkgver=440.82
+pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -13,12 +13,10 @@ options=('!strip')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-utils.sysusers'
-        'kernel-5.6.patch'
         "https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            'a622f4d784103d58f30c584976060ba499f794a0852c469da202314842495bdfbbcae8a510b534eec4477590a1181cae1b98d239a54a60ef2bd752b6ca8ebd1b'
-            '26156974d9a18456ada329f19e93c2f2abb1c5b12fec47df870a0e5b7788204cf0a745ebfefad6ab50d8f659127722905d5156462d4ce794cc52d796b762bf43')
+            'd86ed2cd715c5a9aebdd11ee562cfa454dbafdb1b468004cbb93d37ee258623f11144cf30b8b14996a4e093cb3119edc36d13152893d735e3536f49c45e2cca3')
 
 
 create_links() {
@@ -35,9 +33,6 @@ prepare() {
     sh "${_pkg}.run" --extract-only
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
-
-    # https://gitlab.com/snippets/1945940 (Thanks to https://gitlab.com/EULA)
-    patch -Np1 -i ../kernel-5.6.patch
 
     cd kernel
     sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
