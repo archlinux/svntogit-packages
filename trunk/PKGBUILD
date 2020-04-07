@@ -1,53 +1,42 @@
-# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
 # Contributor: Murtuza Akhtari <inxsible at gmail dot com>
 # Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
 
-pkgname="efibootmgr"
-pkgdesc="Tool to modify UEFI Firmware Boot Manager Variables"
-pkgver=16
-pkgrel=2
+pkgname=efibootmgr
+pkgdesc="Linux user-space application to modify the EFI Boot Manager"
+pkgver=17
+_commit=e067160ecef8208e1944002e5d50b275733211fb # 17
+pkgrel=1
 arch=('x86_64')
 url="https://github.com/rhinstaller/efibootmgr"
 license=('GPL2')
+depends=('glibc' 'efivar')
 makedepends=('git')
-depends=('pciutils' 'efivar' 'zlib')
-options=('strip' 'zipman' 'docs' '!emptydirs')
-
-source=("efibootmgr::git+https://github.com/rhinstaller/efibootmgr.git#tag=${pkgver}")
-#source=("efibootmgr::git+https://github.com/rhinstaller/efibootmgr.git#commit=5e9700c2252eed45f4568f3a7c08c866c2c83c0b")
-sha1sums=('SKIP')
-
-pkgver() {
-	cd "${srcdir}/efibootmgr/"
-	echo "$(git describe --tags)" | sed -e 's|efibootmgr-||g' -e 's|-|\.|g'
-}
+source=("${pkgname}::git+https://github.com/rhboot/efibootmgr#tag=${pkgver}?signed")
+sha512sums=('SKIP')
+validpgpkeys=('B00B48BC731AA8840FED9FB0EED266B70F4FEF10') # Peter Jones <pjones@redhat.com>
 
 prepare() {
-	
-	cd "${srcdir}/efibootmgr/"
-	
-	git clean -x -d -f
-	echo
-	
+  mv -v "${pkgname}" "${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
+  # removing hotfix function declaration:
+  # https://github.com/rhboot/efibootmgr/issues/128
+  sed -e '/extern int efi_set_verbose/d' -i "src/${pkgname}.c"
 }
 
 build() {
-	
-	cd "${srcdir}/efibootmgr/"
-	
-	make EXTRA_CFLAGS="-Os" EFIDIR="/boot/EFI"
-	echo
-	
+  cd "${pkgname}-${pkgver}"
+  make libdir='/usr/lib' sbindir='/usr/bin' EFIDIR='/boot/EFI'
 }
 
 package() {
-	
-	cd "${srcdir}/efibootmgr/"
-	
-	install -d "${pkgdir}/usr/bin/"
-	install -D -m0755 "${srcdir}/efibootmgr/src/efibootmgr" "${pkgdir}/usr/bin/efibootmgr"
-	
-	install -d "${pkgdir}/usr/share/man/man8/"
-	install -D -m0644 "${srcdir}/efibootmgr/src/efibootmgr.8" "${pkgdir}/usr/share/man/man8/efibootmgr.8"
-	
+  cd "${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" \
+       libdir='/usr/lib' \
+       sbindir='/usr/bin' \
+       EFIDIR='/boot/EFI' \
+       install
+  install -vDm 644 {AUTHORS,README,README.md,TODO} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
