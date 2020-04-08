@@ -1,7 +1,7 @@
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
 
 pkgname=suitesparse
-pkgver=5.7.1
+pkgver=5.7.2
 pkgrel=1
 pkgdesc="A collection of sparse matrix libraries"
 url="http://faculty.cse.tamu.edu/davis/suitesparse.html"
@@ -15,7 +15,7 @@ license=('GPL')
 options=('staticlibs')
 source=($pkgname-$pkgver.tar.gz::"https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v$pkgver.tar.gz"
         suitesparse-no-demo.patch)
-sha256sums=('5ba5add1663d51a1b6fb128b50fe869b497f3096765ff7f8212f0ede044b9557'
+sha256sums=('fe3bc7c3bd1efdfa5cffffb5cebf021ff024c83b5daf0ab445429d3d741bd3ad'
             'f80488bb076753d38ea21d207bd682bdc97e21220c733da025f518a5b7e8e030')
 
 prepare() {
@@ -26,7 +26,7 @@ prepare() {
 build() {
   cd SuiteSparse-$pkgver
 
-  BLAS=-lblas TBB=-ltbb SPQR_CONFIG=-DHAVE_TBB MY_METIS_LIB=/usr/lib/libmetis.so make
+  BLAS=-lblas LAPACK=-llapack TBB=-ltbb SPQR_CONFIG=-DHAVE_TBB MY_METIS_LIB=/usr/lib/libmetis.so make
 }
 
 
@@ -34,7 +34,7 @@ package() {
   cd SuiteSparse-$pkgver
   install -dm755 "${pkgdir}"/usr/{include,lib}
 
-  BLAS=-lblas TBB=-ltbb SPQR_CONFIG=-DHAVE_TBB MY_METIS_LIB=/usr/lib/libmetis.so \
+  BLAS=-lblas LAPACK=-llapack TBB=-ltbb SPQR_CONFIG=-DHAVE_TBB MY_METIS_LIB=/usr/lib/libmetis.so \
   make INSTALL_LIB="${pkgdir}"/usr/lib INSTALL_INCLUDE="${pkgdir}"/usr/include install
 
   # fix RPATH
