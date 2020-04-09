@@ -78,7 +78,8 @@ package_nss() {
   install -Dt "$pkgdir/usr/lib" -m644 *.chk
 
   # Replace built-in trust with p11-kit connection
-  ln -sf pkcs11/p11-kit-trust.so "$pkgdir/usr/lib/libnssckbi.so"
+  ln -s pkcs11/p11-kit-trust.so "$pkgdir/usr/lib/p11-kit-trust.so"
+  ln -sf p11-kit-trust.so "$pkgdir/usr/lib/libnssckbi.so"
 }
 
 package_ca-certificates-mozilla() {
