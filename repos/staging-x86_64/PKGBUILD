@@ -1,0 +1,43 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgname=gjs
+pkgver=1.64.1
+pkgrel=2
+epoch=2
+pkgdesc="Javascript Bindings for GNOME"
+url="https://wiki.gnome.org/Projects/Gjs"
+arch=(x86_64)
+license=(GPL)
+depends=(cairo gobject-introspection-runtime js68 dconf readline)
+makedepends=(gobject-introspection git sysprof meson)
+checkdepends=(valgrind xorg-server-xvfb)
+provides=(libgjs.so)
+_commit=0b0af102f6f28a8f7cbfa401ed6a9e1c528bb784  # tags/1.64.1^0
+source=("git+https://gitlab.gnome.org/GNOME/gjs.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build --buildtype release -D installed_tests=false
+  ninja -C build
+}
+
+check() {
+  dbus-run-session xvfb-run \
+    -s '-screen 0 1920x1080x24 -nolisten local' \
+    meson test -C build --print-errorlogs
+}
+
+package() {
+  depends+=(libreadline.so)
+  DESTDIR="$pkgdir" meson install -C build
+}
