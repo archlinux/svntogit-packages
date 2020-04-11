@@ -8,8 +8,8 @@
 
 pkgname=qtcreator
 pkgver=4.11.2
-_clangver=9.0.1
-pkgrel=2
+_clangver=10.0.0
+pkgrel=3
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -29,9 +29,13 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-        qtcreator-preload-plugins.patch)
+        qtcreator-preload-plugins.patch
+        qtcreator-clang-libs.patch
+        qtcreator-clang-10.patch::"https://code.qt.io/cgit/qt-creator/qt-creator.git/patch?id=44023c8f")
 sha256sums=('8d67e45b66944fdb0f879cbfae341af7e38d6a348cf18332b5cb9f07937aae02'
-            'd6f979c820e2294653f4f1853af96942bf25ff9fe9450657d45ff1c7f02bbca7')
+            'd6f979c820e2294653f4f1853af96942bf25ff9fe9450657d45ff1c7f02bbca7'
+            '0f6d0dc41a87aae9ef371b1950f5b9d823db8b5685c6ac04a7a7ac133eb19a3f'
+            'cbbaa52f8daf40866c1c7157f168746cf7cb0231200feaeed05a0fb80e78c8ab')
 
 prepare() {
   mkdir -p build
@@ -46,6 +50,10 @@ prepare() {
   # see http://code.qt.io/cgit/clang/clang.git/commit/?id=7f349701d3ea0c47be3a43e265699dddd3fd55cf
   # and https://bugs.archlinux.org/task/59492
   patch -p1 -i ../qtcreator-preload-plugins.patch
+
+  # Fix build with clang 10
+  patch -p1 -i ../qtcreator-clang-10.patch
+  patch -p1 -i ../qtcreator-clang-libs.patch
 }
 
 build() {
