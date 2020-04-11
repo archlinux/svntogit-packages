@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=clang
-pkgver=9.0.1
+pkgver=10.0.0
 pkgrel=1
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
@@ -16,58 +16,73 @@ optdepends=('openmp: OpenMP support in clang with -fopenmp'
 provides=("clang-analyzer=$pkgver" "clang-tools-extra=$pkgver")
 conflicts=('clang-analyzer' 'clang-tools-extra')
 replaces=('clang-analyzer' 'clang-tools-extra')
-
-_source_base=https://releases.llvm.org/$pkgver
-if [[ ${pkgver##*.} != 0 ]]; then
-  _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
-fi
-
+_source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         $_source_base/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         enable-SSP-and-PIE-by-default.patch)
-sha256sums=('5778512b2e065c204010f88777d44b95250671103e434f9dc7363ab2e3804253'
+sha256sums=('885b062b00e903df72631c5f98b9579ed1ed2790f74e5646b4234fa084eacb21'
             'SKIP'
-            'b26fd72a78bd7db998a26270ec9ec6a01346651d88fa87b4b323e13049fb6f07'
+            'acdf8cf6574b40e6b1dabc93e76debb84a9feb6f22970126b04d4ba18b92911c'
             'SKIP'
-            '00a1ee1f389f81e9979f3a640a01c431b3021de0d42278f6508391a2f0b81c9a'
+            'df83a44b3a9a71029049ec101fb0077ecbbdf5fe41e395215025779099a98fdf'
             'SKIP'
-            'fde58a4902bec3715bc3d0c9250fa4c5f241af90bfd1e46f7128fa1435c03026')
+            '9e557a18f3ca96cc5cc9b62d2e308b993025523b2aca0735248118a928c8c3ff')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+
+# Utilizing LLVM_DISTRIBUTION_COMPONENTS to avoid
+# installing static libraries; inspired by Gentoo
+_get_distribution_components() {
+  local target
+  ninja -t targets | grep -Po 'install-\K.*(?=-stripped:)' | while read -r target; do
+    case $target in
+      clang-libraries|distribution)
+        continue
+        ;;
+      clang|clangd|clang-*)
+        ;;
+      clang*|findAllSymbols)
+        continue
+        ;;
+    esac
+    echo $target
+  done
+}
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver.src"
   mkdir build
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
-  patch -Np1 -i ../enable-SSP-and-PIE-by-default.patch
-
-  # Avoid shipping libclang-cpp before removing BUILD_SHARED_LIBS=ON
-  sed -i '/add_clang_subdirectory(clang-shlib)/d' tools/CMakeLists.txt
+  patch -Np2 -i ../enable-SSP-and-PIE-by-default.patch
 }
 
 build() {
   cd "$srcdir/$pkgname-$pkgver.src/build"
 
-  # Upstream strongly recommends against BUILD_SHARED_LIBS=ON for distro
-  # builds but CLANG_LINK_CLANG_DYLIB=ON is not yet supported by clang's
-  # extra tools. Keep building all libraries as shared and revisit this.
-
-  cmake .. -G Ninja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DPYTHON_EXECUTABLE=/usr/bin/python \
-    -DBUILD_SHARED_LIBS=ON \
-    -DLLVM_LINK_LLVM_DYLIB=ON \
-    -DCLANG_LINK_CLANG_DYLIB=OFF \
-    -DLLVM_ENABLE_RTTI=ON \
-    -DLLVM_BUILD_TESTS=ON \
-    -DLLVM_INCLUDE_DOCS=ON \
-    -DLLVM_BUILD_DOCS=ON \
-    -DLLVM_ENABLE_SPHINX=ON \
-    -DSPHINX_WARNINGS_AS_ERRORS=OFF \
-    -DLLVM_EXTERNAL_LIT=/usr/bin/lit \
+  local cmake_args=(
+    -G Ninja
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DPYTHON_EXECUTABLE=/usr/bin/python
+    -DLLVM_LINK_LLVM_DYLIB=ON
+    -DCLANG_LINK_CLANG_DYLIB=ON
+    -DLLVM_ENABLE_RTTI=ON
+    -DLLVM_BUILD_TESTS=ON
+    -DLLVM_INCLUDE_DOCS=ON
+    -DLLVM_BUILD_DOCS=ON
+    -DLLVM_ENABLE_SPHINX=ON
+    -DSPHINX_WARNINGS_AS_ERRORS=OFF
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit
     -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+  )
+
+  cmake .. "${cmake_args[@]}"
+  local distribution_components=$(_get_distribution_components | paste -sd\;)
+  test -n "$distribution_components"
+  cmake_args+=(-DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components")
+
+  cmake .. "${cmake_args[@]}"
   ninja
 }
 
@@ -90,7 +105,7 @@ _python3_optimize() {
 package() {
   cd "$srcdir/$pkgname-$pkgver.src/build"
 
-  DESTDIR="$pkgdir" ninja install
+  DESTDIR="$pkgdir" ninja install-distribution
   install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 
   # Remove documentation sources
