@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=4.11.2
 _clangver=10.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
