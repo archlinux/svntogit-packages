@@ -22,13 +22,13 @@ options=('strip' 'debug')
 validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
               'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 source=(https://sources.archlinux.org/other/pacman/$pkgname-$pkgver.tar.gz{,.sig}
-        pacman-5.2.1-fix-pactest-package-tar-format.patch::https://git.archlinux.org/pacman.git/patch/?id=b9faf652735c603d1bdf849a570185eb721f11c1
+        pacman-5.2.1-fix-pactest-package-tar-format.patch
         makepkg-fix-one-more-file-seccomp-issue.patch
         pacman.conf
         makepkg.conf)
 sha256sums=('1930c407265fd039cb3a8e6edc82f69e122aa9239d216d9d57b9d1b9315af312'
             'SKIP'
-            'd268379269c9dfa6eb3358f8931d3c84ef5fa4d47fe22567022fcbac8e4638c1'
+            '824a5c9dd458fb27b05a9a0b4b5d75b7a392de0dae79a18f5cfe8beaf4d82f0c'
             'e481a161bba76729cd434c97e0b319ddfcb1d93b2e4890d72b4e8a32982531d9'
             '3353f363088c73f1f86a890547c0f87c7473e5caf43bbbc768c2e9a7397f2aa2'
             '8c100b64450f5a19a16325dd05c143d49395bdeb96bd957f863cde4b95d3cb86')
