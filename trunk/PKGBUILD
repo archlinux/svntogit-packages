@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.4.33
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -18,6 +18,7 @@ source=(
   config         # the main kernel config file
   0001-add-sysctl-and-CONFIG-for-unprivileged_userns_clone.patch
   sphinx-workaround.patch
+  revert-acpi-ec-do-not-clear-boot_ec_is_ecdt-in-acpi_ec_add.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -26,9 +27,10 @@ validpgpkeys=(
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
 sha256sums=('b5579621302a6169b389b64dd9ef084df3bb2f11d91dd73273f76e2323223861'
             'SKIP'
-            '0c318ec33c82b4ea41117b4d0ab464775e13dc6e8b20aea6c655eb4887eafa0e'
+            '8b202067f6f0adbe2f8d4290624005f4fa1fff32aaa42f979c9ab03f6b74b62f'
             'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2'
-            'b7c814c8183e4645947a6dcc3cbf80431de8a8fd4e895b780f9a5fd92f82cb8e')
+            'b7c814c8183e4645947a6dcc3cbf80431de8a8fd4e895b780f9a5fd92f82cb8e'
+            '9fd93b899e03accd31ab357a70e538220c424ce8769e63a8b961fa627ab27c0a')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
