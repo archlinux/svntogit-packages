@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=9.0.1
-pkgrel=3
+pkgver=10.0.0
+pkgrel=1
 _ocaml_ver=4.09.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -12,15 +12,10 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
              'python-sphinx' 'python-recommonmark')
 options=('staticlibs')
-
-_source_base=https://releases.llvm.org/$pkgver
-if [[ ${pkgver##*.} != 0 ]]; then
-  _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
-fi
-
+_source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('00a1ee1f389f81e9979f3a640a01c431b3021de0d42278f6508391a2f0b81c9a'
+sha256sums=('df83a44b3a9a71029049ec101fb0077ecbbdf5fe41e395215025779099a98fdf'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
@@ -49,7 +44,6 @@ build() {
     -DLLVM_ENABLE_SPHINX=ON \
     -DLLVM_ENABLE_DOXYGEN=OFF \
     -DSPHINX_WARNINGS_AS_ERRORS=OFF \
-    -DFFI_INCLUDE_DIR=$(pkg-config --variable=includedir libffi) \
     -DLLVM_BINUTILS_INCDIR=/usr/include
   ninja all ocaml_doc
 }
@@ -77,7 +71,7 @@ package_llvm() {
   rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
 
   # The runtime libraries go into llvm-libs
-  mv -f "$pkgdir"/usr/lib/lib{LLVM,LTO}*.so* "$srcdir"
+  mv -f "$pkgdir"/usr/lib/lib{LLVM,LTO,Remarks}*.so* "$srcdir"
   mv -f "$pkgdir"/usr/lib/LLVMgold.so "$srcdir"
 
   # OCaml bindings go to a separate package
@@ -101,7 +95,7 @@ package_llvm-libs() {
 
   install -d "$pkgdir/usr/lib"
   cp -P \
-    "$srcdir"/lib{LLVM,LTO}*.so* \
+    "$srcdir"/lib{LLVM,LTO,Remarks}*.so* \
     "$srcdir"/LLVMgold.so \
     "$pkgdir/usr/lib/"
 
