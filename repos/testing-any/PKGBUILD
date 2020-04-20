@@ -5,7 +5,7 @@ _openssl_ver=1.1.1d
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202002
-pkgrel=1
+pkgrel=2
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -111,6 +111,7 @@ build() {
 }
 
 package_edk2-shell() {
+  pkgdesc="EDK2 UEFI Shell"
   provides=('uefi-shell')
   cd "$pkgbase-$pkgver"
   local _arch
@@ -139,33 +140,14 @@ package_edk2-ovmf() {
   license+=('MIT')
   cd "$pkgbase-$pkgver"
   local _arch
-  # symlinking to locations defined by qemu:
-  # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
-  install -vdm 755 "${pkgdir}/usr/share/qemu/"
+  # installing the various firmwares
   for _arch in ${_arch_list[@]}; do
-    # installing the various firmwares
     install -vDm 644 Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd \
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
     install -vDm 644 Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd \
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
     install -vDm 644 Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd \
       "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
-    if [[ "${_arch}" == 'IA32' ]]; then
-      ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.fd" \
-        "${pkgdir}/usr/share/qemu/edk2-i386-code.fd"
-      ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_VARS.fd" \
-        "${pkgdir}/usr/share/qemu/edk2-i386-vars.fd"
-      ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd" \
-        "${pkgdir}/usr/share/qemu/edk2-i386-secure-code.fd"
-    fi
-    if [[ "${_arch}" == 'X64' ]]; then
-      ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.fd" \
-        "${pkgdir}/usr/share/qemu/edk2-x86_64-code.fd"
-      ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_VARS.fd" \
-        "${pkgdir}/usr/share/qemu/edk2-x86_64-vars.fd"
-      ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd" \
-        "${pkgdir}/usr/share/qemu/edk2-x86_64-secure-code.fd"
-    fi
   done
   # adding a symlink for legacy applications
   ln -svf "/usr/share/${pkgname}" "${pkgdir}/usr/share/OVMF"
