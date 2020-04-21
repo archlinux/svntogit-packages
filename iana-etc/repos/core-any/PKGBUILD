@@ -2,7 +2,7 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=iana-etc
-pkgver=20200327
+pkgver=20200401
 _ports=service-names-port-numbers-${pkgver}
 _protocols=protocol-numbers-20200131
 pkgrel=1
