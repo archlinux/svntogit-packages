@@ -5,7 +5,7 @@ _openssl_ver=1.1.1d
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202002
-pkgrel=2
+pkgrel=3
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -13,10 +13,18 @@ license=('BSD')
 makedepends=('acpica' 'iasl' 'libutil-linux' 'nasm' 'python')
 options=(!makeflags)
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archive/${pkgbase}-stable${pkgver}.tar.gz"
-        "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc})
+        "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
+        "50-edk2-ovmf-i386-secure.json"
+        "50-edk2-ovmf-x86_64-secure.json"
+        "60-edk2-ovmf-i386.json"
+        "60-edk2-ovmf-x86_64.json")
 sha512sums=('e43090f9c0916b48452fa14bbcd9cd125330304c44b904502ef4ac035bbfb1b0529336f76a0512c0cdbcb4092722839e70b07866e845e76280f6a90b7fb093ab'
             '2bc9f528c27fe644308eb7603c992bac8740e9f0c3601a130af30c9ffebbf7e0f5c28b76a00bbb478bad40fbe89b4223a58d604001e1713da71ff4b7fe6a08a7'
-            'SKIP')
+            'SKIP'
+            '55e4187b11b27737f61e528c02ff43b9381c0cb09140e803531616766f9cb9401115d88d946b56171784cc028f9571279640eb39b6a9fa8e02ec0c8d1b036a3e'
+            'a1236585b30d720540de2e9527d8c90ff2d428e800b3da545b23461dc698dc91fe441b62bb8cbca76e08f4ec1eb485619e9ab26157deb06e7fb33e7f5f9dd8b6'
+            'c81e072aabfb01d29cf5194111524e2c4c8684979de6b6793db10299c95bb94f7b1d0a98b057df0664d7a894a2b40e9b4c3576112fae400a95eaf5fe5fc9369b'
+            '2030dc1d49d56fce8af56c5777fd40f04041e39ff806dd8c021e161227bdd646982024db6758230b8332dc68f16bc6918e1d54ad3c022e21e148d6b65ea778b3')
 validpgpkeys=('8657ABB260F056B1E5190839D9C4D26D0E604491') # Matt Caswell <matt@openssl.org>
 _arch_list=('IA32' 'X64')
 _build_type='RELEASE'
@@ -142,18 +150,23 @@ package_edk2-ovmf() {
   local _arch
   # installing the various firmwares
   for _arch in ${_arch_list[@]}; do
-    install -vDm 644 Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd \
+    install -vDm 644 "Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
-    install -vDm 644 Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd \
+    install -vDm 644 "Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd" \
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
-    install -vDm 644 Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd \
+    install -vDm 644 "Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
       "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
   done
+  # installing qemu descriptors in accordance with qemu:
+  # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
+  # https://bugs.archlinux.org/task/64206
+  install -vDm 644 ../*"${pkgname}"*.json -t "${pkgdir}/usr/share/qemu/firmware"
   # adding a symlink for legacy applications
   ln -svf "/usr/share/${pkgname}" "${pkgdir}/usr/share/OVMF"
   # licenses
   install -vDm 644 License.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -vDm 644 OvmfPkg/License.txt "${pkgdir}/usr/share/licenses/${pkgname}/OvmfPkg.License.txt"
+  install -vDm 644 OvmfPkg/License.txt \
+    "${pkgdir}/usr/share/licenses/${pkgname}/OvmfPkg.License.txt"
   # docs
   install -vDm 644 {OvmfPkg/README,Readme.md,Maintainers.txt} \
     -t "${pkgdir}/usr/share/doc/${pkgname}"
