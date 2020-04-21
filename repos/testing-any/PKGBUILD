@@ -5,7 +5,7 @@ _openssl_ver=1.1.1d
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202002
-pkgrel=3
+pkgrel=4
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -146,6 +146,7 @@ package_edk2-ovmf() {
   conflicts=('ovmf')
   replaces=('ovmf')
   license+=('MIT')
+  install="${pkgname}.install"
   cd "$pkgbase-$pkgver"
   local _arch
   # installing the various firmwares
@@ -156,12 +157,19 @@ package_edk2-ovmf() {
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
     install -vDm 644 "Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
       "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
+    # adding symlinks for previous ovmf location (only secure boot was provided as the default)
+    # https://bugs.archlinux.org/task/66322
+    install -vdm 755 "${pkgdir}/usr/share/ovmf/${_arch,,}"
+    ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd" \
+      "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF_CODE.fd"
+    ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_VARS.fd" \
+      "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF_VARS.fd"
   done
   # installing qemu descriptors in accordance with qemu:
   # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
   # https://bugs.archlinux.org/task/64206
   install -vDm 644 ../*"${pkgname}"*.json -t "${pkgdir}/usr/share/qemu/firmware"
-  # adding a symlink for legacy applications
+  # adding a symlink for applications with questionable heuristics (such as lxd)
   ln -svf "/usr/share/${pkgname}" "${pkgdir}/usr/share/OVMF"
   # licenses
   install -vDm 644 License.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
