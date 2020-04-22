@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.2.2
-pkgrel=5
+pkgrel=6
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -60,6 +60,7 @@ depends=(
   opus
   sdl2
   speex
+  srt
   v4l-utils
   xz
   zlib
@@ -86,7 +87,7 @@ provides=(
   libswscale.so
 )
 source=(git+https://git.ffmpeg.org/ffmpeg.git#tag=192d1d34eb3668fa27f433e96036340e1e5077a0)
-sha256sums=('SKIP')
+sha256sums=(SKIP)
 
 pkgver() {
   cd ffmpeg
@@ -133,6 +134,7 @@ build() {
     --enable-libpulse \
     --enable-libsoxr \
     --enable-libspeex \
+    --enable-libsrt \
     --enable-libssh \
     --enable-libtheora \
     --enable-libv4l2 \
