@@ -5,7 +5,7 @@ _openssl_ver=1.1.1d
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202002
-pkgrel=5
+pkgrel=6
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -151,6 +151,9 @@ package_edk2-ovmf() {
   local _arch
   # installing the various firmwares
   for _arch in ${_arch_list[@]}; do
+    # installing OVMF.fd for xen: https://bugs.archlinux.org/task/58635
+    install -vDm 644 "Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF.fd" \
+      -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
     install -vDm 644 "Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
     install -vDm 644 "Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd" \
@@ -164,6 +167,8 @@ package_edk2-ovmf() {
       "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF_CODE.fd"
     ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_VARS.fd" \
       "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF_VARS.fd"
+    ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF.fd" \
+      "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF.fd"
   done
   # installing qemu descriptors in accordance with qemu:
   # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
