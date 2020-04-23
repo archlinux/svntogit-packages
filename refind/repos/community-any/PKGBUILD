@@ -1,0 +1,93 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+
+pkgname=refind
+pkgver=0.12.0
+pkgrel=6
+pkgdesc="An EFI boot manager"
+arch=('any')
+url="https://www.rodsbooks.com/refind/"
+license=('BSD' 'CCPL' 'FDL1.3' 'GPL2' 'GPL3' 'LGPL3')
+depends=('bash' 'dosfstools' 'efibootmgr' 'which')
+makedepends=('gnu-efi-libs')
+optdepends=('gptfdisk: for finding non-vfat ESP with refind-install'
+            'imagemagick: for refind-mkfont'
+            'openssl: for generating local certificates with refind-install'
+            'python: for refind-mkdefault'
+            'sudo: for privilege elevation in refind-install and refind-mkdefault'
+            'sbsigntools: for EFI binary signing with refind-install')
+# TODO: remove 2020-10-23
+provides=('refind-efi')
+conflicts=('refind-efi')
+replaces=('refind-efi')
+# the drivers don't build with many jobs
+options=(!makeflags)
+source=("https://sourceforge.net/projects/refind/files/${pkgver}/${pkgname}-src-${pkgver}.tar.gz")
+sha512sums=('3ade9642d7acf31097daa5308acb96a9fa3371314073b5a09601a886fc30444752efa08ed9fb35e421efb0b4eb9efbccd7b5c9bd6b3b9ed4af74c58f22a74729')
+_arch='x64'
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # removing the path prefix from the css reference, so that the css can live
+  # in the same directory
+  sed -e 's|../Styles/||g' -i "docs/${pkgname}/"*.html
+  # hardcode RefindDir, so that refind-install can find refind_x64.efi
+  sed -e 's|RefindDir=\"\$ThisDir/refind\"|RefindDir="/usr/share/refind/"|g' \
+      -i refind-install
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  make
+  make gptsync
+  make fs
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  # the install target calls refind-install, therefore we install things
+  # manually
+
+  # efi binaries
+  install -vDm 644 refind/*.efi -t "${pkgdir}/usr/share/${pkgname}"
+  install -vDm 644 drivers_*/*.efi \
+    -t "${pkgdir}/usr/share/refind/drivers_${_arch}"
+  install -vDm 644 gptsync/*.efi \
+    -t "${pkgdir}/usr/share/${pkgname}/tools_${_arch}"
+  # sample config
+  install -vDm 644 "${pkgname}.conf-sample" -t "${pkgdir}/usr/share/${pkgname}"
+  # keys
+  install -vDm 644 keys/*{cer,crt} -t "${pkgdir}/usr/share/${pkgname}/keys"
+  # keysdir
+  install -vdm 700 "${pkgdir}/etc/refind.d/keys"
+  # fonts
+  install -vDm 644 fonts/*.png \
+    -t "${pkgdir}/usr/share/${pkgname}/fonts"
+  # icons
+  install -vDm 644 icons/*.png \
+    -t "${pkgdir}/usr/share/${pkgname}/icons"
+  install -vDm 644 icons/svg/*.svg \
+    -t "${pkgdir}/usr/share/${pkgname}/icons/svg"
+  # scripts
+  install -vDm 755 {refind-{install,mkdefault},mkrlconf,mvrefind} \
+    -t "${pkgdir}/usr/bin"
+  install -vDm 755 fonts/mkfont.sh "${pkgdir}/usr/bin/${pkgname}-mkfont"
+  # man pages
+  install -vDm 644 docs/man/*.8 -t "${pkgdir}/usr/share/man/man8"
+  # docs
+  install -vDm 644 {CREDITS,NEWS,README}.txt \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+  install -vDm 644 fonts/README.txt \
+    "${pkgdir}/usr/share/doc/${pkgname}/README.${pkgname}-mkfont.txt"
+  install -vDm 644 icons/README \
+    "${pkgdir}/usr/share/doc/${pkgname}/README.icons.txt"
+  install -vDm 644 keys/README.txt \
+    "${pkgdir}/usr/share/doc/${pkgname}/README.keys.txt"
+  install -vDm 644 "docs/${pkgname}/"*.{html,png,svg,txt} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}/html"
+  install -vDm 644 docs/Styles/*.css \
+    -t "${pkgdir}/usr/share/doc/${pkgname}/html"
+  install -vDm 644 images/${pkgname}-banner.{png,svg} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}/html"
+  # license
+  install -vDm 644 LICENSE.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
