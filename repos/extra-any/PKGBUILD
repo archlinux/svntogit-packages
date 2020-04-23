@@ -3,15 +3,15 @@
 # When releasing a xorgproto version with updated keysyms, rebuild libx11
 
 pkgname=xorgproto
-pkgver=2019.2
-pkgrel=2
+pkgver=2020.1
+pkgrel=1
 pkgdesc="combined X.Org X11 Protocol headers"
 arch=('any')
 url="https://xorg.freedesktop.org/"
 license=('custom')
 makedepends=('xorg-util-macros' 'meson')
 source=(https://xorg.freedesktop.org/archive/individual/proto/$pkgname-$pkgver.tar.bz2{,.sig})
-sha512sums=('cbfdf6bb3d58d4d4e7788c9ed779402352715e9899f65594fbc527b3178f1dc5e03cebc8ba5a863b3c196a1a0f2026c2d0438207ca19f81f3c8b7da0c0667904'
+sha512sums=('2d10533e54987f293e1c8578aa742c38cf2fac8551db1d317cf5ee4a6a9600eced50f59c57c38b35dd210fe02d350294c967512f04cb9876d6c0c1f7e89cb199'
             'SKIP')
 validpgpkeys=('995ED5C8A6138EB0961F18474C09DD83CAAA50B2') #  "Adam Jackson <ajax@nwnk.net>"
 validpgpkeys+=('DD38563A8A8224537D1F90E45B8A2D50A0ECD0D3') # "Adam Jackson <ajax@benzedrine.nwnk.net>"
