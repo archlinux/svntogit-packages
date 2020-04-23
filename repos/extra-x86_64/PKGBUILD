@@ -7,14 +7,14 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.11.2
+pkgver=4.12.0
 _clangver=10.0.0
-pkgrel=4
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(LGPL)
-depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine clang=$_clangver qbs clazy syntax-highlighting desktop-file-utils)
+depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine clang=$_clangver qbs clazy syntax-highlighting yaml-cpp desktop-file-utils)
 makedepends=(llvm python patchelf)
 options=(docs !strip) # https://bugs.archlinux.org/task/66078
 optdepends=('qt5-doc: integrated Qt documentation'
@@ -30,12 +30,10 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
         qtcreator-preload-plugins.patch
-        qtcreator-clang-libs.patch
-        qtcreator-clang-10.patch::"https://code.qt.io/cgit/qt-creator/qt-creator.git/patch?id=44023c8f")
-sha256sums=('8d67e45b66944fdb0f879cbfae341af7e38d6a348cf18332b5cb9f07937aae02'
-            'd6f979c820e2294653f4f1853af96942bf25ff9fe9450657d45ff1c7f02bbca7'
-            '0f6d0dc41a87aae9ef371b1950f5b9d823db8b5685c6ac04a7a7ac133eb19a3f'
-            'cbbaa52f8daf40866c1c7157f168746cf7cb0231200feaeed05a0fb80e78c8ab')
+        qtcreator-clang-libs.patch)
+sha256sums=('d76655799ad2af81fb15f85d412d74583659fb1b4cf27b758ad8aae73675948b'
+            'b40e222b30c355d1230160a4e933dbd161b8748125662e3bde312ea52296457a'
+            '0f6d0dc41a87aae9ef371b1950f5b9d823db8b5685c6ac04a7a7ac133eb19a3f')
 
 prepare() {
   mkdir -p build
@@ -52,7 +50,6 @@ prepare() {
   patch -p1 -i ../qtcreator-preload-plugins.patch
 
   # Fix build with clang 10
-  patch -p1 -i ../qtcreator-clang-10.patch
   patch -p1 -i ../qtcreator-clang-libs.patch
 }
 
