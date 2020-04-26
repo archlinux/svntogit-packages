@@ -6,7 +6,7 @@
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
 pkgver=1.43.0
-pkgrel=1
+pkgrel=2
 
 _llvm_ver=10.0.0
 
@@ -21,7 +21,7 @@ checkdepends=('procps-ng' 'gdb')
 options=('!emptydirs')
 
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
-        "http://releases.llvm.org/$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
+        "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
         70163.patch)
 
 sha256sums=('75f6ac6c9da9f897f4634d5a07be4084692f7ccc2d2bb89337be86cfc18453a1'
