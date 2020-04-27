@@ -4,42 +4,55 @@
 # Contributor: Roman Kyrylych <Roman.Kyrylych@gmail.com>
 
 pkgname=zziplib
-pkgver=0.13.70
-pkgrel=2
+pkgver=0.13.71
+pkgrel=1
 pkgdesc="A lightweight library that offers the ability to easily extract data from files archived in a single zip file"
 arch=('x86_64')
 url="http://zziplib.sourceforge.net"
 license=('LGPL' 'MPL')
 depends=('zlib')
-makedepends=('python' 'xmlto' 'zip' 'cmake')
+makedepends=('python' 'xmlto' 'zip' 'cmake' 'ninja')
+checkdepends=('unzip')
 source=($pkgname-$pkgver.tar.gz::"https://github.com/gdraheim/zziplib/archive/v$pkgver.tar.gz"
-        https://github.com/gdraheim/zziplib/commit/a46ac9630a46093eda88540a8ec705e6f53bcc4f.patch)
-sha256sums=('a1457262d7a237dc50ce1f98ca57242bc714055ff81146f419ee53cdea1bf029'
-            '6f24e770f858223f8321cc2a2df9fdab570290ac1a1279b6937988a0b460bca1')
-sha512sums=('5e6bed4993cac880063a64b56db42f362898434e9c61916747377440f1325f649c086a3c1beeb05fb647b4f8af3fcb0407b087fc23604cd73fdd2373f132e9a5'
-            '3e2e55bb7af0160dd0b1f0f10b9c41fbe68107c00a42bd6ab19a1a9b640371c751f5fc562f832668ba09b5cfc180b099e361c3747b0e22e80b496bff4f956b11')
+        https://github.com/gdraheim/zziplib/commit/75e22f3c365b62acbad8d8645d5404242800dfba.patch
+        https://patch-diff.githubusercontent.com/raw/gdraheim/zziplib/pull/89.patch)
+sha256sums=('2ee1e0fbbb78ec7cc46bde5b62857bc51f8d665dd265577cf93584344b8b9de2'
+            '5a5ceed4a9a5c22a72b7a06bab2f43701b775202a93b13f393b1fc3c8f708b1c'
+            'a9e908938e07394158f4ea7e57cde6241bbab7949ec752cbedaf951b7acbc0c0')
+sha512sums=('e035d0ac26dca78335ae3defc652543ff7b353a1a95d76ed1beeb21a08e16f287a62d488f528cfbb77d5b558581b68d439aa0823577524e9aa61a3cf5f208cb5'
+            '5fc25cb0663f40a7338a44219793c5d9e1f58fbf3f613aa1f89d925812e13b75c1db5e1a7709edc042c89e3717d5947d38c4ca1fae0c037f776ce656c2e57833'
+            'e3a805dc8a812f45fb0dbcb2aeee44ac7f94f99bf888997bcf188f898fba3ea81441875ececbe460edc8ded0b79a9584a83735876d60a88083ac7d2a1541896a')
 
 prepare() {
   cd ${pkgname}-${pkgver}
 
-  patch -Np1 -i "${srcdir}"/a46ac9630a46093eda88540a8ec705e6f53bcc4f.patch
+  patch -Np1 -i "${srcdir}/75e22f3c365b62acbad8d8645d5404242800dfba.patch"
+  patch -Np1 -i "${srcdir}/89.patch"
 
   mkdir build
 }
 
 build() {
   cd ${pkgname}-${pkgver}/build
-  cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-  make
+  cmake .. \
+    -GNinja \
+    -DZZIPDOCS=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  ninja
+}
+
+check() {
+  cd ${pkgname}-${pkgver}/build
+  ninja check
 }
 
 package() {
   cd ${pkgname}-${pkgver}/build
-  make DESTDIR="${pkgdir}" install
+  DESTDIR="${pkgdir}" ninja install
 
   # Fix permissions
-  chmod 644 "${pkgdir}/usr/share/man/man3/"*
-  chown -R root:root "${pkgdir}/usr/share/man/man3"
+  # chmod 644 "${pkgdir}/usr/share/man/man3/"*
+  # chown -R root:root "${pkgdir}/usr/share/man/man3"
 }
 
 # vim: set ts=2 sw=2 et:
