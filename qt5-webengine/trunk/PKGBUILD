@@ -14,11 +14,15 @@ depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 
 makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
-sha256sums=('e169d6a75d8c397e04f843bc1b9585950fb9a001255cd18d6293f66fa8a6c947')
+source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
+        icu67.patch)
+sha256sums=('e169d6a75d8c397e04f843bc1b9585950fb9a001255cd18d6293f66fa8a6c947'
+            '5315977307e69d20b3e856d3f8724835b08e02085a4444a5c5cefea83fd7d006')
 
 prepare() {
   mkdir -p build
+
+  patch -Np3 -d $_pkgfqn/src/3rdparty/chromium/v8 <icu67.patch
 
   sed -e 's|7-9|7-9\|10|' -i $_pkgfqn/configure.pri # Support ninja 1.10
 }
