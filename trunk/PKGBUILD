@@ -6,7 +6,7 @@
 
 pkgname=pkgconf
 pkgver=1.6.3
-pkgrel=3
+pkgrel=4
 pkgdesc="Package compiler and linker metadata toolkit"
 url="https://github.com/pkgconf/pkgconf"
 license=(custom:ISC)
