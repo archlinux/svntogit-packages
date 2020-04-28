@@ -5,8 +5,8 @@ pkgbase=qemu
 pkgname=(qemu qemu-headless qemu-arch-extra qemu-headless-arch-extra
          qemu-block-{iscsi,rbd,gluster} qemu-guest-agent)
 pkgdesc="A generic and open source machine emulator and virtualizer"
-pkgver=4.2.0
-pkgrel=2
+pkgver=5.0.0
+pkgrel=1
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
@@ -18,7 +18,7 @@ makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
         qemu-ga.service
         65-kvm.rules)
-sha512sums=('2a79973c2b07c53e8c57a808ea8add7b6b2cbca96488ed5d4b669ead8c9318907dec2b6109f180fc8ca8f04c0f73a56e82b3a527b5626b799d7e849f2474ec56'
+sha512sums=('21ef0cbe107c468a40f0fa2635db2a40048c8790b629dfffca5cd62bb1b502ea8eb133bfc40df5ecf1489e2bffe87f6829aee041cb8a380ff04a8afa23b39fcf'
             'SKIP'
             '269c0f0bacbd06a3d817fde02dce26c99d9f55c9e3b74bb710bd7e5cdde7a66b904d2eb794c8a605bf9305e4e3dee261a6e7d4ec9d9134144754914039f176e4'
             'bdf05f99407491e27a03aaf845b7cc8acfa2e0e59968236f10ffc905e5e3d5e8569df496fd71c887da2b5b8d1902494520c7da2d3a8258f7fd93a881dd610c99')
@@ -42,7 +42,6 @@ build() {
 
   _build headless \
     --audio-drv-list= \
-    --disable-bluez \
     --disable-sdl \
     --disable-gtk \
     --disable-vte \
