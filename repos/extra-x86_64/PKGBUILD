@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.22.10
+pkgver=1.22.11dev+36+g6abf71f05
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -17,9 +17,9 @@ _pppver=2.4.7
 makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver" modemmanager
              iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
-             glib2-docs dhcpcd iwd dnsmasq systemd-resolvconf libpsl audit meson)
+             glib2-docs iwd dnsmasq openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=3216c292a670b6c91a932c94c26aed0c8dedaa38  # tags/1.22.10^0
+_commit=6abf71f0566dcdfa1e555b6c4c75ab084c69806f  # nm-1-22
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -56,6 +56,9 @@ build() {
     # configuration plugins
     -D config_plugins_default=keyfile
 
+    # dhcp clients
+    -D dhcpcd=no
+
     # miscellaneous
     -D vapi=true
     -D docs=true
@@ -91,7 +94,9 @@ package_networkmanager() {
               'bluez: Bluetooth support'
               'ppp: dialup connection support'
               'modemmanager: cellular network support'
-              'iwd: wpa_supplicant alternative')
+              'iwd: wpa_supplicant alternative'
+              'dhclient: alternative DHCP client'
+              'openresolv: alternative resolv.conf manager')
   backup=(etc/NetworkManager/NetworkManager.conf)
   groups=(gnome)
 
