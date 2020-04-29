@@ -2,8 +2,8 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=licenses
-pkgver=20191011
-pkgrel=2
+pkgver=20200427
+pkgrel=1
 pkgdesc='Standard licenses distribution package'
 arch=('any')
 license=('custom:none')
@@ -28,7 +28,7 @@ source=(apache-2.0.txt::https://www.apache.org/licenses/LICENSE-2.0.txt
         https://www.latex-project.org/lppl.txt
         perlartistic.txt
         artistic-2_0.txt
-        php-3.0.txt::http://www.php.net/license/3_0.txt
+        php-3.01.txt::http://www.php.net/license/3_01.txt
         ruby-license.txt
         cpl-1.0.txt
         python-2.txt
@@ -58,7 +58,7 @@ md5sums=('3b83ef96387f14655fc854ddc3c6bd57'
          '9f4337828d782bdea41f03dd2ad1b808'
          'd09c120ca7db95ef2aeecec0cb08293b'
          'b4a94da2a1f918b217ef5156634fc9e0'
-         '00b4bd92b48eaed71b4e4e7b7314c3b6'
+         '7e571b888d585b31f9ef5edcc647fa30'
          '8a960b08d972f43f91ae84a6f00dcbfb'
          'f083e41c43db25e18f36c91e57750b64'
          'a055911c32fb4ed6e96c453ceaeba857'
@@ -131,7 +131,7 @@ package() {
   cp "$srcdir"/perlartistic.txt PerlArtistic/license.txt
 
   mkdir PHP
-  cp "$srcdir"/php-3.0.txt PHP/license.txt
+  cp "$srcdir"/php-3.01.txt PHP/license.txt
 
   mkdir PSF
   cp "$srcdir"/python-2.txt PSF/license.txt
