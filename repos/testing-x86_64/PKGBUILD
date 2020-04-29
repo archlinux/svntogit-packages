@@ -6,13 +6,13 @@ pkgname=(qemu qemu-headless qemu-arch-extra qemu-headless-arch-extra
          qemu-block-{iscsi,rbd,gluster} qemu-guest-agent)
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=5.0.0
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
 _headlessdeps=(seabios gnutls libpng libaio numactl jemalloc xfsprogs libnfs
                lzo snappy curl vde2 libcap-ng spice libcacard usbredir libslirp
-               libssh)
+               libssh zstd liburing)
 depends=(virglrenderer sdl2 vte3 libpulse brltty "${_headlessdeps[@]}")
 makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
@@ -64,11 +64,13 @@ _build() (
     --sysconfdir=/etc \
     --localstatedir=/var \
     --libexecdir=/usr/lib/qemu \
+    --extra-ldflags="$LDFLAGS" \
     --smbd=/usr/bin/smbd \
     --enable-modules \
     --enable-sdl \
     --enable-jemalloc \
     --enable-slirp=system \
+    --enable-xfsctl \
     "${@:2}"
 
   make
