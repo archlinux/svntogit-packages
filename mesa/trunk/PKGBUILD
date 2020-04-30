@@ -5,7 +5,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layer' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=20.0.6
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd'
@@ -73,6 +73,7 @@ build() {
   # Print config
   meson configure build
 
+  ninja -C build xmlpool-pot xmlpool-update-po xmlpool-gmo
   ninja -C build
 
   # fake installation to be seperated into packages
@@ -191,7 +192,7 @@ package_mesa() {
 
   # indirect rendering
   ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
-
+  
   # make sure there are no files left to install
   find fakeinstall -depth -print0 | xargs -0 rmdir
 
