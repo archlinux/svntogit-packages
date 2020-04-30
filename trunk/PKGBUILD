@@ -10,11 +10,11 @@ pkgrel=2
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
-_headlessdeps=(seabios gnutls libpng libaio numactl jemalloc xfsprogs libnfs
+_headlessdeps=(seabios gnutls libpng libaio numactl jemalloc libnfs
                lzo snappy curl vde2 libcap-ng spice libcacard usbredir libslirp
                libssh zstd liburing)
 depends=(virglrenderer sdl2 vte3 libpulse brltty "${_headlessdeps[@]}")
-makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx)
+makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx xfsprogs)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
         qemu-ga.service
         65-kvm.rules)
@@ -195,7 +195,7 @@ package_qemu-block-iscsi() {
 
 package_qemu-block-rbd() {
   pkgdesc="QEMU RBD block module"
-  depends=(glib2 ceph)
+  depends=(glib2 ceph-libs)
 
   install -D build-full/block-rbd.so "$pkgdir/usr/lib/qemu/block-rbd.so"
 }
