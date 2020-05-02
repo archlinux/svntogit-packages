@@ -2,8 +2,8 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2019.10
-pkgrel=2
+pkgver=2020.05
+pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
 license=('GPL')
@@ -29,9 +29,9 @@ md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          '580cf8b59eebfaac4fad373ffadc9912'
          'd41d8cd98f00b204e9800998ecf8427e'
          '981ee4d7e506a9d6d9ed2d872e16004b'
-         'e0d8ea1d1a11992dbe9f6550cc14eaa5'
+         '173371ea3ac7817fdec6a726e3996067'
          '5182ac38a0de85da8ade93ef71975ca4'
-         '2c79e1762978235e7b4a9ef595f6c029'
+         '61433fae7da1157ef299734f9c197d4a'
          '0ee015fad07732676d9488ae498eed41'
          'f04bcb2803afc4dcb95670fe87343b4d'
          'f64466dd77c7bec37a8b47681468211a'
