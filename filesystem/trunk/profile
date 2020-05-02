@@ -28,8 +28,8 @@ if test -d /etc/profile.d/; then
 	unset profile
 fi
 
-# Source global bash config
-if test "$PS1" && test "$BASH" && test -z ${POSIXLY_CORRECT+x} && test -r /etc/bash.bashrc; then
+# Source global bash config, when interactive but not posix or sh mode
+if test "$BASH" -a "$PS1" -a -z "$POSIXLY_CORRECT" -a "${0#-}" != sh -a -r /etc/bash.bashrc; then
 	. /etc/bash.bashrc
 fi
 
