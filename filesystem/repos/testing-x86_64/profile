@@ -29,7 +29,12 @@ if test -d /etc/profile.d/; then
 fi
 
 # Source global bash config, when interactive but not posix or sh mode
-if test "$BASH" -a "$PS1" -a -z "$POSIXLY_CORRECT" -a "${0#-}" != sh -a -r /etc/bash.bashrc; then
+if test "$BASH" &&\
+   test "$PS1" &&\
+   test -z "$POSIXLY_CORRECT" &&\
+   test "${0#-}" != sh &&\
+   test -r /etc/bash.bashrc
+then
 	. /etc/bash.bashrc
 fi
 
