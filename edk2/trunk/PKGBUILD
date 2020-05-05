@@ -5,7 +5,7 @@ _openssl_ver=1.1.1d
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202002
-pkgrel=7
+pkgrel=8
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -160,10 +160,11 @@ package_edk2-ovmf() {
       -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
     install -vDm 644 "Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
       "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
-    # adding symlinks for previous ovmf location (only secure boot was provided as the default)
-    # https://bugs.archlinux.org/task/66322
+    # adding symlinks for previous ovmf location (only secure boot was provided
+    # as the default, but was never enforced)
+    # https://bugs.archlinux.org/task/66528
     install -vdm 755 "${pkgdir}/usr/share/ovmf/${_arch,,}"
-    ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd" \
+    ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.fd" \
       "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF_CODE.fd"
     ln -sfv "/usr/share/${pkgname}/${_arch,,}/OVMF_VARS.fd" \
       "${pkgdir}/usr/share/ovmf/${_arch,,}/OVMF_VARS.fd"
