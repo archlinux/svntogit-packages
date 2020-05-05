@@ -1,7 +1,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=mailcap
-pkgver=2.1.48+14+g5811758
+pkgver=2.1.49
 pkgrel=1
 pkgdesc="Helper application and MIME type associations for file types"
 url="https://pagure.io/mailcap"
@@ -15,7 +15,7 @@ replaces=(mime-types)
 backup=(etc/mailcap
         etc/mime.types
         etc/nginx/mime.types)
-_commit=58117584fa573c92d918245d38269cc63cec5996  # master
+_commit=9c916595f1a1a4ae794fb67619c15fbc77905e31  # tags/r2-1-49^0
 source=("git+https://pagure.io/mailcap#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -32,5 +32,5 @@ check() {
 package() {
   cd mailcap
   make install DESTDIR="$pkgdir" sysconfdir=/etc mandir=/usr/share/man
-  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
 }
