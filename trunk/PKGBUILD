@@ -9,7 +9,7 @@ url='https://savannah.nongnu.org/projects/acl'
 license=('LGPL')
 depends=('attr')
 replaces=('xfsacl')
-provides=('xfsacl')
+provides=('xfsacl' 'libacl.so')
 conflicts=('xfsacl')
 validpgpkeys=('600CD204FBCEA418BD2CA74F154343260542DF34'  # Brandon Philips <brandon@ifup.co>
               'B902B5271325F892AC251AD441633B9FE837F581') # Frysinger <vapier@gentoo.org>
