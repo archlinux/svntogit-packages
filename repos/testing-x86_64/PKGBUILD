@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=76.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -80,10 +80,6 @@ export MOZ_REQUIRE_SIGNING=1
 ac_add_options --with-google-location-service-api-keyfile=${PWD@Q}/google-api-key
 ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
 ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
-
-# System libraries
-ac_add_options --with-system-nspr
-ac_add_options --with-system-nss
 
 # Features
 ac_add_options --enable-alsa
