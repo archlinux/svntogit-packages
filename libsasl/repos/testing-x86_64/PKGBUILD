@@ -1,0 +1,181 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+# This package spans multiple repositories.
+# Always build from cyrus-sasl/trunk and merge changes to libsasl/trunk.
+
+#pkgbase='cyrus-sasl'
+#pkgname=('cyrus-sasl' 'cyrus-sasl-gssapi' 'cyrus-sasl-ldap' 'cyrus-sasl-sql')
+pkgname=libsasl
+pkgver=2.1.27
+pkgrel=3
+pkgdesc="Cyrus Simple Authentication Service Layer (SASL) library"
+arch=('x86_64')
+url="https://www.cyrusimap.org/sasl/"
+license=('custom')
+options=('!makeflags')
+makedepends=('postgresql-libs' 'mariadb-libs' 'libldap' 'krb5' 'openssl' 'sqlite')
+source=(https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${pkgver}/cyrus-sasl-${pkgver}.tar.gz{,.sig}
+        0003-Update-saslauthd.conf-location-in-documentation.patch
+	0006-Enable-autoconf-maintainer-mode.patch
+        0010-Update-required-libraries-when-ld-as-needed-is-used.patch
+        0013-Don-t-use-la-files-for-opening-plugins.patch
+        0020-Restore-LIBS-after-checking-gss_inquire_sec_context_.patch
+        0022-Fix-keytab-option-for-MIT-Kerberos.patch
+        0032-Add-with_pgsql-include-postgresql-to-include-path.patch
+        gdbm-errno.patch
+        saslauthd.service
+        saslauthd.conf.d
+        tmpfiles.conf)
+sha256sums=('26866b1549b00ffd020f188a43c258017fa1c382b3ddadd8201536f72efb05d5'
+            'SKIP'
+            '9919c81196701d11a3a77e2573a541489ad9ab42a4c50eb7d19edfb37713c604'
+            '7bd2b2af36c061e92f69944a18e2c122aea0d2b21773f5ea47bb6209f13d0812'
+            '8e22cb6ac58208f191b1eb19aac602c1bf49708f2a3b2e3de5f5b2c1e2467906'
+            'bbee401c01dc6942710e0c1285091fcd98588bf636b52f24ed0e3b04039b748b'
+            'a953c79c585d579f25135de0fe807d6da1fddccbd5b66a9606fb6390c12c7e31'
+            '1a0ae7bd722d57feb6fab12c05eb1922982c68bd9be1c165d405954012e6634f'
+            '3c375f8755fdbd98a21c4ee195bebbd2a146901fee327e4dd6cfde7a4dcba7c3'
+            '03a57cbcec85602fb8e39b7c8a3ff1a22d2c20a28e771b8b326a570d733bf432'
+            '5c6453050a5f594ca1d53baf3a6188d8f3cdc7a28467ad7c844ad51f663dae9a'
+            'fa57b4f374ae633633091b1c8b44e1e0be814e4fddbfa75f16eb3dd1f16b8640'
+            '16ca1a4185847b0c6c70ef6c7c314cb466f698d3ed02185a5f50e8179822f024')
+validpgpkeys=('829F339F8C296FE80F409D93E3D7C118C7B9F46A')
+
+prepare() {
+  cd cyrus-sasl-$pkgver
+  patch -Np1 -i ../0003-Update-saslauthd.conf-location-in-documentation.patch
+  patch -Np1 -i ../0006-Enable-autoconf-maintainer-mode.patch
+  patch -Np1 -i ../0010-Update-required-libraries-when-ld-as-needed-is-used.patch
+  patch -Np1 -i ../0013-Don-t-use-la-files-for-opening-plugins.patch
+  patch -Np1 -i ../0020-Restore-LIBS-after-checking-gss_inquire_sec_context_.patch
+  patch -Np1 -i ../0022-Fix-keytab-option-for-MIT-Kerberos.patch
+  patch -Np1 -i ../0032-Add-with_pgsql-include-postgresql-to-include-path.patch
+  patch -Np1 -i ../gdbm-errno.patch
+  cp -a saslauthd/saslauthd.mdoc saslauthd/saslauthd.8
+}
+
+build() {
+  export CFLAGS="$CFLAGS -fPIC"
+  cd cyrus-sasl-$pkgver
+
+  rm -f config/config.guess config/config.sub 
+  rm -f config/ltconfig config/ltmain.sh config/libtool.m4
+  rm -fr autom4te.cache
+  libtoolize -c
+  aclocal -I config
+  automake -a -c
+  autoheader
+  autoconf
+
+  ./configure --prefix=/usr \
+      --sbin=/usr/bin \
+      --mandir=/usr/share/man \
+      --infodir=/usr/share/info \
+      --disable-static \
+      --enable-shared \
+      --enable-alwaystrue \
+      --enable-checkapop \
+      --enable-cram \
+      --enable-digest \
+      --disable-otp \
+      --disable-srp \
+      --disable-srp-setpass \
+      --disable-krb4 \
+      --enable-gssapi \
+      --enable-auth-sasldb \
+      --enable-plain \
+      --enable-anon \
+      --enable-login \
+      --enable-ntlm \
+      --disable-passdss \
+      --enable-sql \
+      --with-mysql=/usr \
+      --with-pgsql=/usr/lib \
+      --with-sqlite3=/usr/lib \
+      --enable-ldapdb \
+      --disable-macos-framework \
+      --with-pam \
+      --with-saslauthd=/var/run/saslauthd \
+      --with-ldap \
+      --with-dblib=gdbm \
+      --with-configdir=/etc/sasl2:/etc/sasl:/usr/lib/sasl2 \
+      --sysconfdir=/etc \
+      --with-devrandom=/dev/urandom
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package_libsasl() {
+  pkgdesc="Cyrus Simple Authentication Service Layer (SASL) Library"
+  depends=('openssl')
+  conflicts=('cyrus-sasl-plugins')
+
+  cd cyrus-sasl-$pkgver
+  make DESTDIR="$pkgdir" install-pkgconfigDATA
+  for dir in include lib sasldb plugins utils; do
+    pushd ${dir}
+    make DESTDIR="${pkgdir}" install
+    popd
+  done
+  rm -f "${pkgdir}"/usr/lib/sasl2/libsql.so*
+  rm -f "${pkgdir}"/usr/lib/sasl2/libgssapiv2.so*
+  rm -f "${pkgdir}"/usr/lib/sasl2/libldapdb.so*
+  rm -f "${pkgdir}"/usr/lib/sasl2/libgs2.so*
+  install -m755 -d "${pkgdir}/usr/share/licenses/libsasl"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/libsasl/"
+}
+
+package_cyrus-sasl() {
+  depends=("libsasl=${pkgver}" 'krb5' 'pam')
+  pkgdesc="Cyrus saslauthd SASL authentication daemon"
+  backup=('etc/conf.d/saslauthd')
+
+  cd cyrus-sasl-$pkgver/saslauthd
+  make DESTDIR="${pkgdir}" install
+  install -Dm644 "${srcdir}/saslauthd.conf.d" "${pkgdir}/etc/conf.d/saslauthd"
+  install -Dm644 "${srcdir}/saslauthd.service" "${pkgdir}/usr/lib/systemd/system/saslauthd.service"
+  install -Dm644 "${srcdir}/tmpfiles.conf" "${pkgdir}/usr/lib/tmpfiles.d/saslauthd.conf"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/cyrus-sasl"
+  ln -sf ../libsasl/COPYING "${pkgdir}/usr/share/licenses/cyrus-sasl/"
+}
+
+package_cyrus-sasl-gssapi() {
+  pkgdesc="GSSAPI authentication mechanism for Cyrus SASL"
+  depends=("libsasl=${pkgver}" 'krb5')
+  replaces=('cyrus-sasl-plugins')
+
+  cd cyrus-sasl-$pkgver/plugins
+  install -m755 -d "${pkgdir}/usr/lib/sasl2"
+  cp -a .libs/libgssapiv2.so* "${pkgdir}/usr/lib/sasl2/"
+  cp -a .libs/libgs2.so* "${pkgdir}/usr/lib/sasl2/"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/cyrus-sasl-gssapi"
+  ln -sf ../libsasl/COPYING "${pkgdir}/usr/share/licenses/cyrus-sasl-gssapi/"
+}
+
+package_cyrus-sasl-ldap() {
+  pkgdesc="ldapdb auxprop module for Cyrus SASL"
+  depends=("libsasl=${pkgver}" 'libldap')
+  replaces=('cyrus-sasl-plugins')
+
+  cd cyrus-sasl-$pkgver/plugins
+  install -m755 -d "${pkgdir}/usr/lib/sasl2"
+  cp -a .libs/libldapdb.so* "${pkgdir}/usr/lib/sasl2/"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/cyrus-sasl-ldap"
+  ln -sf ../libsasl/COPYING "${pkgdir}/usr/share/licenses/cyrus-sasl-ldap/"
+}
+
+package_cyrus-sasl-sql() {
+  pkgdesc="SQL auxprop module for Cyrus SASL"
+  depends=("libsasl=${pkgver}" 'postgresql-libs' 'mariadb-libs' 'sqlite')
+  replaces=('cyrus-sasl-plugins')
+
+  cd cyrus-sasl-$pkgver/plugins
+  install -m755 -d "${pkgdir}/usr/lib/sasl2"
+  cp -a .libs/libsql.so* "${pkgdir}/usr/lib/sasl2/"
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/cyrus-sasl-sql"
+  ln -sf ../libsasl/COPYING "${pkgdir}/usr/share/licenses/cyrus-sasl-sql/"
+}
