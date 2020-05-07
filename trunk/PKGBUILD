@@ -3,13 +3,14 @@
 
 pkgname=keyutils
 pkgver=1.6.1
-pkgrel=3
+pkgrel=4
 pkgdesc='Linux Key Management Utilities'
 arch=('x86_64')
 url='https://www.kernel.org/'
 license=('GPL2' 'LGPL2.1')
 depends=('glibc' 'sh')
 makedepends=('git')
+provides=('libkeyutils.so')
 backup=('etc/request-key.conf')
 validpgpkeys=('A86E54B0D5E1B4E0AB7C640FFBB7576BA7CB0B6B') # David Howells <dhowells@redhat.com>
 source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils.git#tag=v${pkgver}?signed"
