@@ -3,15 +3,14 @@
 pkgbase=python-automat
 pkgname=('python-automat' 'python2-automat')
 pkgver=20.2.0
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('MIT')
 pkgdesc="Self-service finite-state machines for the programmer on the go."
 url="https://github.com/glyph/automat"
 makedepends=('python-setuptools-scm' 'python2-setuptools-scm' 'm2r' 'python2-m2r' 'python-attrs'
              'python2-attrs')
-checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-pytest-benchmark'
-              'python2-pytest-benchmark')
+checkdepends=('python-pytest' 'python2-pytest' 'python-twisted' 'python2-twisted' 'python-graphviz')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/glyph/automat/archive/v$pkgver.tar.gz")
 sha512sums=('ccba3e82f589fedb1f83dfb37a6a42b51a78d8c3e6fea22c9518135ff194f5f70e2f9c5f0eab50b6e116dae92c94754aac8dbf0e670a59015c916991736b4076')
 
@@ -32,10 +31,10 @@ build() {
 
 check() {
   cd "$srcdir"/automat-$pkgver
-  python setup.py pytest
+  python -m pytest --deselect benchmark
 
   cd "$srcdir"/automat-$pkgver-py2
-  python2 setup.py pytest
+  python2 -m pytest --deselect benchmark
 }
 
 package_python-automat() {
