@@ -3,13 +3,17 @@
 
 pkgname=e2fsprogs
 pkgver=1.45.6
-pkgrel=1
+pkgrel=2
 pkgdesc="Ext2/3/4 filesystem utilities"
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
 url="http://e2fsprogs.sourceforge.net"
 depends=('sh' 'libutil-linux')
 makedepends=('util-linux')
+provides=('libcom_err.so'
+          'libe2p.so'
+          'libext2fs.so'
+          'libss.so')
 backup=('etc/mke2fs.conf')
 options=('staticlibs')
 validpgpkeys=('3AB057B7E78D945C8C5591FBD36F769BC11804F0') # Theodore Ts'o <tytso@mit.edu>
