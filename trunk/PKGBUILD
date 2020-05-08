@@ -154,9 +154,12 @@ check() {
 package_systemd() {
   pkgdesc='system and service manager'
   license=('GPL2' 'LGPL2.1')
-  depends=('acl' 'bash' 'cryptsetup' 'dbus' 'iptables' 'kbd' 'kmod' 'hwids' 'libcap'
-           'libgcrypt' 'systemd-libs' 'libidn2' 'libidn2.so' 'lz4' 'pam' 'libelf'
-           'libseccomp' 'util-linux' 'xz' 'pcre2' 'audit' 'libp11-kit')
+  depends=('acl' 'libacl.so' 'bash' 'cryptsetup' 'libcryptsetup.so' 'dbus'
+           'iptables' 'kbd' 'kmod' 'libkmod.so' 'hwids' 'libcap' 'libcap.so'
+           'libgcrypt' 'systemd-libs' 'libidn2' 'libidn2.so' 'lz4' 'pam'
+           'libelf' 'libseccomp' 'libseccomp.so' 'util-linux' 'libblkid.so'
+           'libmount.so' 'xz' 'pcre2' 'audit' 'libaudit.so' 'libp11-kit'
+           'libp11-kit.so')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
