@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.4.39
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -17,6 +17,7 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
   0001-add-sysctl-and-CONFIG-for-unprivileged_userns_clone.patch
+  0001-gcc-common.h-Update-for-GCC-10.patch
   sphinx-workaround.patch
 )
 validpgpkeys=(
@@ -28,6 +29,7 @@ sha256sums=('5141965a61a7b1c538443782ec3ef25fe0c3f9cd4d70c4e9f969d16883f365c8'
             'SKIP'
             '8b202067f6f0adbe2f8d4290624005f4fa1fff32aaa42f979c9ab03f6b74b62f'
             'a13581d3c6dc595206e4fe7fcf6b542e7a1bdbe96101f0f010fc5be49f99baf2'
+            '5ccd721fea425fc9b1c08edf4f8ea94ee5737c193009b7a4253f7a383b273858'
             'b7c814c8183e4645947a6dcc3cbf80431de8a8fd4e895b780f9a5fd92f82cb8e')
 
 export KBUILD_BUILD_HOST=archlinux
