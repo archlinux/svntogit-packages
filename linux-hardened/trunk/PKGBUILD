@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=5.6.11.a
-pkgrel=1
+pkgrel=2
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -20,6 +20,8 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
+  0001-gcc-plugins-drop-support-for-GCC-4.7.patch
+  0002-gcc-common.h-Update-for-GCC-10.patch
   sphinx-workaround.patch
 )
 validpgpkeys=(
@@ -33,6 +35,8 @@ sha256sums=('d6dd6cbe99429f088eddb248abce7832e8f8e45eb072cbf0d0f86b5b87221baa'
             'a3eb5f89cff627b3bd9232edf50ff28a9522134e9529017b82412cb19ce3ccac'
             'SKIP'
             '93ba919836378a3a4df05e78011281a6e4430afe89a0e54dac48e2ad15355fa4'
+            'f52774d05b2ab6886df95434a31a6070799b7bcc5d48ca9c93d499d40dd9622d'
+            '40c9da5e310ba66c99aeb4c472c6549d8b98cb13ea66835df0291a113113b0c5'
             '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c')
 
 export KBUILD_BUILD_HOST=archlinux
@@ -77,6 +81,7 @@ _package() {
   optdepends=('crda: to set the correct wireless channels of your country'
               'linux-firmware: firmware images needed for some devices'
               'usbctl: deny_new_usb control')
+  provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE)
 
   cd $_srcname
   local kernver="$(<version)"
