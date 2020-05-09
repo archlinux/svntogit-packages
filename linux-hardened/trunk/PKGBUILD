@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=5.6.11.a
-pkgrel=2
+pkgrel=3
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -22,6 +22,8 @@ source=(
   config         # the main kernel config file
   0001-gcc-plugins-drop-support-for-GCC-4.7.patch
   0002-gcc-common.h-Update-for-GCC-10.patch
+  0003-Makefile-disallow-data-races-on-gcc-10-as-well.patch
+  0004-x86-Fix-early-boot-crash-on-gcc-10-next-try.patch
   sphinx-workaround.patch
 )
 validpgpkeys=(
@@ -35,8 +37,10 @@ sha256sums=('d6dd6cbe99429f088eddb248abce7832e8f8e45eb072cbf0d0f86b5b87221baa'
             'a3eb5f89cff627b3bd9232edf50ff28a9522134e9529017b82412cb19ce3ccac'
             'SKIP'
             '93ba919836378a3a4df05e78011281a6e4430afe89a0e54dac48e2ad15355fa4'
-            'f52774d05b2ab6886df95434a31a6070799b7bcc5d48ca9c93d499d40dd9622d'
-            '40c9da5e310ba66c99aeb4c472c6549d8b98cb13ea66835df0291a113113b0c5'
+            '118531186e7069b006d48fdfb2dbd9f28ee6d01cbfaacb007d8f44e8e76a57e1'
+            'd2ee933dd10dee475746a7e9081bca3ebdae8c6fb631f458d8f0d4987c9a0845'
+            'b604f4041c94d12abc0a0ad9e15ab54a7712c424d7740d6dffff8e0a001ae862'
+            '09dbf84dff332fd9c2cde9eca97ce70e73ff7b90c08f22b169c6b69a633c56b0'
             '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c')
 
 export KBUILD_BUILD_HOST=archlinux
