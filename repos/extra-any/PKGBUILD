@@ -2,7 +2,7 @@
 
 pkgbase=python-wstools
 pkgname=('python-wstools' 'python2-wstools')
-pkgver=0.4.9
+pkgver=0.4.10
 pkgrel=1
 pkgdesc="WSDL parsing services package for Web Services for Python"
 arch=('any')
@@ -12,7 +12,7 @@ makedepends=('python-pbr' 'python2-pbr' 'python-setuptools' 'python2-setuptools'
 checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'autopep8' 'python2-autopep8'
               'python-pytest-cov' 'python2-pytest-cov')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/pycontribs/wstools/archive/$pkgver.tar.gz")
-sha512sums=('3221352df2914213a5aad69b67f65da3b1a5e0bdf3e5db34d849e37990058873917bccc270ebb463cf8216c04f065fd10f0d76972bdf0b1e327894d09767598d')
+sha512sums=('1acd8e62d71c7d330f1e953a0da1956291c5dfb25ff9b8b8799c83feaa4230e384955735b131bab7b430b92ae6c18498927d416d2d1e11fb5c5dad93417c671a')
 
 prepare() {
   cp -a wstools-$pkgver{,-py2}
