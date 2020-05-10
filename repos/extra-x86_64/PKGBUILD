@@ -16,7 +16,7 @@ depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appst
          plasma-integration kdelibs4support kpeople kactivities-stats libkscreen kquickcharts kuserfeedback)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/${pkgver%.*}/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
 sha256sums=('14e82033be745f4db46a70d319e2c86012295ea31056092bc974004189b92354'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
