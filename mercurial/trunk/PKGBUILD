@@ -3,7 +3,7 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=mercurial
-pkgver=5.3.2
+pkgver=5.4
 pkgrel=1
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
@@ -14,10 +14,11 @@ optdepends=('tk: for the hgk GUI')
 checkdepends=('breezy' 'cvs' 'git' 'git-lfs' 'python2-docutils' 'subversion' 'unzip')
 backup=(etc/mercurial/hgrc)
 validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
-              3A8155163D0E20A530FCB78647A67FFAA346AACE)
+              3A8155163D0E20A530FCB78647A67FFAA346AACE
+              EB851395B4223EE2F7BA0B28DA54740BF08732BA) # Pulkit Goyal <7895pulkit@gmail.com>
 source=(https://www.mercurial-scm.org/release/${pkgname}-${pkgver}.tar.gz{,.asc}
         mercurial.profile)
-sha256sums=('fed24cbc314d31b0780309ee324c38d45476f00f555969551badcc2a1d5f1329'
+sha256sums=('1df8d1978aefcbb65dc51e3666a452583f47aeaf3c5682e4c00a3b23cd805d6a'
             'SKIP'
             '87427151713e689cd87dc50d50c048e0e58285815e4eb61962b50583532cbde5')
 
