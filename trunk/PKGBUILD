@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.2.2
-pkgrel=6
+pkgrel=7
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -62,6 +62,7 @@ depends=(
   speex
   srt
   v4l-utils
+  vmaf
   xz
   zlib
 )
@@ -139,6 +140,7 @@ build() {
     --enable-libtheora \
     --enable-libv4l2 \
     --enable-libvidstab \
+    --enable-libvmaf \
     --enable-libvorbis \
     --enable-libvpx \
     --enable-libwebp \
