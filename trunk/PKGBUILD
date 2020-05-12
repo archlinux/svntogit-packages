@@ -3,7 +3,7 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=sudo
-_sudover=1.8.31p1
+_sudover=1.9.0
 pkgver=${_sudover/p/.p}
 pkgrel=1
 pkgdesc="Give certain users the ability to run some commands as root"
@@ -15,9 +15,11 @@ depends=('glibc' 'libgcrypt' 'pam' 'libldap')
 backup=('etc/sudoers' 'etc/pam.d/sudo')
 install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
+        sudo_logsrvd.service
         sudo.pam)
-sha256sums=('c73cfdfbc1c5cc259fcc3a355e1bacfed99c5580daeadec9704a24cd5e6d15d8'
+sha256sums=('ab231439c5dfdf4ecbef74f10d5f7e9686c2255c2f3887085b5c5e13281bf95c'
             'SKIP'
+            '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
@@ -55,6 +57,9 @@ check() {
 package() {
   cd "$srcdir/$pkgname-$_sudover"
   make DESTDIR="$pkgdir" install
+
+  # sudo_logsrvd service file (taken from sudo-logsrvd-1.9.0-1.el8.x86_64.rpm)
+  install -Dm644 -t "$pkgdir/usr/lib/systemd/system" ../sudo_logsrvd.service
 
   # Remove sudoers.dist; not needed since pacman manages updates to sudoers
   rm "$pkgdir/etc/sudoers.dist"
