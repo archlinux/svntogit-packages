@@ -6,8 +6,8 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
-pkgver=9.3.0
-_majorver=${pkgver:0:1}
+pkgver=10.1.0
+_majorver=${pkgver%%.*}
 _islver=0.21
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
@@ -20,26 +20,23 @@ options=(!emptydirs)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 # _commit=6957d3e4eef1f4243eb23ff62aea06139ef4415a
 # source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
-source=(https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz{,.sig}
+source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.xz{,.sig}
         http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
         c89 c99
         gdc_phobos_path.patch
-        gdc_artificial_decl.patch
-        gdc_thunk_weak_ref.patch
-        fs64270.patch)
+        fs64270.patch
+)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('71e197867611f6054aa1119b13a0c0abac12834765fe2d81f35ac57f84f742d1'
+sha256sums=('b6898a23844b656f1b68691c5c012036c2e694ac4b53a8918d4712ad876e7ea2'
             'SKIP'
             '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
-            '3862757491160700ac2fb723096f6f636f30320cccc6efd9537149ed348b57d1'
-            '9699d7105375754f0dcf6abff87d09b270565bfc6578a13641770f3fc62d678a'
-            'f45160f699501568ae9e81127562395dd95b5b4a8e4d55a1615fbb00f9e4deb2')
+            '1ef190ed4562c4db8c1196952616cd201cfdd788b65f302ac2cc4dabb4d72cee')
 
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
@@ -59,8 +56,6 @@ prepare() {
 
   # D hacks
   patch -p1 -i "$srcdir/gdc_phobos_path.patch"
-  patch -p1 -i "$srcdir/gdc_artificial_decl.patch"
-  patch -p1 -i "$srcdir/gdc_thunk_weak_ref.patch"
 
   # Turn off SSP for nostdlib|nodefaultlibs|ffreestanding
   # https://bugs.archlinux.org/task/64270
@@ -82,31 +77,30 @@ build() {
       --libexecdir=/usr/lib \
       --mandir=/usr/share/man \
       --infodir=/usr/share/info \
-      --with-pkgversion="Arch Linux $pkgver-$pkgrel" \
       --with-bugurl=https://bugs.archlinux.org/ \
       --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
-      --enable-shared \
-      --enable-threads=posix \
-      --with-system-zlib \
       --with-isl \
-      --enable-__cxa_atexit \
-      --disable-libunwind-exceptions \
-      --enable-clocale=gnu \
-      --disable-libstdcxx-pch \
-      --disable-libssp \
-      --enable-gnu-unique-object \
-      --enable-linker-build-id \
-      --enable-lto \
-      --enable-plugin \
-      --enable-install-libiberty \
       --with-linker-hash-style=gnu \
-      --enable-gnu-indirect-function \
-      --enable-multilib \
-      --disable-werror \
+      --with-system-zlib \
+      --enable-__cxa_atexit \
+      --enable-cet=auto \
       --enable-checking=release \
+      --enable-clocale=gnu \
       --enable-default-pie \
       --enable-default-ssp \
-      --enable-cet=auto \
+      --enable-gnu-indirect-function \
+      --enable-gnu-unique-object \
+      --enable-install-libiberty \
+      --enable-linker-build-id \
+      --enable-lto \
+      --enable-multilib \
+      --enable-plugin \
+      --enable-shared \
+      --enable-threads=posix \
+      --disable-libssp \
+      --disable-libstdcxx-pch \
+      --disable-libunwind-exceptions \
+      --disable-werror \
       gdc_include_dir=/usr/include/dlang/gdc
 
   make
@@ -309,6 +303,10 @@ package_gcc-ada() {
   cd gcc-build/gcc
   make DESTDIR="$pkgdir" ada.install-{common,info}
   install -m755 gnat1 "$pkgdir/${_libdir}"
+
+  cd "$srcdir"/gcc-build/$CHOST/libada
+  make DESTDIR=${pkgdir} INSTALL="install" \
+    INSTALL_DATA="install -m644" install-libada
 
   cd "$srcdir"/gcc-build/$CHOST/32/libada
   make DESTDIR=${pkgdir} INSTALL="install" \
