@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=46.2.0
+pkgver=46.3.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -17,7 +17,7 @@ checkdepends=('python-mock' 'python-pip' 'python-pytest-fixture-config' 'python-
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('c73c70ea8ea7e67d217229c4bd0914afcf6ff1db146515f89cf542077edaec26f5a02ba16ff34e1439510a13afbe3cccc38b799522ae80718aacb59e660f23e8')
+sha512sums=('69e3a5283bdcfdadd2cb0ab88dc5bd66cbe0b6d6306d0f4c2248d0567c7453b9ea29940f145d2959a910e0f8de43856ff0b8059ccbc3f3d033f5ed6f2d983a35')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -58,9 +58,6 @@ prepare() {
       -e '/^def test_no_missing_dependencies/i @pytest.mark.xfail' \
       -i setuptools-$pkgver/setuptools/tests/test_virtualenv.py
   
-  # Fix 2to3 warning
-  sed -i '/2081/i \    ignore:2to3 support is deprecated:setuptools.SetuptoolsDeprecationWarning' setuptools-$pkgver/pytest.ini
-
   cd "$srcdir"/setuptools-$pkgver
   sed -i -e "s|^#\!.*/usr/bin/env python|#!/usr/bin/env python3|" setuptools/command/easy_install.py
 }
