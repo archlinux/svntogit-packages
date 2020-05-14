@@ -23,7 +23,7 @@ pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 _pkgver=2.04
 pkgver=${_pkgver/-/}
-pkgrel=6
+pkgrel=7
 epoch=2
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
@@ -64,6 +64,7 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#tag=grub-${_pkgver}?signe
         "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
         '0003-10_linux-detect-archlinux-initramfs.patch'
         '0004-add-GRUB_COLOR_variables.patch'
+        '0005-grub-install-fix-inverted-test-for-NLS-enabled-when-.patch'
         'grub.default')
 
 sha256sums=('SKIP'
@@ -73,6 +74,7 @@ sha256sums=('SKIP'
             'SKIP'
             '171415ab075d1ac806f36c454feeb060f870416f24279b70104bba94bd6076d4'
             'a5198267ceb04dceb6d2ea7800281a42b3f91fd02da55d2cc9ea20d47273ca29'
+            '06820004912a3db195a76e68b376fce1ba6507ac740129f0b99257ef07aba1ea'
             '690adb7943ee9fedff578a9d482233925ca3ad3e5a50fffddd27cf33300a89e3')
 
 _backports=(
@@ -119,6 +121,9 @@ prepare() {
 	echo "Patch to enable GRUB_COLOR_* variables in grub-mkconfig..."
 	## Based on http://lists.gnu.org/archive/html/grub-devel/2012-02/msg00021.html
 	patch -Np1 -i "${srcdir}/0004-add-GRUB_COLOR_variables.patch"
+
+	echo "Patch to NLS installation..."
+	patch -Np1 -i "${srcdir}/0005-grub-install-fix-inverted-test-for-NLS-enabled-when-.patch"
 
 	echo "Fix DejaVuSans.ttf location so that grub-mkfont can create *.pf2 files for starfield theme..."
 	sed 's|/usr/share/fonts/dejavu|/usr/share/fonts/dejavu /usr/share/fonts/TTF|g' -i "configure.ac"
