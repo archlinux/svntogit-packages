@@ -1,0 +1,40 @@
+# Maintainer: Daniel Isenmann <daniel [at] archlinux.org>
+# Contributor: dorphell <dorphell@gmx.net>
+
+pkgname=gc
+pkgver=8.0.4
+pkgrel=4
+pkgdesc="A garbage collector for C and C++"
+arch=('x86_64')
+url="https://www.hboehm.info/gc/"
+license=('GPL')
+depends=('gcc-libs')
+source=(https://github.com/ivmai/bdwgc/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz
+        add_stack_bottom_feature.patch::https://github.com/ivmai/bdwgc/commit/5668de71107022a316ee967162bc16c10754b9ce.patch)
+sha512sums=('57ccca15c6e50048d306a30de06c1a844f36103a84c2d1c17cbccbbc0001e17915488baec79737449982da99ce5d14ce527176afae9ae153cbbb5a19d986366e'
+            'de0bb19f44e0a20f811005effea54b62a686ba119ed121ded002cc9e5847287fc4d6ab8bfb4a75c928c58ed72aa88b3eac068987cfe224778d923cf96adb8cd0')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+
+  patch -p1 < ../add_stack_bottom_feature.patch # needed for Crystal https://github.com/crystal-lang/crystal/issues/8213
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr --enable-cplusplus --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+  sed 's|GC_MALLOC 1L|gc 3|g' doc/gc.man |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/man/man3/gc.3"
+}
