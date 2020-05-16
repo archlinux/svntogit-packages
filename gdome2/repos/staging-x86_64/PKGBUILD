@@ -1,0 +1,40 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gdome2
+pkgver=0.8.1
+pkgrel=7
+pkgdesc="Gnome DOM Engine"
+arch=('x86_64')
+url="http://gdome2.cs.unibo.it/"
+license=('LGPL')
+depends=('libxml2' 'glib2')
+source=("http://gdome2.cs.unibo.it/tarball/${pkgname}-${pkgver}.tar.gz"
+        gdome2-0.8.1-libxml2.patch
+        03no_glib_1.patch)
+sha256sums=('f4bb80a2ef8e5fd9397ab8aa36d059d0b32e98c4bcf185c7952a7e3874d1d543'
+            '9c7c1bf3ad05bc25b0a4b65971b37206cf02ee40e87cbd3df382a15f2d9913b1'
+            'de99def0e868ac25733cf340349b00e772514de4bcff4834aec610481124ea38')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -p0 -i "${srcdir}/gdome2-0.8.1-libxml2.patch"
+  patch -p1 -i "${srcdir}/03no_glib_1.patch"
+  libtoolize -c -f
+  autoreconf -fi
+}
+
+
+build() {
+  cd ${pkgname}-${pkgver}
+  CFLAGS+=' -fcommon' # https://wiki.gentoo.org/wiki/Gcc_10_porting_notes/fno_common
+  ./configure --prefix=/usr --mandir=/usr/share/man
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+}
