@@ -9,8 +9,7 @@ pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
 url="https://www.mozilla.org/firefox/"
-depends=(gtk3 libxt startup-notification mime-types dbus-glib ffmpeg nss
-         ttf-font libpulse)
+depends=(gtk3 libxt mime-types dbus-glib ffmpeg nss ttf-font libpulse)
 makedepends=(unzip zip diffutils python2-setuptools yasm mesa imake inetutils
              xorg-server-xvfb autoconf2.13 rust clang llvm jack gtk2 python
              nodejs python2-psutil cbindgen nasm)
@@ -93,9 +92,7 @@ ac_add_options --with-system-nss
 # Features
 ac_add_options --enable-alsa
 ac_add_options --enable-jack
-ac_add_options --enable-startup-notification
 ac_add_options --enable-crashreporter
-ac_add_options --disable-gconf
 ac_add_options --disable-updater
 ac_add_options --disable-tests
 END
