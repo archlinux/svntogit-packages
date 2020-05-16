@@ -14,7 +14,7 @@ depends=(baloo-widgets knewstuff kio-extras kcmutils kparts kinit phonon-qt5)
 makedepends=(extra-cmake-modules kdoctools)
 optdepends=('kde-cli-tools: for editing file type options' 'ffmpegthumbs: video thumbnails' 'kdegraphics-thumbnailers: PDF and PS thumbnails'
             'konsole: terminal panel' 'purpose: share context menu')
-groups=(kde-applications kdebase)
+groups=(kde-applications kde-system)
 source=("https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz"{,.sig})
 sha256sums=('ba5db89b338d29c5fa492fc7ce08304427d8db51775fe5a4d34b444034d02577'
             'SKIP')
