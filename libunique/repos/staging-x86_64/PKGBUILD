@@ -1,0 +1,40 @@
+# Maintainer: Jan de Groot  <jgc@archlinux.org>
+pkgname=libunique
+pkgver=1.1.6
+pkgrel=8
+pkgdesc="Library for writing single instance applications"
+arch=('x86_64')
+license=('LGPL')
+depends=('gtk2')
+makedepends=('gtk-doc' 'gobject-introspection')
+url="http://live.gnome.org/LibUnique"
+source=(https://download.gnome.org/sources/${pkgname}/1.1/${pkgname}-${pkgver}.tar.bz2
+        unique-gdbus.patch
+        remove_G_CONST_RETURN.patch)
+sha256sums=('e5c8041cef8e33c55732f06a292381cb345db946cf792a4ae18aa5c66cdd4fbb'
+            'bf99ddbf9104502ea498a6812ec2d700f61f4dbbaa2471cd52174b0b27070769'
+            '194ebfcc4c9297c44bbcfe5d45474310983121cdad881b72265d79cf4ec44235')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i "${srcdir}/unique-gdbus.patch"
+  patch -Np1 -i "${srcdir}/remove_G_CONST_RETURN.patch"
+  sed -e 's/-Werror//' -i configure.ac
+}
+
+build() {
+  cd $pkgname-$pkgver
+  autoreconf -fi
+  ./configure --prefix=/usr --sysconfdir=/etc \
+      --localstatedir=/var --disable-static \
+      --disable-dbus
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="${pkgdir}" install
+
+  # Remove documentation, provided by libunique3
+  rm -r "$pkgdir/usr/share/gtk-doc"
+}
