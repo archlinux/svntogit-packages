@@ -1,0 +1,70 @@
+# Maintainer: David Runge <dave@sleepmap.de>
+# Contributor: Ray Rashif <schiv@archlinux.org>
+# Contributor: dorphell <dorphell@archlinux.org>
+
+pkgname=audiofile
+pkgver=0.3.6
+pkgrel=6
+pkgdesc="Silicon Graphics Audio File Library"
+arch=('x86_64')
+url="https://audiofile.68k.org/"
+license=('GPL2' 'LGPL2.1')
+depends=('gcc-libs' 'alsa-lib' 'flac')
+provides=('libaudiofile.so')
+source=("https://audiofile.68k.org/$pkgname-$pkgver.tar.gz"
+        01_gcc6.patch
+        02_hurd.patch
+        03_CVE-2015-7747.patch
+        04_clamp-index-values-to-fix-index-overflow-in-IMA.cpp.patch
+        05_Always-check-the-number-of-coefficients.patch
+        06_Check-for-multiplication-overflow-in-MSADPCM-decodeSam.patch
+        07_Check-for-multiplication-overflow-in-sfconvert.patch
+        08_Fix-signature-of-multiplyCheckOverflow.-It-returns-a-b.patch
+        09_Actually-fail-when-error-occurs-in-parseFormat.patch
+        10_Check-for-division-by-zero-in-BlockCodec-runPull.patch
+        11_CVE-2018-13440.patch
+        12_CVE-2018-17095.patch)
+sha512sums=('f9a1182d93e405c21eba79c5cc40962347bff13f1b3b732d9a396e3d1675297515188bd6eb43033aaa00e9bde74ff4628c1614462456529cabba464f03c1d5fa'
+            'ae11735970eaddb664251614743cb46ae029b4073f4f8ea7cd4570d50c0f4b7f7b426399901b011d1ea799bb99d4ac648e76be97f13a51e32d7a63f97b38a89f'
+            '76ce5a29beaa394f3a24e7db7c40864f26119857e78087b6780853d06d4f44e80656c418b2c99d95224d29b69c23c51c54a4c8edac5dbaa4038a9d6c1ef7be06'
+            '7673ab3fafdb0dac514a42622f53ea17aa56836c76413e5680c475537e195c53df21f26da1bd4e7941df2dc8b33a471ab52d539dabffbaef8bc95ee59951e7fe'
+            'e7afe1a27566fb593ea53176256df23e447a2ee842cb4168930dec365fdabe7f2f43512d81bca5f14336ef0c756f6006c24948a3c2d79baafb0042ed8a145aae'
+            '187fb02a0d23390a62507756918c6f0b149570d7361bfe18944ea182adb966bb2bece93ed25eb6b38b61e252347cb68372c39ea948e094be7afea126d38115c0'
+            '2a81cd1e87976b0123de0638fe4a20a644bc3292f938def3f1de205296f86c0dc7dfbb78a7c8d75c9b9e771c2dc96708f45d9766cf25be2a11bac61285e7de7f'
+            '65e46f7c7e5c994d98e15ed6e94b9512650cf30d4a7fb213f27a177e38defdb0575faa74712d2ef1c3541db069f98b10f7f365ebb01304a0bcdc92552114d701'
+            '7c81e9dda0fc996a0c7a32da3f7480ddcb5cb30b1fd08c36d485021d699ab886732430271ac5a458c1d43dfb11fd0e97a4a9d7608c7f414eb23de59384b81a80'
+            '51c92ce66e987ae1d4bda65247134097705ef45cf7670401af7943bf6bbfc674089bcfafa49983046b10573ea72900adb96c296739c234d5e98539098eebe022'
+            '234b0b520eebccc8e7782735615ad8fb2f7c03937da2b7dec0b091ca35b8a542d4e5c7ad22ed6715f019cdb36992838d7458ef58980bfb4fa80062e764d18ae2'
+            'e29ab46b2edcbbeb048a7d9e6210d0faac8b75d9a48a663f62b37881e03d34fa97ffaa05d61da53b49404f60f0cadfcbbbb58438ae82af40dd37d0117bf8c631'
+            'ace83995606f900543f65ce6199fe1a69c757b7b37e92561be1c49c2f827676f888e36132ab3fedf3b9f77d4382ea933480fe326859c092aa95ba2c24e777363')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  local filename
+  for filename in "${source[@]}"; do
+    if [[ "$filename" =~ \.patch$ ]]; then
+      echo "Applying patch ${filename##*/}"
+      patch -p1 -N -i "$srcdir/${filename##*/}"
+    fi
+  done
+  autoreconf -vfi
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr
+  make
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  make -k check
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+  install -vDm 644 {AUTHORS,ChangeLog,NEWS,NOTES,README,TODO} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+# vim:set ts=2 sw=2 et:
