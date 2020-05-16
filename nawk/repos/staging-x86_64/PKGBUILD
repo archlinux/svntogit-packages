@@ -1,0 +1,55 @@
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+
+pkgname=nawk
+pkgver=20180827
+pkgrel=2
+pkgdesc="The one, true implementation of AWK"
+url="https://github.com/onetrueawk/awk"
+license=('custom')
+arch=('x86_64')
+options=('!makeflags')
+depends=('glibc')
+makedepends=('git')
+source=(git+https://github.com/onetrueawk/awk#tag=$pkgver
+        'manpage-naming.patch')
+md5sums=('SKIP'
+         '5413692140f8366f8ae6bcecc9a40f2f')
+
+pkgver() {
+  cd awk
+
+  git describe --tags
+}
+
+prepare() {
+  cd awk
+
+  # awk -> nawk
+  patch -Np1 <"$srcdir"/manpage-naming.patch
+
+  bsdtar xf awktest.tar
+}
+
+check() {
+  cd awk
+
+  ./REGRESS
+}
+
+build() {
+  cd awk
+
+  # the final linking step doesn't honor LDFLAGS, so let's just throw it all
+  # together into CFLAGS.
+  make \
+    "CPPFLAGS=-DHAS_ISBLANK $CPPFLAGS" \
+    "CFLAGS=$CFLAGS $LDFLAGS"
+}
+
+package() {
+  cd awk
+
+  install -Dm755 a.out "$pkgdir/usr/bin/nawk"
+  install -Dm644 awk.1 "$pkgdir/usr/share/man/man1/nawk.1"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/nawk/LICENSE"
+}
