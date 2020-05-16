@@ -21,6 +21,7 @@ validpgpkeys=('5C96BDEAF5F47FB02BD4F6B965D98560914F3F48'  # Arun Sharma
 
 build() {
   cd $pkgname-$pkgver
+  CFLAGS+=' -fcommon' # https://wiki.gentoo.org/wiki/Gcc_10_porting_notes/fno_common
   ./configure --prefix=/usr
   make
 }
