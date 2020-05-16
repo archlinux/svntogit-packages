@@ -1,0 +1,25 @@
+# Maintainer: Ronald van Haren <ronald@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=libnova
+pkgver=0.15.0
+pkgrel=3
+pkgdesc="A general purpose, double precision, celestial mechanics, astrometry and astrodynamics library."
+url="http://libnova.sourceforge.net/"
+license=('GPL2')
+arch=('x86_64')
+depends=('glibc')
+source=(https://downloads.sourceforge.net/sourceforge/libnova/$pkgname-$pkgver.tar.gz)
+sha512sums=('77ab0ccbfe462c03a21e88656cb4d6389994ea1da0ee8da997f19a83d24ad8fd9e505e70e1580b75332e826e5b7859b5f2af4417f65eb811440493ba586f2574')
+
+build() {
+	cd ${pkgname}-${pkgver}
+	autoreconf -i
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+        cd ${pkgname}-${pkgver}
+	make DESTDIR="${pkgdir}" install
+}
