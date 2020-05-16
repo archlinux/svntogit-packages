@@ -2,13 +2,13 @@
 
 pkgname=rrdtool
 pkgver=1.7.2
-pkgrel=3
+pkgrel=4
 pkgdesc="Data logging and graphing application"
 arch=('x86_64')
 url="https://www.rrdtool.org"
 license=('GPL' 'custom')
 depends=('libxml2' 'pango' 'ttf-dejavu')
-makedepends=('intltool' 'ruby' 'python2-setuptools' 'tcl' 'lua51')
+makedepends=('intltool' 'ruby' 'python2-setuptools' 'tcl' 'lua51' 'systemd')
 optdepends=('perl: to use corresponding binding'
 	    'tcl: to use corresponding binding'
             'python2: to use corresponding binding'
