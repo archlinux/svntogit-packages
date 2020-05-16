@@ -1,0 +1,465 @@
+#! /bin/sh
+#
+# To run this script, ensure shunit2 (https://github.com/kward/shunit2)
+# is available on the local directory, then just run sh bin_archlinux-java_tests
+#
+# inotifywait -r -m -e MODIFY . | while read l; do sh bin_archlinux-java_tests; done
+
+declare test_dir
+
+. ./bin_archlinux-java > /dev/null
+
+INIT_JVM_DIR=${JVM_DIR}
+INIT_DEFAULT_PATH=${DEFAULT_PATH}
+INIT_DEFAULT_PATH_JRE=${DEFAULT_PATH_JRE}
+
+# Redefining this so that tested script can be invoked without root privileges
+check_root() {
+  true
+}
+
+
+get_rand_str() {
+  echo $(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 10 | head -n 1)
+}
+
+setUp() {
+  test_dir=$(mktemp -d)
+  JVM_DIR=${test_dir}${INIT_JVM_DIR}
+  DEFAULT_PATH=${test_dir}${INIT_DEFAULT_PATH}
+  DEFAULT_PATH_JRE=${test_dir}${INIT_DEFAULT_PATH_JRE}
+  JAVA_NAME=$(get_rand_str)
+  mkdir -p ${JVM_DIR}
+}
+
+tearDown() {
+  rm -rf ${test_dir}
+}
+
+# $1: path of Java environment to create
+create_raw_java_env() {
+  java_env_name=$1
+  bin_name=$2
+  mkdir -p ${JVM_DIR}/${java_env_name}/bin
+  touch    ${JVM_DIR}/${java_env_name}/bin/$bin_name
+  chmod +x ${JVM_DIR}/${java_env_name}/bin/$bin_name
+}
+
+create_valid_jre8_env() {
+  create_raw_java_env "$1/jre" "java"
+}
+
+# $1: path of Java environment to create
+create_valid_jre8_jdk8_env() {
+  create_raw_java_env "$1" "java"
+  create_raw_java_env "$1" "javac"
+  create_valid_jre8_env "$1"
+}
+
+create_valid_jre9_env() {
+  create_raw_java_env "$1" "java"
+}
+
+create_valid_jre9_jdk9_env() {
+  create_raw_java_env "$1" "java"
+  create_raw_java_env "$1" "javac"
+}
+
+set_default_for_test() {
+  ln -s $1 ${DEFAULT_PATH}
+  if [ -d ${DEFAULT_PATH}/jre ]; then
+    ln -s $1/jre ${DEFAULT_PATH_JRE}
+  else
+    ln -s $1 ${DEFAULT_PATH_JRE}
+  fi
+}
+
+assertDefaultNotSet() {
+  assertNull 'Default is set' "$(readlink ${DEFAULT_PATH})"
+  assertNull 'Default runtime is set' "$(readlink ${DEFAULT_PATH_JRE})"
+}
+
+assertDefaultSetTo() {
+  new_java=$1
+  assertEquals "Default points at wrong Java env" "${new_java}" "$(readlink ${DEFAULT_PATH})"
+  if [ ${new_java} == */jre ]; then
+    assertEquals "Default runtime points at wrong Java env" "${new_java}/jre" "$(readlink ${DEFAULT_PATH_JRE})"
+  fi
+}
+
+# do_status
+
+test_do_status_with_jre8_default() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  JAVA_NAME_2="b$(get_rand_str)"
+  JAVA_NAME_3="c$(get_rand_str)"
+  create_valid_jre8_env "${JAVA_NAME_1}"
+  set_default_for_test "${JAVA_NAME_1}/jre"
+  create_valid_jre8_jdk8_env "${JAVA_NAME_2}"
+  create_valid_jre9_env "${JAVA_NAME_3}"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME_1}/jre (default)"
+  mess+="\n  ${JAVA_NAME_2}"
+  mess+="\n  ${JAVA_NAME_3}"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_with_jre9_default() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  JAVA_NAME_2="b$(get_rand_str)"
+  JAVA_NAME_3="c$(get_rand_str)"
+  create_valid_jre8_env "${JAVA_NAME_1}"
+  create_valid_jre8_jdk8_env "${JAVA_NAME_2}"
+  create_valid_jre9_env "${JAVA_NAME_3}"
+  set_default_for_test "${JAVA_NAME_3}"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME_1}/jre"
+  mess+="\n  ${JAVA_NAME_2}"
+  mess+="\n  ${JAVA_NAME_3} (default)"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_with_jdk9_default() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  JAVA_NAME_2="b$(get_rand_str)"
+  JAVA_NAME_3="c$(get_rand_str)"
+  create_valid_jre8_env "${JAVA_NAME_1}"
+  create_valid_jre8_jdk8_env "${JAVA_NAME_2}"
+  create_valid_jre9_jdk9_env "${JAVA_NAME_3}"
+  set_default_for_test "${JAVA_NAME_3}"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME_1}/jre"
+  mess+="\n  ${JAVA_NAME_2}"
+  mess+="\n  ${JAVA_NAME_3} (default)"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_no_default() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  JAVA_NAME_2="b$(get_rand_str)"
+  JAVA_NAME_3="c$(get_rand_str)"
+  JAVA_NAME_4="d$(get_rand_str)"
+  create_valid_jre8_env "${JAVA_NAME_1}"
+  create_valid_jre8_jdk8_env "${JAVA_NAME_2}"
+  create_valid_jre9_env "${JAVA_NAME_3}"
+  create_valid_jre9_jdk9_env "${JAVA_NAME_4}"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME_1}/jre"
+  mess+="\n  ${JAVA_NAME_2}"
+  mess+="\n  ${JAVA_NAME_3}"
+  mess+="\n  ${JAVA_NAME_4}"
+  mess+="\nNo Java environment set as default"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_no_duplicate_entry_jre9_jdk9() {
+  JAVA_NAME_1="a$(get_rand_str)"
+  create_valid_jre9_jdk9_env "${JAVA_NAME_1}"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME_1}"
+  mess+="\nNo Java environment set as default"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+test_do_status_no_javas() {
+  assertEquals 'Wrong status output' 'No compatible Java environment installed' "$(do_status)"
+}
+
+test_do_status_jre_but_jdk_exists() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  mess="Available Java environments:"
+  mess+="\n  ${JAVA_NAME} (${JAVA_NAME}/jre default)"
+  expected=$(echo -e "${mess}")
+  assertEquals 'Wrong status output' "${expected}" "$(do_status)"
+}
+
+# do_get
+
+test_do_get_with_jdk8_default() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  assertEquals 'Wrong result' "${JAVA_NAME}" "$(do_get)"
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_get_without_default() {
+  create_valid_jre8_jdk8_env "$(get_rand_str)"
+  create_valid_jre9_jdk9_env "$(get_rand_str)"
+  assertNull 'Wrong result' "$(do_get)"
+}
+
+test_do_get_with_initial_null() {
+  set_default_for_test "/dev/null"
+  assertNull 'Wrong result' "$(do_get)"
+}
+
+test_do_get_with_jdk9_default() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  assertEquals 'Wrong result' "${JAVA_NAME}" "$(do_get)"
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+# do_set
+
+test_do_set_new_invalid() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  output=$(do_set "INVALID")
+  assertEquals 'Wrong status returned' 1 $?
+  assertEquals 'Wrong message' "'${JVM_DIR}/INVALID' is not a valid Java environment path" "${output}"
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_current_invalid() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "INVALID"
+  $(do_set "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_jre8_with_default_already_set_to_jre8() {
+  create_valid_jre8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  JAVA_NAME_2="$(get_rand_str)"
+  create_valid_jre8_env "${JAVA_NAME_2}"
+  $(do_set "${JAVA_NAME_2}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME_2}/jre"
+}
+
+test_do_set_jre9_with_default_already_set_to_jre8() {
+  create_valid_jre8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  JAVA_NAME_2="$(get_rand_str)"
+  create_valid_jre9_env "${JAVA_NAME_2}"
+  $(do_set "${JAVA_NAME_2}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME_2}"
+}
+
+test_do_set_jdk9_with_default_already_set_to_jdk8() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  JAVA_NAME_2="$(get_rand_str)"
+  create_valid_jre9_jdk9_env "${JAVA_NAME_2}"
+  $(do_set "${JAVA_NAME_2}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME_2}"
+}
+
+test_do_set_jre8_no_previous_default() {
+  create_valid_jre8_env "${JAVA_NAME}"
+  $(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_set_jre9_no_previous_default() {
+  create_valid_jre9_env "${JAVA_NAME}"
+  $(do_set "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_jdk9_no_previous_default() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  $(do_set "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_set_jre8_while_jdk8_also_exists() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  output=$(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+  #mess="Warning: '${JAVA_NAME}' looks like a valid JDK whereas you only set '${JAVA_NAME}/jre' as default"
+  #mess+="\nFix this with 'archlinux-java set ${JAVA_NAME}'"
+  #expected=$(echo -e "${mess}")
+  #assertEquals 'Wrong message' "${expected}" "${output}"
+}
+
+test_do_set_jdk8_cleanup_old_jre8_default() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  output=$(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_set_jdk9_cleanup_old_jdk8_default() {
+  JAVA8_NAME=$(get_rand_str)
+  create_valid_jre8_jdk8_env "${JAVA8_NAME}"
+  set_default_for_test "${JAVA8_NAME}"
+  JAVA9_NAME=$(get_rand_str)
+  create_valid_jre9_jdk9_env "${JAVA9_NAME}"
+  output=$(do_set "${JAVA9_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA9_NAME}"
+}
+
+test_do_set_jdk8_devnull() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "/dev/null"
+  output=$(do_set "${JAVA_NAME}/jre")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_set_jdk9_devnull() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  set_default_for_test "/dev/null"
+  output=$(do_set "${JAVA_NAME}")
+  assertEquals 'Wrong status returned' 0 $?
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+# do_unset
+
+test_do_unset_jre8() {
+  create_valid_jre8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  do_unset
+  assertDefaultNotSet
+}
+
+test_do_unset_no_default_link() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  unlink ${DEFAULT_PATH}
+  do_unset
+  assertDefaultNotSet
+}
+
+test_do_unset_devnull() {
+  set_default_for_test "/dev/null"
+  do_unset
+  assertDefaultNotSet
+}
+
+test_do_unset_jre9() {
+  create_valid_jre9_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  do_unset
+  assertDefaultNotSet
+}
+
+test_do_unset_jdk9() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  do_unset
+  assertDefaultNotSet
+}
+
+# do_fix
+
+test_do_fix_default_valid_jre8() {
+  create_valid_jre8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_fix_default_valid_jre9() {
+  create_valid_jre9_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_default_valid_jdk9() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_no_default_jre8() {
+  create_valid_jre8_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_fix_no_default_jre9() {
+  create_valid_jre9_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_no_default_jdk9() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_default_invalid_openjdk7_jdk_installed() {
+  create_valid_jre8_jdk8_env "java-8-openjdk"
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "java-8-openjdk"
+}
+
+test_do_fix_jdk8_not_default_but_openjdk7_jre_installed() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  create_valid_jre8_env "java-8-openjdk"
+  do_fix
+  assertDefaultSetTo "java-8-openjdk/jre"
+}
+
+test_do_fix_jdk9_not_default_but_openjdk7_jre_installed() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  create_valid_jre8_env "java-8-openjdk"
+  do_fix
+  assertDefaultSetTo "java-8-openjdk/jre"
+}
+
+test_do_fix_default_invalid_random_java8_installed() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_default_invalid_random_java9_installed() {
+  create_valid_jre9_jdk9_env "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_default_invalid_no_java_installed() {
+  assertEquals 'Wrong message' "No valid Java environment found" "$(do_fix)"
+  assertDefaultNotSet
+}
+
+test_do_fix_jre8_but_jdk8_exists() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "${JAVA_NAME}/jre"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+test_do_fix_jdk_but_jre_exists() {
+  create_valid_jre8_jdk8_env "java-7-openjdk"
+  create_valid_jre8_env "${JAVA_NAME}"
+  # Only JRE is installed but setting JDK as default
+  set_default_for_test "${JAVA_NAME}"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}/jre"
+}
+
+test_do_fix_devnull() {
+  create_valid_jre8_jdk8_env "${JAVA_NAME}"
+  set_default_for_test "/dev/null"
+  do_fix
+  assertDefaultSetTo "${JAVA_NAME}"
+}
+
+# load shunit2
+. shunit2/shunit2
