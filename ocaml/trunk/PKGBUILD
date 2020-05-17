@@ -18,7 +18,7 @@ options=('!makeflags' '!emptydirs' 'staticlibs')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  ./configure --prefix /usr --mandir /usr/share/man
+  ./configure --prefix /usr --mandir /usr/share/man --disable-force-safe-string
   make --debug=v world.opt
 }
 
