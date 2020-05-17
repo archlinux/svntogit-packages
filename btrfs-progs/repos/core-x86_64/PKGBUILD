@@ -4,12 +4,14 @@
 
 pkgname=btrfs-progs
 pkgver=5.6.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
-makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools')
-depends=('glibc' 'libutil-linux' 'lzo' 'zlib' 'zstd' 'libgcrypt' 'e2fsprogs' 'reiserfsprogs')
-optdepends=('python: libbtrfsutil python bindings')
+makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs')
+depends=('glibc' 'libutil-linux' 'lzo' 'zlib' 'zstd' 'libgcrypt')
+optdepends=('python: libbtrfsutil python bindings'
+            'e2fsprogs: btrfs-convert'
+            'reiserfsprogs: btrfs-convert')
 url='https://btrfs.wiki.kernel.org'
 replaces=('btrfs-progs-unstable')
 conflicts=('btrfs-progs-unstable')
