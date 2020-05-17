@@ -1,45 +1,56 @@
-# $Id$
-# Maintainer:
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
 # Contributor: dorphell <dorphell@archlinux.org>
 
 pkgname=libid3tag
 pkgver=0.15.1b
-pkgrel=9
-pkgdesc="library for id3 tagging"
+pkgrel=11
+pkgdesc="ID3 tag manipulation library"
 arch=('x86_64')
-url="http://www.underbit.com/products/mad/"
-license=('GPL')
-depends=('zlib')
+url="https://www.underbit.com/products/mad/"
+license=('GPL2')
+depends=('glibc' 'zlib')
 makedepends=('gperf')
-source=("ftp://ftp.mars.org/pub/mpeg/${pkgname}-${pkgver}.tar.gz"
-	'id3tag.pc'
-	'10_utf16.diff' '11_unknown_encoding.diff' 'CVE-2008-2109.patch' libid3tag-gperf.patch)
-md5sums=('e5808ad997ba32c498803822078748c3'
-         '8bb41fd814fafcc37ec8bc88f5545a4a'
-         '4f9df4011e6a8c23240fff5de2d05f6e'
-         '3ca856b97924d48a0fdfeff0bd83ce7d'
-         'c51822ea6301b1ca469975f0c9ee8e34'
-         '85502349069e61eaeea4610b1ea6cb56')
+provides=('libid3tag.so')
+source=("https://sourceforge.net/projects/mad/files/libid3tag/${pkgver}/${pkgname}-${pkgver}.tar.gz"
+        'id3tag.pc'
+        '10_utf16.diff'
+        '11_unknown_encoding.diff'
+        'CVE-2008-2109.patch'
+        'libid3tag-gperf.patch')
+sha512sums=('ade7ce2a43c3646b4c9fdc642095174b9d4938b078b205cd40906d525acd17e87ad76064054a961f391edcba6495441450af2f68be69f116549ca666b069e6d3'
+            'f58367ad74a6ec310f757935b57d59beebbd817ee12de9e532e4af31e166d2f1f614eb3f44caa8601dc5102bfde9ddbea4b8b80bbaa1791dcfcb23e1bd2ed1a6'
+            '3a1c6ad1ba82738276d87369eac0dedf08b83322c767e23e1d73571275a92d6a06877a998d508c74345538a75d28fdffc92446fa3dcff9f3bee90de36fa42247'
+            '8d8ae41a65e1cd343aad2dcf77239144f3c96c433259c3180c403da2d50701687755cb67814b42da04888b2b7e92814705a438de286b548c941493d1cae14531'
+            '895d6a71540c8a60258e8900479bbce8f3eef67c9b0ff631130862778b3688568c5e363e0ba2a7b55a2e4a9109e22673eda69903e7bcaa77776de876cb09295b'
+            '2af08ba12f9fd2121529045c1639206feccc9e4471c348cf9ea7ed73d24ba26b4146afaa6ae2ee03cae976655bf42d8a9e61cfc943d0cd6f73a41c4605de89f8')
 
 prepare() {
-  cd $pkgname-$pkgver
-  patch -p1 -i ${srcdir}/10_utf16.diff
-  patch -p1 -i ${srcdir}/11_unknown_encoding.diff
-  patch -Np0 -i ${srcdir}/CVE-2008-2109.patch
-  patch -p1 -i ../libid3tag-gperf.patch # Fedora patch
-
+  cd "$pkgname-$pkgver"
+  patch -Np1 -i ../10_utf16.diff
+  patch -Np1 -i ../11_unknown_encoding.diff
+  patch -Np0 -i ../CVE-2008-2109.patch
+  patch -Np1 -i ../libid3tag-gperf.patch # Fedora patch
   rm compat.c frametype.c # regenerate them from gperf sources
+
+  # adding missing files for autoreconf
+  touch AUTHORS ChangeLog NEWS
+  autoreconf -vfi
 }
 
 build() {
-  cd ${pkgname}-${pkgver}
-
+  cd "${pkgname}-${pkgver}"
   ./configure --prefix=/usr
   make
+  # adding pkgconfig file
+  cp -v ../id3tag.pc .
+  sed -e "s/VERSION/${pkgver}/" -i id3tag.pc
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
+  cd "${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
-  install -D -m644 "${srcdir}/id3tag.pc" "${pkgdir}/usr/lib/pkgconfig/id3tag.pc"
+  install -vDm 644 id3tag.pc -t "${pkgdir}/usr/lib/pkgconfig/"
+  install -vDm 644 {CHANGES,CREDITS,README} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
