@@ -1,0 +1,90 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=icedtea-web
+pkgname=('icedtea-web' 'icedtea-web-doc')
+pkgver=1.8.3
+pkgrel=2
+pkgdesc='Additional components for OpenJDK - Browser plug-in and Web Start implementation'
+url='https://github.com/AdoptOpenJDK/IcedTea-Web'
+arch=('x86_64')
+license=('GPL2')
+makedepends=('java-environment=8' 'zip' 'libxtst' 'npapi-sdk' 'rhino' 'junit'
+             'firefox' 'epiphany' 'rust' 'bc')
+optdepends=('rhino: for using proxy auto config files')
+source=(https://github.com/AdoptOpenJDK/IcedTea-Web/archive/${pkgbase}-${pkgver}.tar.gz
+        java13-SecurityManager.patch
+        compiler-flags.patch)
+sha256sums=('41b6f09a7b44ad6b85d5086c289557f6f6340baa51be71bc4361aa26a844e7af'
+            'ee2221225afd4a577c1133b8ea4ddb7a596c7c8443cffc9185d21d404bd09f8c'
+            '4db38a59012bf4c3dc857f340924ecbc796d89f15521abdc367bc39301be7a19')
+sha512sums=('878f2abffdce56ad487d495c68c70d07553a01ec379ab81b29dee4a9ddc34182337eb4b019d84dbe32160c9b9160ff2010e566cfa9beacf901bd5a14332a2c9e'
+            '2ced4eb0542ed91a59d766bb4ca0db28a1f9b9569f48bf5b80ff178c81700067cc28a2ec99d06f479fa402ef4f290da291ad8275e52d1cbd27bee445e3ce3f7c'
+            '0689abbe5fa5b616a3c71caf038a42bc69a4950e923cce3c658c15a85a140f5d2e19a96429fc82cfe38c42fdc7bca4a305fd613e3483a8f98a6ee3daaf0a8304')
+
+prepare() {
+  cd IcedTea-Web-${pkgbase}-${pkgver}
+  patch -Np0 < "${srcdir}/compiler-flags.patch"
+  patch -Np1 < "${srcdir}/java13-SecurityManager.patch"
+  autoreconf -fiv
+}
+
+build() {
+  cd IcedTea-Web-${pkgbase}-${pkgver}
+  ./configure \
+      --prefix=/usr/share/${pkgbase} \
+      --datarootdir=/usr/share \
+      --with-jdk-home=/usr/lib/jvm/default \
+      --with-jre-home=/usr/lib/jvm/default-runtime \
+      --with-java=/usr/bin/java \
+      --with-browser-tests \
+      --with-firefox=/usr/bin/firefox \
+      --with-epiphany=/usr/bin/epiphany \
+      --with-itw-libs=DISTRIBUTION
+   make
+}
+
+check() {
+  cd IcedTea-Web-${pkgbase}-${pkgver}
+  make -k check
+}
+
+
+package_icedtea-web() {
+  depends=('java-runtime-openjdk' 'desktop-file-utils')
+  provides=('java-web-start')
+
+  cd IcedTea-Web-${pkgbase}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # Install desktop files
+  install -Dm 644 javaws.png -t "${pkgdir}"/usr/share/pixmaps
+  install -Dm 644 *.desktop -t "${pkgdir}"/usr/share/applications
+
+  ## link binaries into /usr/bin + jre/bin
+  install -m 755 -d "${pkgdir}"/usr/bin
+  for file in "${pkgdir}/usr/share/${pkgbase}/bin/"*; do
+    ln -sf "/usr/share/${pkgbase}/bin/$(basename "${file}")" "${pkgdir}"/usr/bin
+  done
+
+  ## link the mozilla-plugin - test it here http://www.java.com/en/download/help/testvm.xml
+  install -m 755 -d "${pkgdir}"/usr/lib/mozilla/plugins/
+  ln -sf /usr/share/${pkgbase}/lib/IcedTeaPlugin.so "${pkgdir}"/usr/lib/mozilla/plugins/
+
+  # remove splitted doc files
+  rm -rf "${pkgdir}"/usr/share/doc
+}
+
+package_icedtea-web-doc() {
+  pkgdesc+=' (documentation)'
+
+  cd IcedTea-Web-${pkgbase}-${pkgver}
+  make DESTDIR="${pkgdir}" install-data-local
+  # remove javaws about and man page
+  rm -rf "${pkgdir}"/usr/lib
+  rm -rf "${pkgdir}"/usr/share/man
+  rm -rf "${pkgdir}"/usr/share/icedtea-web
+}
+
+# vim: ts=2 sw=2 et:
