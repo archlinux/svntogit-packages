@@ -3,7 +3,7 @@
 pkgname=noto-fonts-cjk
 pkgver=20190409
 _commit=cf29231ab8029678af4bbc1a9480e2b296a5b2d3
-pkgrel=1
+pkgrel=2
 pkgdesc="Google Noto CJK fonts"
 arch=(any)
 url="https://www.google.com/get/noto/"
