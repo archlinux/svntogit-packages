@@ -3,7 +3,7 @@
 
 pkgname=yelp-tools
 pkgver=3.32.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Collection of tools for building and converting documentation"
 url="https://gitlab.gnome.org/GNOME/yelp-tools"
 arch=(any)
