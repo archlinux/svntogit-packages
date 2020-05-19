@@ -10,7 +10,7 @@ license=('GPL2')
 backup=('etc/bird.conf')
 depends=('glibc' 'readline' 'ncurses' 'libssh')
 replaces=('bird6')
-source=("ftp://bird.network.cz/pub/bird/$pkgname-$pkgver.tar.gz"
+source=("https://bird.network.cz/download/$pkgname-$pkgver.tar.gz"
         'bird.service')
 md5sums=('dc884bbe5905578e452f28158700527c'
          '69221e063a3f07dcad519d5eeacaae75')
