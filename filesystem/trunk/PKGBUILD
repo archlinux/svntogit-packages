@@ -2,7 +2,7 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2020.05.07
+pkgver=2020.05.20
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
@@ -31,7 +31,7 @@ md5sums=('5fa6674df7645d7f5895f2d12b4ef4e9'
          '981ee4d7e506a9d6d9ed2d872e16004b'
          '173371ea3ac7817fdec6a726e3996067'
          '5182ac38a0de85da8ade93ef71975ca4'
-         '7b208a630a548740e0f4cd368badae23'
+         '2a50e4755bc841ed2b63a56935176b47'
          '0ee015fad07732676d9488ae498eed41'
          'f04bcb2803afc4dcb95670fe87343b4d'
          '815652599be54fd3607cf276e89a0a19'
