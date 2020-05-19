@@ -4,7 +4,7 @@
 pkgname=lm_sensors
 pkgver=3.6.0
 _pkgver=${pkgver//./-}
-pkgrel=1
+pkgrel=2
 pkgdesc="Collection of user space tools for general SMBus access and hardware monitoring"
 arch=('x86_64')
 url="https://hwmon.wiki.kernel.org/lm_sensors"
