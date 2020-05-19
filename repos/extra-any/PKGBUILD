@@ -4,7 +4,7 @@
 pkgbase=python-ordered-set
 pkgname=(python-ordered-set python2-ordered-set)
 pkgver=3.1.1
-pkgrel=1
+pkgrel=2
 pkgdesc='A MutableSet that remembers its order, so that every entry has an index'
 arch=('any')
 url="https://github.com/LuminosoInsight/ordered-set"
