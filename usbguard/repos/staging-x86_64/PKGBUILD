@@ -1,0 +1,67 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Ian Beringer <ian@ianberinger.com>
+
+pkgname=usbguard
+pkgver=0.7.5
+pkgrel=4
+pkgdesc='Software framework for implementing USB device authorization policies'
+url='https://github.com/dkopecek/usbguard'
+arch=('x86_64')
+license=('GPL2')
+depends=('glibc' 'libqb' 'libqb.so' 'libsodium' 'libcap-ng' 'protobuf' 'polkit' 'dbus-glib'
+         'audit' 'libaudit.so' 'libseccomp' 'libseccomp.so')
+makedepends=('catch2' 'pegtl' 'libxslt' 'asciidoc' 'systemd')
+provides=('libusbguard.so')
+backup=(etc/usbguard/usbguard-daemon.conf
+        etc/usbguard/rules.conf)
+source=(https://github.com/dkopecek/usbguard/releases/download/${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz{,.sig}
+        make-explicitly-treat-pthread-as-first-level-depende.patch)
+sha512sums=('b14f1cfaec676b5bc2f3aa2bda8be96ea8a6b3f02fc78f0fa7a58dd079c57886aae2c33a9e99cb9ccd53e5d6fa27712b978a2d19cd58b75dda34516d8caed0c4'
+            'SKIP'
+            '02232be248aa11e543b0cd2f26e3ff735267b58bb3a255fc32e390f0efff302e4b749fee3927942585a799f0e7571836bc085f89aef43df5517a678b04596e5a')
+validpgpkeys=('FD9B3F9DCEBB5537A8FAF5213B0C109510712034') # Daniel Kopeček <dnk1618@gmail.com>
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  sed 's|/usr/include/catch|/usr/include/catch2|g' -i configure.ac
+  patch -Np1 < ../make-explicitly-treat-pthread-as-first-level-depende.patch
+  autoreconf -fiv
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sys=/etc \
+    --sbindir=/usr/bin \
+    --libdir=/usr/lib \
+    --enable-systemd \
+    --without-bundled-catch \
+    --without-bundled-pegtl \
+    --with-dbus \
+    --with-polkit \
+    --with-crypto-library=sodium
+  make
+  touch rules.conf
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make INSTALL='install -p' DESTDIR="${pkgdir}" install
+
+  chmod 750 "${pkgdir}/etc/usbguard"
+  install -Dpm 600 usbguard-daemon.conf rules.conf -t "${pkgdir}/etc/usbguard"
+
+  # completion
+  install -Dpm 644 scripts/bash_completion/usbguard -t "${pkgdir}/usr/share/bash-completion/completions"
+  install -Dpm 644 scripts/usbguard-zsh-completion "${pkgdir}/usr/share/zsh/site-functions/_usbguard"
+}
+
+# vim: ts=2 sw=2 et:
