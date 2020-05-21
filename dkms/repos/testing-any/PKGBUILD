@@ -1,0 +1,65 @@
+# Maintainer: Sébastien Luttringer
+# Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
+
+pkgname=dkms
+pkgver=2.8.1
+pkgrel=3
+pkgdesc='Dynamic Kernel Modules System'
+arch=('any')
+url='https://github.com/dell/dkms'
+license=('GPL2')
+depends=('bash' 'kmod' 'gcc' 'make' 'patch')
+makedepends=('git')
+optdepends=('linux-headers: build modules against the Arch kernel'
+            'linux-lts-headers: build modules against the LTS kernel'
+            'linux-zen-headers: build modules against the ZEN kernel'
+            'linux-hardened-headers: build modules against the HARDENED kernel')
+backup=('etc/dkms/framework.conf')
+install=$pkgname.install
+source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
+        'hook.install'
+        'hook.remove'
+        'hook.sh'
+        '0001-Revert-Make-newly-installed-modules-available-immedi.patch')
+sha256sums=('SKIP'
+            '047e0e46967e98fbf3ff8860a80f259c28693d5989373d5a5395714495b59844'
+            'c3e3a20857e628116bde499af1b3614bcafb49dbe9b5775cfcf0aa862af1750a'
+            '3463adfe18dad0805a806c2fb0fc4faf88924056168980a3c7cbc28a27c8867b'
+            '124b821b1b44ba365d915945825bcf32c1077655c3a98eb1644de56b6abfcd09')
+
+prepare() {
+  cd dkms
+
+  # apply patch from the source array (should be a pacman feature)
+  local filename
+  for filename in "${source[@]}"; do
+    if [[ "$filename" =~ \.patch$ ]]; then
+      msg2 "Applying patch ${filename##*/}"
+      patch -p1 -N -i "$srcdir/${filename##*/}"
+    fi
+  done
+
+  # /usr move
+  msg2 '/usr move patching'
+  for i in dkms{,_framework.conf,.bash-completion,.8,_common.postinst}; do
+    sed -ri 's,/lib/modules,/usr/lib/modules,g' "$i"
+  done
+}
+
+package() {
+  # alpm hook
+  install -D -m 644 hook.install "$pkgdir/usr/share/libalpm/hooks/70-dkms-install.hook"
+  install -D -m 644 hook.remove "$pkgdir/usr/share/libalpm/hooks/70-dkms-remove.hook"
+  install -D -m 755 hook.sh "$pkgdir/usr/lib/dkms/alpm-hook"
+  # upstream installer
+  cd dkms
+  # we don't need kconf files, so we install them outside $pkgdir
+  make \
+    DESTDIR="$pkgdir" \
+    SBIN="$pkgdir/usr/bin" \
+    BASHDIR="$pkgdir/usr/share/bash-completion/completions" \
+    KCONF="$srcdir"/kconf \
+    install
+}
+
+# vim:set ts=2 sw=2 et:
