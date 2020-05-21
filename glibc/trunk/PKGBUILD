@@ -7,7 +7,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.31
-pkgrel=3
+pkgrel=4
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -40,7 +40,7 @@ prepare() {
   local i; for i in ${source[@]}; do
     case ${i%::*} in
       *.patch)
-        msg2 "Applying ${i}"
+        echo "  -> Applying ${i}"
         patch -p1 -i "$srcdir/${i}"
         ;;
     esac
