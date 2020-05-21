@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright © 2018 Sébastien Luttringer
+# Copyright © 2018-2020, Sébastien Luttringer
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -21,6 +21,8 @@
 run() {
 	echo "==> $*"
 	"$@" > /dev/null
+	local ret=$?
+	(( $ret )) && echo "==> Warning, \`$*' returned $ret"
 }
 
 # check whether the dependencies of a module are installed
@@ -28,8 +30,10 @@ run() {
 # $2: kernel version
 check_dependency() { (
 	source "$source_tree/${1/\//-}/dkms.conf"
+	local state
 	for dep in "${BUILD_DEPENDS[@]}"; do
-		if ! [[ "$(dkms status -m "$dep" -k "$2")" =~ :[[:space:]]installed$ ]]; then
+		state=$(dkms status -m "$dep" -k "$2")
+		if ! [[ "$state" =~ "$mod, $mver, $kver, "[^:]+': installed' ]]; then
 			exit 1
 		fi
 	done
@@ -113,13 +117,15 @@ dkms_install() {
 
 # remove registered modules when built/installed
 dkms_remove() {
-	local nvk mod kver
+	local nvk mod mver kver state
 	for nvk in "${!DKMS_MODULES[@]}"; do
-		mod=${nvk%/*}
-		kver=${nvk##*/}
-		state=$(dkms status -m "$mod" -k "$kver")
-		if [[ "$state" =~ :[[:space:]](built|installed)$ ]]; then
-			run dkms remove "$mod" -k "$kver"
+		[[ "$nvk" =~ ([^/]+)/([^/]+)/(.+) ]]
+		mod="${BASH_REMATCH[1]}"
+		mver="${BASH_REMATCH[2]}"
+		kver="${BASH_REMATCH[3]}"
+		state=$(dkms status -m "$mod" -v "$mver" -k "$kver")
+		if [[ "$state" =~ "$mod, $mver, $kver, "[^:]+": "(built|installed) ]]; then
+			run dkms remove "$mod" -v "$mver" -k "$kver"
 		fi
 		unset DKMS_MODULES[$nvk]
 	done
