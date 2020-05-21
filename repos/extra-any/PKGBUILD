@@ -3,7 +3,7 @@
 
 pkgname=itstool
 pkgver=2.0.6
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="XML to PO and back again"
 arch=(any)
