@@ -5,7 +5,7 @@
 
 pkgname=gnupg
 pkgver=2.2.20
-pkgrel=1
+pkgrel=2
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
@@ -33,6 +33,9 @@ prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	sed '/noinst_SCRIPTS = gpg-zip/c sbin_SCRIPTS += gpg-zip' -i tools/Makefile.in
 	patch -R -p1 -i ../self-sigs-only.patch
+
+	# remove to ensure this is built for reproducibility
+	rm doc/gnupg.info*
 }
 
 build() {
