@@ -7,7 +7,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.31
-pkgrel=4
+pkgrel=5
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -95,6 +95,9 @@ build() {
   echo "CC += -D_FORTIFY_SOURCE=2" >> configparms
   echo "CXX += -D_FORTIFY_SOURCE=2" >> configparms
   make
+
+  # build info pages manually for reprducibility
+  make info
 
   cd "$srcdir/lib32-glibc-build"
   export CC="gcc -m32 -mstackrealign"
