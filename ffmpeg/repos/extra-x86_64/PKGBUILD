@@ -5,8 +5,8 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=4.2.2
-pkgrel=8
+pkgver=4.2.3
+pkgrel=1
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -87,10 +87,12 @@ provides=(
   libswresample.so
   libswscale.so
 )
-source=(git+https://git.ffmpeg.org/ffmpeg.git#tag=192d1d34eb3668fa27f433e96036340e1e5077a0
+source=(git+https://git.ffmpeg.org/ffmpeg.git#tag=d3b963cc41824a3c5b2758ac896fb23e20a87875
         vmaf-model-path.patch)
-sha256sums=('SKIP'
-            '8dff51f84a5f7460f8893f0514812f5d2bd668c3276ef7ab7713c99b71d7bd8d')
+sha256sums=(
+  SKIP
+  8dff51f84a5f7460f8893f0514812f5d2bd668c3276ef7ab7713c99b71d7bd8d
+)
 
 pkgver() {
   cd ffmpeg
@@ -101,9 +103,7 @@ pkgver() {
 prepare() {
   cd ffmpeg
 
-  git cherry-pick -n dc0806dd25882f41f6085c8356712f95fded56c7
-
-  patch -Np1 -i "${srcdir}/vmaf-model-path.patch"
+  patch -Np1 -i "${srcdir}"/vmaf-model-path.patch
 }
 
 build() {
@@ -114,6 +114,7 @@ build() {
     --disable-debug \
     --disable-static \
     --disable-stripping \
+    --enable-avisynth \
     --enable-fontconfig \
     --enable-gmp \
     --enable-gnutls \
