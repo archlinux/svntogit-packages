@@ -1,0 +1,45 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+
+pkgname=gnu-efi
+pkgver=3.0.12
+pkgrel=1
+pkgdesc="Develop EFI applications using the GNU toolchain and the EFI development environment"
+arch=('x86_64')
+url="https://sourceforge.net/projects/gnu-efi/"
+license=('BSD')
+conflicts=('gnu-efi-libs')
+provides=('gnu-efi-libs')
+replaces=('gnu-efi-libs')
+source=("https://download.sourceforge.net/${pkgname}/${pkgname}-${pkgver}.tar.bz2"
+        "${pkgname}-3.0.12-ldflags.patch")
+sha512sums=('cbec6f6e37271c22c71e3ce44d3579e48e7f3b797ec3946f56eb843ed3e472722763c566fc3b749f0c692ab6cb26e8909bb258cd164771a5b1eeff5c7cd51368'
+            '7fd1c8d09ff870c33ae62887b657a7367f85a07f6709d33471ca13117a08e755853fd1e99db492d1db47444b95ae871078c4a913ed70aa7236e49349046e06b6')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # -Werror, not even once
+  sed -e 's/-Werror//g' -i Make.defaults
+  # insert LDFLFAGS into custom linker for apps
+  patch -Np1 -i "../${pkgname}-3.0.12-ldflags.patch"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  make
+  make -C lib
+  make -C gnuefi
+  make -C inc
+  # unset LDFLAGS for custom linker used in apps, as we have patched our
+  # LDFLAGS in manually in prepare()
+  LDFLAGS=""
+  make -C apps
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make INSTALLROOT="$pkgdir/" PREFIX='/usr' install
+  install -vDm 644 apps/*.efi -t "${pkgdir}/usr/share/${pkgname}/apps/$CARCH"
+  install -vDm 644 README.efilib -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -vDm 644 {ChangeLog,README.{gnuefi,git,elilo}} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
