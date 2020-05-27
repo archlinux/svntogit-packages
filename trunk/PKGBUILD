@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.18.5
-pkgrel=2
+pkgrel=3
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -30,6 +30,7 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 prepare() {
   mkdir -p build
 
+  sed -e 's|dbus-run-session ||' -i $pkgbase-$pkgver/login-sessions/plasmawayland.desktop.cmake # Don't start a second user dbus session
   cd $pkgname-$pkgver
   patch -p1 -i ../plasma-animation-duration.patch # Fix slow animations with Frameworks 5.70
 }
