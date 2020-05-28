@@ -5,7 +5,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layer' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=20.1.0
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd'
@@ -14,9 +14,15 @@ makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
+	0001-iris-fix-BO-destruction-in-error-path.patch
+	0002-iris-fix-export-of-GEM-handles.patch
+	0003-i965-fix-export-of-GEM-handles.patch 
         LICENSE)
 sha512sums=('f49230d18febe1bfd7c6282ab95fc244530f5cef56df0f804d8bece8a70bafcb445b8b83df96ad1b4c5af022c4e39a71f19a8f7e47b1fb09ada2b1a1317ff3be'
             'SKIP'
+            '456d1296ac8ce01d2f1e0c9d9cb8fc995d5f5e5de8f56a3487452a131a7ccfa4beaeb3fc693afbf4691e8de90e399d86bb121cd7514a981fe96b4333df980af3'
+            '7903c26dcb11932f26dcc6ffd2fd2ecd05840141dc2abfcaf404716320927cd40ba472c434a6e4ae9a08fafa7d54bdb26890efd2177634947f134de6d1fb7315'
+            '9fe91699d00a9eee4de5b1e60dd14e7cde83933d2fff13f09fd24687addc84a3f9a6c512e02587ceabe6a4c459dbd1f452953ab741ac4843526e1504c12cf5d7'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
@@ -24,6 +30,15 @@ validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l
               'A5CC9FEC93F2F837CB044912336909B6B25FADFA'  # Juan A. Suarez Romero <jasuarez@igalia.com>
               '71C4B75620BC75708B4BDB254C95FAAB3EB073EC'  # Dylan Baker <dylan@pnwbakers.com>
               'CC31EF29D32A6637889530F2481D0E9D964E5593') # Eric Engestrom <eric@engestrom.ch>
+
+prepare() {
+  cd mesa-$pkgver
+
+  # fix https://gitlab.freedesktop.org/mesa/mesa/-/issues/2882
+  patch -Np1 -i ../0001-iris-fix-BO-destruction-in-error-path.patch
+  patch -Np1 -i ../0002-iris-fix-export-of-GEM-handles.patch
+  patch -Np1 -i ../0003-i965-fix-export-of-GEM-handles.patch 
+}
 
 build() {
   arch-meson mesa-$pkgver build \
