@@ -1,0 +1,343 @@
+From e45e6fb29a008006af354f317bd82da2aed8ccf6 Mon Sep 17 00:00:00 2001
+From: Lionel Landwerlin <lionel.g.landwerlin@intel.com>
+Date: Sat, 2 May 2020 16:59:19 +0300
+Subject: [PATCH 3/3] i965: fix export of GEM handles
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+We reuse DRM file descriptors internally. Therefore when we export a
+GEM handle we must do so in the file descriptor used externally.
+
+v2: Fix dmabuf leak
+    Fix GEM handle leaks by tracking exported handles
+
+v3: Check os_same_file_description error (Michel)
+    Don't create multiple exports for a given GEM table
+
+v4: Add WARN_ONCE
+
+Signed-off-by: Lionel Landwerlin <lionel.g.landwerlin@intel.com>
+Closes: https://gitlab.freedesktop.org/mesa/mesa/-/issues/2882
+Fixes: 4094558e8643 ("i965: share buffer managers across screens")
+Tested-by: Eric Engestrom <eric@engestrom.ch>
+Tested-by: Tapani Pälli <tapani.palli@intel.com>
+Signed-off-by: Laurent Carlier <lordheavym@gmail.com>
+---
+ src/mesa/drivers/dri/i965/brw_bufmgr.c        | 122 +++++++++++++++++-
+ src/mesa/drivers/dri/i965/brw_bufmgr.h        |  20 +++
+ src/mesa/drivers/dri/i965/intel_batchbuffer.c |   6 +
+ src/mesa/drivers/dri/i965/intel_screen.c      |  11 +-
+ 4 files changed, 154 insertions(+), 5 deletions(-)
+
+diff --git a/src/mesa/drivers/dri/i965/brw_bufmgr.c b/src/mesa/drivers/dri/i965/brw_bufmgr.c
+index 9b706c42e38..ce904727674 100644
+--- a/src/mesa/drivers/dri/i965/brw_bufmgr.c
++++ b/src/mesa/drivers/dri/i965/brw_bufmgr.c
+@@ -58,6 +58,7 @@
+ #include "util/macros.h"
+ #include "util/hash_table.h"
+ #include "util/list.h"
++#include "util/os_file.h"
+ #include "util/u_dynarray.h"
+ #include "util/vma.h"
+ #include "brw_bufmgr.h"
+@@ -74,6 +75,20 @@
+ #define VG(x)
+ #endif
+ 
++/* Bufmgr is not aware of brw_context. */
++#undef WARN_ONCE
++#define WARN_ONCE(cond, fmt...) do {                            \
++   if (unlikely(cond)) {                                        \
++      static bool _warned = false;                              \
++      if (!_warned) {                                           \
++         fprintf(stderr, "WARNING: ");                          \
++         fprintf(stderr, fmt);                                  \
++         _warned = true;                                        \
++      }                                                         \
++   }                                                            \
++} while (0)
++
++
+ /* VALGRIND_FREELIKE_BLOCK unfortunately does not actually undo the earlier
+  * VALGRIND_MALLOCLIKE_BLOCK but instead leaves vg convinced the memory is
+  * leaked. All because it does not call VG(cli_free) from its
+@@ -135,6 +150,16 @@ struct bo_cache_bucket {
+    struct util_dynarray vma_list[BRW_MEMZONE_COUNT];
+ };
+ 
++struct bo_export {
++   /** File descriptor associated with a handle export. */
++   int drm_fd;
++
++   /** GEM handle in drm_fd */
++   uint32_t gem_handle;
++
++   struct list_head link;
++};
++
+ struct brw_bufmgr {
+    uint32_t refcount;
+ 
+@@ -158,6 +183,7 @@ struct brw_bufmgr {
+    bool has_mmap_wc:1;
+    bool has_mmap_offset:1;
+    bool bo_reuse:1;
++   bool file_cmp_failed:1;
+ 
+    uint64_t initial_kflags;
+ };
+@@ -484,6 +510,18 @@ brw_bo_cache_purge_bucket(struct brw_bufmgr *bufmgr,
+    }
+ }
+ 
++static struct brw_bo *
++bo_calloc(void)
++{
++   struct brw_bo *bo = calloc(1, sizeof(*bo));
++   if (!bo)
++      return NULL;
++
++   list_inithead(&bo->exports);
++
++   return bo;
++}
++
+ static struct brw_bo *
+ bo_alloc_internal(struct brw_bufmgr *bufmgr,
+                   const char *name,
+@@ -557,6 +595,7 @@ retry:
+       }
+ 
+       if (alloc_from_cache) {
++         assert(list_is_empty(&bo->exports));
+          if (!brw_bo_madvise(bo, I915_MADV_WILLNEED)) {
+             bo_free(bo);
+             brw_bo_cache_purge_bucket(bufmgr, bucket);
+@@ -589,7 +628,7 @@ retry:
+          bo->gtt_offset = 0ull;
+       }
+    } else {
+-      bo = calloc(1, sizeof(*bo));
++      bo = bo_calloc();
+       if (!bo)
+          goto err;
+ 
+@@ -760,11 +799,12 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
+     */
+    bo = hash_find_bo(bufmgr->handle_table, open_arg.handle);
+    if (bo) {
++      assert(list_is_empty(&bo->exports));
+       brw_bo_reference(bo);
+       goto out;
+    }
+ 
+-   bo = calloc(1, sizeof(*bo));
++   bo = bo_calloc();
+    if (!bo)
+       goto out;
+ 
+@@ -834,6 +874,9 @@ bo_free(struct brw_bo *bo)
+ 
+       entry = _mesa_hash_table_search(bufmgr->handle_table, &bo->gem_handle);
+       _mesa_hash_table_remove(bufmgr->handle_table, entry);
++
++   } else {
++      assert(list_is_empty(&bo->exports));
+    }
+ 
+    /* Close this object */
+@@ -883,6 +926,14 @@ bo_unreference_final(struct brw_bo *bo, time_t time)
+ 
+    DBG("bo_unreference final: %d (%s)\n", bo->gem_handle, bo->name);
+ 
++   list_for_each_entry_safe(struct bo_export, export, &bo->exports, link) {
++      struct drm_gem_close close = { .handle = export->gem_handle };
++      gen_ioctl(export->drm_fd, DRM_IOCTL_GEM_CLOSE, &close);
++
++      list_del(&export->link);
++      free(export);
++   }
++
+    bucket = bucket_for_size(bufmgr, bo->size);
+    /* Put the buffer into our internal cache for reuse if we can. */
+    if (bufmgr->bo_reuse && bo->reusable && bucket != NULL &&
+@@ -1440,11 +1491,12 @@ brw_bo_gem_create_from_prime_internal(struct brw_bufmgr *bufmgr, int prime_fd,
+     */
+    bo = hash_find_bo(bufmgr->handle_table, handle);
+    if (bo) {
++      assert(list_is_empty(&bo->exports));
+       brw_bo_reference(bo);
+       goto out;
+    }
+ 
+-   bo = calloc(1, sizeof(*bo));
++   bo = bo_calloc();
+    if (!bo)
+       goto out;
+ 
+@@ -1579,6 +1631,70 @@ brw_bo_flink(struct brw_bo *bo, uint32_t *name)
+    return 0;
+ }
+ 
++int
++brw_bo_export_gem_handle_for_device(struct brw_bo *bo, int drm_fd,
++                                    uint32_t *out_handle)
++{
++   struct brw_bufmgr *bufmgr = bo->bufmgr;
++
++   /* Only add the new GEM handle to the list of export if it belongs to a
++    * different GEM device. Otherwise we might close the same buffer multiple
++    * times.
++    */
++   int ret = os_same_file_description(drm_fd, bufmgr->fd);
++   WARN_ONCE(ret < 0,
++             "Kernel has no file descriptor comparison support: %s\n",
++             strerror(errno));
++   if (ret == 0) {
++      *out_handle = brw_bo_export_gem_handle(bo);
++      return 0;
++   }
++
++   struct bo_export *export = calloc(1, sizeof(*export));
++   if (!export)
++      return -ENOMEM;
++
++   export->drm_fd = drm_fd;
++
++   int dmabuf_fd = -1;
++   int err = brw_bo_gem_export_to_prime(bo, &dmabuf_fd);
++   if (err) {
++      free(export);
++      return err;
++   }
++
++   mtx_lock(&bufmgr->lock);
++   err = drmPrimeFDToHandle(drm_fd, dmabuf_fd, &export->gem_handle);
++   close(dmabuf_fd);
++   if (err) {
++      mtx_unlock(&bufmgr->lock);
++      free(export);
++      return err;
++   }
++
++   bool found = false;
++   list_for_each_entry(struct bo_export, iter, &bo->exports, link) {
++      if (iter->drm_fd != drm_fd)
++         continue;
++      /* Here we assume that for a given DRM fd, we'll always get back the
++       * same GEM handle for a given buffer.
++       */
++      assert(iter->gem_handle == export->gem_handle);
++      free(export);
++      export = iter;
++      found = true;
++      break;
++   }
++   if (!found)
++      list_addtail(&export->link, &bo->exports);
++
++   mtx_unlock(&bufmgr->lock);
++
++   *out_handle = export->gem_handle;
++
++   return 0;
++}
++
+ static void
+ add_bucket(struct brw_bufmgr *bufmgr, int size)
+ {
+diff --git a/src/mesa/drivers/dri/i965/brw_bufmgr.h b/src/mesa/drivers/dri/i965/brw_bufmgr.h
+index 499309b5bd3..32346ff8a30 100644
+--- a/src/mesa/drivers/dri/i965/brw_bufmgr.h
++++ b/src/mesa/drivers/dri/i965/brw_bufmgr.h
+@@ -39,6 +39,7 @@
+ #include <stdio.h>
+ #include <time.h>
+ 
++#include "c11/threads.h"
+ #include "util/u_atomic.h"
+ #include "util/list.h"
+ 
+@@ -179,6 +180,13 @@ struct brw_bo {
+    /** BO cache list */
+    struct list_head head;
+ 
++   /**
++    * List of GEM handle exports of this buffer (bo_export).
++    *
++    * Hold bufmgr->lock when using this list.
++    */
++   struct list_head exports;
++
+    /**
+     * Boolean of whether this buffer can be re-used
+     */
+@@ -372,6 +380,18 @@ struct brw_bo *brw_bo_gem_create_from_prime_tiled(struct brw_bufmgr *bufmgr,
+ 
+ uint32_t brw_bo_export_gem_handle(struct brw_bo *bo);
+ 
++/**
++ * Exports a bo as a GEM handle into a given DRM file descriptor
++ * \param bo Buffer to export
++ * \param drm_fd File descriptor where the new handle is created
++ * \param out_handle Pointer to store the new handle
++ *
++ * Returns 0 if the buffer was successfully exported, a non zero error code
++ * otherwise.
++ */
++int brw_bo_export_gem_handle_for_device(struct brw_bo *bo, int drm_fd,
++                                        uint32_t *out_handle);
++
+ int brw_reg_read(struct brw_bufmgr *bufmgr, uint32_t offset,
+                  uint64_t *result);
+ 
+diff --git a/src/mesa/drivers/dri/i965/intel_batchbuffer.c b/src/mesa/drivers/dri/i965/intel_batchbuffer.c
+index bfb39c1ea86..eab6bb2bf72 100644
+--- a/src/mesa/drivers/dri/i965/intel_batchbuffer.c
++++ b/src/mesa/drivers/dri/i965/intel_batchbuffer.c
+@@ -507,11 +507,17 @@ grow_buffer(struct brw_context *brw,
+    new_bo->refcount = bo->refcount;
+    bo->refcount = 1;
+ 
++   assert(list_is_empty(&bo->exports));
++   assert(list_is_empty(&new_bo->exports));
++
+    struct brw_bo tmp;
+    memcpy(&tmp, bo, sizeof(struct brw_bo));
+    memcpy(bo, new_bo, sizeof(struct brw_bo));
+    memcpy(new_bo, &tmp, sizeof(struct brw_bo));
+ 
++   list_inithead(&bo->exports);
++   list_inithead(&new_bo->exports);
++
+    grow->partial_bo = new_bo; /* the one reference of the OLD bo */
+    grow->partial_bytes = existing_bytes;
+ }
+diff --git a/src/mesa/drivers/dri/i965/intel_screen.c b/src/mesa/drivers/dri/i965/intel_screen.c
+index f2fbe70cada..cfc70ff7303 100644
+--- a/src/mesa/drivers/dri/i965/intel_screen.c
++++ b/src/mesa/drivers/dri/i965/intel_screen.c
+@@ -901,9 +901,16 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
+    case __DRI_IMAGE_ATTRIB_STRIDE:
+       *value = image->pitch;
+       return true;
+-   case __DRI_IMAGE_ATTRIB_HANDLE:
+-      *value = brw_bo_export_gem_handle(image->bo);
++   case __DRI_IMAGE_ATTRIB_HANDLE: {
++      __DRIscreen *dri_screen = image->screen->driScrnPriv;
++      uint32_t handle;
++      if (brw_bo_export_gem_handle_for_device(image->bo,
++                                              dri_screen->fd,
++                                              &handle))
++         return false;
++      *value = handle;
+       return true;
++   }
+    case __DRI_IMAGE_ATTRIB_NAME:
+       return !brw_bo_flink(image->bo, (uint32_t *) value);
+    case __DRI_IMAGE_ATTRIB_FORMAT:
+-- 
+2.26.2
+
