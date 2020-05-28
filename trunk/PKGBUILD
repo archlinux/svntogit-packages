@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.6.14.a
+pkgver=5.6.15.b
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -21,7 +21,6 @@ source=(
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
   0001-gcc-plugins-drop-support-for-GCC-4.7.patch
-  0002-gcc-common.h-Update-for-GCC-10.patch
   sphinx-workaround.patch
 )
 validpgpkeys=(
@@ -30,13 +29,12 @@ validpgpkeys=(
   '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A'  # Daniel Micay
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('33763f3541711e39fa743da45ff9512d54ade61406173f3d267ba4484cec7ea3'
+sha256sums=('65ab799393d490463c610270634874dfcb66440a312837d04b51bbb69323034e'
             'SKIP'
-            '84ec49efc9243c3a04d10c30b487137c39611f32e7046938affc09a53585d4c2'
+            '92eddb50d3ea917ccdf169b3f472d2dbd490c0086944f1b68eb6686a3e2b69fa'
             'SKIP'
-            '93ba919836378a3a4df05e78011281a6e4430afe89a0e54dac48e2ad15355fa4'
-            '118531186e7069b006d48fdfb2dbd9f28ee6d01cbfaacb007d8f44e8e76a57e1'
-            'd2ee933dd10dee475746a7e9081bca3ebdae8c6fb631f458d8f0d4987c9a0845'
+            '62373ae4c9b9c400d5d81336812564e7924f0eb2b2a85dd1d505d66c591fcd86'
+            '82210fa21308a3335c6d1a56cbae27bfba4c7c99c64585a3a2dbac93aae8f260'
             '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c')
 
 export KBUILD_BUILD_HOST=archlinux
