@@ -2,10 +2,10 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
-pkgname=('vulkan-mesa-layer' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
+pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=20.1.0
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd'
@@ -49,6 +49,7 @@ build() {
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,swr,iris \
     -D vulkan-drivers=amd,intel \
     -D vulkan-overlay-layer=true \
+	-D vulkan-device-select-layer=true \
     -D swr-arches=avx,avx2 \
     -D dri3=true \
     -D egl=true \
@@ -93,12 +94,18 @@ _install() {
   done
 }
 
-package_vulkan-mesa-layer() {
-  pkgdesc="Vulkan overlay layer to display information about the application"
+package_vulkan-mesa-layers() {
+  pkgdesc="Mesa's Vulkan layers"
+  depends=('libdrm' 'libxcb' 'wayland')
+  conflicts=('vulkan-mesa-layer')
+  replaces=('vulkan-mesa-layer')
 
   _install fakeinstall/usr/share/vulkan/explicit_layer.d
   _install fakeinstall/usr/lib/libVkLayer_MESA_overlay.so
   _install fakeinstall/usr/bin/mesa-overlay-control.py
+
+  _install fakeinstall/usr/share/vulkan/implicit_layer.d
+  _install fakeinstall/usr/lib/libVkLayer_MESA_device_select.so
 
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
 }
