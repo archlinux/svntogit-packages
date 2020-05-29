@@ -30,11 +30,9 @@ build() {
     -D ptp-helper-permissions=capabilities \
     -D dbghelp=disabled \
     -D gobject-cast-checks=disabled \
-    -D glib-asserts=enabled \
-    -D glib-checks=enabled \
     -D package-name="GStreamer (Arch Linux)" \
     -D package-origin="https://www.archlinux.org/"
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
