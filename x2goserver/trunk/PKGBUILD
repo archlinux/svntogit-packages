@@ -7,7 +7,7 @@
 
 pkgname=x2goserver
 pkgver=4.1.0.3
-pkgrel=4
+pkgrel=5
 pkgdesc="Open source graphical Remote Desktop and terminal server based on NX technology"
 arch=('x86_64')
 url="https://www.x2go.org/"
@@ -80,16 +80,17 @@ backup=('etc/x2go/x2goserver.conf'
 # no https due to invalid certificate
 source=(https://code.x2go.org/releases/source/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.asc}
        tmpfiles.d
-       sysusers.d)
+       sysusers.d
+       reproducible-man-gzip.patch)
 sha256sums=('6776aaa354f5a44e349f0b3c176d4988c88a618c2edf46c98a37ae89c069dcd0'
             'SKIP'
             '548d48925171aeca198494236cfba7232921a25a1c4c81f5d004a734d83d1350'
-            '04d429e8d8fe02c8078d75ba63ba57774274df877b2c6ec942621312b7bf9118')
+            '04d429e8d8fe02c8078d75ba63ba57774274df877b2c6ec942621312b7bf9118'
+            '2d52a5ca28d5b65a9cc9bd8cdc74d030d7faddb6d727d2df520686934ea125fb')
 validpgpkeys=('1AD23D1B8F087A35AB74BDE9F4A7678C9C6B0B2B') # X2go Git Administrator <git-admin@x2go.org>
 
-build() {
+prepare() {
   cd ${pkgname}-${pkgver}
-
   # -r option does not exist in Arch linux
   # (However, html man pages do not get installed anyway...)
   for Makefile in $(find . -type f -name Makefile); do
@@ -103,7 +104,13 @@ build() {
   done
   # Do not ship xsession - Debian specific
   sed -i -e '/xsession/s/^/#/' Makefile
-  
+
+  # remove timestamp to solve reproducible build
+  patch -Np1 -i ../reproducible-man-gzip.patch
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
   make PREFIX=/usr SBINDIR=/usr/bin DESTDIR="$pkgdir" PERL_INSTALLDIRS=vendor
 }
 
