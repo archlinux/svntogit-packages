@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.24.0
+pkgver=1.24.2
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
@@ -19,7 +19,7 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs iwd dnsmasq openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=ea141ba8f8d1cf72e3bd752199c1076821fffdf9  # tags/1.24.0^0
+_commit=972453d7352e92f4f988e00d6f43636835a1ae91  # tags/1.24.2^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -68,13 +68,11 @@ build() {
   )
 
   arch-meson NetworkManager build "${meson_args[@]}"
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
-  # iproute2 bug 
-  # https://gitlab.freedesktop.org/NetworkManager/NetworkManager/commit/be76d8b624fab99cbd76092ff511e6adc305279c
-  meson test -C build --print-errorlogs || :
+  meson test -C build --print-errorlogs
 }
 
 _pick() {
@@ -96,7 +94,8 @@ package_networkmanager() {
               'modemmanager: cellular network support'
               'iwd: wpa_supplicant alternative'
               'dhclient: alternative DHCP client'
-              'openresolv: alternative resolv.conf manager')
+              'openresolv: alternative resolv.conf manager'
+              'firewalld: Firewall support')
   backup=(etc/NetworkManager/NetworkManager.conf)
   groups=(gnome)
 
