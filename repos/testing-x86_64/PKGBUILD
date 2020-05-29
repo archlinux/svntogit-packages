@@ -49,7 +49,7 @@ build() {
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,swr,iris \
     -D vulkan-drivers=amd,intel \
     -D vulkan-overlay-layer=true \
-	-D vulkan-device-select-layer=true \
+    -D vulkan-device-select-layer=true \
     -D swr-arches=avx,avx2 \
     -D dri3=true \
     -D egl=true \
