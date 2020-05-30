@@ -1,28 +1,24 @@
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
-# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=20.1.0
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
-             'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd'
-             'elfutils' 'llvm' 'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors'
-             'libxrandr' 'valgrind' 'glslang' 'meson')
+             'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
+             'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
+             'valgrind' 'glslang' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
-	0001-iris-fix-BO-destruction-in-error-path.patch
-	0002-iris-fix-export-of-GEM-handles.patch
-	0003-i965-fix-export-of-GEM-handles.patch 
         LICENSE)
 sha512sums=('f49230d18febe1bfd7c6282ab95fc244530f5cef56df0f804d8bece8a70bafcb445b8b83df96ad1b4c5af022c4e39a71f19a8f7e47b1fb09ada2b1a1317ff3be'
             'SKIP'
-            '456d1296ac8ce01d2f1e0c9d9cb8fc995d5f5e5de8f56a3487452a131a7ccfa4beaeb3fc693afbf4691e8de90e399d86bb121cd7514a981fe96b4333df980af3'
-            '7903c26dcb11932f26dcc6ffd2fd2ecd05840141dc2abfcaf404716320927cd40ba472c434a6e4ae9a08fafa7d54bdb26890efd2177634947f134de6d1fb7315'
-            '9fe91699d00a9eee4de5b1e60dd14e7cde83933d2fff13f09fd24687addc84a3f9a6c512e02587ceabe6a4c459dbd1f452953ab741ac4843526e1504c12cf5d7'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
@@ -33,11 +29,6 @@ validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l
 
 prepare() {
   cd mesa-$pkgver
-
-  # fix https://gitlab.freedesktop.org/mesa/mesa/-/issues/2882
-  patch -Np1 -i ../0001-iris-fix-BO-destruction-in-error-path.patch
-  patch -Np1 -i ../0002-iris-fix-export-of-GEM-handles.patch
-  patch -Np1 -i ../0003-i965-fix-export-of-GEM-handles.patch 
 }
 
 build() {
@@ -77,11 +68,11 @@ build() {
   meson configure build
 
   ninja -C build xmlpool-pot xmlpool-update-po xmlpool-gmo
-  ninja -C build
+  meson compile -C build
 
   # fake installation to be seperated into packages
   # outside of fakeroot but mesa doesn't need to chown/mod
-  DESTDIR="${srcdir}/fakeinstall" ninja -C build install
+  DESTDIR="${srcdir}/fakeinstall" meson install -C build
 }
 
 _install() {
@@ -126,7 +117,7 @@ package_opencl-mesa() {
 package_vulkan-intel() {
   pkgdesc="Intel's Vulkan mesa driver"
   depends=('wayland' 'libx11' 'libxshmfence' 'libdrm' 'zstd')
-  optdepends=('vulkan-mesa-layer: a vulkan layer to display information using an overlay')
+  optdepends=('vulkan-mesa-layers: additional vulkan layers')
   provides=('vulkan-driver')
 
   _install fakeinstall/usr/share/vulkan/icd.d/intel_icd*.json
@@ -139,7 +130,7 @@ package_vulkan-intel() {
 package_vulkan-radeon() {
   pkgdesc="Radeon's Vulkan mesa driver"
   depends=('wayland' 'libx11' 'libxshmfence' 'libelf' 'libdrm' 'zstd' 'llvm-libs')
-  optdepends=('vulkan-mesa-layer: a vulkan layer to display information using an overlay')
+  optdepends=('vulkan-mesa-layers: additional vulkan layers')
   provides=('vulkan-driver')
 
   _install fakeinstall/usr/share/vulkan/icd.d/radeon_icd*.json
@@ -168,7 +159,8 @@ package_mesa-vdpau() {
 
 package_mesa() {
   depends=('libdrm' 'wayland' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf'
-           'libomxil-bellagio' 'libunwind' 'llvm-libs' 'lm_sensors' 'libglvnd')
+           'libomxil-bellagio' 'libunwind' 'llvm-libs' 'lm_sensors' 'libglvnd'
+           'zstd')
   optdepends=('opengl-man-pages: for the OpenGL API man pages'
               'mesa-vdpau: for accelerated video playback'
               'libva-mesa-driver: for accelerated video playback')
@@ -201,7 +193,7 @@ package_mesa() {
 
   # indirect rendering
   ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
-  
+
   # make sure there are no files left to install
   find fakeinstall -depth -print0 | xargs -0 rmdir
 
