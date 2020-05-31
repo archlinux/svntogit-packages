@@ -3,7 +3,7 @@
 pkgbase=python-hyperlink
 pkgname=('python-hyperlink' 'python2-hyperlink')
 pkgver=19.0.0
-pkgrel=4
+pkgrel=5
 pkgdesc='A featureful, correct URL for Python'
 arch=('any')
 license=('BSD')
@@ -37,6 +37,10 @@ package_python-hyperlink() {
   depends=('python-idna')
 
   cd hyperlink-$pkgver
+
+  # reproducible .pyc files
+  export PYTHONHASHSEED=0
+
   python setup.py install --root="$pkgdir" --optimize=1
   install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
 }
