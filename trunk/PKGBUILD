@@ -5,7 +5,7 @@
 # Contributor: Bartlomiej Piotrowski <nospam@bpiotrowski.pl>
 
 pkgname=pkgconf
-pkgver=1.7.2
+pkgver=1.7.3
 pkgrel=1
 pkgdesc="Package compiler and linker metadata toolkit"
 url="https://git.sr.ht/~kaniini/pkgconf"
@@ -17,7 +17,7 @@ provides=(pkg-config pkgconfig)
 conflicts=(pkg-config)
 replaces=(pkg-config)
 groups=(base-devel)
-_commit=c6b93941a03fc330d260d815614dc36468481af2  # tags/pkgconf-1.7.2
+_commit=aca0674837cb6df1b29faddb8afe6b2f39733f6b  # tags/pkgconf-1.7.3
 source=("git+https://git.sr.ht/~kaniini/pkgconf#commit=$_commit"
         i686-pc-linux-gnu.personality
         x86_64-pc-linux-gnu.personality)
