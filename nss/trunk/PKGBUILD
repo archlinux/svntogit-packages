@@ -3,8 +3,8 @@
 
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
-pkgver=3.52.1
-pkgrel=2
+pkgver=3.53
+pkgrel=1
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
 arch=(x86_64)
@@ -13,7 +13,7 @@ depends=(nspr sqlite zlib sh 'p11-kit>=0.23.19')
 makedepends=(perl python gyp)
 source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
         certdata2pem.py bundle.sh)
-sha256sums=('bcc81ac33aeb4ecad182dc21e34d2c97bcc148fd7b9e76f85bebb892405a9278'
+sha256sums=('08d36dc1a56325f02e626626d4eeab9c4d126dbd99dfaf419b91d0a696f58917'
             'd2a1579dae05fd16175fac27ef08b54731ecefdf414085c610179afcf62b096c'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
@@ -33,7 +33,13 @@ build() {
   ./bundle.sh
 
   cd nss-$pkgver/nss
-  ./build.sh -v --opt --system-sqlite --system-nspr --enable-libpkix --disable-tests
+  ./build.sh \
+    --target x64 \
+    --opt \
+    --system-sqlite \
+    --system-nspr \
+    --enable-libpkix \
+    --disable-tests
 }
 
 package_nss() {
@@ -88,3 +94,5 @@ package_ca-certificates-mozilla() {
   install -Dm644 ca-bundle.trust.p11-kit \
     "$pkgdir/usr/share/ca-certificates/trust-source/mozilla.trust.p11-kit"
 }
+
+# vim:set sw=2 et:
