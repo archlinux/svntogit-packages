@@ -3,7 +3,7 @@
 pkgbase=python-hyperlink
 pkgname=('python-hyperlink' 'python2-hyperlink')
 pkgver=19.0.0
-pkgrel=5
+pkgrel=6
 pkgdesc='A featureful, correct URL for Python'
 arch=('any')
 license=('BSD')
@@ -28,6 +28,9 @@ build() {
 check() {
   cd "$srcdir"/hyperlink-$pkgver
   python setup.py pytest
+
+  # clean-up non-reproducible files generated during test
+  rm -rf hyperlink/test/__pycache__/
 
   cd "$srcdir"/hyperlink-$pkgver-py2
   python2 setup.py pytest
