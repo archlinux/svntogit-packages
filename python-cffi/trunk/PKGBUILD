@@ -4,7 +4,7 @@
 pkgbase=python-cffi
 pkgname=(python-cffi python2-cffi)
 pkgver=1.14.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Foreign Function Interface for Python calling C code"
 arch=('x86_64')
 url="https://cffi.readthedocs.org/"
@@ -39,6 +39,10 @@ package_python-cffi() {
   depends=('python-pycparser')
 
   cd cffi-$pkgver
+
+  # remove files created during check() for reproducible SOURCES.txt
+  rm -rf testing/cffi{0,1}/__pycache__/
+
   python setup.py install --root="$pkgdir" --optimize=1
   install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
 }
@@ -47,6 +51,10 @@ package_python2-cffi() {
   depends=('python2-pycparser')
 
   cd cffi-$pkgver-py2
+
+  # remove files created during check() for reproducible SOURCES.txt
+  rm -rf testing/cffi{0,1}/__pycache__/
+
   python2 setup.py install --root="$pkgdir" --optimize=1
   install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
 }
