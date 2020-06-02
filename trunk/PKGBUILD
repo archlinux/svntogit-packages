@@ -5,7 +5,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=440.82
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -13,10 +13,12 @@ options=('!strip')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-utils.sysusers'
-        "https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
+        "https://download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
+        nvidia-kernel-5.7.patch)
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            'd86ed2cd715c5a9aebdd11ee562cfa454dbafdb1b468004cbb93d37ee258623f11144cf30b8b14996a4e093cb3119edc36d13152893d735e3536f49c45e2cca3')
+            'd86ed2cd715c5a9aebdd11ee562cfa454dbafdb1b468004cbb93d37ee258623f11144cf30b8b14996a4e093cb3119edc36d13152893d735e3536f49c45e2cca3'
+            '8b80b565e45382a25a06bebbef65760ce3a5a3de7939c5eed1d230d0e5e37c1a9e0a18825d356eb0e1c7d0f6f612619b3485e96ec23da2605eb1b449dbe9bd99')
 
 
 create_links() {
@@ -46,6 +48,8 @@ BUILT_MODULE_NAME[2]="nvidia-modeset"\
 DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[3]="nvidia-drm"\
 DEST_MODULE_LOCATION[3]="/kernel/drivers/video"' dkms.conf
+
+    patch -p1 -i "$srcdir"/nvidia-kernel-5.7.patch
 
     # Gift for linux-rt guys
     sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
