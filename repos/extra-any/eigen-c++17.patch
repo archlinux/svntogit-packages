@@ -1,0 +1,84 @@
+From 2aa9eb3ce8fa6b2d61dce5be9d6d6460a28080c4 Mon Sep 17 00:00:00 2001
+From: Gael Guennebaud <g.gael@free.fr>
+Date: Thu, 7 Feb 2019 15:21:35 +0100
+Subject: [PATCH] bug #1676: workaround GCC's bug in c++17 mode. (grafted from
+ b3c4344a6852e55c849976dd46ec4e861399bf16 )
+
+---
+ Eigen/src/Core/DenseBase.h                | 4 ++--
+ Eigen/src/Core/util/ForwardDeclarations.h | 6 +-----
+ bench/bench_gemm.cpp                      | 5 +++--
+ 3 files changed, 6 insertions(+), 9 deletions(-)
+
+diff --git a/Eigen/src/Core/DenseBase.h b/Eigen/src/Core/DenseBase.h
+index 90066ae73..a96aa7152 100644
+--- a/Eigen/src/Core/DenseBase.h
++++ b/Eigen/src/Core/DenseBase.h
+@@ -40,7 +40,7 @@ static inline void check_DenseIndex_is_signed() {
+   */
+ template<typename Derived> class DenseBase
+ #ifndef EIGEN_PARSED_BY_DOXYGEN
+-  : public DenseCoeffsBase<Derived>
++  : public DenseCoeffsBase<Derived, internal::accessors_level<Derived>::value>
+ #else
+   : public DenseCoeffsBase<Derived,DirectWriteAccessors>
+ #endif // not EIGEN_PARSED_BY_DOXYGEN
+@@ -71,7 +71,7 @@ template<typename Derived> class DenseBase
+     typedef Scalar value_type;
+     
+     typedef typename NumTraits<Scalar>::Real RealScalar;
+-    typedef DenseCoeffsBase<Derived> Base;
++    typedef DenseCoeffsBase<Derived, internal::accessors_level<Derived>::value> Base;
+ 
+     using Base::derived;
+     using Base::const_cast_derived;
+diff --git a/Eigen/src/Core/util/ForwardDeclarations.h b/Eigen/src/Core/util/ForwardDeclarations.h
+index ea107393a..134544f96 100644
+--- a/Eigen/src/Core/util/ForwardDeclarations.h
++++ b/Eigen/src/Core/util/ForwardDeclarations.h
+@@ -47,11 +47,7 @@ template<typename T> struct NumTraits;
+ template<typename Derived> struct EigenBase;
+ template<typename Derived> class DenseBase;
+ template<typename Derived> class PlainObjectBase;
+-
+-
+-template<typename Derived,
+-         int Level = internal::accessors_level<Derived>::value >
+-class DenseCoeffsBase;
++template<typename Derived, int Level> class DenseCoeffsBase;
+ 
+ template<typename _Scalar, int _Rows, int _Cols,
+          int _Options = AutoAlign |
+diff --git a/bench/bench_gemm.cpp b/bench/bench_gemm.cpp
+index 8528c5587..dccab96a8 100644
+--- a/bench/bench_gemm.cpp
++++ b/bench/bench_gemm.cpp
+@@ -112,6 +112,7 @@ void matlab_cplx_cplx(const M& ar, const M& ai, const M& br, const M& bi, M& cr,
+   cr.noalias() -= ai * bi;
+   ci.noalias() += ar * bi;
+   ci.noalias() += ai * br;
++  // [cr ci] += [ar ai] * br + [-ai ar] * bi
+ }
+ 
+ void matlab_real_cplx(const M& a, const M& br, const M& bi, M& cr, M& ci)
+@@ -240,7 +241,7 @@ int main(int argc, char ** argv)
+     blas_gemm(a,b,r);
+     c.noalias() += a * b;
+     if(!r.isApprox(c)) {
+-      std::cout << r  - c << "\n";
++      std::cout << (r  - c).norm() << "\n";
+       std::cerr << "Warning, your product is crap!\n\n";
+     }
+   #else
+@@ -249,7 +250,7 @@ int main(int argc, char ** argv)
+       gemm(a,b,c);
+       r.noalias() += a.cast<Scalar>() .lazyProduct( b.cast<Scalar>() );
+       if(!r.isApprox(c)) {
+-        std::cout << r - c << "\n";
++        std::cout << (r  - c).norm() << "\n";
+         std::cerr << "Warning, your product is crap!\n\n";
+       }
+     }
+-- 
+2.26.2
+
