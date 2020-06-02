@@ -1,0 +1,348 @@
+From 0156f360b82c55ebcb92c44a9380e3e30af2fffa Mon Sep 17 00:00:00 2001
+From: Fangrui Song <maskray@google.com>
+Date: Mon, 18 May 2020 10:15:59 -0700
+Subject: [PATCH 1/2] [ELF] Make --trace-symbol track preempted shared
+ definitions
+
+Note, we still name a preempted SharedSymbol "shared definition",
+instead of "reference" as printed by GNU ld. This difference should not matter.
+
+```
+// GNU ld
+ld.bfd: t: definition of f@v1
+ld.bfd: t.so: reference to f@v1
+```
+
+Reviewed By: psmith
+
+Differential Revision: https://reviews.llvm.org/D80143
+
+(cherry picked from commit 64676499741cb985146ab982a67da859ff8f4f4d)
+---
+ lld/ELF/Symbols.cpp          | 3 ++-
+ lld/test/ELF/trace-symbols.s | 5 +++++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/lld/ELF/Symbols.cpp b/lld/ELF/Symbols.cpp
+index 0dcf34722d3..4c7bc0f28c0 100644
+--- a/lld/ELF/Symbols.cpp
++++ b/lld/ELF/Symbols.cpp
+@@ -688,7 +688,8 @@ void Symbol::resolveShared(const SharedSymbol &other) {
+     replace(other);
+     binding = bind;
+     referenced = true;
+-  }
++  } else if (traced)
++    printTraceSymbol(&other);
+ }
+ 
+ } // namespace elf
+diff --git a/lld/test/ELF/trace-symbols.s b/lld/test/ELF/trace-symbols.s
+index b6f8bea79d1..f5211b367eb 100644
+--- a/lld/test/ELF/trace-symbols.s
++++ b/lld/test/ELF/trace-symbols.s
+@@ -13,6 +13,11 @@
+ # RUN: rm -f %t2.a
+ # RUN: llvm-ar rcs %t2.a %t2
+ 
++# RUN: ld.lld -y foo -shared %t1 %t1.so -o /dev/null | \
++# RUN:   FileCheck --check-prefix=PREEMPT %s --implicit-check-not=foo
++# PREEMPT:      trace-symbols.s.tmp1: definition of foo
++# PREEMPT-NEXT: trace-symbols.s.tmp1.so: shared definition of foo
++
+ # RUN: ld.lld -y foo -trace-symbol common -trace-symbol=hsymbol \
+ # RUN:   %t %t1 %t2 -o %t3 | FileCheck -check-prefix=OBJECTRFOO %s
+ # OBJECTRFOO: trace-symbols.s.tmp: reference to foo
+
+From 7940788867bea8fabc929d714841476356726399 Mon Sep 17 00:00:00 2001
+From: Fangrui Song <maskray@google.com>
+Date: Fri, 15 May 2020 20:36:41 -0700
+Subject: [PATCH 2/2] [ELF] Parse SHT_GNU_verneed and respect versioned
+ undefined symbols in shared objects
+
+An undefined symbol in a shared object can be versioned, like `f@v1`.
+We currently insert `f` as an Undefined into the symbol table, but we
+should insert `f@v1` instead.
+
+The string `v1` is inferred from SHT_GNU_versym and SHT_GNU_verneed.
+This patch implements the functionality.
+
+Failing to do this can cause two issues:
+
+* If a versioned symbol referenced by a shared object is defined in the
+  executable, we will fail to export it.
+* If a versioned symbol referenced by a shared object in another object
+  file, --no-allow-shlib-undefined may spuriously report an
+  "undefined reference to " error. See https://bugs.llvm.org/show_bug.cgi?id=44842
+  (Linking -lfftw3 -lm on Arch Linux can cause
+  `undefined reference to __log_finite`)
+
+Reviewed By: grimar
+
+Differential Revision: https://reviews.llvm.org/D80059
+
+(cherry picked from commit e32f04cdc95224589f30148599c362ba37bae7b6)
+---
+ lld/ELF/InputFiles.cpp                   | 59 +++++++++++++++++-
+ lld/ELF/InputFiles.h                     |  5 ++
+ lld/test/ELF/invalid/verneed-shared.yaml | 79 ++++++++++++++++++++++++
+ lld/test/ELF/verneed-shared.s            | 37 +++++++++++
+ 4 files changed, 178 insertions(+), 2 deletions(-)
+ create mode 100644 lld/test/ELF/invalid/verneed-shared.yaml
+ create mode 100644 lld/test/ELF/verneed-shared.s
+
+diff --git a/lld/ELF/InputFiles.cpp b/lld/ELF/InputFiles.cpp
+index 43978cd66c6..ddfb24888ce 100644
+--- a/lld/ELF/InputFiles.cpp
++++ b/lld/ELF/InputFiles.cpp
+@@ -1179,6 +1179,42 @@ static std::vector<const void *> parseVerdefs(const uint8_t *base,
+   return verdefs;
+ }
+ 
++// Parse SHT_GNU_verneed to properly set the name of a versioned undefined
++// symbol. We detect fatal issues which would cause vulnerabilities, but do not
++// implement sophisticated error checking like in llvm-readobj because the value
++// of such diagnostics is low.
++template <typename ELFT>
++std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
++                                               const typename ELFT::Shdr *sec) {
++  if (!sec)
++    return {};
++  std::vector<uint32_t> verneeds;
++  ArrayRef<uint8_t> data = CHECK(obj.getSectionContents(sec), this);
++  const uint8_t *verneedBuf = data.begin();
++  for (unsigned i = 0; i != sec->sh_info; ++i) {
++    if (verneedBuf + sizeof(typename ELFT::Verneed) > data.end() ||
++        uintptr_t(verneedBuf) % sizeof(uint32_t) != 0)
++      fatal(toString(this) + " has an invalid Verneed");
++    auto *vn = reinterpret_cast<const typename ELFT::Verneed *>(verneedBuf);
++    const uint8_t *vernauxBuf = verneedBuf + vn->vn_aux;
++    for (unsigned j = 0; j != vn->vn_cnt; ++j) {
++      if (vernauxBuf + sizeof(typename ELFT::Vernaux) > data.end() ||
++          uintptr_t(vernauxBuf) % sizeof(uint32_t) != 0)
++        fatal(toString(this) + " has an invalid Vernaux");
++      auto *aux = reinterpret_cast<const typename ELFT::Vernaux *>(vernauxBuf);
++      if (aux->vna_name >= this->stringTable.size())
++        fatal(toString(this) + " has a Vernaux with an invalid vna_name");
++      uint16_t version = aux->vna_other & VERSYM_VERSION;
++      if (version >= verneeds.size())
++        verneeds.resize(version + 1);
++      verneeds[version] = aux->vna_name;
++      vernauxBuf += aux->vna_next;
++    }
++    verneedBuf += vn->vn_next;
++  }
++  return verneeds;
++}
++
+ // We do not usually care about alignments of data in shared object
+ // files because the loader takes care of it. However, if we promote a
+ // DSO symbol to point to .bss due to copy relocation, we need to keep
+@@ -1222,6 +1258,7 @@ template <class ELFT> void SharedFile::parse() {
+ 
+   const Elf_Shdr *versymSec = nullptr;
+   const Elf_Shdr *verdefSec = nullptr;
++  const Elf_Shdr *verneedSec = nullptr;
+ 
+   // Search for .dynsym, .dynamic, .symtab, .gnu.version and .gnu.version_d.
+   for (const Elf_Shdr &sec : sections) {
+@@ -1238,6 +1275,9 @@ template <class ELFT> void SharedFile::parse() {
+     case SHT_GNU_verdef:
+       verdefSec = &sec;
+       break;
++    case SHT_GNU_verneed:
++      verneedSec = &sec;
++      break;
+     }
+   }
+ 
+@@ -1277,12 +1317,13 @@ template <class ELFT> void SharedFile::parse() {
+   sharedFiles.push_back(this);
+ 
+   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
++  std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
+ 
+   // Parse ".gnu.version" section which is a parallel array for the symbol
+   // table. If a given file doesn't have a ".gnu.version" section, we use
+   // VER_NDX_GLOBAL.
+   size_t size = numELFSyms - firstGlobal;
+-  std::vector<uint32_t> versyms(size, VER_NDX_GLOBAL);
++  std::vector<uint16_t> versyms(size, VER_NDX_GLOBAL);
+   if (versymSec) {
+     ArrayRef<Elf_Versym> versym =
+         CHECK(obj.template getSectionContentsAsArray<Elf_Versym>(versymSec),
+@@ -1313,7 +1354,22 @@ template <class ELFT> void SharedFile::parse() {
+       continue;
+     }
+ 
++    uint16_t idx = versyms[i] & ~VERSYM_HIDDEN;
+     if (sym.isUndefined()) {
++      // For unversioned undefined symbols, VER_NDX_GLOBAL makes more sense but
++      // as of binutils 2.34, GNU ld produces VER_NDX_LOCAL.
++      if (idx != VER_NDX_LOCAL && idx != VER_NDX_GLOBAL) {
++        if (idx >= verneeds.size()) {
++          error("corrupt input file: version need index " + Twine(idx) +
++                " for symbol " + name + " is out of bounds\n>>> defined in " +
++                toString(this));
++          continue;
++        }
++        StringRef verName = this->stringTable.data() + verneeds[idx];
++        versionedNameBuffer.clear();
++        name =
++            saver.save((name + "@" + verName).toStringRef(versionedNameBuffer));
++      }
+       Symbol *s = symtab->addSymbol(
+           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
+       s->exportDynamic = true;
+@@ -1323,7 +1379,6 @@ template <class ELFT> void SharedFile::parse() {
+     // MIPS BFD linker puts _gp_disp symbol into DSO files and incorrectly
+     // assigns VER_NDX_LOCAL to this section global symbol. Here is a
+     // workaround for this bug.
+-    uint32_t idx = versyms[i] & ~VERSYM_HIDDEN;
+     if (config->emachine == EM_MIPS && idx == VER_NDX_LOCAL &&
+         name == "_gp_disp")
+       continue;
+diff --git a/lld/ELF/InputFiles.h b/lld/ELF/InputFiles.h
+index a310ba551bd..2d91c01bf48 100644
+--- a/lld/ELF/InputFiles.h
++++ b/lld/ELF/InputFiles.h
+@@ -366,6 +366,11 @@ public:
+ 
+   // Used for --as-needed
+   bool isNeeded;
++
++private:
++  template <typename ELFT>
++  std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
++                                     const typename ELFT::Shdr *sec);
+ };
+ 
+ class BinaryFile : public InputFile {
+diff --git a/lld/test/ELF/invalid/verneed-shared.yaml b/lld/test/ELF/invalid/verneed-shared.yaml
+new file mode 100644
+index 00000000000..18315fe8a2d
+--- /dev/null
++++ b/lld/test/ELF/invalid/verneed-shared.yaml
+@@ -0,0 +1,79 @@
++## REQUIRES: x86
++## Test that we can parse SHT_GNU_verneed in a shared object and report certain errors.
++
++# RUN: echo '.globl _start; _start:' | llvm-mc -filetype=obj -triple=x86_64 - -o %t.o
++
++## sh_offset(SHT_GNU_verneed) is out of bounds.
++# RUN: yaml2obj --docnum=1 %s -o %t1.so
++# RUN: not ld.lld %t.o %t1.so -o /dev/null 2>&1 | FileCheck --check-prefix=SHOFFSET %s
++# SHOFFSET: error: {{.*}}.so: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x0) that is greater than the file size (0x228)
++--- !ELF
++FileHeader:
++  Class:   ELFCLASS64
++  Data:    ELFDATA2LSB
++  Type:    ET_DYN
++  Machine: EM_X86_64
++Sections:
++  - Name:  .gnu.version_r
++    Type:  SHT_GNU_verneed
++    Flags: [ SHF_ALLOC ]
++    ShOffset: 0xFFFFFFFF
++
++## A Verneed entry is misaligned (not a multiple of 4).
++# RUN: yaml2obj --docnum=2 %s -o %t2.so
++# RUN: not ld.lld %t.o %t2.so -o /dev/null 2>&1 | FileCheck --check-prefix=VN-MISALIGNED %s
++# VN-MISALIGNED: {{.*}}.so has an invalid Verneed
++--- !ELF
++FileHeader:
++  Class:   ELFCLASS64
++  Data:    ELFDATA2LSB
++  Type:    ET_DYN
++  Machine: EM_X86_64
++Sections:
++  - Type: Fill
++    Size: 0x1
++  - Name:  .gnu.version_r
++    Type:  SHT_GNU_verneed
++    Flags: [ SHF_ALLOC ]
++    Info:  1
++    Link:  .dynstr
++    Dependencies:
++      - Version: 1
++        File:    foo
++        Entries:
++          - Name:  'foo'
++            Hash:  0
++            Flags: 0
++            Other: 0
++DynamicSymbols:
++  - Name: foo
++
++## vn_aux points to a place outside of the file.
++# RUN: yaml2obj --docnum=3 -D VERNEED=0100010001000000040200000000000000000000 %s -o %t3.so
++# RUN: not ld.lld %t.o %t3.so -o /dev/null 2>&1 | FileCheck --check-prefix=AUX-OOB %s
++# AUX-OOB: {{.*}}.so has an invalid Vernaux
++--- !ELF
++FileHeader:
++  Class:   ELFCLASS64
++  Data:    ELFDATA2LSB
++  Type:    ET_DYN
++  Machine: EM_X86_64
++Sections:
++  - Name:  .gnu.version_r
++    Type:  SHT_GNU_verneed
++    Flags: [ SHF_ALLOC ]
++    Info:  1
++    Link:  .dynstr
++    Content: "[[VERNEED]]"
++DynamicSymbols:
++  - Name: foo
++
++## vn_aux is misaligned.
++# RUN: yaml2obj --docnum=3 -D VERNEED=0100010001000000110000000000000000000000 %s -o %t4.so
++# RUN: not ld.lld %t.o %t4.so -o /dev/null 2>&1 | FileCheck --check-prefix=AUX-MISALIGNED %s
++# AUX-MISALIGNED: {{.*}}.so has an invalid Vernaux
++
++## vna_name is out of bounds.
++# RUN: yaml2obj --docnum=3 -D VERNEED=010001000000000010000000000000009107000000000000ff00000000000000 %s -o %t5.so
++# RUN: not ld.lld %t.o %t5.so -o /dev/null 2>&1 | FileCheck --check-prefix=NAME-OOB %s
++# NAME-OOB: {{.*}}.so has a Vernaux with an invalid vna_name
+diff --git a/lld/test/ELF/verneed-shared.s b/lld/test/ELF/verneed-shared.s
+new file mode 100644
+index 00000000000..218f43c2545
+--- /dev/null
++++ b/lld/test/ELF/verneed-shared.s
+@@ -0,0 +1,37 @@
++# REQUIRES: x86
++# RUN: echo 'v1 { f; }; v2 { g; };' > %t.ver
++# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
++# RUN: ld.lld -shared --version-script %t.ver %t.o -o %t.so
++
++# RUN: ld.lld --version-script %t.ver %t.o %t.so -o /dev/null -y f@v1 | \
++# RUN:   FileCheck --check-prefix=TRACE %s --implicit-check-not=f@v1
++
++## TRACE:      {{.*}}.o: definition of f@v1
++## TRACE-NEXT: {{.*}}.so: shared definition of f@v1
++
++# RUN: echo '.symver f,f@v1; .symver g,g@v2; call f; call g' | \
++# RUN:   llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
++# RUN: ld.lld -shared %t1.o %t.so -o %t1.so
++
++## Test that we can parse SHT_GNU_verneed to know that the undefined symbols in
++## %t1.so are called 'f@v1' and 'g@v2', which can be satisfied by the executable.
++## We will thus export the symbols.
++# RUN: ld.lld -pie %t.o %t1.so -o %t
++# RUN: llvm-nm -D %t | FileCheck --check-prefix=NM %s
++
++# NM: T f
++# NM: T g
++
++## The default is --no-allow-shlib-undefined.
++## Don't error because undefined symbols in %t1.so are satisfied by %t.so
++# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t2.o
++# RUN: ld.lld %t2.o %t1.so %t.so -y f@v1 -o /dev/null | FileCheck %s
++
++# CHECK:      {{.*}}1.so: reference to f@v1
++# CHECK-NEXT: {{.*}}.so: shared definition of f@v1
++
++.globl f_v1, g_v2
++.symver f_v1,f@v1
++.symver g_v2,g@v2
++f_v1:
++g_v2:
