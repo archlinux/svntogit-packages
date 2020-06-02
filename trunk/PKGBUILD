@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.2.3
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -73,6 +73,7 @@ makedepends=(
   nasm
 )
 optdepends=(
+  'avisynthplus: AviSynthPlus support'
   'intel-media-sdk: Intel QuickSync support'
   'ladspa: LADSPA filters'
   'nvidia-utils: Nvidia NVDEC/NVENC support'
