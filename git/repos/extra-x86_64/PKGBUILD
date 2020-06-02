@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=2.26.2
+pkgver=2.27.0
 pkgrel=1
 pkgdesc='the fast distributed version control system'
 arch=('x86_64')
@@ -28,13 +28,11 @@ optdepends=('tk: gitk and git gui'
 install=git.install
 validpgpkeys=('96E07AF25771955980DAD10020D04E5A713660A7') # Junio C Hamano
 source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar."{xz,sign}
-        '0001-git-p4-python.patch'
         'git-daemon@.service'
         'git-daemon.socket'
         'git-sysusers.conf')
-sha256sums=('6d65132471df9e531807cb2746f8be317e22a343b9385bbe11c9ce7f0d2fc848'
+sha256sums=('73ca9774d7fa226e1d87c1909401623f96dca6a044e583b9a762e84d7d1a73f9'
             'SKIP'
-            '0d19345aaeaeb374f8bfc30b823e8f53cb128c56b68c6504bbdd8766c03d1df9'
             '14c0b67cfe116b430645c19d8c4759419657e6809dfa28f438c33a005245ad91'
             'ac4c90d62c44926e6d30d18d97767efc901076d4e0283ed812a349aece72f203'
             '7630e8245526ad80f703fac9900a1328588c503ce32b37b9f8811674fcda4a45')
@@ -53,12 +51,6 @@ _make_options=(
   NO_PERL_CPAN_FALLBACKS=1
   USE_LIBPCRE2=1
 )
-
-prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
-
-  patch -Np1 < ../0001-git-p4-python.patch
-}
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"
