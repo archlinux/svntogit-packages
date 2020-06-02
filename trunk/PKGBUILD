@@ -2,7 +2,7 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=iana-etc
-pkgver=20200511
+pkgver=20200601
 _ports=service-names-port-numbers-${pkgver}
 _protocols=protocol-numbers-20200417
 pkgrel=1
@@ -14,7 +14,7 @@ backup=('etc/'{protocols,services})
 source=("https://sources.archlinux.org/other/packages/iana-etc/${_ports}.xml"
         "https://sources.archlinux.org/other/packages/iana-etc/${_protocols}.xml"
         'LICENSE')
-sha256sums=('75b1031dc75f3680b880a6db29a11c38fd7cd835f0a95eec758ccec53275a9df'
+sha256sums=('21b3dd5ec7421bf9d68714f6c1c3820b6800010b6e4b1157f18209d2b2f2c52b'
             '7de8f70197974b5238edd5a5a318392d7c262147c7495b7fb64f66b9966d4ec8'
             'dd37e92942d5a4024f1c77df49d61ca77fc6284691814903a741785df61f78cb')
 
