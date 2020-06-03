@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=3.36.2+7+ge4199c71c
+pkgver=3.36.3
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -19,7 +19,7 @@ optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
 install=gnome-shell.install
-_commit=e4199c71cc13ad967ddb797662e10eed538252f6  # gnome-3-36
+_commit=b642f9275e5d9f9a4019e4c62d1c74d715b13911  # tags/3.36.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
@@ -40,7 +40,7 @@ prepare() {
   
 build() {
   arch-meson $pkgname build -D gtk_doc=true
-  ninja -C build
+  meson compile -C build
 }
 
 package() {
