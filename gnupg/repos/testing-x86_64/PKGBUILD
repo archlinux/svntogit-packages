@@ -5,7 +5,7 @@
 
 pkgname=gnupg
 pkgver=2.2.20
-pkgrel=3
+pkgrel=4
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
@@ -22,13 +22,11 @@ validpgpkeys=('D8692123C4065DEA5E0F3AB5249B39D24F25E3B6'
               '031EC2536E580D8EA286A9F22071B08A33BD3F06'
               '5B80C5754298F0CB55D8ED6ABCEF7E294B092E28')
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
-        'gpg-zip.patch'
         'drop-import-clean.patch'
         'avoid-beta-warning.patch'
         'do-not-rebuild-defsincdate.patch')
 sha256sums=('04a7c9d48b74c399168ee8270e548588ddbe52218c337703d7f06373d326ca30'
             'SKIP'
-            'ddcd1f125cb2efda187ef8374a7440b491eb9f338db1772af497e50fdd367eb5'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d'
             '01fee1b04358e5dce76894214bb263e9a75cf408eb1277fad5b751ab3d45b87a')
@@ -39,7 +37,6 @@ prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	patch -p1 -i ../avoid-beta-warning.patch
 	patch -p1 -i ../drop-import-clean.patch
-	patch -p1 -i ../gpg-zip.patch
 
 	# improve reproducibility
 	patch -p1 -i ../do-not-rebuild-defsincdate.patch
