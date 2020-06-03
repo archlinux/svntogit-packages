@@ -2,11 +2,12 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xkeyboard-config
-pkgver=2.29
+pkgver=2.30
 pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
 license=('custom')
+# https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config
 url="https://www.freedesktop.org/wiki/Software/XKeyboardConfig"
 makedepends=('intltool' 'xorg-xkbcomp' 'libxslt' 'python')
 provides=('xkbdata')
@@ -15,7 +16,7 @@ conflicts=('xkbdata')
 source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2{,.sig})
 validpgpkeys=('FFB4CCD275AAA422F5F9808E0661D98FC933A145')
 validpgpkeys+=('15CFA5C595041D2CCBEA155F1732AA424A0E86B4') # "Sergey Udaltsov (For GNOME-related tasks) <svu@gnome.org>"
-sha512sums=('202255af097f3063d76341d1b4a7672662dc645f9bcd7afa87bc966a41db4c20fc6b8f4fbe2fcaec99b6bc458eac10129141a866a165857c46282f6705b78670'
+sha512sums=('2d775dcaab49d80f62b8eaadc9be406b42c9a3643d3a360f864a462c61865abce67d0a8a80772d54f8136603114c61b5168fd06771f9c132411911914abb1ea4'
             'SKIP')
 
 build() {
