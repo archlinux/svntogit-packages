@@ -5,19 +5,19 @@
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=subversion
-pkgver=1.13.0
-pkgrel=3
+pkgver=1.14.0
+pkgrel=1
 pkgdesc="A Modern Concurrent Version Control System"
 arch=('x86_64')
 url="https://subversion.apache.org/"
 license=('APACHE')
 depends=('file' 'libutf8proc' 'serf' 'sqlite' 'systemd')
-makedepends=('apache' 'python2' 'perl' 'swig3' 'java-environment>=8'
+makedepends=('apache' 'python' 'python-py3c' 'perl' 'swig' 'java-environment>=8'
              'libgnome-keyring' 'kwallet' 'kdelibs4support' 'ruby')
 optdepends=('libgnome-keyring: for GNOME Keyring for auth credentials'
             'kwallet: for KWallet for auth credentials'
             'bash-completion: for svn bash completion'
-            'python2: for some hook scripts'
+            'python: for some hook scripts'
             'java-environment: for Java support'
             'ruby: for some hook scripts')
 checkdepends=('ruby-test-unit')
@@ -25,16 +25,14 @@ provides=('svn')
 backup=('etc/xinetd.d/svn' 'etc/conf.d/svnserve')
 options=('!makeflags' '!emptydirs')
 source=(https://www.apache.org/dist/subversion/subversion-${pkgver}.tar.bz2{,.asc}
-        ruby-27.patch
         svn
         svnserve.conf
         svnserve.tmpfiles
         svnserve.service
         subversion.rpath.fix.patch
         ruby-frozen-nil.patch)
-sha512sums=('36f390b412bf772bf894efc2aadc247f12ca30ac407e04f664c14411c3519e1bb242d1239f2f44cbcb86eafc7c413efc8eadbfe1d1e75118235a7b7adc6c85b2'
+sha512sums=('af6b706fdc91f7ab292fce9d9de582da306fd11e92767dc852687e71a6a8b65bb867fa70d5afd7f76a46005acb1b3c2d3193e690def48cd26875b3a7851cd13b'
             'SKIP'
-            '4057e4bb08da476c029629091f5c8a1c7c72104412baaf39b0e2bd69b64ff7963a1c10b210eb6e2275024cd3f697b7793f257a609c3278f31f5dec36d080594e'
             '3df59e92aa0314ff6adce26e2e1162bf2872ca03ff1f78891081a60e67b521b6046b4a2f85f718dcd27f9d5709594658817a09548cdb74e3976d371dbe47e7db'
             'f7f2ceac2446cc94ac2be3404083cc54a0f1f4d04d5301f600dfafca38819669bcffdfa45f1b90b9f3cdb042469385a764f11dc1a827f10c23ddf73b7ac6c9da'
             '7775f4da5003970c9ebdc2f696ba090df194a77d9daed791875488c943f72ae496b5f9cc6f3ff9f3f4de9f352a3b518137babdea38947d1a2d5dd16aa1844036'
@@ -49,28 +47,28 @@ validpgpkeys=('19BBCAEF7B19B280A0E2175E62D48FAD16A0DE01'
               'A844790FB5743606EE95920776D788E1ED1A599C'
               '7B8CA7F6451AD89C8ADC077B376A3CFD110B1C95'
               '056F8016D9B87B1BDE41746799EC741B57921ACC'
-              '3F8E467CB3366E3013E1120D583F00ADF981C39F')
+              '3F8E467CB3366E3013E1120D583F00ADF981C39F'
+              '91BFBF4D6956BD5DF7B72D23DFE691AE331BA3DB')
 # Ben Reser / Stefan Sperling / Branko Čibej / Evgeny Kotkov / Bert Huijben / Philip Martin /
-# Stefan Fuhrmann / Stefan Hett (CODE SIGNING KEY) /Nathan Hartman (CODE SIGNING KEY)
+# Stefan Fuhrmann / Stefan Hett (CODE SIGNING KEY) /Nathan Hartman (CODE SIGNING KEY) / James McCoy
 
 prepare() {
    cd ${pkgname}-${pkgver}
    patch -Np0 -i ../subversion.rpath.fix.patch
    patch -p1 -i ../ruby-frozen-nil.patch
-   sed -i 's|/usr/bin/env python|/usr/bin/env python2|' tools/hook-scripts/{,mailer/{,tests/}}*.py subversion/tests/cmdline/*.py
    rm subversion/bindings/swig/proxy/*.swg
 
-   patch -p1 < ../ruby-27.patch # https://issues.apache.org/jira/browse/SVN-4841
+   # The command line switch is broken
+   sed -i 's|/include|/include/python3.8/py3c|' build/ac-macros/py3c.m4
 
    ./autogen.sh
 }
 
 build() {
    cd ${pkgname}-${pkgver}
-   export PYTHON=/usr/bin/python2
    ./configure --prefix=/usr --with-apr=/usr --with-apr-util=/usr \
                --with-zlib=/usr --with-serf=/usr --with-apxs \
-               --with-sqlite=/usr \
+               --with-sqlite=/usr --with-py3c=/usr \
                --enable-javahl --with-jdk=/usr/lib/jvm/default \
                --with-gnome-keyring --with-kwallet \
                --with-apache-libexecdir=/usr/lib/httpd/modules \
@@ -78,8 +76,8 @@ build() {
                --disable-static
 
    make LT_LDFLAGS="-L$Fdestdir/usr/lib"
-   make swig_pydir=/usr/lib/python2.7/site-packages/libsvn \
-     swig_pydir_extra=/usr/lib/python2.7/site-packages/svn SWIG=swig-3 swig-py swig-pl javahl swig-rb
+   make swig_pydir=/usr/lib/python3.8/site-packages/libsvn \
+     swig_pydir_extra=/usr/lib/python3.8/site-packages/svn swig-py swig-pl javahl swig-rb
 }
 
 check() {
@@ -93,8 +91,8 @@ package() {
 
    export LD_LIBRARY_PATH="${pkgdir}"/usr/lib:${LD_LIBRARY_PATH}
    make DESTDIR="${pkgdir}" INSTALLDIRS=vendor \
-     swig_pydir=/usr/lib/python2.7/site-packages/libsvn \
-     swig_pydir_extra=/usr/lib/python2.7/site-packages/svn \
+     swig_pydir=/usr/lib/python3.8/site-packages/libsvn \
+     swig_pydir_extra=/usr/lib/python3.8/site-packages/svn \
      install install-swig-py install-swig-pl install-javahl install-swig-rb
 
    install -dm755 "${pkgdir}"/usr/share/subversion
