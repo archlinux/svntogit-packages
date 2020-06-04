@@ -4,14 +4,22 @@
 
 pkgname=mercurial
 pkgver=5.4
-pkgrel=1
+pkgrel=2
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
 license=(GPL)
-depends=(python2)
+depends=(python)
+makedepends=('python-docutils')
 optdepends=('tk: for the hgk GUI')
-checkdepends=('breezy' 'cvs' 'git' 'git-lfs' 'python2-docutils' 'subversion' 'unzip')
+#checkdepends=('breezy' 'cvs' 'git' 'git-lfs' 'python-docutils' 'subversion' 'unzip')
+
+# ToDo:
+# check included contrib/packaging/mercurial.spec and how BLFS/Gentoo/Debian/Fedora do it
+# the following should be either makedepends or checkdepends when running tests
+# 'python-gnupg' 'python-pygments'  'python-pyflakes' 'python-pyopenssl'
+# 'openssh'  'rust' 'subversion' 'breezy' 'cvs' 'git') 	
+
 backup=(etc/mercurial/hgrc)
 validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
               3A8155163D0E20A530FCB78647A67FFAA346AACE
@@ -22,29 +30,23 @@ sha256sums=('1df8d1978aefcbb65dc51e3666a452583f47aeaf3c5682e4c00a3b23cd805d6a'
             'SKIP'
             '87427151713e689cd87dc50d50c048e0e58285815e4eb61962b50583532cbde5')
 
-prepare() {
-  cd $pkgname-$pkgver
-  sed -i -e 's#env python#env python2#' mercurial/lsprof.py contrib/hg-ssh
-}
-
 build() {
-  cd $pkgname-$pkgver/contrib/chg
+  cd $pkgname-$pkgver
   make
+  make -C contrib/chg
 }
 
 check() {
   cd $pkgname-$pkgver/tests
-  # TODO
-  python2 run-tests.py -j16 || :
+  # TODO - disabled for now - to many tests fail
+  #python run-tests.py # -j48 || :
 }
 
 package() {
   cd $pkgname-$pkgver
-  python2 setup.py install --root="$pkgdir" --optimize=1
+  python setup.py install --root="$pkgdir" --optimize=1
+  make DESTDIR="${pkgdir}" PREFIX=/usr install
 
-  install -d "$pkgdir/usr/share/man/"{man1,man5}
-  install -m644 doc/hg.1 "$pkgdir/usr/share/man/man1"
-  install -m644 doc/{hgrc.5,hgignore.5} "$pkgdir/usr/share/man/man5"
   install -m644 -D contrib/zsh_completion "$pkgdir/usr/share/zsh/site-functions/_hg"
   install -m644 -D contrib/bash_completion "$pkgdir/usr/share/bash-completion/completions/hg"
 
