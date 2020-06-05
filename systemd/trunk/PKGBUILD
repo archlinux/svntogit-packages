@@ -6,7 +6,7 @@ pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='a47534aa62edfddb2df86e2d0c208979f24dc8c2' # git rev-parse v${pkgver}
 pkgver=245.6
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -44,7 +44,7 @@ sha512sums=('SKIP'
             'e38c7c422c82953f9c2476a5ab8009d614cbec839e4088bff5db7698ddc84e3d8ed64f32ed323f57b1913c5c9703546f794996cb415ed7cdda930b627962a3c4'
             '85d11bbbb5c10016e4a67eec051315e2e292939844f260bf698018c5bd1c516c28444f635eb15832a23e26891c4beda14bacfa57fdeda45c00f1b653abe3b123'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
-            'bc16cd288fa4fe8f8d2d4ba7a3198f942626af08330e4d1656ee38c408b23bb532a1955a1327ec367ae35161e3cc1f336d9285fb9c7d4322f2865451fb9b8961'
+            'e5dfc897f281dcfa89dc81b4f24a4098a49b190bff49cea313c20d4ad019e8ebbe07cbe84232bae0579d103bc66ce96d098e0dbd0a93efd19d249ac742060038'
             'a25b28af2e8c516c3a2eec4e64b8c7f70c21f974af4a955a4a9d45fd3e3ff0d2a98b4419fe425d47152d5acae77d64e69d8d014a7209524b75a81b0edb10bf3a'
             '61032d29241b74a0f28446f8cf1be0e8ec46d0847a61dadb2a4f096e8686d5f57fe5c72bcf386003f6520bc4b5856c32d63bf3efe7eb0bc0deefc9f68159e648'
             'c416e2121df83067376bcaacb58c05b01990f4614ad9de657d74b6da3efa441af251d13bf21e3f0f71ddcb4c9ea658b81da3d915667dc5c309c87ec32a1cb5a5'
@@ -79,6 +79,12 @@ _backports=(
 
   # sd-journal: don't check namespaces if we have no namespace to go by
   '2b6df46d21abe8a8b7481e420588a9a129699cf9'
+
+  # network: tc: support Hierarchy Token Bucket (HTB)
+  # (we need this for safe_atou32_full()...)
+  'b934ac3d6e7dcad114776ef30ee9098693e7ab7e'
+  # basic/user-util: always use base 10 for user/group numbers 
+  '156a5fd297b61bce31630d7a52c15614bf784843'
 )
 
 _reverts=(
