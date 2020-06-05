@@ -1,7 +1,7 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=composer
-pkgver=1.10.6
+pkgver=1.10.7
 pkgrel=1
 pkgdesc="Dependency Manager for PHP"
 arch=('any')
@@ -16,7 +16,7 @@ provides=('php-composer')
 source=("${pkgname}::git+https://github.com/composer/composer.git#tag=${pkgver}"
         "${pkgname}-${pkgver}.phar::https://getcomposer.org/download/${pkgver}/composer.phar")
 sha512sums=('SKIP'
-            'f5daa14bc155792b9e04424998585547fb902997ebc1c658d5786cb777517e051991a5bd0f6a4371da06e872c991d7d1255ef31d6ee6a477d644226de896948a')
+            'f5d5a5c1a1ef2ae09b86e3bcd5727a3c8325160984ec4a3b1bd187425baed261848e41e3cbdcb98c6d07d9ade3e47a7958cf5fc9d0036c93e89e6ede5c258d89')
 
 prepare() {
 	cd "${srcdir}/${pkgname}"
@@ -33,13 +33,21 @@ build() {
 check() {
 	cd "${srcdir}/${pkgname}"
 
+	# check if the upstream build and ours differ
+	diff -q ${srcdir}/${pkgname}-${pkgver}.phar composer.phar
+
+	bin/composer validate
+
 	git config --global user.email "${USER}@${HOST}"
 	git config --global user.name "${USER}"
 
 	# Install the dev dependencies to run the unit tests
 	bin/composer -n install --prefer-dist
 
-	vendor/bin/simple-phpunit
+	# Fix test dependencies for Composer 1.10.7
+	bin/composer require --dev 'symfony/phpunit-bridge:^4.2'
+
+	SYMFONY_PHPUNIT_VERSION=7.5 vendor/bin/simple-phpunit
 }
 
 package() {
