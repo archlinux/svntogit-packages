@@ -6,7 +6,7 @@ pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='a47534aa62edfddb2df86e2d0c208979f24dc8c2' # git rev-parse v${pkgver}
 pkgver=245.6
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -88,6 +88,8 @@ _backports=(
 )
 
 _reverts=(
+  # introduces ordering cycle - FS#66908
+  'e1c091b6d4c55de5c5356e8ca5564dba6769b49f'
 )
 
 prepare() {
