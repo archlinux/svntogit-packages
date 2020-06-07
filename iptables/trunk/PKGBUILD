@@ -4,7 +4,7 @@
 pkgbase=iptables
 pkgname=(iptables iptables-nft)
 pkgver=1.8.5
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
@@ -77,7 +77,7 @@ package_iptables-nft() {
 _package() {
   DESTDIR="$pkgdir" make -C build install
 
-  for _x in {arp,eb,ip,ip6}tables{,-restore,-save} iptables-xml; do
+  for _x in {arp,eb,ip,ip6}tables{,-restore,-save} iptables-apply iptables-xml; do
     if [[ $1 = nft || $_x = ip* ]]; then
       ln -sf xtables-$1-multi "$pkgdir/usr/bin/$_x"
     else
