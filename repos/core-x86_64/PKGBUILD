@@ -3,7 +3,7 @@
 
 pkgbase=iptables
 pkgname=(iptables iptables-nft)
-pkgver=1.8.4
+pkgver=1.8.5
 pkgrel=1
 epoch=1
 pkgdesc='Linux kernel packet control tool'
@@ -16,7 +16,7 @@ backup=(etc/ethertypes etc/iptables/{ip,ip6}tables.rules)
 source=(https://www.netfilter.org/projects/iptables/files/$pkgbase-$pkgver.tar.bz2{,.sig}
         empty.rules simple_firewall.rules empty-{filter,mangle,nat,raw,security}.rules
         {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush)
-sha1sums=('cd5fe776fb2b0479b3234758fc333777caa1239b'
+sha1sums=('f177a58d0a71b00d68ef5792ae4676bcc0ad29e6'
           'SKIP'
           '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
           'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
