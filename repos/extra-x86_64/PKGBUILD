@@ -1,20 +1,20 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Tom Gundersen <teg@jklm.no>
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=libfprint
-pkgver=1.90.1
+pkgver=1.90.2
 pkgrel=1
 pkgdesc="Library for fingerprint readers"
+url="https://fprint.freedesktop.org/"
 arch=(x86_64)
-url="https://www.freedesktop.org/wiki/Software/fprint/libfprint"
 license=(LGPL)
 depends=(libgusb pixman nss systemd-libs)
-makedepends=(git meson gtk-doc gobject-introspection)
+makedepends=(git meson gtk-doc gobject-introspection systemd)
 checkdepends=(cairo)
 provides=(libfprint-2.so)
 groups=(fprint)
-_commit=66c9e4a829a06a25d8b6160cdfbad1d47ef5b81a  # tags/v1.90.1^0
+_commit=4b2816db6404604ba7a89d8610f7572f5032c746  # tags/v1.90.2^0
 source=("git+https://gitlab.freedesktop.org/libfprint/libfprint.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -29,7 +29,7 @@ prepare() {
 
 build() {
   arch-meson $pkgname build
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
