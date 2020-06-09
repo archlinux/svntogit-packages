@@ -1,12 +1,12 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Nikolay Rysev <mad.f3ka@gmail.com>
 
 pkgname=fprintd
 pkgver=1.90.1
 pkgrel=1
 pkgdesc="D-Bus service to access fingerprint readers"
+url="https://fprint.freedesktop.org/"
 arch=(x86_64)
-url="https://www.freedesktop.org/wiki/Software/fprint/fprintd"
 license=(GPL)
 depends=(glib2 libfprint polkit dbus dbus-glib libsystemd)
 makedepends=(gtk-doc git meson pam_wrapper python-cairo python-dbus
@@ -29,7 +29,7 @@ build() {
   arch-meson $pkgname build \
     -D pam_modules_dir=/usr/lib/security \
     -D gtk_doc=true
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
