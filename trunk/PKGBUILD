@@ -88,8 +88,6 @@ _backports=(
 )
 
 _reverts=(
-  # introduces ordering cycle - FS#66908
-  'e1c091b6d4c55de5c5356e8ca5564dba6769b49f'
 )
 
 prepare() {
