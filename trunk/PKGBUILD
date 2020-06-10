@@ -138,7 +138,11 @@ build() {
     -Dlz4=true
     -Dman=true
 
+    # We disable DNSSEC by default, it still causes trouble:
+    # https://github.com/systemd/systemd/issues/10579
+    
     -Ddbuspolicydir=/usr/share/dbus-1/system.d
+    -Ddefault-dnssec=no
     -Ddefault-hierarchy=hybrid
     -Ddefault-kill-user-processes=false
     -Ddefault-locale=C
