@@ -6,7 +6,7 @@
 
 pkgbase=marble
 pkgname=(marble-common marble-qt marble)
-pkgver=20.04.1
+pkgver=20.04.2
 pkgrel=1
 pkgdesc="Desktop Globe"
 arch=(x86_64)
@@ -15,18 +15,13 @@ license=(GPL)
 makedepends=(extra-cmake-modules gpsd kdoctools knewstuff kparts krunner libwlocate phonon-qt5
              plasma-workspace qt5-serialport qt5-tools qt5-webengine shapelib)
 source=("https://download.kde.org/stable/release-service/$pkgver/src/$pkgbase-$pkgver.tar.xz"{,.sig})
-sha256sums=('28cdf7161e8f3a2f00fd35cc4a384e29e7875c7177c27ff6d5dd8f8f53bcaa67'
+sha256sums=('dbd31b0d81e8414db30278948a95f87a23730da0aa5b96cbf3088ec67c450714'
             'SKIP')
 validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
               F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87) # Christoph Feck <cfeck@kde.org>
 
-prepare() {
-  mkdir -p build
-}
-
 build() {
-  cd build
-  cmake ../$pkgbase-$pkgver \
+  cmake -B build -S $pkgbase-$pkgver \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_SYSCONFDIR=/etc \
     -DQT_PLUGINS_DIR=lib/qt/plugins \
@@ -34,7 +29,7 @@ build() {
     -DBUILD_MARBLE_EXAMPLES=OFF \
     -DBUILD_MARBLE_TESTS=OFF \
     -DMOBILE=OFF
-  make
+  cmake --build build
 }
 
 package_marble-common() {
@@ -45,8 +40,7 @@ package_marble-common() {
               'qt5-serialport: APRS plugin'
               'shapelib: SHP plugin')
 
-  cd build
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --install build
   rm -r "$pkgdir"/usr/share/{config.kcfg,kxmlgui5,metainfo,plasma} \
         "$pkgdir"/usr/bin \
         "$pkgdir"/etc \
@@ -60,19 +54,17 @@ package_marble-qt() {
   pkgdesc+=' (Qt version)'
   depends=(marble-common)
 
-  cd build
-  make -C src/apps/marble-qt DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --install build/src/apps/marble-qt
 }
 
 package_marble() {
   depends=(marble-common knewstuff kparts)
   optdepends=('krunner: Krunner plugin')
-  groups=(kde-applications kdeedu)
+  groups=(kde-applications kde-education)
 
-  cd build
-  make -C src/apps/marble-kde DESTDIR="$pkgdir" install
-  make -C src/plasma DESTDIR="$pkgdir" install
-  make -C src/plasmarunner DESTDIR="$pkgdir" install
-  make -C src/thumbnailer DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --install build/src/apps/marble-kde
+  DESTDIR="$pkgdir" cmake --install build/src/plasma
+  DESTDIR="$pkgdir" cmake --install build/src/plasmarunner
+  DESTDIR="$pkgdir" cmake --install build/src/thumbnailer
   rm -r "$pkgdir"/usr/share/{icons,doc/HTML}
 }
