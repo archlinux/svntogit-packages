@@ -1,0 +1,71 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Jonahtan Schaeffer <joschaeffer@gmail.com>
+# COntributor: Drake Arconis <lightdrake@gmail.com>
+
+pkgbase=jsoncpp
+pkgname=('jsoncpp' 'jsoncpp-doc')
+pkgver=1.9.3
+pkgrel=1
+pkgdesc='C++ library for interacting with JSON'
+url='https://github.com/open-source-parsers/jsoncpp'
+arch=('x86_64')
+license=('MIT' 'custom:Public_Domain')
+makedepends=('gcc-libs' 'doxygen' 'graphviz' 'python' 'meson')
+options=('staticlibs')
+source=(https://github.com/open-source-parsers/${pkgbase}/archive/${pkgver}/${pkgbase}-${pkgver}.tar.gz)
+sha512sums=('f1c035d54ed952d8d4e41acab5c3ecf6aa445f348f98aeac2e7c89555ec2f6421d727b3bc4c2f54176afce137c545b20d886562901953ec091f91890e91e8559')
+b2sums=('6f89762e899ffe127705a30c1fe86f458d62fa05b8dbde6c465c73b6855d3945f3d739ff0c26e1a6326a211c946277908684ace9363df72ba0f460f66b3e3fd8')
+
+prepare() {
+  cd ${pkgbase}-${pkgver}
+  echo "${pkgver}" > version
+}
+
+build() {
+  cd ${pkgbase}-${pkgver}
+  echo "Building shared library..."
+  arch-meson --default-library shared build
+  ninja -C build
+
+  echo "Building static library..."
+  arch-meson --default-library static build-static
+  ninja -C build-static
+
+  echo "Building docs..."
+  python doxybuild.py \
+    --doxygen="$(command -v doxygen)" \
+    --with-dot
+}
+
+check() {
+  cd ${pkgbase}-${pkgver}
+  ninja -C build test
+  cd test
+  python runjsontests.py ../build/jsontestrunner
+  python rununittests.py ../build/jsoncpp_test
+}
+
+package_jsoncpp() {
+  depends=('gcc-libs')
+  optdepends=('jsoncpp-doc: documentation')
+  provides=('libjsoncpp.so')
+
+  cd ${pkgbase}-${pkgver}
+  DESTDIR="${pkgdir}" ninja -C build install
+  DESTDIR="${pkgdir}" ninja -C build-static install
+  install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+
+package_jsoncpp-doc() {
+  pkgdesc+=' (documentation)'
+  optdepends=('jsoncpp')
+
+  cd ${pkgbase}-${pkgver}
+  install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -dm 755 "${pkgdir}/usr/share/doc/${pkgbase}"
+  cp -a dist/doxygen/jsoncpp-api-html-${pkgver} "${pkgdir}/usr/share/doc/${pkgbase}/html"
+}
+
+# vim: ts=2 sw=2 et:
