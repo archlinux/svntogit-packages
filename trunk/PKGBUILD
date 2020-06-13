@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=extra-cmake-modules
-pkgver=5.70.0
+pkgver=5.71.0
 pkgrel=1
 pkgdesc='Extra modules and scripts for CMake'
 arch=(any)
@@ -14,29 +14,24 @@ makedepends=(python-sphinx python-requests qt5-tools)
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
         ECM-no-init.py.patch)
-sha256sums=('830da8d84cc737e024ac90d6ed767d10f9e21531e5f576a1660d4ca88bee8581'
+sha256sums=('64f41c0b4b3164c7be8fcab5c0181253d97d1e9d62455fd540cb463afd051878'
             'SKIP'
             '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
 prepare() {
-  mkdir -p build
-
-  cd $pkgname-$pkgver
-  patch -p1 -i ../ECM-no-init.py.patch # Don't create __init__.py
+  patch -d $pkgname-$pkgver -p1 -i ../ECM-no-init.py.patch # Don't create __init__.py
 }
 
 build() {
-  cd build
-  cmake ../$pkgname-$pkgver \
+  cmake -B build -S $pkgname-$pkgver \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DBUILD_HTML_DOCS=OFF \
     -DBUILD_QTHELP_DOCS=ON \
     -DBUILD_TESTING=OFF
-  make
+  cmake --build build
 }
 
 package() {
-  cd build
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --install build
 }
