@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.19.0
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -14,12 +14,14 @@ license=(LGPL)
 depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appstream-qt phonon-qt5
          xorg-xrdb xorg-xsetroot kactivitymanagerd kholidays xorg-xmessage milou prison kwin
          plasma-integration kdelibs4support kpeople kactivities-stats libkscreen kquickcharts kuserfeedback)
-makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin)
+makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin kinit)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
+         kdebug-422837.patch::"https://invent.kde.org/plasma/plasma-workspace/commit/3367908e.patch")
 sha256sums=('bdfcc6c12696e3a24602b23bd366ed52f004b158960c79e6c00b73cbb37e2bbe'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
+            '832d81d71ffbd030a327900887fa6a8352cea416484ad55406bb322db73d51cc')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -27,6 +29,8 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 
 prepare() {
   sed -e 's|dbus-run-session ||' -i $pkgbase-$pkgver/login-sessions/plasmawayland.desktop.cmake # Don't start a second user dbus session
+
+  patch -d $pkgbase-$pkgver -p1 -i ../kdebug-422837.patch # Fix tray icon visibility
 }
 
 build() {
