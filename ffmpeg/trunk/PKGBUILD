@@ -5,9 +5,9 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=4.3
+pkgver=4.2.3
 pkgrel=1
-epoch=1
+epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
 url=https://ffmpeg.org/
@@ -34,7 +34,6 @@ depends=(
   libmodplug
   libomxil-bellagio
   libpulse
-  librav1e.so
   libraw1394
   libsoxr
   libssh
@@ -90,7 +89,7 @@ provides=(
   libswresample.so
   libswscale.so
 )
-_tag=8e12af29d1a3f95c9e952d78354e3c8b1c0431a8
+_tag=d3b963cc41824a3c5b2758ac896fb23e20a87875
 source=(
   git+https://git.ffmpeg.org/ffmpeg.git#tag=${_tag}
   vmaf-model-path.patch
@@ -112,6 +111,10 @@ prepare() {
   # lavf/mp3dec: don't adjust start time; packets are not adjusted
   # https://crbug.com/1062037
   git cherry-pick -n 460132c9980f8a1f501a1f69477bca49e1641233
+
+  # backport avisynthplus support
+  git show 6d8cddd1c67758636843f6a08295b3896c2e9ef8 -- libavformat/avisynth.c | git apply -
+  git show 56f59246293de417d27ea7e27cb9a7727ee579fb -- libavformat/avisynth.c | git apply -
 
   patch -Np1 -i "${srcdir}"/vmaf-model-path.patch
 }
@@ -148,7 +151,6 @@ build() {
     --enable-libopenjpeg \
     --enable-libopus \
     --enable-libpulse \
-    --enable-librav1e \
     --enable-libsoxr \
     --enable-libspeex \
     --enable-libsrt \
