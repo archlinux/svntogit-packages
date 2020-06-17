@@ -1,11 +1,11 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
-# openssl > 1.1.1d is not yet compatible with edk2-ovmf
-_openssl_ver=1.1.1d
+_brotli_ver=1.0.7
+_openssl_ver=1.1.1g
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
-pkgver=202002
-pkgrel=9
+pkgver=202005
+pkgrel=1
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -14,13 +14,17 @@ makedepends=('acpica' 'iasl' 'libutil-linux' 'nasm' 'python')
 options=(!makeflags)
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archive/${pkgbase}-stable${pkgver}.tar.gz"
         "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
+        "brotli-${_brotli_ver}.tar.gz::https://github.com/google/brotli/archive/v${_brotli_ver}.tar.gz"
+        "${pkgbase}-202005-openssl-1.1.1g.patch"
         "50-edk2-ovmf-i386-secure.json"
         "50-edk2-ovmf-x86_64-secure.json"
         "60-edk2-ovmf-i386.json"
         "60-edk2-ovmf-x86_64.json")
-sha512sums=('e43090f9c0916b48452fa14bbcd9cd125330304c44b904502ef4ac035bbfb1b0529336f76a0512c0cdbcb4092722839e70b07866e845e76280f6a90b7fb093ab'
-            '2bc9f528c27fe644308eb7603c992bac8740e9f0c3601a130af30c9ffebbf7e0f5c28b76a00bbb478bad40fbe89b4223a58d604001e1713da71ff4b7fe6a08a7'
+sha512sums=('864e5b8babb28eea05f59e17581209c853c004993842a7a6b104e96bd1fd29d9dd3a1545fb44639f2442acc51b078c4996621e1f927fbf449dc1b86421b432ac'
+            '01e3d0b1bceeed8fb066f542ef5480862001556e0f612e017442330bbd7e5faee228b2de3513d7fc347446b7f217e27de1003dc9d7214d5833b97593f3ec25ab'
             'SKIP'
+            'a82362aa36d2f2094bca0b2808d9de0d57291fb3a4c29d7c0ca0a37e73087ec5ac4df299c8c363e61106fccf2fe7f58b5cf76eb97729e2696058ef43b1d3930a'
+            '3605c67d9c8870562086f63e96ffe8039cb394266298b382df61e12c777b6c37a2d2eb3fd5147cb3f00fabddc6dba139ba53da42ea81b1cbeb8f587c6d4cc251'
             '55e4187b11b27737f61e528c02ff43b9381c0cb09140e803531616766f9cb9401115d88d946b56171784cc028f9571279640eb39b6a9fa8e02ec0c8d1b036a3e'
             'a1236585b30d720540de2e9527d8c90ff2d428e800b3da545b23461dc698dc91fe441b62bb8cbca76e08f4ec1eb485619e9ab26157deb06e7fb33e7f5f9dd8b6'
             'c81e072aabfb01d29cf5194111524e2c4c8684979de6b6793db10299c95bb94f7b1d0a98b057df0664d7a894a2b40e9b4c3576112fae400a95eaf5fe5fc9369b'
@@ -33,12 +37,20 @@ _build_plugin='GCC5'
 prepare() {
   mv -v "$pkgbase-$pkgbase-stable$pkgver" "$pkgbase-$pkgver"
   cd "$pkgbase-$pkgver"
+
+  # applying fixes to build against openssl-1.1.1g
+  patch -Np1 -i "../${pkgbase}-202005-openssl-1.1.1g.patch"
   # symlinking openssl into place
   rm -rfv CryptoPkg/Library/OpensslLib/openssl
   ln -sfv "${srcdir}/openssl-$_openssl_ver" CryptoPkg/Library/OpensslLib/openssl
-  # openssl 1.1.1d has a typo that causes a compile error
-  sed -e 's/return return/return/g' \
-      -i "../openssl-$_openssl_ver/crypto/threads_none.c"
+  # copying required pre-generated header into place (to not also have to patch openssl)
+  cp -v CryptoPkg/Library/Include/internal/dso_conf.h CryptoPkg/Library/OpensslLib/openssl/include/crypto/
+
+  # symlinking brotli into place
+  rm -rfv BaseTools/Source/C/BrotliCompress/brotli MdeModulePkg/Library/BrotliCustomDecompressLib/brotli
+  ln -sfv "${srcdir}/brotli-${_brotli_ver}" BaseTools/Source/C/BrotliCompress/brotli
+  ln -sfv "${srcdir}/brotli-${_brotli_ver}" MdeModulePkg/Library/BrotliCustomDecompressLib/brotli
+
   # -Werror, not even once
   sed -e 's/ -Werror//g' \
       -i BaseTools/Conf/*.template BaseTools/Source/C/Makefiles/*.makefile
@@ -136,7 +148,7 @@ package_edk2-shell() {
   # license
   install -vDm 644 License.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
   # docs
-  install -vDm 644 {Readme.md,Maintainers.txt} \
+  install -vDm 644 {ReadMe.rst,Maintainers.txt} \
     -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
 
@@ -175,6 +187,6 @@ package_edk2-ovmf() {
   install -vDm 644 OvmfPkg/License.txt \
     "${pkgdir}/usr/share/licenses/${pkgname}/OvmfPkg.License.txt"
   # docs
-  install -vDm 644 {OvmfPkg/README,Readme.md,Maintainers.txt} \
+  install -vDm 644 {OvmfPkg/README,ReadMe.rst,Maintainers.txt} \
     -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
