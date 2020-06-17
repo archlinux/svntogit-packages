@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.54.2
+pkgver=0.54.3
 pkgrel=1
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
@@ -15,11 +15,11 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
               'itstool' 'gtk3' 'java-environment=8' 'gtk-doc' 'llvm' 'clang' 'sdl2' 'graphviz'
               'doxygen' 'vulkan-validation-layers' 'openssh' 'mercurial' 'gtk-sharp-2' 'qt5-tools'
               'libwmf' 'valgrind' 'cmake' 'netcdf-fortran' 'openmpi' 'nasm' 'gnustep-base' 'libelf'
-              'python-pytest-xdist') # 'cuda')
+              'python-pytest-xdist' 'python2-setuptools') # 'cuda')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         skip-test.diff
         arch-meson)
-sha512sums=('ad5ec826879d3d85088ca40d768599a4c8e66983f2a6a7ebe8ab12051cad18b4ade9a2afd30fe543b0a75900822992c8ef7161d369489e2211dd7a1a8ccc32ed'
+sha512sums=('2e62bf992bf337ae5a01f7a0fb842ea0cefcdbc81f5675235e41d8182f37df2e003b0a8a90d650c6cca4ff79898f7888474f75e5103a48d7ca14f51a024e4f2b'
             'SKIP'
             'fd1694e74cfa628bda81b1056061d75fa288e04d72bda733f3667be43cfb21c60f2e89455e4a101a7f6bef5754fe112dc84e18ec7a0807bc791015c34deea347'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
