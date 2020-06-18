@@ -5,8 +5,8 @@
 
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
-pkgver=1.44.0
-pkgrel=2
+pkgver=1.44.1
+pkgrel=1
 
 _llvm_ver=10.0.0
 
@@ -23,7 +23,7 @@ options=('!emptydirs' '!strip')
 source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
         "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig})
 
-sha256sums=('bf2df62317e533e84167c5bc7d4351a99fdab1f9cd6e6ba09f51996ad8561100'
+sha256sums=('7e2e64cb298dd5d5aea52eafe943ba0458fa82f2987fdcda1ff6f537b6f88473'
             'SKIP'
             '6a7da64d3a0a7320577b68b9ca4933bdcab676e898b759850e827333c3282c75'
             'SKIP')
@@ -77,6 +77,18 @@ build() {
 
   python ./x.py dist -j "$(nproc)"
   DESTDIR="$PWD"/dest-rust python ./x.py install -j "$(nproc)"
+
+  # Remove analysis data for libs that weren't installed
+  # TODO: Find out where these come from
+  local file lib
+  while read -rd '' file; do
+    lib="${file%.json}.rlib"
+    lib="${lib/\/analysis\///lib/}"
+    if [[ ! -e $lib ]]; then
+      echo "missing '$lib'"
+      rm -v "$file"
+    fi
+  done < <(find "dest-rust/usr/lib/rustlib"  -path '*/analysis/*.json' -print0)
 
   # move docs and lib32 libs out of the way for splitting
   mv dest-rust/usr/lib/rustlib/i686-unknown-linux-gnu dest-i686
