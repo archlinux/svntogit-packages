@@ -1,0 +1,78 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=fontconfig
+pkgname=(fontconfig fontconfig-docs)
+pkgver=2.13.91+48+gfcb0420
+pkgrel=2
+epoch=2
+pkgdesc="Library for configuring and customizing font access"
+url="https://www.freedesktop.org/wiki/Software/fontconfig/"
+arch=(x86_64)
+license=(custom)
+makedepends=(git autoconf-archive gperf python-lxml python-six docbook-utils docbook-sgml
+             perl-sgmls 'texlive-formatsextra>=2017' lynx json-c expat freetype2)
+checkdepends=(unzip)
+_commit=fcb042028126d79ea5a5fa015b2b034b98656e73  # master
+source=("git+https://gitlab.freedesktop.org/fontconfig/fontconfig.git#commit=$_commit"
+        fontconfig.hook)
+sha256sums=('SKIP'
+            '8883f7e6e9d574ed52b89256507a6224507925715ddc85b3dfab9683df2f1e25')
+
+# a nice page to test font matching:
+# http://zipcon.net/~swhite/docs/computers/browsers/fonttest.html
+# http://getemoji.com/
+
+pkgver() {
+  cd fontconfig
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd fontconfig
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd fontconfig
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+    --with-templatedir=/etc/fonts/conf.avail \
+    --localstatedir=/var \
+    --disable-static \
+    --with-default-fonts=/usr/share/fonts \
+    --with-add-fonts=/usr/local/share/fonts
+  make
+}
+
+check() {
+  cd fontconfig
+  make -k check
+}
+
+package_fontconfig() {
+  depends=(expat libfreetype.so)
+  provides=(libfontconfig.so)
+  install=fontconfig.install
+  backup=(etc/fonts/fonts.conf)
+
+  cd fontconfig
+  make DESTDIR="$pkgdir" install
+
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 ../*.hook
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
+
+  # Split -docs
+  mkdir -p "$srcdir/doc/usr/share/man"
+  mv {"$pkgdir","$srcdir"/doc}/usr/share/doc
+  mv {"$pkgdir","$srcdir"/doc}/usr/share/man/man3
+}
+
+package_fontconfig-docs() {
+  pkgdesc+=" (documentation)"
+
+  mv doc/* "$pkgdir"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 fontconfig/COPYING
+}
+
+# vim:set sw=2 et:
