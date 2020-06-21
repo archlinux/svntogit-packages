@@ -1,0 +1,83 @@
+From 9e7c4f88f9165725c384d4b3432014c6d37452f4 Mon Sep 17 00:00:00 2001
+From: Christian Boltz <apparmor@cboltz.de>
+Date: Sun, 5 Apr 2020 14:26:15 +0200
+Subject: [PATCH 1/2] create-apparmor.vim.py: split stdout and stderr
+
+This will prevent that stderr output ends up in apparmor.vim
+
+References:
+- https://gitlab.com/apparmor/apparmor/issues/75
+- https://bugs.archlinux.org/task/65450
+- https://bugs.launchpad.net/apparmor/+bug/1187437
+---
+ utils/vim/create-apparmor.vim.py | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/utils/vim/create-apparmor.vim.py b/utils/vim/create-apparmor.vim.py
+index b5df957a..8a17bb43 100644
+--- a/utils/vim/create-apparmor.vim.py
++++ b/utils/vim/create-apparmor.vim.py
+@@ -42,12 +42,12 @@ def cmd(command, input=None, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, s
+     # Handle redirection of stderr
+     if outerr is None:
+         outerr = ''
+-    return [sp.returncode, out + outerr]
++    return [sp.returncode, out, outerr]
+ 
+ # get capabilities list
+-(rc, output) = cmd(['../../common/list_capabilities.sh'])
++(rc, output, outerr) = cmd(['../../common/list_capabilities.sh'])
+ if rc != 0:
+-    sys.stderr.write("make list_capabilities failed: " + output)
++    sys.stderr.write("make list_capabilities failed: " + output + outerr)
+     exit(rc)
+ 
+ capabilities = re.sub('CAP_', '', output.strip()).lower().split('\n')
+@@ -57,9 +57,9 @@ for cap in capabilities:
+         benign_caps.append(cap)
+ 
+ # get network protos list
+-(rc, output) = cmd(['../../common/list_af_names.sh'])
++(rc, output, outerr) = cmd(['../../common/list_af_names.sh'])
+ if rc != 0:
+-    sys.stderr.write("make list_af_names failed: " + output)
++    sys.stderr.write("make list_af_names failed: " + output + outerr)
+     exit(rc)
+ 
+ af_names = []
+-- 
+2.26.2
+
+
+From 0f891ba30e32545d0f514ef8e3b1768f0b776fc2 Mon Sep 17 00:00:00 2001
+From: Christian Boltz <apparmor@cboltz.de>
+Date: Sun, 5 Apr 2020 14:31:33 +0200
+Subject: [PATCH 2/2] Delete (possibly broken) apparmor.vim on failure
+
+If create-apparmor.vim.py fails, an empty apparmor.vim gets created. The
+next "make" run will assume that apparmor.vim was already created (the
+file exists and has a new-enough timestamp) and will therefore skip the
+create-apparmor.vim.py run, keeping the broken apparmor.vim forever.
+
+Adjust the Makefile to delete apparmor.vim if the script fails. This
+ensures that make tries again in the next run.
+---
+ utils/vim/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/utils/vim/Makefile b/utils/vim/Makefile
+index 9ffc301e..7d107dd0 100644
+--- a/utils/vim/Makefile
++++ b/utils/vim/Makefile
+@@ -9,7 +9,7 @@ VIM_INSTALL_PATH=${DESTDIR}/usr/share/apparmor
+ all: apparmor.vim manpages htmlmanpages
+ 
+ apparmor.vim: apparmor.vim.in Makefile create-apparmor.vim.py
+-	${PYTHON} create-apparmor.vim.py > apparmor.vim
++	${PYTHON} create-apparmor.vim.py > apparmor.vim || { rm -f apparmor.vim ; exit 1; }
+ 
+ manpages: $(MANPAGES)
+ 
+-- 
+2.26.2
+
