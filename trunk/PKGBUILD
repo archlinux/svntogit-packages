@@ -5,7 +5,7 @@ _openssl_ver=1.1.1g
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202005
-pkgrel=1
+pkgrel=2
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -77,6 +77,7 @@ build() {
                        -b "${_build_type}" \
                        -n "$(nproc)" \
                        -t "${_build_plugin}" \
+                       -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM2_ENABLE \
                        -D HTTP_BOOT_ENABLE \
@@ -92,6 +93,7 @@ build() {
                        -b "${_build_type}" \
                        -n "$(nproc)" \
                        -t "${_build_plugin}" \
+                       -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM2_ENABLE \
                        -D HTTP_BOOT_ENABLE \
