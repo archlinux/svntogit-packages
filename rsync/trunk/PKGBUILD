@@ -1,8 +1,8 @@
 # Maintainer: Christian Hesse <mail@eworm.de>
 
 pkgname=rsync
-_tag='affe6786e63ef638af993a0ba788c62e047accb8' # git rev-parse v${pkgver}
-pkgver=3.2.0
+_tag='3c97e8e4e4c98a15e71146808692a6215bb6af1c' # git rev-parse v${pkgver}
+pkgver=3.2.1
 pkgrel=1
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
