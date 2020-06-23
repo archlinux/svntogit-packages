@@ -77,14 +77,18 @@ _backports=(
   # man: document binfmt's new --unregister switch
   'cd9aa8f0f91b113acb079e79750c146c0529c2d7'
 
-  # sd-journal: don't check namespaces if we have no namespace to go by
-  '2b6df46d21abe8a8b7481e420588a9a129699cf9'
+  # Revert "job: Don't mark as redundant if deps are relevant"
+  'cc479760b4736082d26ec332f2423a9ab23d59c5'
 
-  # network: tc: support Hierarchy Token Bucket (HTB)
-  # (we need this for safe_atou32_full()...)
-  'b934ac3d6e7dcad114776ef30ee9098693e7ab7e'
+  # these are in stable branch already
+
+  # sd-journal: don't check namespaces if we have no namespace to go by
+  'd55f53e95646174f3b5921e920e9210c5af43856'
+
+  # parse-util: backport safe_atou32_full()
+  '64126925181809e7c0b8916471186c0bfa19d6ce'
   # basic/user-util: always use base 10 for user/group numbers 
-  '156a5fd297b61bce31630d7a52c15614bf784843'
+  '9498903de6c1f7b0c3e5f1654d0ee451a304c59d'
 )
 
 _reverts=(
