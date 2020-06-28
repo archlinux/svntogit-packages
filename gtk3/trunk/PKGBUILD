@@ -1,9 +1,9 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
-pkgver=3.24.20
+pkgver=3.24.21
 pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
@@ -15,7 +15,7 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 d
          cantarell-fonts colord rest libcups libcanberra fribidi iso-codes)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
-_commit=db39ce2b1699acaf5d0ba160cf7cc68ccf6e16d6  # tags/3.24.20^0
+_commit=ab4b85f88cf822d6dbb9cda9c4d71fd10a5d3d99  # tags/3.24.21^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         settings.ini
         gtk-query-immodules-3.0.hook
@@ -43,7 +43,7 @@ build() {
     -D colord=yes \
     -D gtk_doc=true \
     -D man=true
-  ninja -C build
+  meson compile -C build
 }
 
 package_gtk3() {
