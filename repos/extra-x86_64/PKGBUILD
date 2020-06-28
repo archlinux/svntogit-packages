@@ -2,8 +2,8 @@
 # Maintainer: juergen <juergen@archlinux.org>
 
 pkgname=ecl
-pkgver=20.4.24
-pkgrel=1
+pkgver=20.4.24 # Remember to rebuild sagemath when the soname changes 
+pkgrel=2
 pkgdesc="Embeddable Common Lisp"
 arch=('x86_64')
 url="https://common-lisp.net/project/ecl/"
@@ -12,18 +12,21 @@ depends=('bash' 'gmp')
 makedepends=('texinfo')
 provides=('common-lisp' 'cl-asdf')
 options=('!makeflags')
-source=("https://common-lisp.net/project/ecl/static/files/release/${pkgname}-${pkgver}.tgz")
-sha256sums=('670838edf258a936b522fdb620da336de7e575aa0d27e34841727252726d0f07')
+source=("https://common-lisp.net/project/ecl/static/files/release/${pkgname}-${pkgver}.tgz"
+         https://gitlab.com/embeddable-common-lisp/ecl/-/commit/75877dd8.patch)
+sha256sums=('670838edf258a936b522fdb620da336de7e575aa0d27e34841727252726d0f07'
+            '2c4896efc51114c0db0c0203a57379b3f1407e1107bf3443fe956d358221292c')
 
 prepare() {
-  cd $srcdir/$pkgname-$pkgver
+  cd $pkgname-$pkgver
 
+  patch -p1 -i ../75877dd8.patch # Fix segfaults in sagemath
   # upstream patch: https://gitlab.com/sagemath/dev/trac/-/commit/ed7bc14f751a76ad88c506cd33beb7f3e1030ff5
   sed -i "s/FFI_SYSV/FFI_UNIX64/" src/c/ffi.d
 }
 
 build() {
-  cd $srcdir/$pkgname-$pkgver
+  cd $pkgname-$pkgver
   sed -i 's|-Wl,--rpath,~A|-Wl,--rpath,/usr/lib/ecl|' src/configure
   CFLAGS+=" -fcommon"
   ./configure \
@@ -43,5 +46,5 @@ build() {
 }
 
 package() {
-  make -C $srcdir/$pkgname-$pkgver DESTDIR=$pkgdir install
+  make -C $pkgname-$pkgver DESTDIR="$pkgdir" install
 }
