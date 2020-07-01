@@ -26,9 +26,6 @@ prepare() {
   patch -p1 -i ../liblua.so.patch
 
   sed "s/%VER%/$_majorver/g;s/%REL%/$pkgver/g" ../lua.pc > lua.pc
-
-  # Lua 5.3.4 has wrong release version in its Makefile. Fix it.
-  # sed "s/^R= \$V.4/R= \$V.5/" -i Makefile
 }
 
 build() {
