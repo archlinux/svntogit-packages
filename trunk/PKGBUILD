@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.6.19.a
+pkgver=5.7.7.a
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -20,7 +20,6 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
-  0001-gcc-plugins-drop-support-for-GCC-4.7.patch
   sphinx-workaround.patch
 )
 validpgpkeys=(
@@ -29,12 +28,11 @@ validpgpkeys=(
   '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A'  # Daniel Micay
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('62532fb257fe98a68601e4ca36bd3d34300b4f26f447bf495df4693442601ee8'
+sha256sums=('f840b9679283343c165516585c3070ebb277528721c890e9410a58e9d071ee7f'
             'SKIP'
-            'b5122fd035ba92d9298363e6493bd0e6ac37ce9199928c8decf242f3225bad3f'
+            'e4e4485817d1bcba4bd5d3ee94329aa47683ea282d0d0605157d74b5517ae308'
             'SKIP'
-            '727daf2109807a5084ff739f0a99baf0f990fda9aa303580a6814e10de0e4d4b'
-            '82210fa21308a3335c6d1a56cbae27bfba4c7c99c64585a3a2dbac93aae8f260'
+            '22195d3db0f6e9991287477ed273dc603bcf2bc84a97b33b7a0e8829b74312d4'
             '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c')
 
 export KBUILD_BUILD_HOST=archlinux
@@ -94,7 +92,7 @@ _package() {
   echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
   echo "Installing modules..."
-  make INSTALL_MOD_PATH="$pkgdir/usr" modules_install
+  make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 modules_install
 
   # remove build and source links
   rm "$modulesdir"/{source,build}
@@ -169,6 +167,9 @@ _package-headers() {
         strip -v $STRIP_SHARED "$file" ;;
     esac
   done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
+
+  echo "Stripping vmlinux..."
+  strip -v $STRIP_STATIC "$builddir/vmlinux"
 
   echo "Adding symlink..."
   mkdir -p "$pkgdir/usr/src"
