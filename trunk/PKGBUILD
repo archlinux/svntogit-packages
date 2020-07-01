@@ -1,7 +1,7 @@
 # Maintainer: Ronald van Haren <ronald.archlinux.org>
 
 pkgname=suitesparse
-pkgver=5.7.2
+pkgver=5.8.0
 pkgrel=1
 pkgdesc="A collection of sparse matrix libraries"
 url="http://faculty.cse.tamu.edu/davis/suitesparse.html"
@@ -9,13 +9,13 @@ arch=('x86_64')
 conflicts=('umfpack')
 provides=('umfpack')
 replaces=('umfpack')
-depends=('metis' 'lapack' 'intel-tbb')
+depends=('metis' 'lapack' 'tbb')
 makedepends=('gcc-fortran' 'cmake' 'chrpath')
 license=('GPL')
 options=('staticlibs')
 source=($pkgname-$pkgver.tar.gz::"https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v$pkgver.tar.gz"
         suitesparse-no-demo.patch)
-sha256sums=('fe3bc7c3bd1efdfa5cffffb5cebf021ff024c83b5daf0ab445429d3d741bd3ad'
+sha256sums=('5ce343444c589d5c46d1ef2b4dde625fdb287e1838f24bc5a5f7054149145fc3'
             'f80488bb076753d38ea21d207bd682bdc97e21220c733da025f518a5b7e8e030')
 
 prepare() {
