@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=47.3.1
+pkgver=47.3.2
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -13,11 +13,11 @@ url="https://pypi.org/project/setuptools/"
 depends=('python-appdirs' 'python-packaging' 'python-ordered-set')
 makedepends=('git')
 checkdepends=('python-mock' 'python-pip' 'python-pytest-fixture-config' 'python-pytest-flake8'
-              'python-pytest-virtualenv' 'python-wheel' 'python-paver')
+              'python-pytest-virtualenv' 'python-wheel' 'python-paver' 'python-pytest-cov')
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('a414194c850e7df38b3b5c5ce11f73a4c08386b55265f1b7da2ad51619b6d6c0f9a3de9f52a83176bfa85d224d6a5659d59542da5add2bf5da619ed19d4300f9')
+sha512sums=('55331a7b69ae272cf19e65943c7275e33120dadd9643065af50ff1b4f2f73a4a134c81222138c6d78e26355ffce89a6693e719ce27081b81dd0163d0663fcc40')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
