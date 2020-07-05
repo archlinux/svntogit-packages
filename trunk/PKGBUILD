@@ -2,7 +2,7 @@
 
 pkgname=rsync
 _tag='3c97e8e4e4c98a15e71146808692a6215bb6af1c' # git rev-parse v${pkgver}
-pkgver=3.2.1
+pkgver=3.2.2
 pkgrel=1
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
@@ -13,7 +13,6 @@ depends=('acl' 'libacl.so' 'lz4' 'openssl' 'perl' 'popt' 'xxhash' 'libxxhash.so'
 makedepends=('git' 'python-commonmark')
 backup=('etc/rsyncd.conf'
         'etc/xinetd.d/rsync')
-install=rsync.install
 validpgpkeys=('0048C8B026D4C96F0E589C2F6C859FB14B96A8C5') # Wayne Davison <wayned@users.sourceforge.net>
 source=("git+https://github.com/WayneD/rsync#tag=${_tag}?signed"
         'rsyncd.conf')
