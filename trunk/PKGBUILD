@@ -80,6 +80,9 @@ _backports=(
   # Revert "job: Don't mark as redundant if deps are relevant"
   'cc479760b4736082d26ec332f2423a9ab23d59c5'
 
+  # Fix build with µhttpd 0.9.71
+  'd17eabb1052e7c8c432331a7a782845e36164f01'
+
   # these are in stable branch already
 
   # sd-journal: don't check namespaces if we have no namespace to go by
