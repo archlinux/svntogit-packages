@@ -2,7 +2,8 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=keyutils
-pkgver=1.6.2
+_tag='5678a1aae8834b5c16b5ed7dc72ef8836a29e122' # git rev-parse v${pkgver}
+pkgver=1.6.3
 pkgrel=1
 pkgdesc='Linux Key Management Utilities'
 arch=('x86_64')
@@ -13,7 +14,7 @@ makedepends=('git')
 provides=('libkeyutils.so')
 backup=('etc/request-key.conf')
 validpgpkeys=('A86E54B0D5E1B4E0AB7C640FFBB7576BA7CB0B6B') # David Howells <dhowells@redhat.com>
-source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils.git#tag=v${pkgver}?signed"
+source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils.git#tag=${_tag}?signed"
         'request-key.conf.patch' 'reproducible.patch')
 sha256sums=('SKIP'
             '203c602c61ed94ccd423a0a453d74143d678c641a9a4486367576ee8af2cb8d6'
