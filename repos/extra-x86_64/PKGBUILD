@@ -1,9 +1,9 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
-# Maintainer: Ionut Biru <ibiru@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.36.3
+pkgver=3.36.4
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -17,7 +17,7 @@ checkdepends=(xorg-server-xvfb)
 provides=(libmutter-6.so)
 groups=(gnome)
 install=mutter.install
-_commit=dc75c7d297fac4b047e4fbaa0186720e9d6b1e38  # tags/3.36.3^0
+_commit=d03deb006c4154232ee257a8a16fee4ea61f3286  # tags/3.36.4^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
