@@ -5,7 +5,7 @@
 pkgname=lua
 pkgver=5.4.0
 _majorver=${pkgver%.*}
-pkgrel=1
+pkgrel=2
 pkgdesc='Powerful lightweight programming language designed for extending applications'
 arch=('x86_64')
 url='https://www.lua.org/'
@@ -31,7 +31,7 @@ prepare() {
 build() {
   cd lua-$pkgver
 
-  make MYCFLAGS="$CFLAGS -fPIC" MYLDFLAGS="$LDFLAGS" linux
+  make MYCFLAGS="$CFLAGS -fPIC" MYLDFLAGS="$LDFLAGS" linux-readline
 }
 
 package() {
