@@ -4,14 +4,15 @@
 pkgname=qt5-webengine
 _qtver=5.15.0
 pkgver=${_qtver/-/}
-pkgrel=4
+pkgrel=5
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 
          'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx' 'krb5' 'ttf-font')
-makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler')
+makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02')
+optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
@@ -23,6 +24,7 @@ source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/subm
         qtbug-85118.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=e42ccdad"
         qtbug-62957.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=f341988f"
         qtbug-62957-pre.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch?id=75412200"
+        qt5-webengine-pipewire.patch
         )
 sha256sums=('c38e2fda7ed1b7d5a90f26abf231ec0715d78a5bc39a94673d8e39d75f04c5df'
             '22a2265c81bc73dba6843279407ccaec9f192d0987c54a0d9533be7c49b37f29'
@@ -32,7 +34,8 @@ sha256sums=('c38e2fda7ed1b7d5a90f26abf231ec0715d78a5bc39a94673d8e39d75f04c5df'
             '4bb12a72d40e69052946a6b66fff621f28e40c3d3c11ddeec155133a9204f352'
             'fc976a6a7198121a4c1b6026318098de278412d73634db31b1815a3cc7502657'
             '1a07ab59daa9552ad1a70abd03b00d40e542d9dd64fa6d7404d31c9a51e5eeba'
-            'd47ec2111c9713312158f800c01ca9358400b4e11273e470d57a53c36b7565c0')
+            'd47ec2111c9713312158f800c01ca9358400b4e11273e470d57a53c36b7565c0'
+            '34cd6fdcdf7d20f9a32d4ad066535edad61735a83a895e9503edab247fee5542')
 
 prepare() {
   mkdir -p build
@@ -47,6 +50,7 @@ prepare() {
   patch -p1 -i ../qtbug-85118.patch # Fix recentlyAudible signal
   patch -p1 -i ../qtbug-62957-pre.patch # Avoid the network context reset during http cache clear
   patch -p1 -i ../qtbug-62957.patch # Return valid path in Profile::GetPath() for incognito profiles
+  patch -p1 -i ../qt5-webengine-pipewire.patch # Add screen sharing support on wayland via pipewire
 }
 
 build() {
@@ -57,7 +61,8 @@ build() {
     -webp \
     -spellchecker \
     -webengine-icu \
-    -webengine-kerberos
+    -webengine-kerberos \
+    -webengine-webrtc-pipewire
   make
 }
 
