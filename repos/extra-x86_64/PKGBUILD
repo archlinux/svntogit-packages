@@ -1,9 +1,9 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Eric Bélanger <eric@archlinux.org>
 
 pkgname=webkit2gtk
-pkgver=2.28.2
-pkgrel=2
+pkgver=2.28.3
+pkgrel=1
 pkgdesc="GTK+ Web content engine library"
 arch=(x86_64)
 url="https://webkitgtk.org/"
@@ -12,13 +12,13 @@ depends=(libxt libxslt enchant gst-plugins-base-libs libsecret libwebp openjpeg2
          harfbuzz-icu gtk3 libnotify hyphen woff2 libwpe wpebackend-fdo
          bubblewrap xdg-dbus-proxy)
 makedepends=(gperf gobject-introspection ruby gtk-doc cmake python geoclue
-             gst-plugins-bad)
+             gst-plugins-bad ninja)
 optdepends=('geoclue: Geolocation support'
             'gst-plugins-good: media decoding'
             'gst-plugins-bad: media decoding'
             'gst-libav: nonfree media decoding')
 source=(https://webkitgtk.org/releases/webkitgtk-${pkgver}.tar.xz{,.asc})
-sha256sums=('b9d23525cfd8d22c37b5d964a9fe9a8ce7583042a2f8d3922e71e6bbc68c30bd'
+sha256sums=('f0898ac072c220e13a4aee819408421a6cb56a6eb89170ceafe52468b0903522'
             'SKIP')
 validpgpkeys=('D7FCF61CF9A2DEAB31D81BD3F3D322D0EC4582C3'
               '5AA3BC334FD7E3369E7C77B291C559DBE4C9123B')
@@ -28,7 +28,9 @@ prepare() {
 }
 
 build() {
-  cmake -Hwebkitgtk-$pkgver -Bbuild \
+  CFLAGS+=" $CPPFLAGS"
+  CXXFLAGS+=" $CPPFLAGS"
+  cmake -Hwebkitgtk-$pkgver -Bbuild -G Ninja \
     -DPORT=GTK \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
