@@ -4,8 +4,8 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.20
-pkgrel=4
+pkgver=2.2.21
+pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
@@ -25,11 +25,11 @@ source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,
         'drop-import-clean.patch'
         'avoid-beta-warning.patch'
         'do-not-rebuild-defsincdate.patch')
-sha256sums=('04a7c9d48b74c399168ee8270e548588ddbe52218c337703d7f06373d326ca30'
+sha256sums=('61e83278fb5fa7336658a8b73ab26f379d41275bb1c7c6e694dd9f9a6e8e76ec'
             'SKIP'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d'
-            '01fee1b04358e5dce76894214bb263e9a75cf408eb1277fad5b751ab3d45b87a')
+            'bb4dcba0328af6271ccfe992a64d8daa9f0a691ba52978491647f1dea05675ee')
 
 install=install
 
