@@ -3,12 +3,13 @@
 
 pkgname=shadow
 pkgver=4.8.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
 license=('BSD')
-depends=('pam' 'acl' 'audit' 'libaudit.so')
+# libcap-ng needed by install scriptlet for 'filecap'
+depends=('pam' 'acl' 'audit' 'libaudit.so' 'libcap-ng')
 makedepends=('git' 'itstool' 'libxslt' 'docbook-xsl')
 backup=(etc/login.defs
         etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
