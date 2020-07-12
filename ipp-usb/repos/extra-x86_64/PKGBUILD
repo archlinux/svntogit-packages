@@ -1,0 +1,48 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=ipp-usb
+pkgver=0.9.8
+pkgrel=1
+pkgdesc="allows using the IPP protocol, normally designed for network printers, to be used with USB printers as well"
+arch=('x86_64')
+url="https://github.com/OpenPrinting/ipp-usb"
+license=('custom: BSD')
+# ToDo: package goipp ?
+depends=('avahi' 'libusb')
+makedepends=('go')
+source=("$pkgname-$pkgver.tar.gz"::https://github.com/OpenPrinting/ipp-usb/archive/$pkgver.tar.gz)
+sha256sums=('b630434bcfb99549f18ef80608626d82129bed4f0939fad1dc1aca1c721437f3')
+
+prepare() {
+        cd "$pkgname-$pkgver"
+	# fix Makefile
+	sed -i "s/sbin/bin/g" Makefile
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+	export CGO_CPPFLAGS="${CPPFLAGS}"
+	export CGO_CFLAGS="${CFLAGS}"
+	export CGO_CXXFLAGS="${CXXFLAGS}"
+	export CGO_LDFLAGS="${LDFLAGS}"
+	export GOFLAGS="-buildmode=pie -trimpath -mod=readonly -modcacherw"
+
+	#go build -o "$pkgname" .
+	make
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+	# https://github.com/OpenPrinting/ipp-usb/blob/master/Makefile
+	# DESTDIR and PREFIX are fully f... up so do it our own
+	#make DESTDIR="${pkgdir}" install
+
+	install -Dm755 $pkgname "$pkgdir"/usr/bin/$pkgname
+	install -Dm644 ipp-usb.conf "$pkgdir"/etc/ipp-usb/ipp-usb.conf
+	install -Dm644 systemd-udev/71-ipp-usb.rules "$pkgdir"/usr/lib/udev/rules.d/71-ipp-usb.rules
+	install -Dm644 systemd-udev/ipp-usb.service "$pkgdir"/usr/lib/systemd/system/ipp-usb.service
+	install -Dm644 ipp-usb.1 "$pkgdir"/usr/share/man/man1/ipp-usb.1
+
+	
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
