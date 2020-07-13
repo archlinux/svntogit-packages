@@ -1,0 +1,53 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=low-memory-monitor
+pkgver=2.0
+pkgrel=1
+pkgdesc="Monitors memory pressure and signals applications"
+url="https://gitlab.freedesktop.org/hadess/low-memory-monitor"
+arch=(x86_64)
+license=(GPL3)
+depends=(glib2 dbus)
+makedepends=(git meson gtk-doc systemd)
+backup=(etc/low-memory-monitor.conf)
+_commit=db42057f8d3c836cf0a6b9e833e3e38c703170a3  # tags/2.0^0
+source=("git+https://gitlab.freedesktop.org/hadess/low-memory-monitor.git#commit=$_commit"
+        noinstall.diff)
+sha256sums=('SKIP'
+            '5fde368c0165f95f8da2fd9d9ac37b5ec688a0861973eae704f42ff2a66cd781')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build -D trigger_kernel_oom=false
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  depends+=(libg{lib,object,io}-2.0.so)
+
+  DESTDIR="$pkgdir" meson install -C build
+
+  install -Dm644 /dev/stdin "$pkgdir/etc/low-memory-monitor.conf" <<END
+[Configuration]
+TriggerKernelOom=false
+END
+
+  # Statically enable
+  _wantsdir="$pkgdir/usr/lib/systemd/system/basic.target.wants"
+  _service="$pkgdir/usr/lib/systemd/system/$pkgname.service"
+  mkdir -p "$_wantsdir"
+  ln -srt "$_wantsdir" "$_service"
+  patch "$_service" noinstall.diff
+}
