@@ -1,9 +1,9 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=3.36.2
+pkgver=3.36.3
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -12,7 +12,7 @@ license=(GPL)
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl)
 checkdepends=(check)
-_commit=02c42c1ca84bc28928618b773c12f2cea67ed71e  # tags/3.36.2^0
+_commit=24a4c0afe337a7a381397c87a39e3a666c0ae6cc  # tags/3.36.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0001-Xsession-Don-t-start-ssh-agent-by-default.patch
         0002-pam-arch-Don-t-check-greeter-account-for-expiry.patch
