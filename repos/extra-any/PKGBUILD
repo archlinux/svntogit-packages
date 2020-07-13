@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=49.1.3
+pkgver=49.2.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -17,7 +17,7 @@ checkdepends=('python-mock' 'python-pip' 'python-pytest-fixture-config' 'python-
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('f52d39cf7addff51c2435a63530760a7817147e85f1443ac897d1e5e08b9888c08efbafa72dc2592918dab96d28b53c8508169f687e5328a85a6e31f1993604b')
+sha512sums=('0d6ed572eb958d016c071e9f4a61d55cf426fc0309487c804086cd44e2385c1898021048129454c6a35413fb9aee97b69dfaa8c8bf1c3b6a673141b2c6f50033')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
