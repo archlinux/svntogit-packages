@@ -4,7 +4,7 @@
 
 pkgname=openssh
 pkgver=8.3p1
-pkgrel=1
+pkgrel=2
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
@@ -18,6 +18,7 @@ optdepends=('xorg-xauth: X11 forwarding'
 validpgpkeys=('59C2118ED206D927E667EBE3D3E5F56B6D920D30')
 #source=("git://anongit.mindrot.org/openssh.git?signed#tag=V_8_2_P1"
 source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
+        '67290.patch::https://anongit.mindrot.org/openssh.git/patch/?id=c514f3c0522855b4d548286eaa113e209051a6d2'
         'sshdgenkeys.service'
         'sshd.service'
         'sshd.conf'
@@ -25,6 +26,7 @@ source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgve
         'glibc-2.31.patch')
 sha256sums=('f2befbe0472fe7eb75d23340eb17531cb6b3aac24075e2066b41f814e12387b2'
             'SKIP'
+            '3ccc1c6672521782c154c89607d2c2d7a67e0f66a349260e00e28ae999ea54f5'
             '4031577db6416fcbaacf8a26a024ecd3939e5c10fe6a86ee3f0eea5093d533b7'
             'e40f8b7c8e5e2ecf3084b3511a6c36d5b5c9f9e61f2bb13e3726c71dc7d4fbc7'
             '4effac1186cc62617f44385415103021f72f674f8b8e26447fc1139c670090f6'
@@ -37,6 +39,7 @@ install=install
 
 prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
+	patch -p1 -i ../67290.patch # FS#67290
 	patch -p1 -i ../glibc-2.31.patch
 	autoreconf
 }
