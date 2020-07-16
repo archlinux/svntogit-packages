@@ -4,7 +4,7 @@
 
 pkgname=mkinitcpio
 pkgver=27
-pkgrel=3
+pkgrel=4
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url="https://projects.archlinux.org/mkinitcpio.git/"
@@ -19,13 +19,11 @@ optdepends=('xz: Use lzma or xz compression for the initramfs image'
 provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig}
-        "0001-mkinitcpio-remove-preset-pacsave.patch"
-        "0002-mkinitcpio-fix-builtin.patch")
+        "0001-mkinitcpio-remove-preset-pacsave.patch")
 install=mkinitcpio.install
 sha256sums=('e6bff1cb78b677538eb9aace900b715fd59de8fc210b74fb9d899dfaa32bc354'
             'SKIP'
-            '845569fa760f70c868ecb3dc8ae9667287970526dddaf403fdafcb716e8b3d51'
-            'd097f3df15ba9fefd3771f9f784e1c31c8d5ff1d9d6885a46fc6b5188e419796')
+            '845569fa760f70c868ecb3dc8ae9667287970526dddaf403fdafcb716e8b3d51')
 validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'   # Dave Reisner
               '86CFFCA918CF3AF47147588051E8B148A9999C34'   # Evangelos Foutras
               'ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB')  # Giancarlo Razzolini
@@ -34,9 +32,6 @@ prepare() {
   cd $pkgname-$pkgver
   # Apply 0001-mkinitcpio-remove-preset-pacsave.patch
   patch -Np1 < $srcdir/0001-mkinitcpio-remove-preset-pacsave.patch
-
-  # Apply 0002-mkinitcpio-fix-builtin.patch
-  patch -Np1 < $srcdir/0002-mkinitcpio-fix-builtin.patch
 }
 
 check() {
