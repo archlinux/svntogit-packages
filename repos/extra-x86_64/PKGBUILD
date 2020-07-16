@@ -1,4 +1,5 @@
 # Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Alexander F Rødseth <xyproto@archlinux.org>
 # Contributor: Daniel Micay <danielmicay@gmail.com>
 # Contributor: userwithuid <userwithuid@gmail.com>
@@ -6,7 +7,7 @@
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
 pkgver=1.45.0
-pkgrel=1
+pkgrel=2
 
 _llvm_ver=10.0.0
 
@@ -40,6 +41,7 @@ link-shared = true
 
 [build]
 target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+tools = ["cargo", "rls", "clippy", "miri", "rustfmt", "analysis", "src"]
 cargo = "/usr/bin/cargo"
 rustc = "/usr/bin/rustc"
 python = "/usr/bin/python"
@@ -105,7 +107,7 @@ package_rust() {
 
   cd "rustc-$pkgver-src"
 
-  mv dest-rust/* "$pkgdir"
+  cp -a dest-rust/* "$pkgdir"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
   # delete unnecesary files, e.g. components and manifest files only used for the uninstall script
@@ -116,8 +118,8 @@ package_rust() {
   # overwrite them with symlinks to the per-architecture versions
   ln -srft "$pkgdir"/usr/lib x86_64-unknown-linux-gnu/lib/*.so
 
-  install -d "$pkgdir"/usr/share/bash-completion
-  mv "$pkgdir"/etc/bash_completion.d/ "$pkgdir"/usr/share/bash-completion/completions/
+  install -d "$pkgdir"/usr/share/bash-completion/
+  mv "$pkgdir"/etc/bash_completion.d "$pkgdir"/usr/share/bash-completion/completions
 }
 
 package_lib32-rust-libs() {
@@ -131,7 +133,7 @@ package_lib32-rust-libs() {
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
   install -d "$pkgdir"/usr/lib/rustlib/ "$pkgdir"/usr/lib32/
-  mv dest-i686 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu
+  cp -a dest-i686 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu
   ln -srft "$pkgdir"/usr/lib32 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu/lib/*.so
 }
 
@@ -141,8 +143,8 @@ package_rust-docs() {
   cd "rustc-$pkgver-src"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
 
-  install -d "$pkgdir"/usr/share/doc
-  mv dest-doc/* "$pkgdir"/usr/share/doc
+  install -d "$pkgdir"/usr/share/
+  cp -a dest-doc "$pkgdir"/usr/share/doc
 }
 
 # vim:set ts=2 sw=2 et:
