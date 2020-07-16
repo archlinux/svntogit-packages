@@ -1,0 +1,48 @@
+# Maintainer: Jelle van der Waa <jelle@archlinux.org>
+# Contributor: Nils Czernia <nils@czserver.de>
+
+pkgname=prometheus-postgres-exporter
+pkgver=0.8.0
+pkgrel=2
+pkgdesc="Prometheus exporter for PostrgreSQL"
+arch=('x86_64')
+url="https://github.com/wrouesnel/postgres_exporter"
+license=('Apache')
+makedepends=('git' 'go')
+source=(${pkgname}-${pkgver}.tar.gz::https://github.com/wrouesnel/postgres_exporter/archive/v${pkgver}.tar.gz
+        "prometheus-postgres-exporter.service"
+        "prometheus-postgres-exporter.conf")
+sha256sums=('27877c9b3aa751c7c1265f39986218f6a2c2b66a126cf348c6cc2f20f5201b02'
+            '5361f16ddf02d0c43665884674e9a3049cf6da8ac3a19eb7dba154354853eda6'
+            'd132e8140c147f3a26fdff648c4e4e59b80225a7ee10195b9e460e224316e556')
+
+prepare() {
+  cd "${srcdir}/postgres_exporter-${pkgver}"
+
+  export GOPATH="${srcdir}/gopath"
+  mkdir -p "${GOPATH}/src/github.com/wrouesnel"
+  ln -snf "${srcdir}/postgres_exporter-${pkgver}" "${GOPATH}/src/github.com/wrouesnel/postgres_exporter"
+}
+
+build() {
+  export GOPATH="${srcdir}/gopath"
+  cd "${GOPATH}/src/github.com/wrouesnel/postgres_exporter"
+  go build \
+    -trimpath \
+    -buildmode=pie \
+    -ldflags "-extldflags \"${LDFLAGS}\"" \
+  ./cmd/postgres_exporter
+}
+
+check() {
+  export GOPATH="${srcdir}/gopath"
+  cd "${GOPATH}/src/github.com/wrouesnel/postgres_exporter"
+  go test ./...
+}
+
+package() {
+  install -Dm755 ${srcdir}/prometheus-postgres-exporter.service "${pkgdir}/usr/lib/systemd/system/prometheus-postgres-exporter.service"
+  install -Dm600 ${srcdir}/prometheus-postgres-exporter.conf "${pkgdir}/etc/conf.d/prometheus-postgres-exporter"
+
+  install -Dm755 "postgres_exporter-${pkgver}/postgres_exporter" "${pkgdir}/usr/bin/prometheus-postgres-exporter"
+}
