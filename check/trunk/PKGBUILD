@@ -1,16 +1,16 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
 # Contributor: Jeremy Cowgar <jeremy@cowgar.com>
 
 pkgbase=check
 pkgname=(check check-docs)
 pkgver=0.15.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A unit testing framework for C"
 url="https://libcheck.github.io/check/"
 arch=(x86_64)
 license=(LGPL)
-makedepends=(git texlive-bin texi2html doxygen awk)
+makedepends=(git texlive-bin texi2html doxygen awk cmake)
 _commit=aa8657b149ad290bee7c6855ad97f10f1522ebbb  # tags/0.15.0
 source=("git+https://github.com/libcheck/check#commit=$_commit")
 md5sums=('SKIP')
@@ -22,19 +22,33 @@ pkgver() {
 
 prepare() {
   cd check
+
+  # Fix format warnings
+  git cherry-pick -n 02128563709a 17fdbf2c3d52 8c6788e66e04
+
   autoreconf -fvi
 }
 
 build() {
+  CFLAGS+=" -Wno-format-extra-args"
+
+  cmake -Hcheck -Bcmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCHECK_ENABLE_TIMEOUT_TESTS=OFF \
+    -DAWK_GSUB_DBL_BSLASH='\\\\'
+  cmake --build cmake
+
   cd check
-  ./configure --prefix=/usr --disable-static
+  ./configure --prefix=/usr --disable-timeout-tests
   make all doc/doxygen doc/check_html
 }
 
 check() {
+  CTEST_OUTPUT_ON_FAILURE=1 cmake --build cmake --target test
+
   cd check
-  # Extremely long
-  #make -k check
+  make check
 }
 
 package_check() {
@@ -42,10 +56,12 @@ package_check() {
   optdepends=('check-docs: Documentation')
   provides=(libcheck.so)
 
-  cd check
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --build cmake --target install
 
-  mv "$pkgdir/usr/share/doc" "$srcdir"
+  DESTDIR="$srcdir/tmp" make -C check install
+  mv tmp/usr/share/{aclocal,info} "$pkgdir/usr/share"
+  mv tmp/usr/share/doc .
+  rm -rv tmp
 }
 
 package_check-docs() {
