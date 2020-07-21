@@ -2,8 +2,8 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=pam
-pkgver=1.3.1
-pkgrel=2
+pkgver=1.4.0
+pkgrel=1
 pkgdesc="PAM (Pluggable Authentication Modules) library"
 arch=('x86_64')
 license=('GPL2')
@@ -14,11 +14,11 @@ backup=(etc/security/{access.conf,group.conf,limits.conf,namespace.conf,namespac
 source=(https://github.com/linux-pam/linux-pam/releases/download/v$pkgver/Linux-PAM-$pkgver.tar.xz
         https://github.com/linux-pam/linux-pam/releases/download/v$pkgver/Linux-PAM-$pkgver.tar.xz.asc)
 validpgpkeys=(
-        '8C6BFD92EE0F42EDF91A6A736D1A7F052E5924BB' # Thorsten Kukuk
+        '296D6F29A020808E8717A8842DB5BD89A340AEB7' #Dimitry V. Levin <ldv@altlinux.org>
 )
 
-md5sums=('558ff53b0fc0563ca97f79e911822165'
-         'SKIP')
+sha256sums=('cd6d928c51e64139be3bdb38692c68183a509b83d4f2c221024ccd4bcddfd034'
+            'SKIP')
 
 options=('!emptydirs')
 
