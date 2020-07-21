@@ -3,14 +3,14 @@
 
 pkgname=pam
 pkgver=1.4.0
-pkgrel=1
+pkgrel=2
 pkgdesc="PAM (Pluggable Authentication Modules) library"
 arch=('x86_64')
 license=('GPL2')
 url="http://linux-pam.org"
-depends=('glibc' 'cracklib' 'libtirpc' 'pambase')
+depends=('glibc' 'cracklib' 'libtirpc' 'pambase' 'audit')
 makedepends=('flex' 'w3m' 'docbook-xml>=4.4' 'docbook-xsl')
-backup=(etc/security/{access.conf,group.conf,limits.conf,namespace.conf,namespace.init,pam_env.conf,time.conf} etc/default/passwd etc/environment)
+backup=(etc/security/{access.conf,group.conf,limits.conf,namespace.conf,namespace.init,pam_env.conf,time.conf} etc/environment)
 source=(https://github.com/linux-pam/linux-pam/releases/download/v$pkgver/Linux-PAM-$pkgver.tar.xz
         https://github.com/linux-pam/linux-pam/releases/download/v$pkgver/Linux-PAM-$pkgver.tar.xz.asc)
 validpgpkeys=(
