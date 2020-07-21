@@ -4,7 +4,7 @@
 # Contributor: Patryk Kowalczyk < patryk at kowalczyk dot ws>
 
 pkgname=libseccomp
-pkgver=2.4.2
+pkgver=2.5.0
 pkgrel=1
 pkgdesc='Enhanced seccomp library'
 arch=('x86_64')
@@ -12,44 +12,36 @@ license=('LGPL2.1')
 url="https://github.com/seccomp/libseccomp"
 depends=('glibc')
 checkdepends=('valgrind')
-makedepends=('git')
+makedepends=('gperf')
 provides=('libseccomp.so')
-#source=(https://github.com/seccomp/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz{,.asc})
-source=("git+https://github.com/seccomp/${pkgname}?signed#tag=v${pkgver}")
-sha256sums=('SKIP')
-# XXX: do NOT trust this key as its not yet in the strong set, see linked issue
-# XXX: https://github.com/seccomp/libseccomp/issues/187
-# XXX: 47A68FCE37C7D7024FD65E11356CE62C2B524099  Tom Hromatka <tom.hromatka@oracle.com>
-# XXX: do NOT trust ^^ this key as its not yet in the strong set ^^ see linked issue
-validpgpkeys=('7100AADFAE6E6E940D2E0AD655E45A5AE8CA7C8A') # Paul Moore <paul@paul-moore.com>
-
-pkgver() {
-  cd ${pkgname}
-  git describe --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
-}
+source=(https://github.com/seccomp/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz{,.asc})
+sha256sums=('1ffa7038d2720ad191919816db3479295a4bcca1ec14e02f672539f4983014f3'
+            'SKIP')
+b2sums=('c1f30624e210d632175b734c49411ee3f95e8f0ee68819ad83a342434231baef10c292f23fca0127394365a37efb043f9f24ade9534deecd61f50e7111a6fbc8'
+        'SKIP')
+validpgpkeys=(
+  '7100AADFAE6E6E940D2E0AD655E45A5AE8CA7C8A' # Paul Moore <paul@paul-moore.com>
+  '47A68FCE37C7D7024FD65E11356CE62C2B524099' # Tom Hromatka <tom.hromatka@oracle.com>
+)
 
 prepare() {
-  cd ${pkgname}
-  # assert annotated tag doesn't change
-  test "$(git rev-parse HEAD)" = "1b6cfd1fc0b7499a28c24299a93a80bd18619563"
-  # backport: api: define __SNR_ppoll again
-  git cherry-pick --no-commit e3647f5b6b52996bf30d0c2c1d1248e4182e1c1c
+  cd ${pkgname}-${pkgver}
+  autoreconf -fiv
 }
 
 build() {
-  cd ${pkgname}
-  autoreconf -fiv
+  cd ${pkgname}-${pkgver}
   ./configure --prefix=/usr
   make
 }
 
 check() {
-  cd ${pkgname}
+  cd ${pkgname}-${pkgver}
   make check
 }
 
 package() {
-  cd ${pkgname}
+  cd ${pkgname}-${pkgver}
   make DESTDIR="${pkgdir}" install
   install -Dm 644 CHANGELOG README.md SECURITY.md -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
