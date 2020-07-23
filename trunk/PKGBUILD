@@ -2,14 +2,14 @@
 
 pkgbase=linux-firmware
 pkgname=(linux-firmware amd-ucode)
-_commit=e96c1212f0c61505f3efe6e9db324735b15fd290  # tags/20200619^0
-pkgver=20200619.e96c121
+_commit=2b823fc2568fc354551a63c37f5f5490d70a53d1  # tags/20200721^0
+pkgver=20200721.2b823fc
 pkgrel=1
 pkgdesc="Firmware files for Linux"
-makedepends=('git')
-arch=('any')
 url="https://git.kernel.org/?p=linux/kernel/git/firmware/linux-firmware.git;a=summary"
 license=('GPL2' 'GPL3' 'custom')
+arch=('any')
+makedepends=('git')
 options=(!strip)
 source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git#commit=${_commit}?signed")
 sha256sums=('SKIP')
@@ -31,8 +31,8 @@ build() {
   cat ${pkgbase}/amd-ucode/microcode_amd*.bin > kernel/x86/microcode/AuthenticAMD.bin
 
   # Reproducibility: set the timestamp on the bin file
-  if [[ -n $SOURCE_DATE_EPOCH ]]; then 
-    touch -d @$SOURCE_DATE_EPOCH kernel/x86/microcode/AuthenticAMD.bin
+  if [[ -n ${SOURCE_DATE_EPOCH} ]]; then 
+    touch -d @${SOURCE_DATE_EPOCH} kernel/x86/microcode/AuthenticAMD.bin
   fi
 
   # Reproducibility: strip the inode and device numbers from the cpio archive
@@ -42,46 +42,24 @@ build() {
 }
 
 package_linux-firmware() {
-  conflicts=('linux-firmware-git'
-             'kernel26-firmware'
-             'ar9170-fw'
-             'iwlwifi-1000-ucode'
-             'iwlwifi-3945-ucode'
-             'iwlwifi-4965-ucode'
-             'iwlwifi-5000-ucode'
-             'iwlwifi-5150-ucode'
-             'iwlwifi-6000-ucode'
-             'rt2870usb-fw'
-             'rt2x00-rt61-fw'
-             'rt2x00-rt71w-fw')
-  replaces=('kernel26-firmware'
-            'ar9170-fw'
-            'iwlwifi-1000-ucode'
-            'iwlwifi-3945-ucode'
-            'iwlwifi-4965-ucode'
-            'iwlwifi-5000-ucode'
-            'iwlwifi-5150-ucode'
-            'iwlwifi-6000-ucode'
-            'rt2870usb-fw'
-            'rt2x00-rt61-fw'
-            'rt2x00-rt71w-fw')
-
   cd ${pkgname}
 
   make DESTDIR="${pkgdir}" FIRMWAREDIR=/usr/lib/firmware install
 
-  install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 LICEN* WHENCE
-
   # Trigger a microcode reload for configurations not using early updates
   echo 'w /sys/devices/system/cpu/microcode/reload - - - - 1' |
     install -Dm644 /dev/stdin "${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
+
+  install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 LICEN* WHENCE
 }
 
 package_amd-ucode() {
-  pkgdesc='Microcode update files for AMD CPUs'
+  pkgdesc="Microcode update image for AMD CPUs"
+  license=(custom)
 
   install -Dt "${pkgdir}/boot" -m644 amd-ucode.img
-  install -Dm644 ${pkgbase}/LICENSE.amd-ucode "${pkgdir}/usr/share/licenses/$pkgname/LICENSE"
+
+  install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 ${pkgbase}/LICENSE.amd-ucode
 }
 
-# vim:set ts=2 sw=2 et:
+# vim:set sw=2 et:
