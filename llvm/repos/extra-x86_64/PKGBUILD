@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=10.0.0
-pkgrel=2
+pkgver=10.0.1
+pkgrel=1
 _ocaml_ver=4.10.0
 arch=('x86_64')
 url="https://llvm.org/"
@@ -15,7 +15,7 @@ options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('df83a44b3a9a71029049ec101fb0077ecbbdf5fe41e395215025779099a98fdf'
+sha256sums=('c5d8e30b57cbded7128d78e5e8dad811bff97a8d471896812f57fa99ee82cdf3'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
