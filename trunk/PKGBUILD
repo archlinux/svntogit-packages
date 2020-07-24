@@ -1,25 +1,20 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
-# Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
-# Contributor: Corrado Primier <bardo@aur.archlinux.org>
-# Contributor: William Rea <sillywilly@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgbase=pulseaudio
 pkgname=(pulseaudio libpulse pulseaudio-{zeroconf,lirc,jack,bluetooth,equalizer})
 pkgdesc="A featureful, general-purpose sound server"
-pkgver=13.0
-pkgrel=3
+pkgver=13.99.1+67+g414644dff
+pkgrel=1
 arch=(x86_64)
 url="https://www.freedesktop.org/wiki/Software/PulseAudio/"
 license=(GPL)
 makedepends=(libasyncns libcap attr libxtst libsm libsndfile rtkit libsoxr
              speexdsp tdb systemd dbus avahi bluez bluez-libs jack2 sbc
              lirc openssl fftw orc gtk3 webrtc-audio-processing check git meson
-             xmltoman)
-_commit=200618b32f0964a479d69c9b6e5073e6931c370a  # tags/v13.0^0
-source=("git+https://gitlab.freedesktop.org/pulseaudio/pulseaudio.git#commit=$_commit"
-        0001-meson-Define-TUNNEL_SINK-for-module-tunnel-sink.patch)
-sha256sums=('SKIP'
-            '4ff133e2847baad5bb6798b5816d67551cfba2efabb2f1f348628d7217abd07d')
+             xmltoman gst-plugins-base-libs)
+_commit=414644dff1abd32294db3be1fde001f56ec9e65a  # master
+source=("git+https://gitlab.freedesktop.org/pulseaudio/pulseaudio.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd pulseaudio
@@ -31,17 +26,14 @@ prepare() {
 
   # Freeze version before patching
   ./git-version-gen doesnt-exist >.tarball-version
-
-  # https://bugs.archlinux.org/task/63755
-  git apply -3 ../0001-meson-Define-TUNNEL_SINK-for-module-tunnel-sink.patch
 }
 
 build() {
   arch-meson pulseaudio build \
-    -D gcov=false \
     -D pulsedsp-location='/usr/\$LIB/pulseaudio' \
+    -D stream-restore-clear-old-devices=true \
     -D udevrulesdir=/usr/lib/udev/rules.d
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
@@ -61,7 +53,7 @@ _pick() {
 
 package_pulseaudio() {
   depends=("libpulse=$pkgver-$pkgrel" rtkit libltdl speexdsp tdb orc libsoxr
-           webrtc-audio-processing)
+           webrtc-audio-processing gst-plugins-base-libs)
   optdepends=('pulseaudio-alsa: ALSA configuration (recommended)')
   backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
   install=pulseaudio.install
@@ -76,14 +68,6 @@ package_pulseaudio() {
   DESTDIR="$pkgdir" meson install -C build
 
   cd "$pkgdir"
-
-  # Assumes that any volume adjustment is intended by the user, who can control
-  # each app's volume. Misbehaving clients can trigger earsplitting volume
-  # jumps. App volumes can diverge wildly and cause apps without their own
-  # volume control to fall below sink volume; a sink-only volume control will
-  # suddenly be unable to make such an app loud enough.
-  sed -e '/flat-volumes/iflat-volumes = no' \
-      -i etc/pulse/daemon.conf
 
   # Superseded by socket activation
   sed -e '/autospawn/iautospawn = no' \
@@ -171,7 +155,7 @@ package_pulseaudio-bluetooth(){
 
 package_pulseaudio-equalizer(){
   pkgdesc="Equalizer for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" python-{pyqt5,dbus,sip} fftw)
+  depends=("pulseaudio=$pkgver-$pkgrel" python-{pyqt5,dbus} fftw)
 
   mv equalizer/* "$pkgdir"
 }
