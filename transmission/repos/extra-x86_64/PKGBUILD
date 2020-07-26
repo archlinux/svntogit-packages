@@ -4,11 +4,11 @@
 pkgbase=transmission
 pkgname=(transmission-cli transmission-gtk transmission-qt)
 pkgver=3.00
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url="http://www.transmissionbt.com/"
 license=(MIT)
-makedepends=(gtk3 intltool curl qt5-base libevent systemd qt5-tools)
+makedepends=(gtk3 intltool curl qt5-base libevent systemd qt5-tools libappindicator-gtk3)
 source=(https://github.com/transmission/transmission-releases/raw/master/transmission-${pkgver}.tar.xz
         transmission-cli.sysusers
         transmission-cli.tmpfiles)
@@ -59,7 +59,7 @@ package_transmission-cli() {
 
 package_transmission-gtk() {
   pkgdesc='Fast, easy, and free BitTorrent client (GTK+ GUI)'
-  depends=(curl libevent gtk3 desktop-file-utils hicolor-icon-theme)
+  depends=(curl libevent gtk3 desktop-file-utils hicolor-icon-theme libappindicator-gtk3)
   optdepends=('libnotify: Desktop notification support'
               'transmission-cli: daemon and web support')
 
