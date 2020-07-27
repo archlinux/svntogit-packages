@@ -4,9 +4,9 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='a47534aa62edfddb2df86e2d0c208979f24dc8c2' # git rev-parse v${pkgver}
-pkgver=245.6
-pkgrel=8
+_tag='8a8b000d682a7108463c5c74bc876c5658d9de4a' # git rev-parse v${pkgver}
+pkgver=245.7
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -64,34 +64,6 @@ sha512sums=('SKIP'
 _backports=(
   # systemd-resolved: use hostname for certificate validation in DoT
   'eec394f10bbfcc3d2fc8504ad8ff5be44231abd5'
-
-  # unregister binary formats during shutdown #15566
-  # shared: add common helper for unregistering all binfmt entries
-  '965cc99416a3b5a2a71127e9e6d2e4a95ab3c432'
-  # shutdown: unregister all binfmt_misc entries before entering shutdown loop
-  '0282c0285a3e3c2e409305ce28555a6ad0489539'
-  # binfmt: modernize code a bit
-  'f3670df13e144c2f81bf6f9a0bea581e6d555bdd'
-  # binfmt: also unregister binfmt entries from unit
-  '846acb6798a63f35162f58e1146d1a1f40849e86'
-  # man: document binfmt's new --unregister switch
-  'cd9aa8f0f91b113acb079e79750c146c0529c2d7'
-
-  # Revert "job: Don't mark as redundant if deps are relevant"
-  'cc479760b4736082d26ec332f2423a9ab23d59c5'
-
-  # Fix build with µhttpd 0.9.71
-  'd17eabb1052e7c8c432331a7a782845e36164f01'
-
-  # these are in stable branch already
-
-  # sd-journal: don't check namespaces if we have no namespace to go by
-  'd55f53e95646174f3b5921e920e9210c5af43856'
-
-  # parse-util: backport safe_atou32_full()
-  '64126925181809e7c0b8916471186c0bfa19d6ce'
-  # basic/user-util: always use base 10 for user/group numbers 
-  '9498903de6c1f7b0c3e5f1654d0ee451a304c59d'
 )
 
 _reverts=(
@@ -153,6 +125,7 @@ build() {
     -Ddefault-hierarchy=hybrid
     -Ddefault-kill-user-processes=false
     -Ddefault-locale=C
+    -Ddns-over-tls=openssl
     -Dfallback-hostname='archlinux'
     -Dnologin-path=/usr/bin/nologin
     -Dntp-servers="${_timeservers[*]}"
@@ -179,7 +152,7 @@ package_systemd() {
            'libgcrypt' 'systemd-libs' 'libidn2' 'libidn2.so' 'lz4' 'pam'
            'libelf' 'libseccomp' 'libseccomp.so' 'util-linux' 'libblkid.so'
            'libmount.so' 'xz' 'pcre2' 'audit' 'libaudit.so' 'libp11-kit'
-           'libp11-kit.so')
+           'libp11-kit.so' 'openssl')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
