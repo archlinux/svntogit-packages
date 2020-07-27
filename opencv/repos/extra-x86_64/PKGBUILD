@@ -3,13 +3,13 @@
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
-pkgver=4.3.0
-pkgrel=7
+pkgver=4.4.0
+pkgrel=1
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
 url="https://opencv.org/"
-depends=(intel-tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg)
+depends=(tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg)
 makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
@@ -19,27 +19,15 @@ optdepends=('opencv-samples: samples'
             'python-numpy: Python bindings'
             'java-runtime: Java interface')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
-        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz"
-        opencv-includedir.patch)
-sha256sums=('36799186756c1e12adde97f0a8d1afc395d5b0f86d8ad9ef951bc33aa732f9b9'
-            'acb8e89c9e7d1174e63e40532125b60d248b00e517255a98a419d415228c6a55'
-            'a96e35c9592e655b21a62cfe04e864a10e21535ad900e5de67356b9e9f40ca10')
-
-prepare() {
-  mkdir -p build
-
-  cd $pkgname-$pkgver
-  patch -p1 -i ../opencv-includedir.patch # Fix wrong include patch in pkgconfig file
-
-  sed -e '/ocv_tbb_cmake_guess(HAVE_TBB)/d' -i cmake/OpenCVDetectTBB.cmake # Don't use TBB's cmake config, it breaks build
-}
+        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
+sha256sums=('7faa0991c74cda52313ee37ef73f3e451332a47e7aa36c2bb2240b69f5002d27'
+            'a69772f553b32427e09ffbfd0c8d5e5e47f7dab8b3ffc02851ffd7f912b76840')
 
 build() {
-  cd build
   export JAVA_HOME="/usr/lib/jvm/default"
   # cmake's FindLAPACK doesn't add cblas to LAPACK_LIBRARIES, so we need to specify them manually
   _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
-  cmake ../$pkgname-$pkgver \
+  cmake -B build -S $pkgname-$pkgver \
     -DWITH_OPENCL=ON \
     -DWITH_OPENGL=ON \
     -DWITH_TBB=ON \
@@ -65,15 +53,14 @@ build() {
     -DOPENCV_JNI_INSTALL_PATH=lib \
     -DOPENCV_GENERATE_SETUPVARS=OFF \
     -DEIGEN_INCLUDE_PATH=/usr/include/eigen3
-  make
+  cmake --build build
 }
 
 package_opencv() {
-  cd build
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --install build
 
   # install license file
-  install -Dm644 "$srcdir"/$pkgname-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
+  install -Dm644 $pkgname-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
 
   # separate samples package
   mv "$pkgdir"/usr/share/opencv4/samples "$srcdir"
@@ -84,10 +71,9 @@ package_opencv-samples() {
   depends=("opencv=$pkgver")
   unset optdepends
 
-  cd build
   mkdir -p "$pkgdir"/usr/share/opencv4
-  mv "$srcdir"/samples "$pkgdir"/usr/share/opencv4
+  mv samples "$pkgdir"/usr/share/opencv4
 
   # install license file
-  install -Dm644 "$srcdir"/opencv-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
+  install -Dm644 opencv-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
 }
