@@ -1,9 +1,9 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=78.0.2
+pkgver=79.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -12,7 +12,7 @@ url="https://www.mozilla.org/firefox/"
 depends=(gtk3 libxt mime-types dbus-glib ffmpeg nss ttf-font libpulse)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils xorg-server-xvfb
              autoconf2.13 rust clang llvm jack gtk2 nodejs cbindgen nasm
-             python-setuptools python-psutil)
+             python-setuptools python-psutil lld)
 optdepends=('networkmanager: Location detection via available WiFi networks'
             'libnotify: Notification integration'
             'pulseaudio: Audio support'
@@ -21,10 +21,12 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
+        bug1654465.diff
         $pkgname.desktop)
-sha256sums=('1aa00ec6d40a771d525b867b175be28eda096becc745875bcceb133a985750fc'
+sha256sums=('12a922855914ec6b4d4f06a4ac58bc549aca6bdafd3722d68a3d709a935e5713'
             'SKIP'
             '3bb7463471fb43b2163a705a79a13a3003d70fff4bbe44f467807ca056de9a75'
+            'e577f7e5636deda0026b0e385186f3ecb2212c9b84b6a2949a1811dab3e410d6'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
@@ -47,6 +49,9 @@ prepare() {
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
   patch -Np1 -i ../0001-Use-remoting-name-for-GDK-application-names.patch
 
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1654465
+  patch -Np1 -i ../bug1654465.diff
+
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
 
@@ -58,6 +63,8 @@ ac_add_options --enable-release
 ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
+ac_add_options --enable-linker=lld
+ac_add_options --disable-elf-hack
 export CC='clang --target=x86_64-unknown-linux-gnu'
 export CXX='clang++ --target=x86_64-unknown-linux-gnu'
 export AR=llvm-ar
@@ -121,15 +128,11 @@ END
     xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
     ./mach python build/pgo/profileserver.py
 
-  if [[ ! -s merged.profdata ]]; then
-    echo "No profile data produced."
-    return 1
-  fi
+  stat -c "Profile data found (%s bytes)" merged.profdata
+  test -s merged.profdata
 
-  if [[ ! -s jarlog ]]; then
-    echo "No jar log produced."
-    return 1
-  fi
+  stat -c "Jar log found (%s bytes)" jarlog
+  test -s jarlog
 
   echo "Removing instrumented browser..."
   ./mach clobber
