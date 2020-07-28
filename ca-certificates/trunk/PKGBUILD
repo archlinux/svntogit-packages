@@ -1,16 +1,16 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgbase=ca-certificates
 pkgname=(ca-certificates-utils ca-certificates)
 pkgver=20181109
-pkgrel=3
+pkgrel=4
 pkgdesc="Common CA certificates"
 url="https://src.fedoraproject.org/rpms/ca-certificates"
 arch=(any)
 license=(GPL2)
 makedepends=(asciidoc p11-kit)
-source=(update-ca-trust update-ca-trust.8.txt update-ca-trust.hook)
+source=(update-ca-trust update-ca-trust.8.txt 40-update-ca-trust.hook)
 sha256sums=('ba98e00f80f94e2648b66252119d1b0da2339b8c83860cd69738e5c4e2d0fcc3'
             'acf571f7d7a9df2149a373017280e8f22d07a2d36600256fa48159d22ab74751'
             '3a3833ebd6f9cdef2e534a273653f973a4354d4f9368577d0d73236b014b7748')
@@ -27,9 +27,9 @@ package_ca-certificates-utils() {
   conflicts=(ca-certificates-java)
   replaces=(ca-certificates-java)
 
-  install -D update-ca-trust "$pkgdir/usr/bin/update-ca-trust"
-  install -Dm644 update-ca-trust.8 "$pkgdir/usr/share/man/man8/update-ca-trust.8"
-  install -Dm644 update-ca-trust.hook "$pkgdir/usr/share/libalpm/hooks/update-ca-trust.hook"
+  install -Dt "$pkgdir/usr/bin" update-ca-trust
+  install -Dt "$pkgdir/usr/share/man/man8" -m644 update-ca-trust.8
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
 
   # Trust source directories
   install -d "$pkgdir"/{etc,usr/share}/$pkgbase/trust-source/{anchors,blacklist}
