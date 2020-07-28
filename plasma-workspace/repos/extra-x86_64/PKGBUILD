@@ -5,8 +5,8 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.19.3
-pkgrel=2
+pkgver=5.19.4
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -16,20 +16,16 @@ depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appst
          plasma-integration kdelibs4support kpeople kactivities-stats libkscreen kquickcharts kuserfeedback)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin kinit)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
-         kdebug-423995.patch::"https://invent.kde.org/plasma/plasma-workspace/commit/1cfd9e88.patch")
-sha256sums=('a967b4b3679f17b6e01b4811015ef6210f0f73bb035642867415c51c1ed20894'
+source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
+sha256sums=('584fada178f8a3d770080e1faa631cb64eebbf70af89f5d611ac9438fa868bd3'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
-            '8e522a95d6dc552a55be8aae26ea21fdfb478d98f2ce43ac5b2523016af30e09')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 
 prepare() {
-  patch -d $pkgbase-$pkgver -p1 -i ../kdebug-423995.patch # Don't overwrite systemwide local settings
-
   sed -e 's|dbus-run-session ||' -i $pkgbase-$pkgver/login-sessions/plasmawayland.desktop.cmake # Don't start a second user dbus session
 }
 
