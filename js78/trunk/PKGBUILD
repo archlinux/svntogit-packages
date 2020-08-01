@@ -33,7 +33,6 @@ build() {
     --disable-strip
     --enable-hardening
     --enable-linker=lld
-    --enable-lto=cross
     --enable-optimize
     --enable-readline
     --enable-release
@@ -53,7 +52,30 @@ build() {
 
   cd firefox-$pkgver/obj
 
-  sh ../js/src/configure "${configure_args[@]}"
+  # Do 3-tier PGO
+  echo "Building instrumented JS..."
+  sh ../js/src/configure "${configure_args[@]}" \
+    --enable-profile-generate=cross
+  make
+
+  echo "Profiling instrumented JS..."
+  (
+    cd ../js/src/octane
+    ../../../obj/dist/bin/js run.js
+    llvm-profdata merge -o ../../../obj/merged.profdata *.profraw
+  )
+
+  stat -c "Profile data found (%s bytes)" merged.profdata
+  test -s merged.profdata
+
+  echo "Removing instrumented JS..."
+  make clobber
+
+  echo "Building optimized JS..."
+  sh ../js/src/configure "${configure_args[@]}" \
+    --enable-lto=cross \
+    --enable-profile-use=cross \
+    --with-pgo-profile-path="$PWD/merged.profdata"
   make
 }
 
