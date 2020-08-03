@@ -1,16 +1,16 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=polkit
-pkgver=0.116
-pkgrel=5
+pkgver=0.117
+pkgrel=1
 pkgdesc="Application development toolkit for controlling system-wide privileges"
 arch=(x86_64)
 license=(LGPL)
 url="https://www.freedesktop.org/wiki/Software/polkit/"
-depends=(glib2 pam expat systemd js60)
+depends=(glib2 pam expat systemd js68)
 makedepends=(intltool gtk-doc gobject-introspection git autoconf-archive)
 backup=(etc/pam.d/polkit-1)
-_commit=941e9329f8d3d43ace8335d206365b212824e686  # tags/0.116
+_commit=585f4f2715639394e36319d4918389d26e250e7b
 source=("git+https://gitlab.freedesktop.org/polkit/polkit.git#commit=$_commit")
 sha256sums=('SKIP')
 
