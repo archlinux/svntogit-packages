@@ -1,0 +1,44 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Dan McGee <dan@archlinux.org>
+# Contributor: Martin Striz <ms@poruba.net>
+
+pkgname=irqbalance
+pkgver=1.7.0
+pkgrel=1
+pkgdesc="IRQ balancing daemon for SMP systems"
+arch=('x86_64')
+url="https://github.com/irqbalance/irqbalance"
+license=('GPL2')
+backup=('etc/irqbalance.env')
+depends=('glibc' 'libcap-ng')
+makedepends=('glib2' 'ncurses' 'numactl' 'systemd' 'systemd-libs')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/v$pkgver.tar.gz")
+sha512sums=('2fa29c738275dda2fac38d78ca0ec4619826b72529e8eda7ad8ddcda5768bbf282e2260dddc16a8b46d4296289b25dc59684575ae1badca0c6c6ae30b1e9b5ea')
+b2sums=('1213b21c7d3979c9ba7d2298c21f7f0b75217d251ecfa02660ea0602a032d62c9c9b0254bf158e07e0fdcf55b35f332f5a17f929c7393dfdb894ca952dad52b4')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # fix location of configuration and binary in service
+  sed -e 's|/path/to/|/etc/|g' \
+      -e 's|/usr/sbin|/usr/bin|g' \
+      -i "misc/${pkgname}.service"
+  autoreconf -vfi
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr \
+              --sbindir=/usr/bin \
+              --with-systemd
+  make
+}
+
+package() {
+  depends+=('libglib-2.0.so' 'libncursesw.so' 'libnuma.so' 'libsystemd.so')
+  cd "$pkgname-$pkgver"
+  make install DESTDIR="$pkgdir"
+  install -vDm 644 misc/irqbalance.service \
+    -t "${pkgdir}/usr/lib/systemd/system/"
+  install -vDm 644 misc/irqbalance.env -t "${pkgdir}/etc/"
+  install -vDm 644 {AUTHORS,README.md} -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
