@@ -2,24 +2,34 @@
 # Contributor: Yaron de Leeuw <me@jarondl.net>
 
 pkgname=python-isort
-pkgver=5.1.4
+pkgver=5.2.0
 pkgrel=1
 pkgdesc="A Python utility / library to sort Python imports."
 arch=('any')
 url="https://github.com/timothycrosley/isort"
 license=('MIT')
-depends=('python')
+depends=('python-toml')
 makedepends=('python-dephell')
-checkdepends=('pylama' 'python-hypothesis-auto' 'python-pip' 'python-pip-api' 'python-pipreqs'
-              'python-pytest' 'python-requirementslib')
+checkdepends=('git' 'pylama' 'python-black' 'python-hypothesis-auto' 'python-pip' 'python-pip-api'
+              'python-pipreqs' 'python-pytest' 'python-requirementslib')
 source=("https://github.com/timothycrosley/isort/archive/$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('49c78d3731caac0c70e49d07336cc87110042dcfd3e0ba191cd0bbe65a59fe14488d6361506a2a0308402d4b09a8d1e00f7dd3c79ca889e13bbc175b4f2c3417')
+sha512sums=('864b71b1162571d359f31568640cf1ae15fea99317954327a42d43c2521075a1d18527f437252e0f74f503db85d5a9657643199882a4171edfe031fdb208bb92')
 
 prepare() {
   cd isort-$pkgver
+
+  # Devendor toml
+  rm -r isort/_vendored
+  sed -i 's/from ._vendored //' isort/settings.py
+
   # poetry-generated setup.py are fatally broken, see:
   # https://github.com/sdispater/poetry/issues/866
   dephell deps convert --from pyproject.toml --to setup.py
+  for _plugin in example_isort_formatting_plugin example_shared_isort_profile; do
+    pushd $_plugin
+    dephell deps convert --from pyproject.toml --to setup.py
+    popd
+  done
 }
 
 build() {
@@ -30,7 +40,14 @@ build() {
 check() {
   cd isort-$pkgver
   python setup.py install --root="$PWD/tmp_install" --optimize=1
-  PYTHONPATH="$PWD/tmp_install/usr/lib/python3.8/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" pytest --deselect tests/test_importable.py::test_importable
+  for _plugin in example_isort_formatting_plugin example_shared_isort_profile; do
+    pushd $_plugin
+    python setup.py install --root="$srcdir/isort-$pkgver/tmp_install" --optimize=1
+    popd
+  done
+  # This is just weird
+  PYTHONPATH="$PWD/example_isort_formatting_plugin:$PWD/example_shared_isort_profile:$PWD/tmp_install/usr/lib/python3.8/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" \
+    pytest --deselect tests/test_importable.py::test_importable
 }
 
 package() {
