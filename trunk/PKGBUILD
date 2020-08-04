@@ -2,16 +2,16 @@
 
 pkgbase=python-hyperlink
 pkgname=('python-hyperlink' 'python2-hyperlink')
-pkgver=19.0.0
-pkgrel=6
+pkgver=20.0.0
+pkgrel=1
 pkgdesc='A featureful, correct URL for Python'
 arch=('any')
 license=('BSD')
 url='https://github.com/python-hyper/hyperlink'
-makedepends=('python-idna' 'python2-idna' 'python-setuptools' 'python2-setuptools')
+makedepends=('python-idna' 'python2-idna' 'python-setuptools' 'python2-setuptools' 'python2-typing')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/python-hyper/hyperlink/archive/v$pkgver.tar.gz")
-sha512sums=('5a2848d55de1cd1373c140cf3063b4a32c944f4f762f27196a402095afcb65143551af55eab28926c794dc55b8337527266de4db377a635c18a477cd398cc3ee')
+sha512sums=('2a07b2ca895d9f0fe012653a45514746c65197b283f8dcc724a7077ab626696820279faed1a3483fe275b8b1054ac18cb6945a2894032ddf0deed1cf15a43580')
 
 prepare() {
   cp -a hyperlink-$pkgver{,-py2}
@@ -49,7 +49,7 @@ package_python-hyperlink() {
 }
 
 package_python2-hyperlink() {
-  depends=('python2-idna')
+  depends=('python2-idna' 'python2-typing')
 
   cd hyperlink-$pkgver-py2
   python2 setup.py install --root="$pkgdir" --optimize=1
