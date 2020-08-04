@@ -1,0 +1,47 @@
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Hugo Doria <hugo@archlinux.org>
+
+pkgname=libcap
+pkgver=2.39
+pkgrel=1
+pkgdesc='POSIX 1003.1e capabilities'
+arch=(x86_64)
+url='https://sites.google.com/site/fullycapable/'
+license=(GPL2)
+depends=(glibc attr)
+makedepends=(linux-api-headers)
+provides=(libcap.so)
+source=(https://kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-$pkgver.tar.{xz,sign})
+sha512sums=('82cd81d67ec439a6051eaa4c20ff302bb5a667c585eada837605b122dc04d8fe6b4c619e7373af2423f3b0f4ab2258147fff309001a8f483e185b7e6578e1f98'
+            'SKIP')
+validpgpkeys=(38A644698C69787344E954CE29EE848AE2CCF3F4) # Andrew G. Morgan <morgan@kernel.org>
+
+prepare() {
+  cd $pkgname-$pkgver
+  sed -i "/SBINDIR/s#sbin#bin#" Make.Rules
+
+  # use our buildflags
+  sed -i "s/CFLAGS :=/CFLAGS += \$(CPPFLAGS) /" Make.Rules
+  sed -i "s/LDFLAGS :=/LDFLAGS +=/" Make.Rules
+}
+
+_makeargs=(
+  KERNEL_HEADERS=/usr/include
+  RAISE_SETFCAP=no
+  SBINDIR=/usr/bin
+  lib=lib
+  prefix=/usr
+)
+
+build() {
+  make -C $pkgname-$pkgver "${_makeargs[@]}"
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" "${_makeargs[@]}" install
+
+  install -Dm644 pam_cap/capability.conf \
+    "$pkgdir"/usr/share/doc/$pkgname/capability.conf.example
+}
