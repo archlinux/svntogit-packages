@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.36.3
-pkgrel=2
+pkgrel=3
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -39,7 +39,7 @@ prepare() {
   patch -Np1 -i ../0003-pam-arch-Restrict-greeter-service-to-the-gdm-user.patch
 
   # https://bugs.archlinux.org/task/67485
-  patch -Np1 -i ../0004-pam-arch-Replace-pam_tally-with-pam_faillock.patch
+  #patch -Np1 -i ../0004-pam-arch-Replace-pam_tally-with-pam_faillock.patch
 
   NOCONFIGURE=1 ./autogen.sh
 }
