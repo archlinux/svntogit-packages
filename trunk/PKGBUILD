@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.36.3
-pkgrel=4
+pkgrel=5
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -17,12 +17,12 @@ source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0001-Xsession-Don-t-start-ssh-agent-by-default.patch
         0002-pam-arch-Don-t-check-greeter-account-for-expiry.patch
         0003-pam-arch-Restrict-greeter-service-to-the-gdm-user.patch
-        0004-pam-arch-Replace-pam_tally-with-pam_faillock.patch)
+        0004-pam-arch-Update-to-match-pambase-20200721.1-2.patch)
 sha256sums=('SKIP'
             'b9ead66d2b6207335f0bd982a835647536998e7c7c6b5248838e5d53132ca21a'
             'd89a3a852c9656a61a3d418817c883f7a607a0e65aa0eaf9904738c0299f006d'
             'c18dc79bdd3207c66b6f66a41a51dd069442d2e9053055147c2f90e39f0c4a7d'
-            '091fe36855c39c7e900ba971795c48d155269be470a6ff3e5494b438de7aa3d9')
+            '7d1e293de59e08e750a42dc01c35170c9d8f1d9a71ff6ca168efd1c4f9bb6812')
 
 pkgver() {
   cd gdm
@@ -39,7 +39,7 @@ prepare() {
   patch -Np1 -i ../0003-pam-arch-Restrict-greeter-service-to-the-gdm-user.patch
 
   # https://bugs.archlinux.org/task/67485
-  patch -Np1 -i ../0004-pam-arch-Replace-pam_tally-with-pam_faillock.patch
+  patch -Np1 -i ../0004-pam-arch-Update-to-match-pambase-20200721.1-2.patch
 
   NOCONFIGURE=1 ./autogen.sh
 }
