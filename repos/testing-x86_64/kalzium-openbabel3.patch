@@ -1,0 +1,301 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index aada7a92..2a0fb61c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -26,7 +26,12 @@ include(ECMSetupVersion)
+ find_package(Gettext REQUIRED)
+ find_package(PythonInterp REQUIRED)
+ find_package(PkgConfig)
+-find_package(OpenBabel2)
++find_package(OpenBabel3 3.1)
++if(${OpenBabel3_FOUND})
++    find_package(Threads REQUIRED)
++else()
++    find_package(OpenBabel2)
++endif()
+ find_package(AvogadroLibs)
+ find_package(Eigen3)
+ find_package(OCaml)
+@@ -37,9 +42,22 @@ check_include_files(ieeefp.h HAVE_IEEEFP_H)
+ 
+ # create configuration file
+ set(HAVE_FACILE ${LIBFACILE_FOUND})
++set(HAVE_OPENBABEL3 ${OpenBabel3_FOUND})
+ set(HAVE_OPENBABEL2 ${OPENBABEL2_FOUND})
++if(HAVE_OPENBABEL2 OR HAVE_OPENBABEL3)
++    set(HAVE_OPENBABEL 1)
++endif()
+ set(HAVE_EIGEN ${EIGEN3_FOUND})
+ set(HAVE_AVOGADRO ${AvogadroLibs_FOUND})
++
++if(HAVE_OPENBABEL3)
++    set(OPENBABEL_INCLUDE_DIR ${OpenBabel3_INCLUDE_DIRS})
++    set(OPENBABEL_LIBRARIES openbabel)
++elseif(HAVE_OPENBABEL2)
++    set(OPENBABEL_INCLUDE_DIR ${OPENBABEL2_INCLUDE_DIR})
++    set(OPENBABEL_LIBRARIES ${OPENBABEL2_LIBRARIES})
++endif()
++
+ configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/config-kalzium.h.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/config-kalzium.h
+@@ -97,7 +115,7 @@ if(MSVC)
+ add_definitions(-DUSING_DYNAMIC_LIBS)
+ endif(MSVC)
+ 
+-if (OPENBABEL2_FOUND AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
++if (HAVE_OPENBABEL AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
+   find_package(Qt5OpenGL ${QT_MIN_VERSION} REQUIRED)
+   find_package(KF5NewStuff REQUIRED)
+   # avoid compilerwarnings about redefinitions
+@@ -107,9 +125,9 @@ if (OPENBABEL2_FOUND AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
+     add_definitions(-DHAVE_SNPRINTF -DHAVE_STRCASECMP -DHAVE_STRNCASECMP)
+   endif (WIN32)
+   add_subdirectory(compoundviewer)
+-else (OPENBABEL2_FOUND AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
++else (HAVE_OPENBABEL AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
+   message(STATUS "Kalzium molecular editor disabled")
+-endif (OPENBABEL2_FOUND AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
++endif (HAVE_OPENBABEL AND AvogadroLibs_FOUND AND EIGEN3_FOUND)
+ 
+ add_subdirectory(doc)
+ add_subdirectory(src)
+diff --git a/compoundviewer/CMakeLists.txt b/compoundviewer/CMakeLists.txt
+index db367a7d..3fd2c42b 100644
+--- a/compoundviewer/CMakeLists.txt
++++ b/compoundviewer/CMakeLists.txt
+@@ -1,7 +1,7 @@
+ include_directories(
+     ${CMAKE_CURRENT_BINARY_DIR}/..
+     ${EIGEN3_INCLUDE_DIR}
+-    ${OPENBABEL2_INCLUDE_DIR}
++    ${OPENBABEL_INCLUDE_DIR}
+     ${AvogadroLibs_INCLUDE_DIRS}
+     ${PROJECT_SOURCE_DIR}/compoundviewer
+ )
+@@ -22,7 +22,7 @@ target_link_libraries(compoundviewer
+     Qt5::OpenGL
+     Qt5::Gui
+     Qt5::Widgets
+-    ${OPENBABEL2_LIBRARIES}
++    ${OPENBABEL_LIBRARIES}
+     AvogadroQtGui
+     AvogadroQtOpenGL
+     AvogadroQtPlugins
+diff --git a/compoundviewer/widgets/CMakeLists.txt b/compoundviewer/widgets/CMakeLists.txt
+index 7658056c..a1e54204 100644
+--- a/compoundviewer/widgets/CMakeLists.txt
++++ b/compoundviewer/widgets/CMakeLists.txt
+@@ -11,6 +11,6 @@ add_widget_files(kalziumui_PART_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/kalziumui.widge
+ 
+ add_library(kalziumuiwidgets MODULE ${kalziumui_PART_SRCS})
+ 
+-target_link_libraries(kalziumuiwidgets ${OPENBABEL2_LIBRARIES} Qt5::Designer KF5::Core)
++target_link_libraries(kalziumuiwidgets ${OPENBABEL_LIBRARIES} Qt5::Designer KF5::Core)
+ 
+ install(TARGETS kalziumuiwidgets DESTINATION ${PLUGIN_INSTALL_DIR}/plugins/designer)
+diff --git a/config-kalzium.h.cmake b/config-kalzium.h.cmake
+index f834d57d..99862809 100644
+--- a/config-kalzium.h.cmake
++++ b/config-kalzium.h.cmake
+@@ -4,6 +4,12 @@
+ /* Define to 1 if we have OpenBabel2 */
+ #cmakedefine HAVE_OPENBABEL2 1
+ 
++/* Define to 1 if we have OpenBabel3 */
++#cmakedefine HAVE_OPENBABEL3 1
++
++/* Define to 1 if we have OpenBabel */
++#cmakedefine HAVE_OPENBABEL 1
++
+ /* Define 1 if we have Eigen */
+ #cmakedefine HAVE_EIGEN 1
+ 
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 2d1e8972..eb18ddd9 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -14,10 +14,10 @@ ecm_setup_version(${RELEASE_SERVICE_VERSION} VARIABLE_PREFIX KALZIUM VERSION_HEA
+ 
+ ########### next target ###############
+ 
+-# The tools can only be built when OpenBabel2 is found.
+-# The moleculeviewer needs not only OpenBabel2 but also Eigen2 and Avogadro,
++# The tools can only be built when OpenBabel is found.
++# The moleculeviewer needs not only OpenBabel but also Eigen and Avogadro,
+ # so there is a nested if-check.
+-if (OPENBABEL2_FOUND)
++if (HAVE_OPENBABEL)
+    set(kalziumtools_SRCS
+       tools/obconverter.cpp
+       )
+@@ -25,7 +25,7 @@ if (OPENBABEL2_FOUND)
+    ki18n_wrap_ui(kalziumtools_SRCS
+       tools/obconverterwidget.ui
+       )
+-   include_directories(SYSTEM ${OPENBABEL2_INCLUDE_DIR})
++   include_directories(SYSTEM ${OPENBABEL_INCLUDE_DIR})
+ 
+    if (EIGEN3_FOUND AND AvogadroLibs_FOUND)
+ 
+@@ -41,7 +41,7 @@ if (OPENBABEL2_FOUND)
+          )
+       include_directories(${EIGEN3_INCLUDE_DIR})
+    endif (EIGEN3_FOUND AND AvogadroLibs_FOUND)
+-endif (OPENBABEL2_FOUND)
++endif (HAVE_OPENBABEL)
+ 
+ ## Kalzium calculator files
+ set(kalziumtools_SRCS
+@@ -151,8 +151,8 @@ target_link_libraries(kalzium
+     Qt5::Svg
+     science
+ )
+-if (OPENBABEL2_FOUND)
+-   target_link_libraries(kalzium ${OPENBABEL2_LIBRARIES})
++if (HAVE_OPENBABEL)
++   target_link_libraries(kalzium ${OPENBABEL_LIBRARIES})
+    if (EIGEN3_FOUND AND AvogadroLibs_FOUND)
+       target_link_libraries(kalzium
+          KF5::NewStuff
+@@ -163,7 +163,7 @@ if (OPENBABEL2_FOUND)
+          AvogadroQtPlugins
+        )
+    endif (EIGEN3_FOUND AND AvogadroLibs_FOUND)
+-endif (OPENBABEL2_FOUND)
++endif (HAVE_OPENBABEL)
+ 
+ if (LIBFACILE_FOUND)
+    link_directories(${OCAMLC_DIR})
+diff --git a/src/kalzium.cpp b/src/kalzium.cpp
+index f0a3e01e..bb91fe53 100644
+--- a/src/kalzium.cpp
++++ b/src/kalzium.cpp
+@@ -37,7 +37,7 @@
+ #include "eqchemview.h"
+ #endif
+ 
+-#ifdef HAVE_OPENBABEL2
++#ifdef HAVE_OPENBABEL
+ #if defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
+ #include "tools/moleculeview.h"
+ #include <QGLFormat>
+@@ -198,7 +198,7 @@ void Kalzium::setupActions()
+     m_pOBConverterAction->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy")));
+     m_pOBConverterAction->setWhatsThis(i18nc("WhatsThis Help", "With this tool, you can convert files containing chemical data between various file formats."));
+     connect(m_pOBConverterAction, &QAction::triggered, this, &Kalzium::slotOBConverter);
+-#ifndef HAVE_OPENBABEL2
++#ifndef HAVE_OPENBABEL
+     m_pOBConverterAction->setEnabled(false);
+ #endif
+ 
+@@ -207,7 +207,7 @@ void Kalzium::setupActions()
+     m_pMoleculesviewer->setIcon(QIcon::fromTheme(QStringLiteral("kalzium_molviewer")));
+     m_pMoleculesviewer->setWhatsThis(i18nc("WhatsThis Help", "This tool allows you to view and edit 3D molecular structures."));
+     connect(m_pMoleculesviewer, &QAction::triggered, this, &Kalzium::slotMoleculeviewer);
+-#if !defined(HAVE_OPENBABEL2) || !defined(HAVE_EIGEN) || !defined(HAVE_AVOGADRO)
++#if !defined(HAVE_OPENBABEL) || !defined(HAVE_EIGEN) || !defined(HAVE_AVOGADRO)
+     m_pMoleculesviewer->setEnabled(false);
+ #endif
+ 
+@@ -361,7 +361,7 @@ void Kalzium::slotRS()
+ 
+ void Kalzium::slotOBConverter()
+ {
+-#ifdef HAVE_OPENBABEL2
++#ifdef HAVE_OPENBABEL
+     KOpenBabel * d = new KOpenBabel(this);
+     d->setAttribute(Qt::WA_DeleteOnClose);
+     d->show();
+@@ -370,7 +370,7 @@ void Kalzium::slotOBConverter()
+ 
+ MoleculeDialog *Kalzium::slotMoleculeviewer()
+ {
+-#if defined(HAVE_OPENBABEL2) && defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
++#if defined(HAVE_OPENBABEL) && defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
+ 
+     if (!QGLFormat::hasOpenGL()) {
+         QMessageBox::critical(Q_NULLPTR, i18n("Kalzium Error"), i18n("This system does not support OpenGL."));
+@@ -632,7 +632,7 @@ Kalzium::~Kalzium()
+ 
+ void Kalzium::loadMolecule(const QString &moleculeFile)
+ {
+-#if defined(HAVE_OPENBABEL2) && defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
++#if defined(HAVE_OPENBABEL) && defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
+     MoleculeDialog *d = slotMoleculeviewer();
+     if (d) {
+         d->loadMolecule(moleculeFile);
+diff --git a/src/kalziumschemetype.cpp b/src/kalziumschemetype.cpp
+index 91a5cbf0..07f7bbfa 100644
+--- a/src/kalziumschemetype.cpp
++++ b/src/kalziumschemetype.cpp
+@@ -25,6 +25,9 @@
+ #ifdef HAVE_OPENBABEL2
+ #include <openbabel/mol.h>
+ #endif
++#ifdef HAVE_OPENBABEL3
++#include <openbabel/elements.h>
++#endif
+ 
+ #include <QBrush>
+ #include <QDebug>
+@@ -39,7 +42,7 @@ KalziumSchemeTypeFactory::KalziumSchemeTypeFactory()
+     m_schemes << KalziumIconicSchemeType::instance();
+     m_schemes << KalziumFamilySchemeType::instance();
+     m_schemes << KalziumGroupsSchemeType::instance();
+-    #ifdef HAVE_OPENBABEL2
++    #ifdef HAVE_OPENBABEL
+     m_schemes << KalziumColorSchemeType::instance();
+     #endif
+ }
+@@ -379,7 +382,7 @@ QList<legendPair> KalziumGroupsSchemeType::legendItems() const
+     return ll;
+ }
+ 
+-#ifdef HAVE_OPENBABEL2
++#ifdef HAVE_OPENBABEL
+ ///OpenBabel Color///
+ KalziumColorSchemeType::KalziumColorSchemeType()
+         : KalziumSchemeType()
+@@ -406,8 +409,15 @@ QBrush KalziumColorSchemeType::elementBrush(int el) const
+ {
+     QColor c;
+ 
++#ifdef HAVE_OPENBABEL2
+     std::vector<double> color = OpenBabel::etab.GetRGB(el);
+     c.setRgbF(color[0], color[1], color[2]);
++#endif
++#ifdef HAVE_OPENBABEL3
++    double red, green, blue;
++    OpenBabel::OBElements::GetRGB(el, &red, &green, &blue);
++    c.setRgbF(red, green, blue);
++#endif
+ 
+     return QBrush(c);
+ }
+diff --git a/src/kalziumschemetype.h b/src/kalziumschemetype.h
+index c4bb4085..e1a91e10 100644
+--- a/src/kalziumschemetype.h
++++ b/src/kalziumschemetype.h
+@@ -230,7 +230,7 @@ private:
+     KalziumGroupsSchemeType();
+ };
+ 
+-#ifdef HAVE_OPENBABEL2
++#ifdef HAVE_OPENBABEL
+ /**
+  * The scheme for color
+  *
+diff --git a/src/main.cpp b/src/main.cpp
+index 2f28079b..5caebaa9 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -142,7 +142,7 @@ int main(int argc, char **argv)
+     parser.process(app);
+     about.processCommandLine(&parser);
+ 
+-    #if defined(HAVE_OPENBABEL2) && defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
++    #if defined(HAVE_OPENBABEL) && defined(HAVE_EIGEN) && defined(HAVE_AVOGADRO)
+     parser.addOption(QCommandLineOption(QStringList() << QStringLiteral("m") << QStringLiteral("molecule"), i18n("Open the given molecule file"), QStringLiteral("file")));
+     #endif
+ 
