@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.36.4
+pkgver=3.36.5
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -17,7 +17,7 @@ checkdepends=(xorg-server-xvfb)
 provides=(libmutter-6.so)
 groups=(gnome)
 install=mutter.install
-_commit=d03deb006c4154232ee257a8a16fee4ea61f3286  # tags/3.36.4^0
+_commit=7d061a06dec02278bef1054e502cae8837c39f2f  # tags/3.36.5^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
