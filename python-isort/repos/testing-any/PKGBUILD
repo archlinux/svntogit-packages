@@ -1,0 +1,58 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Yaron de Leeuw <me@jarondl.net>
+
+pkgname=python-isort
+pkgver=5.3.0
+pkgrel=1
+pkgdesc="A Python utility / library to sort Python imports."
+arch=('any')
+url="https://github.com/timothycrosley/isort"
+license=('MIT')
+depends=('python-toml')
+makedepends=('python-dephell')
+checkdepends=('git' 'pylama' 'python-black' 'python-hypothesis-auto' 'python-hypothesmith'
+              'python-libcst' 'python-pip' 'python-pip-api' 'python-pipreqs' 'python-pytest'
+              'python-requirementslib')
+source=("https://github.com/timothycrosley/isort/archive/$pkgver/$pkgname-$pkgver.tar.gz")
+sha512sums=('59c8e149bbbccf452fdbc710ec3acf426305bb0f21b086e613b1c40fb2305cdf6b507b853598ea3fe34f253aec2d2b29fbb7e9221ba8c275db0693d3cdfe6d4a')
+
+prepare() {
+  cd isort-$pkgver
+
+  # Devendor toml
+  rm -r isort/_vendored
+  sed -i 's/from ._vendored //' isort/settings.py
+
+  # poetry-generated setup.py are fatally broken, see:
+  # https://github.com/sdispater/poetry/issues/866
+  dephell deps convert --from pyproject.toml --to setup.py
+  for _plugin in example_isort_formatting_plugin example_shared_isort_profile; do
+    pushd $_plugin
+    dephell deps convert --from pyproject.toml --to setup.py
+    popd
+  done
+}
+
+build() {
+  cd isort-$pkgver
+  python setup.py build
+}
+
+check() {
+  cd isort-$pkgver
+  python setup.py install --root="$PWD/tmp_install" --optimize=1
+  for _plugin in example_isort_formatting_plugin example_shared_isort_profile; do
+    pushd $_plugin
+    python setup.py install --root="$srcdir/isort-$pkgver/tmp_install" --optimize=1
+    popd
+  done
+  # This is just weird
+  PYTHONPATH="$PWD/example_isort_formatting_plugin:$PWD/example_shared_isort_profile:$PWD/tmp_install/usr/lib/python3.8/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" \
+    pytest --deselect tests/test_importable.py::test_importable
+}
+
+package() {
+  cd isort-$pkgver
+  python setup.py install --root="$pkgdir" --optimize=1
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
+}
