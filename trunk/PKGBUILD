@@ -21,6 +21,7 @@ build() {
   # which is a secure version of locate.
   sed -e '/^SUBDIRS/s/locate//' -e 's/frcode locate updatedb//' -i Makefile.in
 
+  autoreconf
   ./configure --prefix=/usr
   # don't build locate, but the docs want a file in there.
   make -C locate dblocation.texi
