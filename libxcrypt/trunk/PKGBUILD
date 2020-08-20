@@ -2,7 +2,7 @@
 
 pkgname=libxcrypt
 pkgver=4.4.16
-pkgrel=2
+pkgrel=3
 pkgdesc='Modern library for one-way hashing of passwords'
 arch=(x86_64)
 url='https://github.com/besser82/libxcrypt/'
@@ -22,7 +22,7 @@ build() {
   ./configure \
     --prefix=/usr \
     --disable-static \
-    --enable-hashes=strong \
+    --enable-hashes=strong,glibc \
     --enable-obsolete-api=no \
     --disable-failure-tokens
   make
@@ -36,5 +36,4 @@ check() {
 package() {
   cd $pkgname-$pkgver
   make DESTDIR="$pkgdir" install
-  rm -f "$pkgdir/usr/lib/libcrypt.so"
 }
