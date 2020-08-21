@@ -4,7 +4,7 @@
 
 pkgname=apache
 pkgver=2.4.46
-pkgrel=1
+pkgrel=2
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('x86_64')
 url='https://www.apache.org/dist/httpd'
@@ -21,7 +21,7 @@ backup=(
 provides=('mod_proxy_uwsgi')
 conflicts=('mod_proxy_uwsgi')
 replaces=('mod_proxy_uwsgi')
-depends=('zlib' 'apr-util' 'pcre' 'libnghttp2' 'openssl')
+depends=('zlib' 'apr-util' 'pcre' 'libnghttp2' 'openssl' 'libxcrypt')
 makedepends=('libxml2' 'lua53' 'curl' 'brotli' 'jansson')
 optdepends=(
     'lua53: for mod_lua module'
