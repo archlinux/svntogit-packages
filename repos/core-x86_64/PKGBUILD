@@ -6,11 +6,11 @@ pkgbase=util-linux
 pkgname=(util-linux libutil-linux)
 _pkgmajor=2.36
 pkgver=${_pkgmajor}
-pkgrel=1
+pkgrel=2
 pkgdesc="Miscellaneous system utilities for Linux"
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
-makedepends=('systemd' 'python' 'libcap-ng')
+makedepends=('systemd' 'python' 'libcap-ng' 'libxcrypt')
 license=('GPL2')
 options=('strip')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
@@ -64,7 +64,9 @@ package_util-linux() {
   conflicts=('rfkill')
   provides=('rfkill')
   replaces=('rfkill')
-  depends=('pam' 'shadow' 'coreutils' 'systemd-libs' 'libcap-ng' 'libutil-linux')
+  depends=('pam' 'shadow' 'coreutils' 'systemd-libs' 'libsystemd.so'
+           'libudev.so' 'libcap-ng' 'libxcrypt' 'libcrypt.so' 'libutil-linux'
+           'libmagic.so' 'libncursesw.so' 'libreadline.so')
   optdepends=('python: python bindings to libmount'
               'words: default dictionary for look')
   backup=(etc/pam.d/chfn
