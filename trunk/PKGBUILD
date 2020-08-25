@@ -2,12 +2,12 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgbase="sqlite"
-pkgname=('sqlite' 'sqlite-tcl' 'sqlite-doc' 'sqlite-analyzer')
+pkgname=('sqlite' 'sqlite-tcl' 'sqlite-analyzer' 'lemon' 'sqlite-doc')
 _srcver=3330000
 _docver=${_srcver}
 #_docver=3330000
 pkgver=3.33.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A C library that implements an SQL database engine"
 arch=('x86_64')
 license=('custom:Public Domain')
@@ -15,15 +15,21 @@ url="https://www.sqlite.org/"
 makedepends=('tcl' 'readline' 'zlib')
 source=(https://www.sqlite.org/2020/sqlite-src-${_srcver}.zip
         https://www.sqlite.org/2020/sqlite-doc-${_docver}.zip
+        sqlite-lemon-system-template.patch
         license.txt)
 options=('!emptydirs' '!makeflags') # json extensions breaks parallel build
 # upstream now switched to sha3sums - currently not suppoerted by makepkg
 sha256sums=('90bf7604a5aa26deece551af7a665fd4ce3d854ea809899c0e4bb19a69d609b8'
             '42f6e7eb03ea26f551760804703d6b81c3017983ccdb5fdbd8b9fc1940cd018e'
+            '9ffb899a28b74b5b1fcb6f1cf50a34d53c98e41f2cbcf60838a8a890cdb595e8'
             '4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d')
 
 prepare() {
   cd sqlite-src-$_srcver
+
+  # patch taken from Fedora
+  patch -Np1 -i ../sqlite-lemon-system-template.patch
+
 #  autoreconf -vfi
 }
 
@@ -105,6 +111,24 @@ package_sqlite-analyzer() {
   install -m755 sqlite3_analyzer "${pkgdir}"/usr/bin/
 }
 
+package_lemon() {
+
+ # https://www.sqlite.org/lemon.html
+ pkgdesc="A parser generator"
+ depends=('glibc')
+
+  cd sqlite-src-$_srcver
+  # ELF file ('usr/bin/lemon') lacks FULL RELRO, check LDFLAGS. - no fix found so far
+  install -Dm755 lemon ${pkgdir}/usr/bin/lemon
+  install -Dm644 lempar.c ${pkgdir}/usr/share/lemon/lempar.c
+  
+  mkdir -p "${pkgdir}"/usr/share/doc/${pkgname}
+  cp ../sqlite-doc-${_docver}/lemon.html  "${pkgdir}"/usr/share/doc/${pkgname}/
+  install -m755 -d "${pkgdir}"/usr/share/licenses
+  ln -sf /usr/share/licenses/${pkgbase} "${pkgdir}/usr/share/licenses/${pkgname}"
+
+}
+
 package_sqlite-doc() {
 
  pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
@@ -115,4 +139,6 @@ package_sqlite-doc() {
   cd sqlite-doc-${_docver}
   mkdir -p "${pkgdir}"/usr/share/doc/${pkgbase}
   cp -R *  "${pkgdir}"/usr/share/doc/${pkgbase}/
+  
+  rm "${pkgdir}"/usr/share/doc/${pkgbase}/lemon.html
 }
