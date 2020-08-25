@@ -5,7 +5,7 @@ _openssl_ver=1.1.1g
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
 pkgver=202005
-pkgrel=2
+pkgrel=3
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -79,7 +79,7 @@ build() {
                        -t "${_build_plugin}" \
                        -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
-                       -D TPM2_ENABLE \
+                       -D TPM_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D TLS_ENABLE \
                        -D FD_SIZE_2MB \
@@ -95,7 +95,7 @@ build() {
                        -t "${_build_plugin}" \
                        -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
-                       -D TPM2_ENABLE \
+                       -D TPM_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D TLS_ENABLE \
                        -D FD_SIZE_2MB
@@ -109,7 +109,7 @@ build() {
                        -n "$(nproc)" \
                        -t "${_build_plugin}" \
                        -D NETWORK_IP6_ENABLE \
-                       -D TPM2_ENABLE \
+                       -D TPM_ENABLE \
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
                        -D HTTP_BOOT_ENABLE \
@@ -124,7 +124,7 @@ build() {
                        -n "$(nproc)" \
                        -t "${_build_plugin}" \
                        -D NETWORK_IP6_ENABLE \
-                       -D TPM2_ENABLE \
+                       -D TPM_ENABLE \
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
                        -D HTTP_BOOT_ENABLE
