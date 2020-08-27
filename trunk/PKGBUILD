@@ -201,6 +201,7 @@ package_glibc() {
 package_lib32-glibc() {
   pkgdesc='GNU C Library (32-bit)'
   depends=("glibc=$pkgver")
+  options+=('!emptydirs')
 
   cd lib32-glibc-build
 
