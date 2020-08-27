@@ -7,16 +7,16 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.12.4
+pkgver=4.13.0
 _clangver=10.0.1
-pkgrel=2
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(LGPL)
 depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine clang=$_clangver qbs clazy syntax-highlighting yaml-cpp desktop-file-utils)
 makedepends=(llvm python patchelf)
-options=(docs !strip) # https://bugs.archlinux.org/task/66078
+options=(docs)
 optdepends=('qt5-doc: integrated Qt documentation'
             'qt5-examples: welcome page examples'
             'qt5-translations: for other languages'
@@ -29,10 +29,8 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-        qtcreator-preload-plugins.patch
         qtcreator-clang-libs.patch)
-sha256sums=('3f47d83344476b172f0c51a2351f5a9d8ce8dd8dd2eea827a52276763471b97a'
-            'b40e222b30c355d1230160a4e933dbd161b8748125662e3bde312ea52296457a'
+sha256sums=('bdc846552850283528a826e170787b5d51d86342dcf700ebf9cc5c3b4cdcb747'
             '0f6d0dc41a87aae9ef371b1950f5b9d823db8b5685c6ac04a7a7ac133eb19a3f')
 
 prepare() {
@@ -44,10 +42,6 @@ prepare() {
   sed -e 's|libexec|lib|g' -i src/tools/tools.pro
   # use system qbs
   rm -r src/shared/qbs
-  # Preload analyzer plugins, since upstream clang doesn't link to all plugins
-  # see http://code.qt.io/cgit/clang/clang.git/commit/?id=7f349701d3ea0c47be3a43e265699dddd3fd55cf
-  # and https://bugs.archlinux.org/task/59492
-  patch -p1 -i ../qtcreator-preload-plugins.patch
 
   # Fix build with clang 10
   patch -p1 -i ../qtcreator-clang-libs.patch
@@ -72,7 +66,4 @@ package() {
   make INSTALL_ROOT="$pkgdir/usr/" install_docs
 
   install -Dm644 "$srcdir"/qt-creator-opensource-src-$pkgver/LICENSE.GPL3-EXCEPT "$pkgdir"/usr/share/licenses/qtcreator/LICENSE.GPL3-EXCEPT
-
-# Link clazy plugin explicitely
-  patchelf --add-needed ClazyPlugin.so "$pkgdir"/usr/lib/qtcreator/clangbackend
 }
