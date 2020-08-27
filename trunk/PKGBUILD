@@ -15,7 +15,7 @@ arch=(x86_64)
 url='https://www.qt.io'
 license=(LGPL)
 depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine clang=$_clangver qbs clazy syntax-highlighting yaml-cpp desktop-file-utils)
-makedepends=(llvm python patchelf)
+makedepends=(llvm python)
 options=(docs)
 optdepends=('qt5-doc: integrated Qt documentation'
             'qt5-examples: welcome page examples'
