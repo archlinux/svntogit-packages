@@ -3,33 +3,35 @@
 
 pkgname=assimp
 pkgver=5.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Library to import various well-known 3D model formats in an uniform manner"
 arch=('x86_64')
 license=('BSD')
 depends=('zlib' 'gcc-libs' 'boost-libs')
-makedepends=('cmake' 'boost')
-url='http://assimp.sourceforge.net/index.html'
+makedepends=('cmake' 'boost' 'ninja')
+url='https://assimp.org/'
 source=("$pkgname-$pkgver.tar.gz::https://github.com/assimp/assimp/archive/v${pkgver}.tar.gz")
 sha512sums=('51b704ffea778638b9e228578650f62691c56ee1a90337f8bbbee37e807455466d818234be24852334e5806260e5690932c9bd8e00f055c5c26782e0636538f0')
 
-prepare() {
-	mkdir ${srcdir}/${pkgname}-${pkgver}/build
-}
-
 build() {
-	cd ${srcdir}/${pkgname}-${pkgver}/build
+    cd ${pkgname}-${pkgver}
 
-	cmake .. \
+    cmake . \
+        -Bbuild \
+        -GNinja \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=Release \
         -DASSIMP_BUILD_SAMPLES=OFF
-	make
+    ninja -C build
 }
 
 package()  {
-	cd ${srcdir}/${pkgname}-${pkgver}/build
+    cd ${pkgname}-${pkgver}
 
-	make DESTDIR=$pkgdir install
-	install -Dm644 ${srcdir}/${pkgname}-${pkgver}/LICENSE ${pkgdir}/usr/share/licenses/${pkgname}/LICENSE
+    DESTDIR="$pkgdir" ninja -C build install
+    install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+
+    # Remove this in release > 5.0.1
+    # https://bugs.archlinux.org/task/67735
+    sed -i "s|includedir=.*|includedir=/usr/include/assimp|" "${pkgdir}"/usr/lib/pkgconfig/assimp.pc
 }
