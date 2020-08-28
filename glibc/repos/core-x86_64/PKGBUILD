@@ -7,7 +7,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.32
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -229,4 +229,7 @@ package_lib32-glibc() {
       -not -name 'libthread_db-*.so' \
       -name '*-*.so' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
+
+  # Provided by lib32-libxcrypt; keep the old shared library for backwards compatibility
+  rm -f "$pkgdir"/usr/lib32/libcrypt.{a,so}
 }
