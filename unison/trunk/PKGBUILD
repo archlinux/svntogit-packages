@@ -3,14 +3,14 @@
 
 pkgname=unison
 pkgver=2.51.2
-pkgrel=9
+pkgrel=10
 pkgdesc='File-synchronization tool'
 #url='https://github.com/bcpierce00/unison/'
 url='https://www.cis.upenn.edu/~bcpierce/unison/'
 arch=('x86_64')
 license=('GPL2')
 optdepends=('gtk2: graphical interface')
-makedepends=('ocaml' 'emacs' 'lablgtk2')
+makedepends=('ocaml>=4.11.0' 'emacs' 'lablgtk2')
 source=("https://github.com/bcpierce00/unison/archive/v${pkgver}.tar.gz"
         'large.patch'
 	'4.08-compatibility.patch'
