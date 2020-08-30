@@ -2,7 +2,7 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2020.08.21
+pkgver=2020.08.30
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
@@ -16,7 +16,8 @@ backup=('etc/crypttab' 'etc/fstab' 'etc/group' 'etc/gshadow' 'etc/host.conf'
 source=('crypttab' 'env-generator' 'fstab' 'group' 'gshadow' 'host.conf' 'hosts'
         'issue' 'ld.so.conf' 'locale.sh' 'motd' 'nsswitch.conf' 'os-release'
         'passwd' 'profile' 'resolv.conf' 'securetty' 'shadow' 'shells' 'sysctl'
-        'sysusers' 'tmpfiles' 'archlinux.svg' 'archlinux.png')
+        'sysusers' 'tmpfiles' 'archlinux.svg' 'archlinux.png'
+        'archlinux-logo.svg' 'archlinux-logo.png')
 sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             'ed0cb4f1db4021f8c3b5ce78fdf91d2c0624708f58f36c9cf867f4d93c3bc6da'
             'e54626e74ed8fee4173b62a545ab1c3a3a069e4217a0ee8fc398d9933e9c1696'
@@ -31,7 +32,7 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             '3b821d881a147977e251c522d722626881229d8bc150447673f39f28876ac749'
             '53395e67cc113b7f73e72a829731f6d30319a841d164af8a1d4d4f829a9c3cd9'
             '5e06477834f51abf42ea4e8dc199632afc6afbfd8c44354685a271e9a48d2c0a'
-            '7bb7e910d7bc073e34543f1e42b709e85efb6f1f7c0e5c9ffe0e207f8ca36fb6'
+            '5e4088ad8d0853d390fa303f6be8c3f69c33834200cba9e90f7849f1993ca8d0'
             '5557d8e601b17a80d1ea7de78a9869be69637cb6a02fbfe334e22fdf64e61d4c'
             'd88be2b45b43605ff31dd83d6a138069b6c2e92bc8989b7b9ab9eba8da5f8c7b'
             '6e13705ac4d6f69cdba118c6b70c722346fd3c45224133e6bbfe28aca719563c'
@@ -39,8 +40,10 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             '89e43a0b7028f52d5c8e7fb961d962c4b4f4e9595880a6157274ddb2c7c0b6b4'
             'b5b28f395583d141d88c0b955cd05124f9b8cdf003feab01e55885b8e8c1303e'
             '618ac097441c1f2daffc9967e5c3cd18ea8866f776db62d04bf401c53907b1c9'
-            'e6959e41bf552662d6c662faa49ec84b5fadb8b612d49e8324bfe45752c0fb0d'
-            'a10826be2337d2e96a273af4db62678caa7d1602d9f94b47dedebd71807ecc03')
+            '8b7a0d041f2969b25665af6ae34e5e242ca4154b06c24258739e04cce6369160'
+            '9b1d1fa053c80487f7f3ffc9233fffd8022e961f8c7522db9b8b03c18bf793ac'
+            '3da1595631bca2d4c4f3cd11a47ee4da3166f7af05009a35c44c4080302f7425'
+            '5dc58399f9aff492abbd6d2547cf6188835ea82c5f2d72b16830c86164860743')
 
 package() {
   cd "$pkgdir"
@@ -124,7 +127,7 @@ package() {
   install -D -m755 "$srcdir"/env-generator usr/lib/systemd/system-environment-generators/10-arch
 
   # add logo
-  install -D -m644 "$srcdir"/archlinux.{svg,png} usr/share/pixmaps
+  install -D -m644 "$srcdir"/archlinux{,-logo}.{svg,png} usr/share/pixmaps
 }
 
 # vim:set ts=2 sw=2 et:
