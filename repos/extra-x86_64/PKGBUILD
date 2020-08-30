@@ -1,28 +1,47 @@
-# Maintainer: tobias <tobias@arhlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: tobias <tobias@arhlinux.org>
 
 pkgname=exiv2
-pkgver=0.27.2
-pkgrel=2
+pkgver=0.27.3
+pkgrel=1
 pkgdesc="Exif, Iptc and XMP metadata manipulation library and tools"
-arch=('x86_64')
 url="https://exiv2.org"
+arch=('x86_64')
 license=('GPL2')
-depends=('gcc-libs' 'zlib' 'expat')
-makedepends=('cmake')
-source=($pkgname-$pkgver.tar.gz::"https://github.com/Exiv2/exiv2/archive/v$pkgver.tar.gz")
-sha256sums=('3dbcaf01fbc5b98d42f091d1ff0d4b6cd9750dc724de3d9c0d113948570b2934')
+depends=('gcc-libs' 'zlib' 'expat' 'gettext' 'curl')
+makedepends=('cmake' 'gtest')
+checkdepends=('python')
+provides=('libexiv2.so')
+source=(https://github.com/Exiv2/exiv2/archive/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
+sha512sums=('92775e1c79f06f7b4fb4c214cb2732982cbf01d8bc07d0e8f440facca712a41e579ef2baf72a0471889bb74d3f4975fbc76b47adbe6839decb6770458f76a341')
+b2sums=('f57afed9adbc578c6db0bec843112b12af4aa706a92a12fcd6cfe989ddc07090701f99bc3fb17946d696fe36073d8cefa4ec87a819e8407fda8c48f25d368964')
 
 build() {
-  cd $pkgname-$pkgver 
-  cmake . \
+  cd ${pkgname}-${pkgver}
+  cmake -B build \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DEXIV2_BUILD_SAMPLES=ON \
+    -DEXIV2_BUILD_UNIT_TESTS=ON \
     -DEXIV2_ENABLE_VIDEO=ON \
-    -DEXIV2_BUILD_SAMPLES=OFF \
-    -DEXIV2_ENABLE_NLS=ON
-  make
+    -DEXIV2_ENABLE_NLS=ON \
+    -DEXIV2_ENABLE_XMP=ON \
+    -DEXIV2_ENABLE_CURL=ON \
+    -DEXIV2_ENABLE_WEBREADY=ON
+  make -C build VERBOSE=1
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make -C build tests
 }
 
 package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="${pkgdir}" install
+  cd ${pkgname}-${pkgver}
+  # remove samples instal which are only needed for unit tests
+  sed '/samples\/cmake_install.cmake/d' -i build/cmake_install.cmake
+  make -C build DESTDIR="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:
