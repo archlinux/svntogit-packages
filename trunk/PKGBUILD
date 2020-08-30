@@ -5,12 +5,12 @@
 
 pkgname=dolphin
 pkgver=20.08.0
-pkgrel=1
+pkgrel=2
 pkgdesc="KDE File Manager"
 arch=(x86_64)
 url="https://kde.org/applications/system/dolphin/"
 license=(LGPL)
-depends=(baloo-widgets knewstuff kio-extras kcmutils kparts kinit)
+depends=(baloo-widgets knewstuff kio-extras kcmutils kparts kinit kactivities)
 makedepends=(extra-cmake-modules kdoctools packagekit-qt5)
 optdepends=('kde-cli-tools: for editing file type options' 'ffmpegthumbs: video thumbnails' 'kdegraphics-thumbnailers: PDF and PS thumbnails'
             'konsole: terminal panel' 'purpose: share context menu' 'packagekit-qt5: service menu installer')
