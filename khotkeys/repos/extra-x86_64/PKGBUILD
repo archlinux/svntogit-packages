@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=khotkeys
-pkgver=5.19.4
+pkgver=5.19.5
 pkgrel=1
 pkgdesc='KHotKeys'
 arch=(x86_64)
@@ -13,7 +13,7 @@ depends=(plasma-workspace)
 makedepends=(extra-cmake-modules kdoctools kdesignerplugin kinit)
 groups=(plasma)
 source=("https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz"{,.sig})
-sha256sums=('816501642267252180110865f0ec6918c9604820f24856dc6d1245ec45956932'
+sha256sums=('568cb61eb385a3776d96b21aa77188377b02e56e3bf46f9d9ffddb83a9b31bda'
             'SKIP')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
