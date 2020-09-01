@@ -5,8 +5,8 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.19.4
-pkgrel=2
+pkgver=5.19.5
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -18,7 +18,7 @@ makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesigne
 groups=(plasma)
 source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
          plasma-workspace-gpsd-3.21.patch)
-sha256sums=('584fada178f8a3d770080e1faa631cb64eebbf70af89f5d611ac9438fa868bd3'
+sha256sums=('490329e08e63016edd696a9132bf80b76ef51dacf53308b865d2e27b67ce8127'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
             '27bdc2f751cb6a418d4cf08b08d260ec5621dc3190418fcea9fa80870f857348')
