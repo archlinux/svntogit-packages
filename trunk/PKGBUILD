@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=49.6.0
+pkgver=50.0.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -18,7 +18,7 @@ checkdepends=('python-jaraco.envs' 'python-mock' 'python-pip' 'python-pytest-fix
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('a3dd9627addb146342f5739b9e9e5aab0ea13c5ce63bef119060d51f0c00eb504429fb5cf40f2fd320599dac2757d9cc7a19272fcf1b72bd43b8f90fcc3374e8')
+sha512sums=('a1974679f5575756b29965385b3860fc68a17f6acca491dc3889a1e80e90349d91a1e581c26504096ea684c1db94ae18d65f4e7d0d831fd2360df636e8957b24')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
