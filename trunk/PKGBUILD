@@ -2,7 +2,7 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2020.08.30
+pkgver=2020.09.03
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
@@ -40,10 +40,10 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             '89e43a0b7028f52d5c8e7fb961d962c4b4f4e9595880a6157274ddb2c7c0b6b4'
             'b5b28f395583d141d88c0b955cd05124f9b8cdf003feab01e55885b8e8c1303e'
             '618ac097441c1f2daffc9967e5c3cd18ea8866f776db62d04bf401c53907b1c9'
-            '8b7a0d041f2969b25665af6ae34e5e242ca4154b06c24258739e04cce6369160'
-            '9b1d1fa053c80487f7f3ffc9233fffd8022e961f8c7522db9b8b03c18bf793ac'
-            '3da1595631bca2d4c4f3cd11a47ee4da3166f7af05009a35c44c4080302f7425'
-            '5dc58399f9aff492abbd6d2547cf6188835ea82c5f2d72b16830c86164860743')
+            '450a4fd61a58af97329241ef2e199a68ab07ea2937c73c968469afc52fd9bc8d'
+            '889c92e34d11d2dada952adb1c364a48b7fdfcdc381cfff865ff96a348d19e80'
+            '51da5fdeaa2b56c1730e7a2abb46b956500368f6f563bf38a5979be8d9d28d33'
+            '290fc432fc3b4748acca48639538fa5c101d9d344911882c7952d83651cd57ad')
 
 package() {
   cd "$pkgdir"
