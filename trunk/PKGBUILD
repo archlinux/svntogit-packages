@@ -1,21 +1,23 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Daniel Micay <danielmicay@gmail.com>
 # Contributor: Mladen Pejakovic <pejakm@gmail.com>
 
 pkgbase=libxkbcommon
 pkgname=(libxkbcommon libxkbcommon-doc libxkbcommon-x11)
-pkgver=0.10.0
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="Keymap handling library for toolkits and window systems"
 url="https://xkbcommon.org/"
 arch=(x86_64)
 license=(custom)
-depends=(xkeyboard-config glibc)
-makedepends=(libxcb doxygen git graphviz wayland wayland-protocols meson)
-checkdepends=(xorg-server-xvfb libgl)
-_commit=e3c3420a7146f4ea6225d6fb417baa05a79c8202  # tags/xkbcommon-0.10.0^0
-source=("git+https://github.com/xkbcommon/libxkbcommon#commit=$_commit")
-sha256sums=('SKIP')
+makedepends=(xkeyboard-config libxml2 libxcb wayland wayland-protocols doxygen
+             git meson)
+checkdepends=(xorg-server-xvfb libgl python-pytest)
+_commit=12f99d0dfe012c07d82d70296bbcac8a0a8ac0a9  # tags/xkbcommon-1.0.0^0
+source=("git+https://github.com/xkbcommon/libxkbcommon#commit=$_commit"
+        fix-test.diff)
+sha256sums=('SKIP'
+            'e965cf7516d3158f3de1016e955f804a14b3e514df66520d7919e5289eefde69')
 
 pkgver() {
   cd $pkgbase
@@ -24,53 +26,58 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
-
-  printf '%s\n' >>doc/Doxyfile.in \
-    HAVE_DOT=yes DOT_IMAGE_FORMAT=svg INTERACTIVE_SVG=yes
+  git apply -3 ../fix-test.diff
 }
 
 build() {
   arch-meson $pkgbase build
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
   xvfb-run -a meson test -C build --print-errorlogs
 }
 
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
 package_libxkbcommon() {
+  depends=(xkeyboard-config libxml2)
+  optdepends=('libxkbcommon-x11: xkbcli interactive-x11'
+              'wayland: xkbcli interactive-wayland')
+  provides=(libxkbcommon.so libxkbregistry.so)
+
   DESTDIR="$pkgdir" meson install -C build
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
 
-### Split libxkbcommon-doc
+  _pick libxkbcommon-doc "$pkgdir"/usr/share/doc
 
-  mkdir -p "$srcdir"/doc/usr/share
-  mv "$pkgdir"/usr/share/doc "$srcdir/doc/usr/share"
-
-### Split libxkbcommon-x11
-
-  mkdir -p "$srcdir"/x11/usr/{include/xkbcommon,lib/pkgconfig}
-  mv "$pkgdir"/usr/lib/*x11* "$srcdir/x11/usr/lib"
-  mv "$pkgdir"/usr/lib/pkgconfig/*x11* "$srcdir/x11/usr/lib/pkgconfig"
-  mv "$pkgdir"/usr/include/xkbcommon/*x11* "$srcdir/x11/usr/include/xkbcommon"
+  _pick libxkbcommon-x11 "$pkgdir"/usr/lib/*x11*
+  _pick libxkbcommon-x11 "$pkgdir"/usr/lib/pkgconfig/*x11*
+  _pick libxkbcommon-x11 "$pkgdir"/usr/lib/xkbcommon/*x11*
+  _pick libxkbcommon-x11 "$pkgdir"/usr/include/xkbcommon/*x11*
+  _pick libxkbcommon-x11 "$pkgdir"/usr/share/man/man1/*x11*
 }
 
 package_libxkbcommon-doc() {
   pkgdesc="API documentation for libxkbcommon"
-  depends=(libxkbcommon)
 
-  mv doc/* "$pkgdir"
-
-  install -d "$pkgdir/usr/share/licenses"
-  ln -s libxkbcommon "$pkgdir/usr/share/licenses/$pkgname"
+  mv libxkbcommon-doc/* "$pkgdir"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
 }
 
 package_libxkbcommon-x11() {
   pkgdesc="Keyboard handling library using XKB data for X11 XCB clients"
-  depends=(libxkbcommon libxcb)
+  depends=(libxkbcommon libxkbcommon.so libxcb)
+  provides=(libxkbcommon-x11.so)
 
-  mv x11/* "$pkgdir"
-
-  install -d "$pkgdir/usr/share/licenses"
-  ln -s libxkbcommon "$pkgdir/usr/share/licenses/$pkgname"
+  mv libxkbcommon-x11/* "$pkgdir"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
 }
