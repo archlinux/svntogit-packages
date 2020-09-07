@@ -5,7 +5,7 @@
 
 pkgname=c-ares
 pkgver=1.16.1
-pkgrel=1
+pkgrel=2
 pkgdesc='C library that performs DNS requests and name resolves asynchronously'
 arch=('x86_64')
 url='https://c-ares.haxx.se/'
