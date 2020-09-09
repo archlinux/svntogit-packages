@@ -1,18 +1,18 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=gnome-remote-desktop
-pkgver=0.1.8
+pkgver=0.1.9
 pkgrel=1
 pkgdesc="GNOME Remote Desktop server"
 url="https://wiki.gnome.org/Projects/Mutter/RemoteDesktop"
 arch=(x86_64)
 license=(GPL2)
-depends=(glib2 pipewire systemd libvncserver libsecret libnotify dconf)
+depends=(cairo freerdp glib2 pipewire systemd libvncserver libsecret libnotify dconf)
 makedepends=(git meson)
 checkdepends=(xorg-server-xvfb python-dbus python-gobject mutter)
 groups=(gnome)
-_commit=3141a7efec1529f06e2bcc64b68d8bad02d9a4c1  # tags/0.1.8^0
-source=("git+https://gitlab.gnome.org/jadahl/gnome-remote-desktop.git#commit=$_commit")
+_commit=ba216dc82c7cdfcd2b99066b8be480e6a76cc60b  # tags/0.1.9^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-remote-desktop.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
@@ -23,25 +23,35 @@ pkgver() {
 prepare() {
   cd $pkgname
 
-  # Disable the Xvfb abstract socket which leaks out of our containers
-  sed -i 's|-noreset|& -nolisten local|' tests/vnc-test-runner.sh
+  # Test fixes
+  sed -e 's|-noreset|& -nolisten local|' \
+      -e 's|dbus-run-session --||' \
+      -i tests/vnc-test-runner.sh
 }
 
 build() {
   arch-meson $pkgname build
-  ninja -C build
+  meson compile -C build
 }
 
-check() (
+_run_tests() {
   mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
   glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/build/src}"
   export XDG_RUNTIME_DIR GSETTINGS_SCHEMA_DIR
+
+  sed 's/exec pipewire-media-session .*/exec pipewire-media-session -d bluez5,alsa-seq,alsa-pcm/' \
+    </etc/pipewire/pipewire.conf >pipewire.conf
+  export PIPEWIRE_CONFIG_FILE="$PWD/pipewire.conf"
 
   pipewire &
   trap "kill $!; wait" EXIT
 
   meson test -C build --print-errorlogs
-)
+}
+
+check() {
+  dbus-run-session bash -c "$(declare -f _run_tests); _run_tests"
+}
 
 package() {
   DESTDIR="$pkgdir" meson install -C build
