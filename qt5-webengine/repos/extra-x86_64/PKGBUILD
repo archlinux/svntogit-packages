@@ -2,9 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.15.0
+_qtver=5.15.1
 pkgver=${_qtver/-/}
-pkgrel=5
+pkgrel=1
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -15,42 +15,11 @@ makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipew
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-        qt5-webengine-icu67.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=e941f2bd"
-        qt5-webengine-gcc10.patch
-        dark-mode-crash.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=4e8ca195"
-        qtbug-85119.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=c91f4d20"
-        qtbug-85120.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=242802ab"
-        qtbug-85118.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=e42ccdad"
-        qtbug-62957.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=f341988f"
-        qtbug-62957-pre.patch::"https://code.qt.io/cgit/qt/qtwebengine.git/patch?id=75412200"
-        qt5-webengine-pipewire.patch
-        )
-sha256sums=('c38e2fda7ed1b7d5a90f26abf231ec0715d78a5bc39a94673d8e39d75f04c5df'
-            '22a2265c81bc73dba6843279407ccaec9f192d0987c54a0d9533be7c49b37f29'
-            '8a6e0c41f708d6a8f1febb751157642ab985b58c07ada1447b73b71cd31b4d99'
-            '7ea054a95045635fcee9ee50a6a28e9aedf182ca97a76cc6dd680fb1a91748e1'
-            '758561a5bd52feca16751c37def8e7cd3388073bf5bd072eb0862830c174decc'
-            '4bb12a72d40e69052946a6b66fff621f28e40c3d3c11ddeec155133a9204f352'
-            'fc976a6a7198121a4c1b6026318098de278412d73634db31b1815a3cc7502657'
-            '1a07ab59daa9552ad1a70abd03b00d40e542d9dd64fa6d7404d31c9a51e5eeba'
-            'd47ec2111c9713312158f800c01ca9358400b4e11273e470d57a53c36b7565c0'
-            '34cd6fdcdf7d20f9a32d4ad066535edad61735a83a895e9503edab247fee5542')
+source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
+sha256sums=('f903e98fe3cd717161252710125fce011cf882ced96c24968b0c38811fbefdf2')
 
 prepare() {
   mkdir -p build
-
-  cd $_pkgfqn
-  patch -d src/3rdparty -p1 -i "$srcdir"/qt5-webengine-icu67.patch # Fix build with ICU 67
-  patch -d src/3rdparty -p1 -i "$srcdir"/qt5-webengine-gcc10.patch
-  patch -d src/3rdparty -p1 -i "$srcdir"/dark-mode-crash.patch # Fix crash in qutebrowser when using dark mode
-  patch -d src/3rdparty -p1 -i "$srcdir"/qtbug-85119.patch # Extend url library for WebEngine custom schemes
-  patch -d src/3rdparty -p1 -i "$srcdir"/qtbug-85120.patch # Make XScrnSaver optional
-
-  patch -p1 -i ../qtbug-85118.patch # Fix recentlyAudible signal
-  patch -p1 -i ../qtbug-62957-pre.patch # Avoid the network context reset during http cache clear
-  patch -p1 -i ../qtbug-62957.patch # Return valid path in Profile::GetPath() for incognito profiles
-  patch -p1 -i ../qt5-webengine-pipewire.patch # Add screen sharing support on wayland via pipewire
 }
 
 build() {
