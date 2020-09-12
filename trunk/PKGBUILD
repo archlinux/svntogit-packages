@@ -3,13 +3,13 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=10.0.1
-pkgrel=2
-_ocaml_ver=4.11.0
+pkgrel=3
+_ocaml_ver=4.11.1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
-             "ocaml=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
+             "ocaml>=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
              'python-sphinx' 'python-recommonmark')
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
