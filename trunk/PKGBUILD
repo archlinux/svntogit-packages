@@ -10,7 +10,7 @@ pkgdesc="Modern, feature-rich firmware development environment for the UEFI spec
 arch=('any')
 url="https://github.com/tianocore/edk2"
 license=('BSD')
-makedepends=('acpica' 'iasl' 'libutil-linux' 'nasm' 'python')
+makedepends=('acpica' 'iasl' 'util-linux-libs' 'nasm' 'python')
 options=(!makeflags)
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archive/${pkgbase}-stable${pkgver}.tar.gz"
         "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
