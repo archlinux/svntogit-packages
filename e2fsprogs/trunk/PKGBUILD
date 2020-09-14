@@ -8,7 +8,7 @@ pkgdesc="Ext2/3/4 filesystem utilities"
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
 url="http://e2fsprogs.sourceforge.net"
-depends=('sh' 'libutil-linux')
+depends=('sh' 'util-linux-libs')
 makedepends=('util-linux')
 provides=('libcom_err.so'
           'libe2p.so'

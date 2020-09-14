@@ -8,7 +8,7 @@ pkgrel=1
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs')
-depends=('glibc' 'libutil-linux' 'lzo' 'zlib' 'zstd' 'libgcrypt')
+depends=('glibc' 'util-linux-libs' 'lzo' 'zlib' 'zstd' 'libgcrypt')
 optdepends=('python: libbtrfsutil python bindings'
             'e2fsprogs: btrfs-convert'
             'reiserfsprogs: btrfs-convert')
