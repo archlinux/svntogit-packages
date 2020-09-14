@@ -133,7 +133,7 @@ END
 
 package_libnm() {
   pkgdesc="NetworkManager client library"
-  depends=(glib2 nss libutil-linux jansson systemd-libs)
+  depends=(glib2 nss util-linux-libs jansson systemd-libs)
   provides=(libnm.so)
 
   mv libnm/* "$pkgdir"
