@@ -1,37 +1,43 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=wpebackend-fdo
-pkgver=1.6.1
+pkgver=1.8.0
 pkgrel=1
 pkgdesc="Freedesktop.org backend for WPE WebKit"
 url="https://wpewebkit.org"
 arch=(x86_64)
 license=(custom)
-depends=(libwpe glib2 libegl wayland)
-makedepends=(cmake mesa)
-source=($url/releases/$pkgname-$pkgver.tar.xz{,.asc})
-sha256sums=('740eee3327acfb462b8460519a219e30dc0a870326e88e2ddc4fe2c8de20b1c9'
-            'SKIP')
+depends=(libwpe glib2 libegl wayland libepoxy)
+makedepends=(mesa wayland-protocols git meson)
+_commit=5523f39d46d398608544a501c39b6f1c3d41233f  # tags/1.8.0^0
+source=("git+https://github.com/Igalia/WPEBackend-fdo?signed#commit=$_commit")
+sha256sums=('SKIP')
 validpgpkeys=('5AA3BC334FD7E3369E7C77B291C559DBE4C9123B') # Adrián Pérez de Castro <aperez@igalia.com>
 
+pkgver() {
+  cd WPEBackend-fdo
+  git describe --tags | sed 's/-/+/g'
+}
+
 prepare() {
-  cd $pkgname-$pkgver
+  cd WPEBackend-fdo
 }
 
 build() {
-  cmake -H$pkgname-$pkgver -Bbuild \
-    -DCMAKE_BUILD_TYPE=None \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INSTALL_LIBDIR=/usr/lib
-  cmake --build build
+  arch-meson WPEBackend-fdo build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
   depends+=(libwpe-1.0.so libg{lib,object,io}-2.0.so)
   provides+=(libWPEBackend-fdo-1.0.so)
 
-  DESTDIR="$pkgdir" cmake --build build --target install
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname-$pkgver/COPYING
+  DESTDIR="$pkgdir" meson install -C build
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 WPEBackend-fdo/COPYING
 }
 
 # vim:set sw=2 et:
