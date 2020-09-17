@@ -1,19 +1,19 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.64.1
-pkgrel=2
+pkgver=1.66.0
+pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
 depends=(python-mako python-markdown)
-_glibver=2.64.1
+_glibver=2.66.0
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
 options=(!emptydirs)
-_commit=e315fd15bbf0f01e211684f6c1de1bf4300d91b5  # tags/1.64.1^0
+_commit=5c14352cc464130beef461ab2a71bb0895603e6e  # tags/1.66.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver")
 sha512sums=('SKIP'
@@ -33,7 +33,7 @@ build() {
   arch-meson $pkgbase build \
     -D gtk_doc=true \
     -D glib_src_dir="$srcdir/glib"
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
