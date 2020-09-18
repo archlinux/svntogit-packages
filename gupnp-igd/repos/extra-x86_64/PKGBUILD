@@ -1,48 +1,41 @@
-# Maintainer: Eric Bélanger <eric@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Eric Bélanger <eric@archlinux.org>
 
 pkgname=gupnp-igd
-pkgver=0.2.5+3+gedd78a6
-pkgrel=3
+pkgver=1.2.0
+pkgrel=1
 pkgdesc="A library to handle UPnP IGD port mapping"
 url="https://wiki.gnome.org/Projects/GUPnP"
 arch=(x86_64)
 license=(LGPL)
 depends=(gupnp)
-makedepends=(gobject-introspection git gtk-doc)
-_commit=edd78a6561fc1a6e6769342157f0e4db62705fa3  # master
+makedepends=(gobject-introspection git gtk-doc meson)
+_commit=a0aafc79ac8e258f849cdb2924cb11ec9162d0c5  # tags/1.2.0-correct^0
 source=("git+https://gitlab.gnome.org/GNOME/gupnp-igd.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  git describe --tags | sed 's/-correct//;s/-/+/g'
 }
 
 prepare() {
   cd $pkgname
-
-  # gupnp 1.2
-  git cherry-pick -n 63531558a16ac2334a59f627b2fca5576dcfbb2e
-
-  gtkdocize
-  autoreconf -fvi
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --enable-gtk-doc
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build -D gtk_doc=true
+  meson compile -C build
 }
 
 check() {
-  cd $pkgname
-  # test broken (requires root to bind lowport)
-  make check || :
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  depends+=(libg{lib,object,io}-2.0.so libg{ssdp,upnp}-1.2.so)
+  provides+=(libgupnp-igd-1.0.so)
+
+  DESTDIR="$pkgdir" meson install -C build
 }
 
