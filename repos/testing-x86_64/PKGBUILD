@@ -1,0 +1,53 @@
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Contributor: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Andrej Gelenberg <andrej.gelenberg@udo.edu>
+
+pkgbase=elfutils
+pkgname=(elfutils libelf)
+pkgver=0.181
+pkgrel=1
+pkgdesc='Utilities to handle ELF object files and DWARF debugging information'
+arch=(x86_64)
+url='https://sourceware.org/elfutils/'
+license=(LGPL3 GPL GPL3)
+makedepends=(gcc-libs zlib bzip2 xz libmicrohttpd sqlite libarchive curl)
+options=(staticlibs)
+source=(https://sourceware.org/elfutils/ftp/${pkgver}/elfutils-${pkgver}.tar.bz2{,.sig})
+sha512sums=('d565541d5817f409dc89ebb1ee593366f69c371a1531308eeb67ff934b14a0fab0c9009fd7c23240efbaa1b4e04edac5c425e47d80e3e66ba03dcaf000afea36'
+            'SKIP')
+validpgpkeys=('47CC0331081B8BC6D0FD4DA08370665B57816A6A')  # Mark J. Wielaard <mark@klomp.org>
+validpgpkeys+=('EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A') # Mark Wielaard <mjw@gnu.org>
+
+build() {
+  cd $pkgbase-$pkgver
+
+  CFLAGS+=" -g"  # required for test-suite success
+  ./configure --prefix=/usr --program-prefix="eu-" --enable-deterministic-archives
+
+  make
+}
+
+check() {
+  cd $pkgbase-$pkgver
+
+  # Some tests fail due to limited capabilities of build chroot
+  make check || :
+}
+
+package_elfutils() {
+  depends=(gcc-libs zlib bzip2 xz libmicrohttpd sqlite libarchive curl
+           "libelf=$pkgver-$pkgrel")
+
+  cd $pkgbase-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  mkdir "$srcdir/libelf" 
+  mv "$pkgdir"/usr/{lib,include} "$srcdir/libelf/"
+}
+
+package_libelf() {
+  pkgdesc='Libraries to handle ELF object files and DWARF debugging information'
+  depends=(gcc-libs zlib bzip2 xz curl)
+
+  mv libelf "$pkgdir/usr"
+}
