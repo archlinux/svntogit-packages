@@ -1,16 +1,16 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=yelp-tools
-pkgver=3.32.2
-pkgrel=2
+pkgver=3.38.0
+pkgrel=1
 pkgdesc="Collection of tools for building and converting documentation"
 url="https://gitlab.gnome.org/GNOME/yelp-tools"
 arch=(any)
 depends=(yelp-xsl libxslt libxml2 itstool docbook-xsl mallard-ducktype)
 makedepends=(git)
 license=(GPL)
-_commit=c8664c3df853f5307ff3c4d939721f340d61f4ba  # tags/3.32.2^0
+_commit=901865178e6d15f62cb939dce50a01abe3fbdb2c  # tags/3.38.0^0
 source=("git+https://gitlab.gnome.org/GNOME/yelp-tools.git#commit=$_commit")
 sha256sums=('SKIP')
 
