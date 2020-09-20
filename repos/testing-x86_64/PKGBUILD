@@ -1,0 +1,72 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Guillaume ALAUX <guillaume@archlinux.org>
+
+pkgbase=java-commons-daemon
+pkgname=(
+  java-commons-daemon
+  java-jsvc
+)
+pkgver=1.2.3
+pkgrel=1
+arch=(x86_64)
+url=https://commons.apache.org/proper/commons-daemon/
+license=(APACHE)
+_tag=f42d76aaa22df5f6bfa2f745ba2985bc47fe28d1
+source=(git+https://github.com/apache/commons-daemon.git#tag=${_tag})
+b2sums=(SKIP)
+makedepends=(
+  docbook2x
+  docbook-xsl
+  git
+  java-environment
+  maven
+)
+
+pkgver() {
+  cd commons-daemon
+
+  git describe --tags | sed 's/^COMMONS_DAEMON_//; s/_/./g'
+}
+
+prepare() {
+  cd commons-daemon/src/native/unix
+  support/buildconf.sh
+}
+
+build() {
+  cd commons-daemon
+
+  mvn clean package
+
+  cd src/native/unix
+
+  ./configure \
+    --with-java=/usr/lib/jvm/default
+  make
+  docbook2man man/jsvc.1.xml
+}
+
+package_java-commons-daemon() {
+  pkgdesc='Alternative invocation mechanism for unix-daemon-like java code'
+  depends=(java-runtime)
+
+  cd commons-daemon
+
+  install -Dm 644 target/commons-daemon-${pkgver}.jar -t "${pkgdir}"/usr/share/java/
+  ln -s commons-daemon-${pkgver}.jar "${pkgdir}"/usr/share/java/commons-daemon.jar
+}
+
+package_java-jsvc() {
+  pkgdesc='Apache application for making Java applications run on UNIX more easily'
+  depends=(
+    java-commons-daemon
+    libcap
+  )
+
+  cd commons-daemon/src/native/unix
+
+  install -Dm 755 jsvc -t "${pkgdir}"/usr/bin/
+  install -Dm 644 JSVC.1 -t "${pkgdir}"/usr/share/man/man1/
+}
+
+# vim: ts=2 sw=2 et:
