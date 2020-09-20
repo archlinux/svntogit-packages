@@ -1,38 +1,59 @@
-# Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
 # Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Guillaume Alaux <guillaume@archlinux.org>
 # Contributor: Vitaliy Berdinskikh <ur6lad@i.ua>
 
 pkgname=tomcat-native
-pkgver=1.2.24
+pkgver=1.2.25
 pkgrel=1
 pkgdesc='Optional component for Tomcat to use certain native resources for performance, compatibility'
 arch=(x86_64)
 url=https://tomcat.apache.org/native-doc/
 license=(APACHE)
 depends=(apr)
-makedepends=(java-environment)
-options=(!emptydirs)
-source=(https://archive.apache.org/dist/tomcat/tomcat-connectors/native/${pkgver}/source/${pkgname}-${pkgver}-src.tar.gz{,.asc})
-validpgpkeys=(
-  A9C5DF4D22E99998D9875A5110C01C5A2F6059E7
-  B3F49CD3B9BD2996DA90F817ED3873F5D3262722
+makedepends=(
+  git
+  java-environment
+  python
 )
-sha512sums=('5dae151a60f8bd5a9a29d63eca838c77174426025ee65a826f0698943494dd3656d50bcd417e220a926b9ce111ea167043d4b806264030e951873d06767b3d6f'
-            'SKIP')
+options=(!emptydirs)
+_tag=a94590ec2a5e40b168a9494144125a52f41ed0b2
+source=(
+  git+https://github.com/apache/tomcat-native.git#tag=${_tag}
+  tomcat-native-buildconf.patch
+)
+b2sums=(
+  SKIP
+  d3603079626b908644331c193452088ef3ce89e92c775c60b232d16d04b8c49d40106d55c76f81c87daea93d335868140df0046c7102796d92b08431ac8749a4
+)
+
+pkgver() {
+  cd tomcat-native
+
+  git describe --tags
+}
+
+prepare() {
+  cd tomcat-native/native
+
+  patch -Np2 -i ../../tomcat-native-buildconf.patch
+  automake --add-missing --copy --force-missing || true
+  ./buildconf \
+    --with-apr=/usr/share/apr-1
+}
 
 build() {
-  cd tomcat-native-${pkgver}-src/native
+  cd tomcat-native/native
 
   ./configure \
     --prefix=/usr \
+    --with-apr=/usr/bin/apr-1-config \
     --with-java-home=/usr/lib/jvm/default \
-    --with-apr=/usr \
     --with-ssl=/usr
   make
 }
 
 package() {
-  make DESTDIR="${pkgdir}" -C tomcat-native-${pkgver}-src/native install
+  make DESTDIR="${pkgdir}" -C tomcat-native/native install
 }
 
 # vim: ts=2 sw=2 et:
