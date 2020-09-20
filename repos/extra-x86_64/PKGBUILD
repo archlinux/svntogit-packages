@@ -4,7 +4,7 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
-pkgver=450.66
+pkgver=455.23.04
 pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -16,7 +16,7 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            'd4408cf2274602b7ee28f1056b8875468e8b9dae9f9e2dd8fe2dc505cbcdbb76eff2e2182252b8d5182008046ed5ca33c2fdc15d46e4c854b7ca46325724bc67')
+            '96e8267ea76bf42f0c8be67d27b4d2a6f180cbea9348feb19c313805dc7957a945992d11ea4a1233d7cf96c75254b717d48153db0fe6aed8146bffd041f50a6e')
 
 
 create_links() {
