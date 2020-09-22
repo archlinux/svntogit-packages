@@ -2,7 +2,7 @@
 
 pkgbase=python-cryptography
 pkgname=('python-cryptography' 'python2-cryptography')
-pkgver=3.1
+pkgver=3.1.1
 pkgrel=1
 pkgdesc="A package designed to expose cryptographic recipes and primitives to Python developers"
 arch=('x86_64')
@@ -14,7 +14,7 @@ makedepends=('python-setuptools' 'python2-setuptools' 'python-six' 'python2-six'
 checkdepends=('python-pytest-runner' "python-cryptography-vectors=$pkgver" 'python-iso8601'
               'python-pretend' 'python-hypothesis' 'python-pytz')
 source=("https://pypi.io/packages/source/c/cryptography/cryptography-$pkgver.tar.gz")
-sha512sums=('c015df3a71e4c274b2fb8fd954d264c8b56443644048139113f548c69cf83798b73c9f0993609f338044df92b609723b0281ce61ed2751309a122de22060037e')
+sha512sums=('feb86c65365cbe7a0175f9c7794bb9d4c8c4530a5766b895de3986c2db1ac85b24de32cd21c60c5181cbd35835c6508e3e329c706046bb8e5bba252a03f6d210')
 
 prepare() {
   cp -a cryptography-${pkgver}{,-python2}
