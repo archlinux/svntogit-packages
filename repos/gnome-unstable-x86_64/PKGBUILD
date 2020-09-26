@@ -4,15 +4,16 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
 pkgver=3.24.23
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
 url="https://www.gtk.org/"
-depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2 dconf
-         libxcomposite libxdamage pango shared-mime-info at-spi2-atk wayland libxkbcommon
-         adwaita-icon-theme json-glib librsvg wayland-protocols desktop-file-utils mesa
-         cantarell-fonts colord rest libcups libcanberra fribidi iso-codes tracker3)
+depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2
+         dconf libxcomposite libxdamage pango shared-mime-info at-spi2-atk
+         wayland libxkbcommon adwaita-icon-theme json-glib librsvg
+         wayland-protocols desktop-file-utils mesa cantarell-fonts colord rest
+         libcups libcanberra fribidi iso-codes tracker3 libcloudproviders)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
 _commit=016e8c55ab924c9ef4d32c8cb06253b1dc1be60d  # tags/3.24.23^0
@@ -40,6 +41,7 @@ build() {
   CFLAGS+=" -DG_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS"
   arch-meson gtk build \
     -D broadway_backend=true \
+    -D cloudproviders=true \
     -D colord=yes \
     -D gtk_doc=true \
     -D man=true
