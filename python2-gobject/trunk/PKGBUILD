@@ -1,85 +1,49 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
-pkgbase=pygobject
-pkgname=(python-gobject python2-gobject pygobject-devel)
+pkgname=python2-gobject
 pkgver=3.36.1
-pkgrel=1
-pkgdesc="Python Bindings for GLib/GObject/GIO/GTK+"
+pkgrel=2
+pkgdesc="Python 2 Bindings for GLib/GObject/GIO/GTK+"
 url="https://wiki.gnome.org/Projects/PyGObject"
 arch=(x86_64)
 license=(LGPL)
-depends=(gobject-introspection-runtime)
-makedepends=(python{,2}-cairo gobject-introspection git meson)
-checkdepends=(python{,2}-pytest gtk3 xorg-server-xvfb)
+depends=(gobject-introspection-runtime python2)
+makedepends=(python2-cairo gobject-introspection git meson)
+checkdepends=(python2-pytest gtk3 xorg-server-xvfb)
 optdepends=('cairo: Cairo bindings')
 _commit=5c6bee1c2a0d08cf367aa61784b5b967128e68b2  # tags/3.36.1^0
 source=("git+https://gitlab.gnome.org/GNOME/pygobject.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgbase
+  cd pygobject
   git describe --tags | sed 's/-/+/g'
 }
 
 prepare() {
-  cd $pkgbase
+  cd pygobject
   # tests: don't use strict mode for xfail with the excepthook plugin
   git cherry-pick -n dae0500166068d78150855bdef94f0bee18b31dd
 }
 
-_build() {
-  arch-meson $pkgbase build-$1 -D python=/usr/bin/$1
-  ninja -C build-$1
-}
-
-_check() {
-  xvfb-run meson test -C build-$1 --print-errorlogs
-}
-
-_package() {
-  DESTDIR="$pkgdir" meson install -C build-$1
-  $1 -m compileall -d /usr/lib "$pkgdir/usr/lib"
-  $1 -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
-}
-
 build() {
-  _build python
-  _build python2
+  arch-meson pygobject build -D python=/usr/bin/python2
+  meson compile -C build
 }
 
 check() {
-  _check python
-  _check python2
-}
-
-package_python-gobject() {
-  depends=("pygobject-devel=$pkgver" python)
-
-  _package python
-
-### Split -devel
-  mkdir -p "$srcdir/devel"
-  mv "$pkgdir"/usr/{include,lib/pkgconfig} "$srcdir/devel"
+  xvfb-run -s '-screen 0 1920x1080x24 -nolisten local' \
+    meson test -C build --print-errorlogs
 }
 
 package_python2-gobject() {
-  pkgdesc="${pkgdesc/Python/Python2}"
-  depends=("pygobject-devel=$pkgver" python2)
+  DESTDIR="$pkgdir" meson install -C build
+  python2 -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python2 -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
 
-  _package python2
-
-### Remove -devel
+  # Remove devel stuff conflicting with python-gobject
   rm -r "$pkgdir"/usr/{include,lib/pkgconfig}
-}
-
-package_pygobject-devel() {
-  pkgdesc="Common development files for pygobject"
-  optdepends=()
-
-  mkdir -p "$pkgdir/usr/lib"
-  mv devel/include "$pkgdir/usr"
-  mv devel/pkgconfig "$pkgdir/usr/lib"
 }
 
 # vim:set sw=2 et:
