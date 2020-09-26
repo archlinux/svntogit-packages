@@ -1,17 +1,18 @@
-# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
 # Contributor: Aaron Griffin <aaron@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
 pkgver=8.3p1
-pkgrel=4
+pkgrel=5
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
 arch=('x86_64')
-checkdepends=('inetutils')
+depends=('glibc' 'krb5' 'openssl' 'libedit' 'ldns' 'libxcrypt' 'libcrypt.so' 'zlib' 'pam')
 makedepends=('linux-headers' 'libfido2')
-depends=('krb5' 'openssl' 'libedit' 'ldns')
+checkdepends=('inetutils')
 optdepends=('xorg-xauth: X11 forwarding'
             'x11-ssh-askpass: input passphrase in X'
             'libfido2: FIDO/U2F support')
