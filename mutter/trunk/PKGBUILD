@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.36.6
+pkgver=3.38.0+18+g38a96cc10
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -12,12 +12,12 @@ license=(GPL)
 depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanberra
          startup-notification zenity libsm gnome-desktop upower libxkbcommon-x11
          gnome-settings-daemon libgudev libinput pipewire xorg-server-xwayland)
-makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
+makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
-provides=(libmutter-6.so)
+provides=(libmutter-7.so)
 groups=(gnome)
 install=mutter.install
-_commit=7d1e9e77a914d71b902ba2dd8c2f51a16000b908  # tags/3.36.6^0
+_commit=38a96cc104abf73f6602e1865f57f3161290e4e9  # master
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -37,6 +37,7 @@ build() {
     -D egl_device=true \
     -D wayland_eglstream=true \
     -D xwayland_initfd=disabled \
+    -D profiler=false \
     -D installed_tests=false
   meson compile -C build
 }
