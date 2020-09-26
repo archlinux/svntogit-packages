@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=3.36.6
+pkgver=3.38.0+17+g84cff8920
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -19,7 +19,7 @@ optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
 install=gnome-shell.install
-_commit=682d4588bc6b2c1826013f98c52cc0b5afccea29  # tags/3.36.6^0
+_commit=84cff8920509f99be47c017bd8bdf8e45ea90535  # master
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
@@ -44,6 +44,6 @@ build() {
 }
 
 package() {
-  depends+=(libmutter-6.so)
+  depends+=(libmutter-7.so)
   DESTDIR="$pkgdir" meson install -C build
 }
