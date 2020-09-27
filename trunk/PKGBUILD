@@ -30,7 +30,7 @@ prepare() {
 build() {
   CFLAGS+=" $CPPFLAGS"
   CXXFLAGS+=" $CPPFLAGS"
-  cmake -H$pkgbase -Bbuild -G Ninja \
+  cmake -S $pkgbase -B build -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
     -DSYSCONF_INSTALL_DIR=/etc \
@@ -47,7 +47,7 @@ package_evolution() {
               'evolution-bogofilter: Bogofilter spam check plugin')
   groups=(gnome-extra)
 
-  DESTDIR="$pkgdir" cmake --build build --target install
+  DESTDIR="$pkgdir" cmake --install build
 
 ### Split
   local x
