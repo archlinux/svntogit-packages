@@ -1,19 +1,21 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Ben <contrasutra@myrealbox.com>
 
 pkgname=sound-juicer
-pkgver=3.24.0+2+gb8380d2d
-pkgrel=3
+pkgver=3.38.0
+pkgrel=1
 pkgdesc="A lean and friendly audio CD extractor for GNOME"
 url="https://wiki.gnome.org/Apps/SoundJuicer"
 arch=(x86_64)
 license=(GPL)
 depends=(libmusicbrainz5 libdiscid gtk3 gst-plugins-base gst-plugins-good brasero iso-codes)
-makedepends=(intltool itstool gnome-common appstream-glib git)
-_commit=b8380d2da3b799560d5703ae8159a492877cd411  # master
-source=("git+https://git.gnome.org/browse/sound-juicer#commit=$_commit")
-sha256sums=('SKIP')
+makedepends=(itstool appstream-glib git meson)
+_commit=97c62e1a97821ea7bd0fb361fdf5d3ab59463a38  # tags/3.38.0^0
+source=("git+https://gitlab.gnome.org/GNOME/sound-juicer.git#commit=$_commit"
+        fix-docdir.diff)
+sha256sums=('SKIP'
+            'f6b11f7bec2cdc602d3ec87b630628d9e5f17d4397932442d27b757dee13cf4c')
 
 pkgver() {
   cd $pkgname
@@ -22,18 +24,18 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  sed -i "/^AM_GNU_GETTEXT_VERSION.*/a AM_GNU_GETTEXT_REQUIRE_VERSION([0.19.6])" configure.ac  
-  NOCONFIGURE=1 ./autogen.sh
+  git apply -3 ../fix-docdir.diff
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --enable-compile-warnings=minimum
-  make
+  arch-meson $pkgname build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="${pkgdir}" install
+  DESTDIR="$pkgdir" meson install -C build
 }
