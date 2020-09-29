@@ -3,25 +3,34 @@
 
 pkgname=ispell
 pkgver=3.4.00
-pkgrel=3
+pkgrel=4
 pkgdesc="An interactive spell-checking program for Unix"
 arch=('x86_64')
 url="https://www.cs.hmc.edu/~geoff/ispell.html"
 license=('BSD')
-depends=('ncurses')
+depends=('ncurses' 'sh')
 options=('!makeflags')
 source=(https://www.cs.hmc.edu/~geoff/tars/$pkgname-$pkgver.tar.gz
-	license.txt)
+        cflags-from-environment.patch
+        license.txt)
 sha256sums=('5dc42e458635f218032d3ae929528e5587b1e7247564f0e9f9d77d5ccab7aec2'
+            '280459d2cdb17846aab202d53089fd13469e6e59ae9e6da4a95b475597dd4603'
             '359eca8bfb77db63785c4c304ecd3568b26cdf736946388e509933fc8a3f66bd')
 
-build() {
+prepare() {
   cd ${pkgname}-${pkgver}
+
+  # needed for full RELRO (FS#68037)
+  patch -Np1 -i ../cflags-from-environment.patch
 
   sed -i -e 's/#undef USG/#define USG/' \
     -e 's|/usr/local|/usr|' \
     -e 's|/lib|/lib/ispell|' local.h.linux
   cp local.h.linux local.h
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
   make TMPDIR=/tmp all
 }
 
