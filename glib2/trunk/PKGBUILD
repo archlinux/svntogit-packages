@@ -4,14 +4,14 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.66.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL2.1)
 arch=(x86_64)
 depends=(pcre libffi util-linux-libs zlib)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
-             meson dbus)
+             meson dbus sysprof)
 checkdepends=(desktop-file-utils)
 _commit=c2c12e42920d6e06c23c87398996827e53c1fc72  # tags/2.66.0^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
@@ -38,6 +38,7 @@ build() {
   CFLAGS+=" -DG_DISABLE_CAST_CHECKS"
   arch-meson glib build \
     -D selinux=disabled \
+    -D sysprof=enabled \
     -D man=true \
     -D gtk_doc=true
   meson compile -C build
