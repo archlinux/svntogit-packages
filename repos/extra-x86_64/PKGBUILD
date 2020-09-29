@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.1
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -15,11 +15,15 @@ makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipew
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz")
-sha256sums=('f903e98fe3cd717161252710125fce011cf882ced96c24968b0c38811fbefdf2')
+source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
+         qtbug-86752.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=4e828b3b")
+sha256sums=('f903e98fe3cd717161252710125fce011cf882ced96c24968b0c38811fbefdf2'
+            'b9fde4d76a031c4bdba19b628ff9435647f54915546d977869568093f361d1b9')
 
 prepare() {
   mkdir -p build
+
+  patch -d $_pkgfqn/src/3rdparty -p1 -i "$srcdir"/qtbug-86752.patch # https://bugreports.qt.io/browse/QTBUG-86752
 }
 
 build() {
