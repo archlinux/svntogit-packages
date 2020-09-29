@@ -1,0 +1,117 @@
+From: Robert Luberda <robert@debian.org>
+Date: Sat, 5 Mar 2011 13:19:20 +0100
+Subject: 0015 CFLAGS from environment
+
+Use CFLAGS from environment instead of hard-coding them in local.h.
+Make use of LDFLAGS when needed.
+---
+ Makefile              | 20 +++++++++++---------
+ deformatters/Makefile |  4 ++--
+ 2 files changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index c8e4b23..7f6e065 100644
+--- a/Makefile
++++ b/Makefile
+@@ -294,7 +294,7 @@ showversion:	ispell
+ .c.o:
+ 	@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -c $<
++	  $$CC $$CFLAGS -DCFLAGS="\"$$CFLAGS\"" -c $<
+ 
+ #
+ # The funny business with y_tab.c is necessary for MS-DOS systems,
+@@ -305,7 +305,7 @@ showversion:	ispell
+ 	  set -x; \
+ 	  $$YACC $<; \
+ 	  [ -f y_tab.c ]  ||  mv y.tab.c y_tab.c; \
+-	  $$CC $$CFLAGS -c y_tab.c; \
++	  $$CC $$CFLAGS -DCFLAGS="$$CFLAGS" -c y_tab.c; \
+ 	  mv y_tab.o $@; \
+ 	  rm -f y_tab.c
+ 
+@@ -485,22 +485,23 @@ language-subdirs:	config.sh
+ buildhash: config.sh buildhash.o hash.o makedent.o parse.o
+ 	@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o buildhash buildhash.o hash.o makedent.o parse.o \
++	  $$CC $(LDFLAGS) -o buildhash buildhash.o hash.o makedent.o parse.o \
+ 	    $$LIBES
+ 
+ icombine: config.sh icombine.o makedent.o parse.o
+ 	@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o icombine icombine.o makedent.o parse.o \
++	  $$CC $(LDFLAGS) -o icombine icombine.o makedent.o parse.o \
+ 	    $$LIBES
+ 
+ ijoin: config.sh ijoin.o fields.o
+ 	@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o ijoin ijoin.o fields.o $$LIBES
++	  $$CC $(LDFLAGS) -o ijoin ijoin.o fields.o $$LIBES
+ 
+ EDITFILE	=	notthere
+ OUTFILE		=	/dev/null
++CFLAGS	        ?=     -O
+ 
+ #
+ # Note: we use "sed -n -e $$p" to achieve "tail -1" here because some
+@@ -537,7 +538,7 @@ defhash.h:  config.X local.h Makefile
+ 
+ config.sh:  config.X defhash.h local.h Makefile
+ 	set $(SHELLDEBUG); \
+-	for var in BAKEXT BINDIR CC CFLAGS COUNTSUFFIX DEFDICT DEFHASH \
++	for var in BAKEXT BINDIR CC COUNTSUFFIX DEFDICT DEFHASH \
+ 	  DEFLANG EXEEXT HASHSUFFIX INSTALL \
+ 	  LANGUAGES LIBDIR LIBES LINK LINT LINTFLAGS LOOK_XREF \
+ 	  MAKE_SORTTMP MAN1DIR MAN1EXT MAN45DIR MAN45EXT MAN45SECT MASTERHASH \
+@@ -549,6 +550,7 @@ config.sh:  config.X defhash.h local.h Makefile
+ 	      | sed -e 's/"[^"]*$$/'"'/" -e "s/=/='/" -e 's/\\"/"/g' \
+ 	      | sed -n -e '$$p'; \
+ 	  done > config.sh; \
++	echo "CFLAGS='$(CFLAGS)'" >> config.sh; \
+ 	echo 'case "$$MAKE_SORTTMP" in "") \
+ 	  SORTTMP="-e /!!SORTTMP!!/s/=.*$$/=/";; *) SORTTMP=;; esac' \
+ 	  >> config.sh
+@@ -631,17 +633,17 @@ term.o:	term.c
+ ispell: config.sh $(OBJS)
+ 	@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o ispell $(OBJS) $$TERMLIB $$REGLIB $$LIBES
++	  $$CC $(LDFLAGS) -o ispell $(OBJS) $$TERMLIB $$REGLIB $$LIBES
+ 
+ sq:	config.sh msgs.h sq.c
+ 	@@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o sq sq.c
++	  $$CC $$CFLAGS $(LDFLAGS) -o sq sq.c
+ 
+ unsq:	config.sh msgs.h unsq.c
+ 	@@. ./config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o unsq unsq.c
++	  $$CC $$CFLAGS $(LDFLAGS) -o unsq unsq.c
+ 
+ $(OBJS) buildhash.o icombine.o hash.o parse.o: config.h ispell.h local.h
+ $(OBJS) buildhash.o icombine.o hash.o parse.o: proto.h msgs.h config.sh
+diff --git a/deformatters/Makefile b/deformatters/Makefile
+index a4d99ee..82337e4 100644
+--- a/deformatters/Makefile
++++ b/deformatters/Makefile
+@@ -77,12 +77,12 @@ all:	$(PROGRAMS)
+ defmt-c: defmt-c.o
+ 	@. ../config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o $@ $<
++	  $$CC $(LDFLAGS) -o $@ $<
+ 
+ defmt-sh: defmt-sh.o
+ 	@. ../config.sh; \
+ 	  set -x; \
+-	  $$CC $$CFLAGS -o $@ $<
++	  $$CC $(LDFLAGS) -o $@ $<
+ 
+ .c.o:
+ 	@. ../config.sh; \
