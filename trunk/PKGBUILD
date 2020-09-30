@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.19.5
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://www.kde.org/workspaces/plasmadesktop/'
@@ -17,11 +17,13 @@ depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appst
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin kinit)
 groups=(plasma)
 source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam
-         plasma-workspace-gpsd-3.21.patch)
+         plasma-workspace-gpsd-3.21.patch
+         kdebug-423526.patch::"https://invent.kde.org/plasma/plasma-workspace/commit/bb7b1226.patch")
 sha256sums=('490329e08e63016edd696a9132bf80b76ef51dacf53308b865d2e27b67ce8127'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
-            '27bdc2f751cb6a418d4cf08b08d260ec5621dc3190418fcea9fa80870f857348')
+            '27bdc2f751cb6a418d4cf08b08d260ec5621dc3190418fcea9fa80870f857348'
+            'ffda98d84a18f6a1111607411c85b18dc20c6d7899b1037c209970b25845d2b0')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -29,6 +31,7 @@ validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr
 
 prepare() {
   patch -d $pkgbase-$pkgver -p1 -i ../plasma-workspace-gpsd-3.21.patch # Fix build with gpsd 3.21
+  patch -d $pkgbase-$pkgver -p1 -i ../kdebug-423526.patch # Fix switching sessions with systemd 246
 
   sed -e 's|dbus-run-session ||' -i $pkgbase-$pkgver/login-sessions/plasmawayland.desktop.cmake # Don't start a second user dbus session
 }
