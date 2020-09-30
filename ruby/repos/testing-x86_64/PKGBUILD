@@ -1,0 +1,101 @@
+# Contributor: Thomas Dziedzic <gostrc@gmail.com>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: John Proctor <jproctor@prium.net>
+# Contributor: Jeramy Rutley <jrutley@gmail.com>
+
+pkgname=(ruby ruby-docs)
+pkgver=2.7.1
+pkgrel=4
+arch=(x86_64)
+url='https://www.ruby-lang.org/en/'
+license=(BSD custom)
+depends=(libxcrypt)
+makedepends=(gdbm openssl libffi doxygen graphviz libyaml ttf-dejavu tk)
+options=(!emptydirs)
+source=(https://cache.ruby-lang.org/pub/ruby/${pkgver:0:3}/ruby-${pkgver}.tar.xz
+        webrick.patch) # simplified upstream patch https://github.com/ruby/ruby/commit/828c34e58b63d64558ec0f2d1d7ae401c5e6b21f
+sha512sums=('79f98b1ea98e0b10ec79da1883e8fc84d48ffe5c09ae945cbebde94365e35a589d919aac965f74d70ca7e21370ecee631ac5a8f9c4eac61d62f5aa629f27bf31'
+            '60688c02bdbed087dc41613e335abd5602964f13e0cdf900ed2f7a830eb4d10a93396e8ef6e87a5c17aa6c50f63098199aa729302c8e6cf44505eecec2aed9e2')
+
+prepare() {
+  cd ruby-${pkgver}
+  # remove bundled gems, we are going to ship them as separate packages
+  rm -rf gems/
+
+  patch -p1 < ../webrick.patch # FS#68051   CVE-2020-25613
+}
+
+build() {
+  cd ruby-${pkgver}
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sharedstatedir=/var/lib \
+    --libexecdir=/usr/lib/ruby \
+    --enable-shared \
+    --disable-rpath \
+    --with-dbm-type=gdbm_compat
+
+  make
+}
+
+check() {
+  cd ruby-${pkgver}
+
+  make test
+}
+
+package_ruby() {
+  pkgdesc='An object-oriented language for quick and easy programming'
+  depends=(gdbm openssl libffi libyaml gmp zlib rubygems ruby-irb)
+  optdepends=(
+      'ruby-docs: Ruby documentation'
+      'tk: for Ruby/TK'
+  )
+
+  cd ruby-${pkgver}
+
+  make DESTDIR="${pkgdir}" install-nodoc
+
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/ruby/LICENSE"
+  install -D -m644 BSDL "${pkgdir}/usr/share/licenses/ruby/BSDL"
+
+  rubyver=${pkgver:0:3}.0
+
+  # remove rubygems as it shipped as a separate package
+  rm -r "${pkgdir}"/usr/lib/ruby/${rubyver}/{rubygems,rubygems.rb}
+  rm "${pkgdir}"/usr/bin/gem
+
+  # remove bundler as it shipped as a separate package
+  rm -r "${pkgdir}"/usr/lib/ruby/${rubyver}/{bundler,bundler.rb}
+  rm "${pkgdir}"/usr/bin/{bundle,bundler}
+  rm "${pkgdir}"/usr/lib/ruby/gems/${rubyver}/specifications/default/bundler-*.gemspec
+  rm "${pkgdir}"/usr/share/man/man1/{bundle,bundle-*}.1
+
+  # remove bundled rdoc gem
+  rm -r "${pkgdir}"/usr/lib/ruby/${rubyver}/{rdoc,rdoc.rb}
+  rm "${pkgdir}"/usr/bin/{rdoc,ri}
+  rm "${pkgdir}"/usr/lib/ruby/gems/${rubyver}/specifications/default/rdoc-*.gemspec
+
+  # remove irb as it is a separate package now
+  rm -r "${pkgdir}"/usr/lib/ruby/${rubyver}/{irb,irb.rb}
+  rm "${pkgdir}"/usr/bin/irb
+  rm "${pkgdir}"/usr/lib/ruby/gems/${rubyver}/specifications/default/irb-*.gemspec
+  rm "${pkgdir}"/usr/share/man/man1/irb.1
+
+  # remove all bundled gems to avoid conflicts with ruby-* Arch packages
+  rm -r "${pkgdir}"/usr/lib/ruby/gems/${rubyver}/gems/*
+}
+
+package_ruby-docs() {
+  pkgdesc='Documentation files for ruby'
+
+  cd ruby-${pkgver}
+
+  make DESTDIR="${pkgdir}" install-doc install-capi
+
+  install -D -m644 COPYING "${pkgdir}/usr/share/licenses/ruby-docs/LICENSE"
+  install -D -m644 BSDL "${pkgdir}/usr/share/licenses/ruby-docs/BSDL"
+}
