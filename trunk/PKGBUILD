@@ -3,7 +3,7 @@
 
 pkgname=libsoup
 pkgver=2.72.0+5+g0b094bff
-pkgrel=2
+pkgrel=3
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
 arch=(x86_64)
@@ -40,4 +40,7 @@ check() {
 
 package() {
   DESTDIR="$pkgdir" meson install -C build
+
+  # Avoid a dep on sysprof
+  sed -i 's/sysprof-capture-4, //' "$pkgdir"/usr/lib/pkgconfig/*.pc
 }
