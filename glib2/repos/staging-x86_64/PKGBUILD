@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.66.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL2.1)
@@ -57,6 +57,9 @@ package_glib2() {
 
   DESTDIR="$pkgdir" meson install -C build
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+
+  # Avoid a dep on sysprof
+  sed -i 's/, sysprof-capture-4//' "$pkgdir"/usr/lib/pkgconfig/*.pc
 
   export PYTHONHASHSEED=0
   python -m compileall -d /usr/share/glib-2.0/codegen \
