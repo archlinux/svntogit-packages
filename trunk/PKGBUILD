@@ -3,8 +3,8 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.66.0
-pkgrel=3
+pkgver=2.66.1
+pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL2.1)
@@ -13,7 +13,7 @@ depends=(pcre libffi util-linux-libs zlib)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus sysprof)
 checkdepends=(desktop-file-utils)
-_commit=c2c12e42920d6e06c23c87398996827e53c1fc72  # tags/2.66.0^0
+_commit=b2f8ba8a11482dc702a470e92552cbb97765dbc9  # tags/2.66.1^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         noisy-glib-compile-schemas.diff
         glib-compile-schemas.hook gio-querymodules.hook)
