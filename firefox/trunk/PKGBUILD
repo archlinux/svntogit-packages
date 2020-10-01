@@ -3,8 +3,8 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=81.0
-pkgrel=2
+pkgver=81.0.1
+pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -24,7 +24,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         0002-Bug-1660901-Support-the-fstat-like-subset-of-fstatat.patch
         0003-Bug-1660901-ignore-AT_NO_AUTOMOUNT-in-fstatat-system.patch
         $pkgname.desktop)
-sha256sums=('9328745012178aee5a4f47c833539f7872cc6e0f20a853568a313e60cabd1ec8'
+sha256sums=('7eac8d3eaaf580e0f30e9bd79d798c3138aaa5fa2737616fa08c588b730e8fff'
             'SKIP'
             'e0eaec8ddd24bbebf4956563ebc6d7a56f8dada5835975ee4d320dd3d0c9c442'
             'c2489a4ad3bfb65c064e07180a1de9a2fbc3b1b72d6bc4cd3985484d1b6b7b29'
