@@ -9,7 +9,7 @@ pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
 pkgver=10.2.0
 _majorver=${pkgver%%.*}
 _islver=0.21
-pkgrel=2
+pkgrel=3
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -25,6 +25,8 @@ source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.
         c89 c99
         gdc_phobos_path.patch
         fs64270.patch
+        ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
+        ipa-fix-ICE-in-get_default_value.patch
 )
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
@@ -36,7 +38,9 @@ sha256sums=('b8dd4368bb9c7f0b98188317ee0254dd8cc99d1e3a18d0ff146c855fe16c1d8c'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
-            '1ef190ed4562c4db8c1196952616cd201cfdd788b65f302ac2cc4dabb4d72cee')
+            '1ef190ed4562c4db8c1196952616cd201cfdd788b65f302ac2cc4dabb4d72cee'
+            'fcb11c9bcea320afd202b031b48f8750aeaedaa4b0c5dddcd2c0a16381e927e4'
+            '42865f2af3f48140580c4ae70b6ea03b5bdca0f29654773ef0d42ce00d60ea16')
 
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
@@ -60,6 +64,12 @@ prepare() {
   # Turn off SSP for nostdlib|nodefaultlibs|ffreestanding
   # https://bugs.archlinux.org/task/64270
   patch -p1 -i "$srcdir/fs64270.patch"
+
+  # Fix a crash in mpv when mesa 20.2 is compiled with LTO
+  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/3239
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96482
+  patch -Np1 -i ../ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
+  patch -Np1 -i ../ipa-fix-ICE-in-get_default_value.patch
 
   mkdir -p "$srcdir/gcc-build"
 }
