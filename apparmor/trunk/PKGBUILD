@@ -1,17 +1,19 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 pkgname=apparmor
-pkgver=2.13.4
-pkgrel=6
+pkgver=3.0.0
+pkgrel=1
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
 license=('GPL2' 'LGPL2.1')
-depends=('audit' 'pam' 'python')
-makedepends=('apache' 'ruby' 'swig')
-checkdepends=('dejagnu' 'perl-locale-gettext' 'python-pyflakes')
-optdepends=('perl: perl bindings'
-            'ruby: ruby bindings')
+depends=('audit' 'glibc' 'pam' 'python')
+makedepends=('apache' 'libxcrypt' 'ruby' 'swig')
+checkdepends=('dejagnu' 'perl-locale-gettext' 'python-notify2' 'python-psutil')
+optdepends=('perl: for perl bindings'
+            'python-notify2: for aa-notify'
+            'python-psutil: for aa-notify'
+            'ruby: for ruby bindings')
 provides=('libapparmor.so')
 backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/logprof.conf'
@@ -19,34 +21,21 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/parser.conf'
         'etc/apparmor/subdomain.conf'
         'etc/apparmor/severity.db')
-source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
-        "${pkgname}-2.13.4-make4.3.patch"
-        "${pkgname}-2.13.4-vim_file.patch"
-        "${pkgname}-2.13.4-run_variable.patch"
-        "${pkgname}-2.13.4-fix_systemd_userdb.patch")
-sha512sums=('d42748bf36ae66849f79653a62d499e9d17a97c4d680fb653eb1c379d0593aaa09f7ddfc6f2fa0d2fb468bce05fb25444976f60a5ec24778fdd7ec20d1c13651'
+source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver%.[0-9]}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
+        "${pkgname}-3.0.0-utils_test.patch")
+sha512sums=('2465a8bc400e24e548b0589b7b022fb8325c53858429b9c54204f989d5589d7bd99c9507bde88a48f9965a55edcbac98efeeb6b93aeefe6a27afa0b7e851aea6'
             'SKIP'
-            '8d0eb65624a7dcc7f019974a7ad10ec0b3e2d61e51a3f9771564b4e0ddaaece17e90f78388933e8f9451ad413a51dd16d479b99733ceef73b86eb8308122a335'
-            '987d2d0dd1148c28796cbb933ea79a14ef2bdf903253a10f369614f0cbbd0309c9848e28dd2f2aa216d8deaf8412e6dd043e867da34466fe39169fc0e44f07ad'
-            '0abe606ad510cc97947152b28750354bd43046b38abcd6b28bbc04916fad39308f78b3626ca8b4a3ec59612fea908bdef2e309376f617595b5fc1aaec2bc6343'
-            'acc76fa492429cd014f5ebc8ae2f8399912513183d634283db124156bca407ba7166fca9ecd74a8b2a334d37da06ea80805e5afc687511baf687bf5298becd4a')
+            'cc2048d9d43a15e7f429e022b352e15a023865f0e5babdec28eec943144ef2838b882d130bee4d40198b9c1b6dbb52f7ed6dc92f5824f8c5b18c3ebe46829149')
 # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB')
 _core_perl="/usr/bin/core_perl"
 
 prepare() {
   cd "${pkgname}-${pkgver}"
-  # fix problems in Makefile (header inclusion):
-  # https://gitlab.com/apparmor/apparmor/-/issues/74
-  patch -Np1 -i "../${pkgname}-2.13.4-make4.3.patch"
-  # fix generating of apparmor.vim:
-  # https://bugs.archlinux.org/task/65450
-  patch -Np1 -i "../${pkgname}-2.13.4-vim_file.patch"
-  # fix problems with /run/systemd/userdb access
-  # https://bugs.archlinux.org/task/65777
-  # https://gitlab.com/apparmor/apparmor/-/issues/82
-  patch -Np1 -i "../${pkgname}-2.13.4-run_variable.patch"
-  patch -Np1 -i "../${pkgname}-2.13.4-fix_systemd_userdb.patch"
+  # fix issue with test trying to access /var/log/wtmp
+  # https://gitlab.com/apparmor/apparmor/-/issues/120
+  patch -Np1 -i "../${pkgname}-3.0.0-utils_test.patch"
+
   # fix PYTHONPATH and add LD_LIBRARY_PATH for aa-logprof based check:
   # https://gitlab.com/apparmor/apparmor/issues/39
   local _py3_ver=$(python --version | cut -d " " -f2)
@@ -102,10 +91,13 @@ check() {
   echo "INFO: Running check-parser profiles"
   make -C profiles check-parser
   echo "INFO: Running check utils"
-  make -C utils check
+  # we do not care about linting when running tests
+  # https://gitlab.com/apparmor/apparmor/-/issues/121
+  make PYFLAKES='/usr/bin/true' -C utils check
 }
 
 package() {
+  depends+=('libcrypt.so')
   cd "$pkgname-$pkgver"
   make -C libraries/libapparmor DESTDIR="${pkgdir}" install
   make -C changehat/pam_apparmor DESTDIR="${pkgdir}/usr" install
@@ -137,7 +129,7 @@ package() {
     "${pkgdir}/usr/lib/ruby/vendor_ruby/"
   # adding files below /etc/apparmor.d to backup array
   cd "${pkgdir}"
-  # tricking extract_function_variable() in makepkg into not detecting the
+  # trick extract_function_variable() in makepkg into not detecting the
   # backup array modification and adding remaining configuration files
   [[ /usr/bin/true ]] && backup=( ${backup[@]} $(find "etc/${pkgname}.d/" -type f) )
 }
