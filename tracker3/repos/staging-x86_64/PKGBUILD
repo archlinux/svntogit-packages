@@ -3,7 +3,7 @@
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
 pkgname=tracker3
-pkgver=3.0.0+40+g4405523d7
+pkgver=3.0.1
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
@@ -16,7 +16,7 @@ makedepends=(gobject-introspection vala git gtk-doc bash-completion meson
 checkdepends=(python-gobject python-dbus)
 provides=(libtracker-sparql-3.0.so)
 groups=(gnome)
-_commit=4405523d7947c1076d0abbb51365bf5506060eb3  # master
+_commit=db1b17576f5e1edc4f145a73a9c873d453717f81  # tags/3.0.1^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
 sha256sums=('SKIP')
 
