@@ -1,15 +1,18 @@
-# Maintainer: damir <damir@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
 
 pkgbase=libxml++
-pkgname=('libxml++' 'libxml++-docs')
-pkgver=3.2.0
+pkgname=(libxml++ libxml++-docs)
+pkgver=3.2.2
 pkgrel=1
-arch=('x86_64')
-license=('LGPL')
-url="http://libxmlplusplus.sourceforge.net/"
-makedepends=('glibmm-docs' 'libxml2' 'glibmm' 'git' 'mm-common')
-options=('!emptydirs')
-_commit=50c5efe0bcce3fa5273afbc832b1424b352469c9  # 3.2.0
+pkgdesc="C++ bindings to libxml2"
+url="https://libxmlplusplus.github.io/libxmlplusplus/"
+arch=(x86_64)
+license=(LGPL)
+depends=(libxml2 glibmm)
+makedepends=(glibmm-docs git meson mm-common)
+options=(!emptydirs)
+_commit=ba03d1ea29c1b6a8757be9b56637f19d1385ad3e  # tags/3.2.2^0
 source=("git+https://github.com/libxmlplusplus/libxmlplusplus#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -20,33 +23,32 @@ pkgver() {
 
 prepare() {
   cd libxmlplusplus
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd libxmlplusplus
-  ./configure --prefix=/usr
-
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson libxmlplusplus build
+  meson compile -C build
 }
 
 check() {
-  cd libxmlplusplus
-  make check
+  meson test -C build --print-errorlogs
 }
 
-package_libxml++() {
-  pkgdesc="C++ bindings to libxml2"
-  depends=('libxml2' 'glibmm')
+# Do not remove the space before the () or commitpkg will
+# accidentally to run this function on the system (!!!) 
+package_libxml++ () {
+  provides=(libxml++-3.0.so)
 
-  cd libxmlplusplus
-  make DESTDIR="${pkgdir}" install doc_subdirs=
+  DESTDIR="$pkgdir" meson install -C build
+
+  # Split -docs
+  mkdir -p docs/usr/share
+  mv -t docs/usr/share "$pkgdir"/usr/share/{devhelp,doc}
 }
 
 package_libxml++-docs() {
-  pkgdesc="Developer documentation for libxml++"
-  depends=('glibmm-docs')
-  cd libxmlplusplus
-  make DESTDIR="${pkgdir}" -C docs install
+  pkgdesc+=" (documentation)"
+  depends=(glibmm-docs)
+
+  mv -t "$pkgdir" docs/*
 }
