@@ -1,14 +1,14 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=yelp-xsl
-pkgver=3.38.0
+pkgver=3.38.1
 pkgrel=1
 pkgdesc="Document transformations from Yelp"
 url="https://gitlab.gnome.org/GNOME/yelp-xsl"
 arch=(any)
 license=(GPL)
 makedepends=(itstool git)
-_commit=34f36e675ed4a8407c800b91fe76c46462b98c80  # tags/3.38.0^0
+_commit=c92427a0a5c6012ba8c5f189c1d5141c6d28d098  # tags/3.38.1^0
 source=("git+https://gitlab.gnome.org/GNOME/yelp-xsl.git#commit=$_commit")
 sha256sums=('SKIP')
 
