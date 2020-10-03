@@ -2,7 +2,7 @@
 
 pkgname=apparmor
 pkgver=3.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
@@ -102,7 +102,10 @@ package() {
   make -C libraries/libapparmor DESTDIR="${pkgdir}" install
   make -C changehat/pam_apparmor DESTDIR="${pkgdir}/usr" install
   make -C changehat/mod_apparmor DESTDIR="${pkgdir}" install
-  make -C binutils DESTDIR="${pkgdir}" install
+  make -C binutils DESTDIR="${pkgdir}" \
+                   SBINDIR="${pkgdir}/usr/bin" \
+                   USR_SBINDIR="${pkgdir}/usr/bin" \
+                   install
   make -C parser -j1 DESTDIR="${pkgdir}" \
                      SBINDIR="${pkgdir}/usr/bin" \
                      USR_SBINDIR="${pkgdir}/usr/bin" \
@@ -110,6 +113,8 @@ package() {
                      install install-systemd
   make -C profiles DESTDIR="${pkgdir}" install
   make -C utils DESTDIR="${pkgdir}" \
+                SBINDIR="${pkgdir}/usr/bin" \
+                USR_SBINDIR="${pkgdir}/usr/bin" \
                 BINDIR="${pkgdir}/usr/bin" \
                 VIM_INSTALL_PATH="${pkgdir}/usr/share/vim/vimfiles/syntax" \
                 install
