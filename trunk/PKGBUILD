@@ -13,7 +13,7 @@ url="https://wiki.qemu.org/"
 _headlessdeps=(seabios gnutls libpng libaio numactl libnfs
                lzo snappy curl vde2 libcap-ng spice libcacard usbredir libslirp
                libssh zstd liburing)
-depends=(virglrenderer sdl2 vte3 libpulse brltty "${_headlessdeps[@]}")
+depends=(virglrenderer sdl2 vte3 libpulse libjack.so brltty "${_headlessdeps[@]}")
 makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx xfsprogs)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
         qemu-ga.service
@@ -36,7 +36,7 @@ prepare() {
 
 build() {
   _build full \
-    --audio-drv-list="pa alsa sdl"
+    --audio-drv-list="pa alsa sdl jack"
 
   _build headless \
     --audio-drv-list= \
