@@ -4,7 +4,7 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk-update-icon-cache)
 pkgver=3.24.23
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -18,11 +18,13 @@ makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
 _commit=016e8c55ab924c9ef4d32c8cb06253b1dc1be60d  # tags/3.24.23^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
+        0001-gtkplacessidebar-Disconnect-and-unref-cloud_manager-.patch
         settings.ini
         gtk-query-immodules-3.0.hook
         gtk-update-icon-cache.hook
         gtk-update-icon-cache.script)
 sha256sums=('SKIP'
+            'd6f6bf347482553bc20a1640c1619f674520b853a5b2ade9fd56bb77bfdfe170'
             '01fc1d81dc82c4a052ac6e25bf9a04e7647267cc3017bc91f9ce3e63e5eb9202'
             'a0319b6795410f06d38de1e8695a9bf9636ff2169f40701671580e60a108e229'
             '2d435e3bec8b79b533f00f6d04decb1d7c299c6e89b5b175f20be0459f003fe8'
@@ -35,6 +37,9 @@ pkgver() {
 
 prepare() {
   cd gtk
+
+  # https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/2669
+  git apply -3 ../0001-gtkplacessidebar-Disconnect-and-unref-cloud_manager-.patch
 }
 
 build() {
