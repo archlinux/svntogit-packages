@@ -2,7 +2,7 @@
 # Contributor: Olli <olli@suruatoel.xyz>
 
 pkgname=tomcat9
-pkgver=9.0.37
+pkgver=9.0.39
 pkgrel=1
 pkgdesc='Open source implementation of the Java Servlet 4.0 and JavaServer Pages 2.3 technologies'
 arch=(any)
@@ -13,6 +13,11 @@ depends=(
   java-jsvc
   java-commons-daemon
   eclipse-ecj
+)
+makedepends=(
+  ant
+  git
+  java-environment
 )
 optdepends=('tomcat-native: to allow optimal performance in production environments')
 backup=(
@@ -25,36 +30,61 @@ backup=(
   etc/tomcat9/web.xml
 )
 install=tomcat9.install
+_tag=6989c4e9360b4f9443862968c15a95d17f264321
 source=(
-  https://archive.apache.org/dist/tomcat/tomcat-9/v${pkgver}/bin/apache-tomcat-${pkgver}.tar.gz{,.asc}
+  git+https://github.com/apache/tomcat.git#tag=${_tag}
   tomcat9.service
   tomcat9.sysusers
   tomcat9.tmpfiles
 )
-validpgpkeys=(
-  A9C5DF4D22E99998D9875A5110C01C5A2F6059E7 # Mark E D Thomas
-  713DA88BE50911535FE716F5208B0AB1D63011C7 # Violeta Georgieva Georgieva
-)
-sha256sums=('8fb4cfa459a3f027b855334fbdc7197fa5378e504853a98009281d8e149b1bc7'
-            'SKIP'
-            'df2199080b3e4061eb8d454045428d7d340e527972c497309f69392ab2e3186f'
-            '63d8a28af96e6c7232595e7eab3bb7930f0eebcd89a5b1e3bc17b80cb2580db5'
-            '5cf1be7e6975c909d9935b2226a5aec4f783de154d910d3b65860286a3ce2a7b')
+b2sums=('SKIP'
+        '54b745cefdb9dbe5993b0b2ca08fae8d453a7610ffdeb2795b766d3ce321c267d570f6a1f5bd197f4c8053df3ab46ff68363f9d5ea1d96ddf96d19b84c075d21'
+        'b5206f649229ed67e8f9bfbd942d2fcdeb4056633e47b6a0cbbd813220c74a708a418fb09fe2e5a3c6fb17e271f268e2326bc3d26cdfd0e54c4f0eb9eeba3413'
+        '85a0dc807d3398856046e1450578e8f3a81ee34435eba119a883231ecd0e09ed32c97bf1747b20a253270df8a6e918d3823e6273ec52c01afd9a34a042e9dfcf')
+
 _gid_log=19
 _gid_tomcat=58
 _uid_tomcat=58
 
+pkgver() {
+  cd tomcat
+
+  _pkgver=$(git describe --tags)
+
+  if [[ ${_pkgver} != 9.* ]]; then
+    exit 1
+  fi
+
+  echo ${_pkgver}
+}
+
+prepare() {
+  cd tomcat
+
+  cp build.properties.default build.properties
+  sed "/^base\.path=/c\base\.path=${srcdir}" -i build.properties
+  sed "/^compile.debug=/c\compile.debug=false" -i build.properties
+  sed "/^trydownload.httpusecaches=/c\trydownload.httpusecaches=false" -i build.properties
+}
+
+build() {
+  cd tomcat
+
+  ant
+}
+
 package() {
-  cd apache-tomcat-${pkgver}
+  cd tomcat/output/build
 
   # Tomcat general files
-  install -dm 755 "${pkgdir}"/usr/share/{,java/}tomcat9
-  cp -dr --no-preserve=ownership bin "${pkgdir}"/usr/share/tomcat9
-  # commons-daemon and tomcat-natives are packaged on their own
-  rm "${pkgdir}"/usr/share/tomcat9/bin/{*.bat,commons-daemon*,tomcat-native.tar.gz}
+  install -dm 755 "${pkgdir}"/usr/share/tomcat9/bin
+  install -m 755  bin/* -t "${pkgdir}"/usr/share/tomcat9/bin/
+  # commons-daemon is packaged on its own
+  rm "${pkgdir}"/usr/share/tomcat9/bin/{*.bat,commons-daemon*}
   ln -s /usr/share/java/commons-daemon.jar "${pkgdir}"/usr/share/tomcat9/bin/commons-daemon.jar
 
-  install -m 644 lib/* "${pkgdir}"/usr/share/java/tomcat9
+  install -dm 755 "${pkgdir}"/usr/share/java/tomcat9
+  install -m 644 lib/* -t "${pkgdir}"/usr/share/java/tomcat9/
   # eclipse-ecj is packaged on its own
   rm "${pkgdir}"/usr/share/java/tomcat9/ecj-*.jar
   ln -s ../eclipse-ecj.jar "${pkgdir}"/usr/share/java/tomcat9/ecj.jar
@@ -68,12 +98,13 @@ package() {
   chgrp ${_gid_log} "${pkgdir}"/var/log/tomcat9/catalina.{out,err}
 
   install -dm 775 "${pkgdir}"/etc/tomcat9
-  install -m 640 -g ${_gid_tomcat} conf/* "${pkgdir}"/etc/tomcat9
+  install -m 640 -g ${_gid_tomcat} conf/* -t "${pkgdir}"/etc/tomcat9/
+
   install -dm 775 -g ${_gid_tomcat} "${pkgdir}"/etc/tomcat9/Catalina
   ln -s /etc/tomcat9 "${pkgdir}"/usr/share/tomcat9/conf
 
   install -dm 775 "${pkgdir}"/var/lib/tomcat9
-  cp -r webapps "${pkgdir}"/var/lib/tomcat9
+  cp -dr --no-preserve=ownership webapps "${pkgdir}"/var/lib/tomcat9/
   chown -R ${_uid_tomcat}:${_gid_tomcat} "${pkgdir}"/var/lib/tomcat9
   chmod 775 "${pkgdir}"/var/lib/tomcat9/webapps
   ln -s /var/lib/tomcat9/webapps "${pkgdir}"/usr/share/tomcat9/webapps
@@ -83,9 +114,9 @@ package() {
   ln -s /var/tmp/tomcat9/temp "${pkgdir}"/usr/share/tomcat9/temp
   ln -s /var/tmp/tomcat9/work "${pkgdir}"/usr/share/tomcat9/work
 
-  install -Dm 644 ../tomcat9.service "${pkgdir}"/usr/lib/systemd/system/tomcat9.service
-  install -Dm 644 ../tomcat9.sysusers "${pkgdir}"/usr/lib/sysusers.d/tomcat9.conf
-  install -Dm 644 ../tomcat9.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/tomcat9.conf
+  install -Dm 644 ../../../tomcat9.service -t "${pkgdir}"/usr/lib/systemd/system/
+  install -Dm 644 ../../../tomcat9.sysusers "${pkgdir}"/usr/lib/sysusers.d/tomcat9.conf
+  install -Dm 644 ../../../tomcat9.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/tomcat9.conf
 }
 
 # vim: ts=2 sw=2 et:
