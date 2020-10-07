@@ -2,7 +2,7 @@
 # Maintainer: Jan de Groot
 
 pkgname=libinput
-pkgver=1.16.1
+pkgver=1.16.2
 pkgrel=1
 pkgdesc="Input device management and event handling library"
 url="https://www.freedesktop.org/wiki/Software/libinput/"
@@ -15,7 +15,7 @@ optdepends=('gtk3: libinput debug-gui'
             'python-pyudev: libinput measure'
             'python-libevdev: libinput measure')
 source=(https://freedesktop.org/software/$pkgname/$pkgname-$pkgver.tar.xz{,.sig})
-sha512sums=('86b2d563c2cff2b3d3cae3acdd399030cc785cc9859a06357a99565ef51f95122a8427c8c0883121fb0760613460a29c8cd8c7a7e3ac68115c10330b3b75cbe0'
+sha512sums=('3394faeb0cdb0a543624e150f04a98f3bce8d67438e47455808bde8eec8ea9cdafb86056e5f8d3431352ae33714e490c55edeb51e0af1972c68fca07c1ef1daa'
             'SKIP')
 validpgpkeys=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # Peter Hutterer (Who-T) <office@who-t.net>
 
