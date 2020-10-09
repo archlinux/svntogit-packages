@@ -1,32 +1,50 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
 # Contributor: Wieland Hoffmann <the_mineo@web.de>
-# Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=chromaprint
 pkgver=1.5.0
-pkgrel=2
-pkgdesc='Library that implements a custom algorithm for extracting fingerprints from any audio source'
-url='https://acoustid.org/chromaprint'
+pkgrel=3
+pkgdesc="Library for extracting fingerprints from any audio source"
+url="https://acoustid.org/chromaprint"
 arch=('x86_64')
-license=('LGPL')
-depends=('ffmpeg')
-makedepends=('cmake' 'git')
-source=("https://github.com/acoustid/chromaprint/releases/download/v${pkgver}/chromaprint-${pkgver}.tar.gz")
-sha256sums=('573a5400e635b3823fc2394cfa7a217fbb46e8e50ecebd4a61991451a8af766a')
+license=('LGPL2.1' 'MIT')
+depends=('gcc-libs' 'glibc')
+makedepends=('cmake' 'ffmpeg' 'gtest')
+provides=('libchromaprint.so')
+# upstream signs with DSA key: https://github.com/acoustid/chromaprint/issues/81
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/acoustid/${pkgname}/archive/v${pkgver}.tar.gz")
+sha512sums=('333114949928abdf5d4b11aba1db6ec487eebe526324c68d903b3fa80a3af87a28d942af765a2f873e63a1bf222b658b6438cd10cde4446f61b26ea91f537469')
+b2sums=('930d1a7b8fa30dc726f78e3fc93c4e1aef5036b60ceee003c36ce7ea344523ce8b3abc294a4204e9acb6472600e7cfa5b15b1ca27c2917bd161b59cac1e7120c')
 
-#_commit=f2ce2e7ff05cf2b0b5e473fff55f31acf07c6a92 #tag=v1.4.2
-#source=("git+https://github.com/acoustid/chromaprint.git#commit=$_commit")
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  # the vendored cmake module does not find gtest
+  rm -v cmake/modules/FindGTest.cmake
+}
 
 build() {
-	cd "${srcdir}/${pkgname}-v${pkgver}"
-	cmake \
-		-DCMAKE_INSTALL_PREFIX=/usr \
-		-DCMAKE_BUILD_TYPE=Release \
-		-DBUILD_TOOLS=ON \
-		.
-	make
+  cd "${pkgname}-${pkgver}"
+  cmake -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_BUILD_TYPE='None' \
+        -DBUILD_TESTS=ON \
+        -DBUILD_TOOLS=ON \
+        -DGTEST_SOURCE_DIR=/usr/src/googletest/ \
+        -Wno-dev \
+        -B build \
+        -S .
+  make VERBOSE=1 -C build
+}
+
+check() {
+  cd "${pkgname}-${pkgver}"
+  make VERBOSE=1 -C build check
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-v${pkgver}"
-	make DESTDIR="${pkgdir}" install
+  depends+=('libavcodec.so' 'libavformat.so' 'libavutil.so' 'libswresample.so')
+  cd "${pkgname}-${pkgver}"
+  make VERBOSE=1 DESTDIR="${pkgdir}" install -C build
+  install -vDm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -vDm 644 {NEWS.txt,README.md} -t "${pkgdir}/usr/share/doc/${pkgname}"
 }
