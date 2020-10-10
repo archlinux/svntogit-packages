@@ -4,7 +4,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
 pkgver=4.4.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -66,8 +66,8 @@ package_opencv() {
   mv "$pkgdir"/usr/share/opencv4/samples "$srcdir"
 
   # Add java symlinks expected by some binary blobs
-  ln -s "$pkgdir"/usr/share/java/{opencv4/opencv-${pkgver//./},opencv}.jar
-  ln -s "$pkgdir"/usr/lib/{libopencv_java${pkgver//./},libopencv_java}.so
+  ln -sr "$pkgdir"/usr/share/java/{opencv4/opencv-${pkgver//./},opencv}.jar
+  ln -sr "$pkgdir"/usr/lib/{libopencv_java${pkgver//./},libopencv_java}.so
 }
 
 package_opencv-samples() {
