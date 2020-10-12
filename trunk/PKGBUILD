@@ -7,9 +7,9 @@
 pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
 epoch=1
 pkgver=1.47.0
-pkgrel=1
+pkgrel=2
 
-_llvm_ver=10.0.1
+_llvm_ver=11.0.0
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
 url='https://www.rust-lang.org/'
@@ -26,7 +26,7 @@ source=("https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
 
 sha256sums=('3185df064c4747f2c8b9bb8c4468edd58ff4ad6d07880c879ac1b173b768d81d'
             'SKIP'
-            'd90dc8e121ca0271f0fd3d639d135bfaa4b6ed41e67bd6eb77808f72629658fa'
+            '374aff82ff573a449f9aabbd330a5d0a441181c535a3599996127378112db234'
             'SKIP')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
