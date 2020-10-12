@@ -3,8 +3,8 @@
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
-pkgver=4.4.0
-pkgrel=3
+pkgver=4.5.0
+pkgrel=1
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -20,8 +20,8 @@ optdepends=('opencv-samples: samples'
             'java-runtime: Java interface')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
         "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
-sha256sums=('7faa0991c74cda52313ee37ef73f3e451332a47e7aa36c2bb2240b69f5002d27'
-            'a69772f553b32427e09ffbfd0c8d5e5e47f7dab8b3ffc02851ffd7f912b76840')
+sha256sums=('168f6e61d8462fb3d5a29ba0d19c0375c111125cac753ad01035a359584ccde9'
+            'a65f1f0b98b2c720abbf122c502044d11f427a43212d85d8d2402d7a6339edda')
 
 build() {
   export JAVA_HOME="/usr/lib/jvm/default"
