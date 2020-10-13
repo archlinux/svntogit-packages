@@ -1,0 +1,76 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgbase=qt6-doc
+pkgname=(qt6-doc qt6-examples)
+_qtver=6.0.0-alpha
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=('any')
+url='https://www.qt.io'
+license=(GPL3 LGPL3 FDL custom)
+depends=(libjpeg-turbo xcb-util-keysyms xcb-util-cursor libgl fontconfig xdg-utils
+         shared-mime-info xcb-util-wm libxrender libxi sqlite mesa
+         tslib libinput libxkbcommon-x11 libproxy libcups double-conversion md4c brotli libb2)
+makedepends=(cmake libfbclient mariadb-libs unixodbc postgresql alsa-lib gst-plugins-base-libs
+             gtk3 libpulse cups freetds vulkan-headers qt6-tools)
+makedepends+=(clang python llvm xorg-server-xvfb)
+groups=(qt6)
+_pkgfn="qt-everywhere-src-${_qtver}"
+source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/single/${_pkgfn}.tar.xz")
+sha256sums=('a58400ef299e4238ec4c8cc0217f70373b186b015b749a53d5b14c87f2c408a1')
+
+prepare() {
+  mkdir -p $_pkgfn/{qtbase,qttools}/bin
+  ln -s /usr/lib/qt6/bin/rcc $_pkgfn/qtbase/bin
+  ln -s /usr/lib/qt6/bin/{qtattributionsscanner,qdoc,qhelpgenerator} $_pkgfn/qttools/bin
+}
+
+build() {
+# Use qmake, see https://bugreports.qt.io/browse/QTBUG-87382
+  cd $_pkgfn
+  ./configure -confirm-license -opensource \
+    -prefix /usr \
+    -docdir /usr/share/doc/qt6 \
+    -headerdir /usr/include/qt6 \
+    -archdatadir /usr/lib/qt6 \
+    -datadir /usr/share/qt6 \
+    -bindir /usr/lib/qt6/bin \
+    -sysconfdir /etc/xdg \
+    -nomake examples
+  export PATH="/usr/lib/qt6/bin:$PATH"
+  make docs
+}
+
+package_qt6-doc() {
+  cd $_pkgfn
+  INSTALL_ROOT="$pkgdir" make install_docs
+
+  install -Dm644 LICENSE* -t "$pkgdir"/usr/share/licenses/$pkgbase
+}
+
+package_qt6-examples() {
+  pkgdesc='Examples and demos from qt6 documentation'
+  depends=('qt6-doc')
+
+  _base="$pkgdir"/usr/share/doc/qt6/examples
+
+  # The various example dirs have conflicting .pro files, but
+  # QtCreator requires them to be in the same top-level directory.
+  # Matching the Qt5 installer, only the qtbase project is kept.
+  mkdir -p $_base
+  cp ${_pkgfn}/qtbase/examples/examples.pro $_base
+
+  _fdirs=$(find "${_pkgfn}" -maxdepth 2 -type d -name examples)
+  for _dir in $_fdirs; do
+      _mod=$(basename ${_dir%/examples})
+
+      if [ -e "$_dir/README" ]; then
+        cp $_dir/README $_dir/README.$_mod
+      fi
+
+#     mkdir $_base/$_mod
+      cp -rn $_dir/* $_base
+  done
+}
