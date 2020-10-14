@@ -4,10 +4,10 @@
 # Contributor: Daniel Micay <danielmicay@gmail.com>
 # Contributor: userwithuid <userwithuid@gmail.com>
 
-pkgname=('rust' 'lib32-rust-libs' 'rust-docs')
+pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
 epoch=1
 pkgver=1.47.0
-pkgrel=2
+pkgrel=3
 
 _llvm_ver=11.0.0
 
@@ -16,7 +16,8 @@ url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python' 'curl' 'cmake')
+makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
+             'curl' 'cmake' 'musl')
 checkdepends=('procps-ng' 'gdb')
 
 options=('!emptydirs' '!strip')
@@ -40,7 +41,7 @@ prepare() {
 link-shared = true
 
 [build]
-target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
+target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu", "x86_64-unknown-linux-musl"]
 tools = ["cargo", "rls", "clippy", "miri", "rustfmt", "analysis", "src"]
 cargo = "/usr/bin/cargo"
 rustc = "/usr/bin/rustc"
@@ -54,8 +55,8 @@ vendor = true
 prefix = "/usr"
 
 [rust]
-# LLVM crashes when passing an object through ThinLTO twice.  This is triggered when using rust
-# code in cross-language LTO if libstd was built using ThinLTO.
+# LLVM crashes when passing an object through ThinLTO twice.  This is triggered
+# when using rust code in cross-language LTO if libstd was built using ThinLTO.
 # http://blog.llvm.org/2019/09/closing-gap-cross-language-lto-between.html
 # https://github.com/rust-lang/rust/issues/54872
 codegen-units-std = 1
@@ -68,6 +69,9 @@ rpath = false
 
 [target.x86_64-unknown-linux-gnu]
 llvm-config = "/usr/bin/llvm-config"
+
+[target.x86_64-unknown-linux-musl]
+musl-root = "/usr/lib/musl"
 END
 }
 
@@ -92,8 +96,9 @@ build() {
     fi
   done < <(find "dest-rust/usr/lib/rustlib"  -path '*/analysis/*.json' -print0)
 
-  # move docs and lib32 libs out of the way for splitting
+  # move docs and cross targets out of the way for splitting
   mv dest-rust/usr/lib/rustlib/i686-unknown-linux-gnu dest-i686
+  mv dest-rust/usr/lib/rustlib/x86_64-unknown-linux-musl dest-musl
   mv dest-rust/usr/share/doc dest-doc
 }
 
@@ -123,7 +128,7 @@ package_rust() {
 }
 
 package_lib32-rust-libs() {
-  descriptino=('32-bit libraries for Rust')
+  description=('32-bit target and libraries for Rust')
   depends=('lib32-gcc-libs')
   provides=('lib32-rust')
   conflicts=('lib32-rust')
@@ -135,6 +140,16 @@ package_lib32-rust-libs() {
   install -d "$pkgdir"/usr/lib/rustlib/ "$pkgdir"/usr/lib32/
   cp -a dest-i686 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu
   ln -srft "$pkgdir"/usr/lib32 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu/lib/*.so
+}
+
+package_rust-musl() {
+  description=('Musl target for Rust')
+
+  cd "rustc-$pkgver-src"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  install -d "$pkgdir"/usr/lib/rustlib/
+  cp -a dest-musl "$pkgdir"/usr/lib/rustlib/x86_64-unknown-linux-musl
 }
 
 package_rust-docs() {
