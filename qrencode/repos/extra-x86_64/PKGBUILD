@@ -2,7 +2,7 @@
 # Contributor: Dany Martineau <dany.luc.martineau@gmail.com>
 
 pkgname=qrencode
-pkgver=4.1.0
+pkgver=4.1.1
 pkgrel=1
 pkgdesc="C library for encoding data in a QR Code symbol."
 arch=(x86_64)
@@ -11,7 +11,7 @@ makedepends=(sdl)
 url="https://fukuchi.org/works/qrencode/"
 license=('GPL')
 source=(https://fukuchi.org/works/${pkgname}/${pkgname}-${pkgver}.tar.bz2)
-md5sums=('f2343f69def03b4e6bfeaf2c7e1016b9')
+md5sums=('de7185bcab635a34730e1b73d4efa705')
 
 build() {
   cd "${srcdir}/$pkgname-$pkgver"
