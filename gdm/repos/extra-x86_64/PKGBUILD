@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.38.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -21,7 +21,7 @@ source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
 sha256sums=('SKIP'
             'b9ead66d2b6207335f0bd982a835647536998e7c7c6b5248838e5d53132ca21a'
             '723bf4462ea4eed4193a891e95137687abfeefe6a170ec5822921bffdfc1f412'
-            'a18ea3a17bf1c52011cb15f500973946625586786ad8f7c7eec1808f80ffd939')
+            'e88410bcec9e2c7a22a319be0b771d1f8d536863a7fc618b6352a09d61327dcb')
 
 pkgver() {
   cd gdm
