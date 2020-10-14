@@ -4,7 +4,7 @@
 
 pkgname=apache
 pkgver=2.4.46
-pkgrel=2
+pkgrel=3
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('x86_64')
 url='https://www.apache.org/dist/httpd'
@@ -31,6 +31,7 @@ optdepends=(
     'brotli: for mod_brotli module'
     'uwsgi: for mod_proxy_uwsgi module'
     'lynx: apachectl status'
+    'perl: for apxs and dbmmanage'
 )
 source=(
     https://www.apache.org/dist/httpd/httpd-${pkgver}.tar.bz2{,.asc}
