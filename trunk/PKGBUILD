@@ -4,7 +4,7 @@
 
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=20.0.23
+pkgver=20.0.24
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
@@ -12,17 +12,16 @@ arch=('any')
 license=('MIT')
 makedepends=('python-setuptools' 'python-appdirs' 'python-distlib' 'python-filelock' 'python-six'
              'python2-setuptools' 'python2-appdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
-             'python2-contextlib2' 'python2-importlib-metadata' 'python2-importlib_resources'
-             'python2-pathlib2'
+             'python2-importlib-metadata' 'python2-importlib_resources' 'python2-pathlib2'
              'python-setuptools-scm' 'python2-setuptools-scm' 'python-sphinx'
              'python-sphinx_rtd_theme' 'python-sphinx-argparse' 'towncrier')
-checkdepends=('python-pytest-mock' 'python2-pytest' 'python2-pytest-mock' 'python-pip' 'python2-pip'
-              'python-coverage' 'python2-coverage' 'fish' 'xonsh' 'python-flaky' 'python2-flaky')  # 'tcsh' removed: randomly hangs tests
+checkdepends=('python-pytest-freezegun' 'python-pytest-mock' 'python-pip' 'python-coverage' 'fish'
+              'xonsh' 'python-flaky')  # 'tcsh' removed: randomly hangs tests
 replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=($pkgbase-$pkgver.tar.gz::https://github.com/pypa/virtualenv/archive/$pkgver.tar.gz)
-sha512sums=('01a56564ac09abca25cd163e7b425d8dbf1f57d6771b57e1f5fe4182f86197009e7ebdcb6f4a8640c8b8f0cdfcfdcd843f7be33848c66b0b5877cc7a8fe6ee0e')
+sha512sums=('5a456396053cd69512f5b7780d2c559051f198db111fd1185dee72dbd328d4c32cf676e1567a6588724465e5b30404ee403d4d9e7292b8049fa404bbcd4d5374')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -45,12 +44,8 @@ build() {
 }
 
 check() {
-  (cd virtualenv-$pkgver
-    PYTHONPATH="$PWD/build/lib:$PWD/src" python -m pytest
-  )
-  (cd virtualenv-$pkgver-py2
-    PYTHONPATH="$PWD/build/lib:$PWD/src" python2 -m pytest
-  )
+  cd virtualenv-$pkgver
+  PYTHONPATH="$PWD/build/lib:$PWD/src" python -m pytest
 }
 
 package_python-virtualenv() {
@@ -70,8 +65,7 @@ package_python-virtualenv() {
 
 package_python2-virtualenv() {
   depends=('python2-setuptools' 'python2-appdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
-           'python2-contextlib2' 'python2-importlib-metadata' 'python2-importlib_resources'
-           'python2-pathlib2')
+           'python2-importlib-metadata' 'python2-importlib_resources' 'python2-pathlib2')
 
   cd virtualenv-$pkgver-py2
   python2 setup.py install --prefix=/usr --root="$pkgdir" --skip-build
