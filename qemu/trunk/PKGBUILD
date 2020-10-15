@@ -6,7 +6,7 @@ pkgname=(qemu qemu-headless qemu-arch-extra qemu-headless-arch-extra
          qemu-block-{iscsi,rbd,gluster} qemu-guest-agent)
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=5.1.0
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
@@ -22,7 +22,7 @@ sha512sums=('e213edb71d93d5167ddce7546220ecb7b52a7778586a4f476f65bd1e510c9cfc6d1
             'SKIP'
             '269c0f0bacbd06a3d817fde02dce26c99d9f55c9e3b74bb710bd7e5cdde7a66b904d2eb794c8a605bf9305e4e3dee261a6e7d4ec9d9134144754914039f176e4'
             'bdf05f99407491e27a03aaf845b7cc8acfa2e0e59968236f10ffc905e5e3d5e8569df496fd71c887da2b5b8d1902494520c7da2d3a8258f7fd93a881dd610c99')
-validpgpkeys=('CEACC9E15534EBABB82D3FA03353C9CEF108B584')
+validpgpkeys=('CEACC9E15534EBABB82D3FA03353C9CEF108B584') # Michael Roth <flukshun@gmail.com>
 
 case $CARCH in
   i?86) _corearch=i386 ;;
