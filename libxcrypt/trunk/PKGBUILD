@@ -1,24 +1,28 @@
 # Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 
 pkgname=libxcrypt
+# Neither tarballs nor tags are signed, but commits are.
+_commit='6b110bcd4f4caa61fc39c7339d30adc20a7dd177' # git rev-parse v${pkgver}
 pkgver=4.4.17
 pkgrel=1
 pkgdesc='Modern library for one-way hashing of passwords'
-arch=(x86_64)
+arch=('x86_64')
 url='https://github.com/besser82/libxcrypt/'
-license=(GPL)
-depends=(glibc)
-provides=(libcrypt.so)
-source=($pkgname-$pkgver.tar.gz::$url/archive/v${pkgver}.tar.gz)
-sha256sums=('7665168d0409574a03f7b484682e68334764c29c21ca5df438955a381384ca07')
+license=('GPL')
+depends=('glibc')
+makedepends=('git')
+provides=('libcrypt.so')
+validpgpkeys=('678CE3FEE430311596DB8C16F52E98007594C21D') # Björn 'besser82' Esser
+source=("git+https://github.com/besser82/libxcrypt.git#commit=${_commit}?signed")
+sha256sums=('SKIP')
 
 prepare() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   autoreconf -fi
 }
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   ./configure \
     --prefix=/usr \
     --disable-static \
@@ -29,11 +33,11 @@ build() {
 }
 
 check() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make check 
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd $pkgname
   make DESTDIR="$pkgdir" install
 }
