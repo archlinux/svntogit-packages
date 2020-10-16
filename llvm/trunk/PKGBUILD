@@ -10,7 +10,8 @@ url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml>=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
-             'python-psutil' 'python-sphinx' 'python-recommonmark')
+             'python-setuptools' 'python-psutil' 'python-sphinx'
+             'python-recommonmark')
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
@@ -55,7 +56,6 @@ check() {
 package_llvm() {
   pkgdesc="Collection of modular and reusable compiler and toolchain technologies"
   depends=('llvm-libs' 'perl')
-  optdepends=('python-setuptools: for using lit (LLVM Integrated Tester)')
 
   cd "$srcdir/llvm-$pkgver.src/build"
 
