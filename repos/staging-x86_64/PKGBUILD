@@ -7,7 +7,7 @@
 pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
 epoch=1
 pkgver=1.47.0
-pkgrel=3
+pkgrel=4
 
 _llvm_ver=11.0.0
 
@@ -128,7 +128,7 @@ package_rust() {
 }
 
 package_lib32-rust-libs() {
-  description=('32-bit target and libraries for Rust')
+  pkgdesc='32-bit target and libraries for Rust'
   depends=('lib32-gcc-libs')
   provides=('lib32-rust')
   conflicts=('lib32-rust')
@@ -143,7 +143,7 @@ package_lib32-rust-libs() {
 }
 
 package_rust-musl() {
-  description=('Musl target for Rust')
+  pkgdesc='Musl target for Rust'
 
   cd "rustc-$pkgver-src"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
@@ -153,7 +153,7 @@ package_rust-musl() {
 }
 
 package_rust-docs() {
-  description=('Documentation for the Rust programming language')
+  pkgdesc='Documentation for the Rust programming language'
 
   cd "rustc-$pkgver-src"
   install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
