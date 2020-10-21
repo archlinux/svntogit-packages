@@ -1,11 +1,11 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 _brotli_ver=1.0.7
-_openssl_ver=1.1.1g
+_openssl_ver=1.1.1h
 pkgbase=edk2
 pkgname=('edk2-shell' 'edk2-ovmf')
-pkgver=202005
-pkgrel=3
+pkgver=202008
+pkgrel=1
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
@@ -15,16 +15,14 @@ options=(!makeflags)
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archive/${pkgbase}-stable${pkgver}.tar.gz"
         "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
         "brotli-${_brotli_ver}.tar.gz::https://github.com/google/brotli/archive/v${_brotli_ver}.tar.gz"
-        "${pkgbase}-202005-openssl-1.1.1g.patch"
         "50-edk2-ovmf-i386-secure.json"
         "50-edk2-ovmf-x86_64-secure.json"
         "60-edk2-ovmf-i386.json"
         "60-edk2-ovmf-x86_64.json")
-sha512sums=('864e5b8babb28eea05f59e17581209c853c004993842a7a6b104e96bd1fd29d9dd3a1545fb44639f2442acc51b078c4996621e1f927fbf449dc1b86421b432ac'
-            '01e3d0b1bceeed8fb066f542ef5480862001556e0f612e017442330bbd7e5faee228b2de3513d7fc347446b7f217e27de1003dc9d7214d5833b97593f3ec25ab'
+sha512sums=('c32340104f27b9b85f79e934cc9eeb739d47b01e13975c88f39b053e9bc5a1ecfe579ab3b63fc7747cc328e104b337b53d41deb4470c3f20dbbd5552173a4666'
+            'da50fd99325841ed7a4367d9251c771ce505a443a73b327d8a46b2c6a7d2ea99e43551a164efc86f8743b22c2bdb0020bf24a9cbd445e9d68868b2dc1d34033a'
             'SKIP'
             'a82362aa36d2f2094bca0b2808d9de0d57291fb3a4c29d7c0ca0a37e73087ec5ac4df299c8c363e61106fccf2fe7f58b5cf76eb97729e2696058ef43b1d3930a'
-            '3605c67d9c8870562086f63e96ffe8039cb394266298b382df61e12c777b6c37a2d2eb3fd5147cb3f00fabddc6dba139ba53da42ea81b1cbeb8f587c6d4cc251'
             '55e4187b11b27737f61e528c02ff43b9381c0cb09140e803531616766f9cb9401115d88d946b56171784cc028f9571279640eb39b6a9fa8e02ec0c8d1b036a3e'
             'a1236585b30d720540de2e9527d8c90ff2d428e800b3da545b23461dc698dc91fe441b62bb8cbca76e08f4ec1eb485619e9ab26157deb06e7fb33e7f5f9dd8b6'
             'c81e072aabfb01d29cf5194111524e2c4c8684979de6b6793db10299c95bb94f7b1d0a98b057df0664d7a894a2b40e9b4c3576112fae400a95eaf5fe5fc9369b'
@@ -38,13 +36,9 @@ prepare() {
   mv -v "$pkgbase-$pkgbase-stable$pkgver" "$pkgbase-$pkgver"
   cd "$pkgbase-$pkgver"
 
-  # applying fixes to build against openssl-1.1.1g
-  patch -Np1 -i "../${pkgbase}-202005-openssl-1.1.1g.patch"
   # symlinking openssl into place
   rm -rfv CryptoPkg/Library/OpensslLib/openssl
   ln -sfv "${srcdir}/openssl-$_openssl_ver" CryptoPkg/Library/OpensslLib/openssl
-  # copying required pre-generated header into place (to not also have to patch openssl)
-  cp -v CryptoPkg/Library/Include/internal/dso_conf.h CryptoPkg/Library/OpensslLib/openssl/include/crypto/
 
   # symlinking brotli into place
   rm -rfv BaseTools/Source/C/BrotliCompress/brotli MdeModulePkg/Library/BrotliCustomDecompressLib/brotli
