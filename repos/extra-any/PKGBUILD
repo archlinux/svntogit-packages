@@ -4,7 +4,7 @@
 
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=20.0.30
+pkgver=20.0.31
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
@@ -21,7 +21,7 @@ replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=($pkgbase-$pkgver.tar.gz::https://github.com/pypa/virtualenv/archive/$pkgver.tar.gz)
-sha512sums=('d49320cad72f9d1b9d4bf15ba9c35cb818740f8553cdc0a34adbac9e708122002e9c17c1c52ebe0324c7c5f8b6fbfdbfef0b8569c8ab914fb31b48b8f7d83b53')
+sha512sums=('9078a6d27b315934aa58450516c9bca89788110faf1bc9471c16ae0ec728eabfe739d03f1fbc27af8a1b6c7f82e7a2fff63da8bc53a7cf4a6591777f3371b18f')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
