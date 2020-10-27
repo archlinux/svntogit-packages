@@ -4,7 +4,7 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=3.38.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -20,7 +20,7 @@ source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         default.pa)
 sha256sums=('SKIP'
             'b9ead66d2b6207335f0bd982a835647536998e7c7c6b5248838e5d53132ca21a'
-            '723bf4462ea4eed4193a891e95137687abfeefe6a170ec5822921bffdfc1f412'
+            'd5cd6a401db2aa19374d477817420a39759044393bd420414fdc41881fd93597'
             'e88410bcec9e2c7a22a319be0b771d1f8d536863a7fc618b6352a09d61327dcb')
 
 pkgver() {
@@ -67,7 +67,7 @@ package_gdm() {
   install -d "$pkgdir/var/lib"
   install -d "$pkgdir/var/lib/gdm"                           -o120 -g120 -m1770
   install -d "$pkgdir/var/lib/gdm/.config"                   -o120 -g120 -m700
-  install -d "$pkgdir/var/lib/gdm/.config/pulse"             -o120 -g120
+  install -d "$pkgdir/var/lib/gdm/.config/pulse"             -o120 -g120 -m700
   install -d "$pkgdir/var/lib/gdm/.local"                    -o120 -g120 -m700
   install -d "$pkgdir/var/lib/gdm/.local/share"              -o120 -g120
   install -d "$pkgdir/var/lib/gdm/.local/share/applications" -o120 -g120
