@@ -6,12 +6,12 @@
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
 pkgver=1.25.10
-pkgrel=1
+pkgrel=2
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
 url="https://github.com/shazow/urllib3"
 license=("MIT")
-makedepends=('python-setuptools' 'python2-setuptools' 'python2-sphinx' 'python-ndg-httpsclient'
+makedepends=('python-setuptools' 'python2-setuptools' 'python-sphinx' 'python-ndg-httpsclient'
              'python2-ndg-httpsclient' 'python-pyasn1' 'python2-pyasn1' 'python-pyopenssl'
              'python2-pyopenssl' 'python-pysocks' 'python2-pysocks' 'python-mock' 'python2-mock'
              'python-brotli')
@@ -34,9 +34,8 @@ build() {
   cd "$srcdir"/urllib3-$pkgver-py2
   python2 setup.py build
 
-  # Build with Python 2 since autodoc produces errors on Python 3
   cd "$srcdir"/urllib3-$pkgver/docs
-  make SPHINXBUILD=sphinx-build2 html
+  make html
 }
 
 check() {
