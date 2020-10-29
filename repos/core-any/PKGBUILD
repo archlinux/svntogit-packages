@@ -3,7 +3,7 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=mkinitcpio
-pkgver=28
+pkgver=29
 pkgrel=1
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
@@ -20,11 +20,12 @@ provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
-sha256sums=('bf83a158786d272d8046a4dd48bfcc343ec37de2cae0ae65c59132a45744808c'
+sha512sums=('cc03159f16ae12a0d1ebf6a1827f8cdaf73ad0910bf2b1b0f30b737b1cff472130eb41c3669c180291a9861c3c3167498d1f9d60cb9782aeb1ef1d0cd2156068'
             'SKIP')
-validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'   # Dave Reisner
-              '86CFFCA918CF3AF47147588051E8B148A9999C34'   # Evangelos Foutras
-              'ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB')  # Giancarlo Razzolini
+b2sums=('4303216cc3c020bf58491a18b13785660e08f418a333f5b975b29b1da4f6b4427f5bbda358018a34e6894217c6368fdf3fe73d361e770a4b6e40abb12ba2fd02'
+        'SKIP')
+validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'    # Giancarlo Razzolini
+              '86CFFCA918CF3AF47147588051E8B148A9999C34')   # Evangelos Foutras
 
 # prepare() {
 #   cd $pkgname-$pkgver
