@@ -1,0 +1,61 @@
+# Maintainer: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Judd <jvinet@zeroflux.org>
+
+pkgname=bzip2
+pkgver=1.0.8
+pkgrel=4
+pkgdesc="A high-quality data compression program"
+arch=('x86_64')
+license=('BSD')
+url="https://sourceware.org/bzip2/"
+depends=('glibc' 'sh')
+provides=('libbz2.so')
+source=(https://sourceware.org/pub/bzip2/$pkgname-$pkgver.tar.gz{,.sig}
+        bzip2.pc)
+sha256sums=('ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269'
+            'SKIP'
+            'eca9d8cd6376df1fb5442667c603032023fb21d8d183684550da0b96ade39654')
+validpgpkeys=('EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A') # Mark Wielaard <mark@klomp.org>
+
+prepare() {
+  cd $pkgname-$pkgver
+  cp ../bzip2.pc bzip2.pc
+  sed "s|@VERSION@|$pkgver|" -i bzip2.pc
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+  make -f Makefile-libbz2_so CC="gcc $CFLAGS $CPPFLAGS $LDFLAGS"
+  make bzip2 bzip2recover CC="gcc $CFLAGS $CPPFLAGS $LDFLAGS"
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make test
+}
+
+package() {
+  cd $pkgname-$pkgver
+
+  install -dm755 "$pkgdir"/usr/{bin,lib,include,share/man/man1}
+
+  install -m755 bzip2-shared "$pkgdir"/usr/bin/bzip2
+  install -m755 bzip2recover bzdiff bzgrep bzmore "$pkgdir"/usr/bin
+  ln -sf bzip2 "$pkgdir"/usr/bin/bunzip2
+  ln -sf bzip2 "$pkgdir"/usr/bin/bzcat
+
+  cp -a libbz2.so* "$pkgdir"/usr/lib
+  ln -s libbz2.so.$pkgver "$pkgdir"/usr/lib/libbz2.so
+  ln -s libbz2.so.$pkgver "$pkgdir"/usr/lib/libbz2.so.1 # For compatibility with some other distros
+
+  install -m644 bzlib.h "$pkgdir"/usr/include/
+
+  install -m644 bzip2.1 "$pkgdir"/usr/share/man/man1/
+  ln -sf bzip2.1 "$pkgdir"/usr/share/man/man1/bunzip2.1
+  ln -sf bzip2.1 "$pkgdir"/usr/share/man/man1/bzcat.1
+  ln -sf bzip2.1 "$pkgdir"/usr/share/man/man1/bzip2recover.1
+
+  install -Dm644 bzip2.pc -t "$pkgdir"/usr/lib/pkgconfig
+  install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
+}
