@@ -2,30 +2,30 @@
 # Maintainer: Gaetan Bisson <bisson@archlinux.org>
 
 pkgname=libassuan
-pkgver=2.5.3
-pkgrel=2
+pkgver=2.5.4
+pkgrel=1
 pkgdesc='IPC library used by some GnuPG related software'
 url='https://www.gnupg.org/related_software/libassuan/'
 arch=('x86_64')
 license=('GPL')
 depends=('libgpg-error')
-validpgpkeys=('031EC2536E580D8EA286A9F22071B08A33BD3F06') # NIIBE Yutaka
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig})
-sha256sums=('91bcb0403866b4e7c4bc1cc52ed4c364a9b5414b3994f718c70303f7f765e702'
+sha256sums=('c080ee96b3bd519edd696cfcebdecf19a3952189178db9887be713ccbcb5fbf0'
             'SKIP')
+validpgpkeys=('6DAA6E64A76D2840571B4902528897B826403ADA') # "Werner Koch (dist signing 2020)"
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	./configure --prefix=/usr
-	make
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr
+  make
 }
 
 check() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make check
+  cd ${pkgname}-${pkgver}
+  make check
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make DESTDIR="${pkgdir}" install
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
 }
