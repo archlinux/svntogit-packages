@@ -4,7 +4,7 @@
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
 pkgver=3.58
-pkgrel=1
+pkgrel=2
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
 arch=(x86_64)
@@ -12,16 +12,21 @@ license=(MPL GPL)
 depends=(nspr sqlite zlib sh 'p11-kit>=0.23.19')
 makedepends=(perl python gyp)
 source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
+        0001-Bug-1672703-always-tolerate-the-first-CCS-in-TLS-1.3.patch
         certdata2pem.py bundle.sh)
 sha256sums=('9f73cf789b5f109b978e5239551b609b0cafa88d18f0bc8ce3f976cb629353c0'
+            '62ec84bbd366f8431b70430082306f78a4f8510c301f14494391d1fd3a173f4a'
             'd2a1579dae05fd16175fac27ef08b54731ecefdf414085c610179afcf62b096c'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
 prepare() {
-  mkdir certs
-  ln -srt certs nss-$pkgver/nss/lib/ckfw/builtins/{certdata.txt,nssckbi.h}
+  cd nss-$pkgver/nss
 
-  cd nss-$pkgver
+  mkdir "$srcdir/certs"
+  ln -srt "$srcdir/certs" lib/ckfw/builtins/{certdata.txt,nssckbi.h}
+
+  # https://bugs.archlinux.org/task/68357
+  patch -Np1 -i "$srcdir/0001-Bug-1672703-always-tolerate-the-first-CCS-in-TLS-1.3.patch"
 }
 
 build() {
