@@ -12,18 +12,30 @@ pkgdesc='Standalone mail and news reader from mozilla.org'
 url='https://www.mozilla.org/thunderbird/'
 arch=(x86_64)
 license=(MPL GPL LGPL)
-depends=(gtk3 libxt startup-notification mime-types dbus-glib alsa-lib
-         nss hunspell sqlite ttf-font icu) # libvpx
-makedepends=(unzip zip diffutils python python2 yasm nasm mesa imake libpulse inetutils xorg-server-xvfb
-             autoconf2.13 rust clang llvm gtk2 cbindgen nodejs)
+depends=(
+  glibc gtk3 libgdk-3.so mime-types dbus libdbus-1.so dbus-glib alsa-lib nss
+  hunspell sqlite ttf-font libvpx libvpx.so zlib bzip2 botan libwebp libevent
+  libjpeg-turbo libffi nspr gcc-libs libx11 libxrender libxfixes libxext
+  libxcomposite libxdamage pango libpango-1.0.so cairo gdk-pixbuf2 icu
+  libicui18n.so libicuuc.so freetype2 libfreetype.so fontconfig
+  libfontconfig.so glib2 libglib-2.0.so
+)
+makedepends=(
+  unzip zip diffutils python python-setuptools yasm nasm mesa imake libpulse
+  inetutils xorg-server-xvfb autoconf2.13 rust clang llvm gtk2 cbindgen nodejs
+)
 optdepends=('libcanberra: sound support')
 options=(!emptydirs !makeflags)
 source=(https://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/$pkgver/source/thunderbird-$pkgver.source.tar.xz{,.asc}
-        $pkgname.desktop
-        thunderbird-rust-1.47.patch::https://src.fedoraproject.org/rpms/thunderbird/raw/master/f/rust-1.47.patch)
+        thunderbird.desktop
+        vendor-prefs.js
+        distribution.ini
+        thunderbird-rust-1.47.patch::https://src.fedoraproject.org/rpms/thunderbird/raw/86967ddc206310ba7bb9eb57a933031909288ce2/f/rust-1.47.patch)
 sha512sums=('0536a59286dec2f05e3fa00bdcc4f2e52139d9c53d5c086e0074d0d7c6a3b01bbb4beee2c996ffecace2950d1b8b35e2731e6c681ece804b1505acd26f58b308'
             'SKIP'
             'a0061fcb2a7f66061e336a8d95948592f56f4752e56467f14ba63846720ebf845cce7511d1a2637e3b80d5a1ffdaa2fb783fa37195103425ef65222d45372012'
+            '6918c0de63deeddc6f53b9ba331390556c12e0d649cf54587dfaabb98b32d6a597b63cf02809c7c58b15501720455a724d527375a8fb9d757ccca57460320734'
+            '5cd3ac4c94ef6dcce72fba02bc18b771a2f67906ff795e0e3d71ce7db6d8a41165bd5443908470915bdbdb98dddd9cf3f837c4ba3a36413f55ec570e6efdbb9f'
             'd337a77104d411df219f3ae1c7d136ae92f944a18969cc92e6257b4f909204677a58df43187d41f53d4c36c29f57f53bdbad90d8263e6a9b0781640944895cad')
 validpgpkeys=(14F26682D0916CDD81E37B6D61B7B526D98F0353) # Mozilla Software Releases <release@mozilla.com>
 
@@ -56,8 +68,7 @@ ac_add_options --enable-release
 ac_add_options --enable-linker=gold
 ac_add_options --enable-hardening
 ac_add_options --enable-optimize
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1521249
-#ac_add_options --enable-rust-simd
+ac_add_options --enable-rust-simd
 # https://bugzilla.mozilla.org/show_bug.cgi?id=1423822
 ac_add_options --disable-elf-hack
 
@@ -76,10 +87,15 @@ ac_add_options --with-system-zlib
 ac_add_options --with-system-bz2
 ac_add_options --with-system-icu
 ac_add_options --with-system-jpeg
-# ac_add_options --with-system-libvpx
+# does not have APNG support
+# ac_add_options --with-system-png
+ac_add_options --with-system-libvpx
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
-ac_add_options --enable-system-ffi
+ac_add_options --with-system-botan
+ac_add_options --with-system-webp
+ac_add_options --with-system-libevent
+ac_add_options --with-system-ffi
 
 # Features
 ac_add_options --enable-alsa
@@ -100,38 +116,9 @@ package() {
   cd $pkgname-$pkgver
   DESTDIR="$pkgdir" ./mach install
 
-  _vendorjs="$pkgdir/usr/lib/$pkgname/defaults/preferences/vendor.js"
-  install -Dm644 /dev/stdin "$_vendorjs" <<END
-// Use LANG environment variable to choose locale
-pref("intl.locale.requested", "");
-
-// Use system-provided dictionaries
-pref("spellchecker.dictionary_path", "/usr/share/hunspell");
-
-// Disable default mailer checking.
-pref("mail.shell.checkDefaultMail", false);
-
-// Don't disable our bundled extensions in the application directory
-pref("extensions.autoDisableScopes", 11);
-pref("extensions.shownSelectionUI", true);
-
-/* Disable telemetry */
-pref("datareporting.healthreport.uploadEnabled", false);
-pref("datareporting.policy.dataSubmissionEnabled", false);
-pref("toolkit.telemetry.archive.enabled", false);
-END
-
-  _distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
-  install -Dm644 /dev/stdin "$_distini" <<END
-[Global]
-id=archlinux
-version=1.0
-about=Mozilla Thunderbird for Arch Linux
-
-[Preferences]
-app.distributor=archlinux
-app.distributor.channel=$pkgname
-END
+  install -Dm 644 ../vendor-prefs.js -t "$pkgdir/usr/lib/$pkgname/defaults/pref"
+  install -Dm 644 ../distribution.ini -t "$pkgdir/usr/lib/$pkgname/distribution"
+  install -Dm 644 ../thunderbird.desktop -t "$pkgdir/usr/share/applications"
 
   for i in 16 22 24 32 48 64 128 256; do
     install -Dm644 comm/mail/branding/thunderbird/default${i}.png \
@@ -139,9 +126,6 @@ END
   done
   install -Dm644 comm/mail/branding/thunderbird/TB-symbolic.svg \
     "$pkgdir/usr/share/icons/hicolor/symbolic/apps/thunderbird-symbolic.svg"
-
-  install -Dm644 ../$pkgname.desktop \
-    "$pkgdir/usr/share/applications/$pkgname.desktop"
 
   # Use system-provided dictionaries
   ln -Ts /usr/share/hunspell "$pkgdir/usr/lib/$pkgname/dictionaries"
