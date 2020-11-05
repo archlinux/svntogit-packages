@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.8.16.a
+pkgver=5.9.6.a
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -21,6 +21,7 @@ source=(
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
   sphinx-workaround.patch
+  mac80211-fix-regression-where-EAPOL-frames-were-sent-in-plaintext.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -28,12 +29,13 @@ validpgpkeys=(
   '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A'  # Daniel Micay
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('fdbf584f56eb5761bdb4aac5856a9ef41327e5ad677c9f89485142fc2e509dc5'
+sha256sums=('6cc182fe19a8f3958c24d453f4ab68eb73fb5cfb8af4c95b02f3db049e655370'
             'SKIP'
-            'c1dafe8d5c23867b94e88d4da55331a6b195fcfcf8abebdd4d55896fe777eb2c'
+            '7676a79e0a0f1f990e9b6637e456454f5d96436b3473bbaa93e27b70d79445c0'
             'SKIP'
-            '72de5b7f9e467613f488468944100780dfb6876613445aba7d4843c365d6a98a'
-            '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c')
+            '7ee9ebfa9ccd1391808a3d387be8a8db7e335f8b448ec41f9148d3665eac56d1'
+            '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c'
+            'ce35d788ec6bbcb04ddb826a946fb155f9a69b62e4518092bf0530f2d2d2b151')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
