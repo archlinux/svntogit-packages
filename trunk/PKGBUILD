@@ -6,7 +6,7 @@
 # Contributor: Anders Bostrom <anders.bostrom@home.se>
 
 pkgname=thunderbird
-pkgver=78.4.0
+pkgver=78.4.1
 pkgrel=1
 pkgdesc='Standalone mail and news reader from mozilla.org'
 url='https://www.mozilla.org/thunderbird/'
@@ -18,11 +18,12 @@ depends=(
   libjpeg-turbo libffi nspr gcc-libs libx11 libxrender libxfixes libxext
   libxcomposite libxdamage pango libpango-1.0.so cairo gdk-pixbuf2 icu
   libicui18n.so libicuuc.so freetype2 libfreetype.so fontconfig
-  libfontconfig.so glib2 libglib-2.0.so
+  libfontconfig.so glib2 libglib-2.0.so pixman libpixman-1.so gnupg
 )
 makedepends=(
   unzip zip diffutils python python-setuptools yasm nasm mesa imake libpulse
   inetutils xorg-server-xvfb autoconf2.13 rust clang llvm gtk2 cbindgen nodejs
+  gawk perl findutils
 )
 optdepends=('libcanberra: sound support')
 options=(!emptydirs !makeflags)
@@ -30,12 +31,14 @@ source=(https://ftp.mozilla.org/pub/mozilla.org/thunderbird/releases/$pkgver/sou
         thunderbird.desktop
         vendor-prefs.js
         distribution.ini
+        mozconfig.cfg
         thunderbird-rust-1.47.patch::https://src.fedoraproject.org/rpms/thunderbird/raw/86967ddc206310ba7bb9eb57a933031909288ce2/f/rust-1.47.patch)
-sha512sums=('0536a59286dec2f05e3fa00bdcc4f2e52139d9c53d5c086e0074d0d7c6a3b01bbb4beee2c996ffecace2950d1b8b35e2731e6c681ece804b1505acd26f58b308'
+sha512sums=('dd2aea61d172e5e6b6bebf1aeaa9fbafe38749bc435b791472d13e430446286fcd20e03c12e8f9acd6c74d4af0e7db1e50e08b2ff5cfdbdbae6462eb6984b5aa'
             'SKIP'
             'a0061fcb2a7f66061e336a8d95948592f56f4752e56467f14ba63846720ebf845cce7511d1a2637e3b80d5a1ffdaa2fb783fa37195103425ef65222d45372012'
             '6918c0de63deeddc6f53b9ba331390556c12e0d649cf54587dfaabb98b32d6a597b63cf02809c7c58b15501720455a724d527375a8fb9d757ccca57460320734'
             '5cd3ac4c94ef6dcce72fba02bc18b771a2f67906ff795e0e3d71ce7db6d8a41165bd5443908470915bdbdb98dddd9cf3f837c4ba3a36413f55ec570e6efdbb9f'
+            'b04e8b11360f41e0cc0eb0c307f062569603372ed15112e33a0ca893c5622217c3155289b3560c0ba909306faf25ff98b7dc3944ad1493e0a8d940306be5167a'
             'd337a77104d411df219f3ae1c7d136ae92f944a18969cc92e6257b4f909204677a58df43187d41f53d4c36c29f57f53bdbad90d8263e6a9b0781640944895cad')
 validpgpkeys=(14F26682D0916CDD81E37B6D61B7B526D98F0353) # Mozilla Software Releases <release@mozilla.com>
 
@@ -54,59 +57,26 @@ _mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
 prepare() {
   cd $pkgname-$pkgver
 
-  patch -Np1 < ../thunderbird-rust-1.47.patch
+  local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
+  done
 
-  echo -n "$_google_api_key" >google-api-key
-  echo -n "$_mozilla_api_key" >mozilla-api-key
-
-  cat >.mozconfig <<END
-ac_add_options --enable-application=comm/mail
-ac_add_options --enable-calendar
-
-ac_add_options --prefix=/usr
-ac_add_options --enable-release
-ac_add_options --enable-linker=gold
-ac_add_options --enable-hardening
-ac_add_options --enable-optimize
-ac_add_options --enable-rust-simd
-# https://bugzilla.mozilla.org/show_bug.cgi?id=1423822
-ac_add_options --disable-elf-hack
-
-# Branding
-ac_add_options --enable-official-branding
-ac_add_options --enable-update-channel=release
-ac_add_options --with-distribution-id=org.archlinux
-
-# Keys
-ac_add_options --with-google-location-service-api-keyfile=${PWD@Q}/google-api-key
-ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
-ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
-
-# System libraries
-ac_add_options --with-system-zlib
-ac_add_options --with-system-bz2
-ac_add_options --with-system-icu
-ac_add_options --with-system-jpeg
-# does not have APNG support
-# ac_add_options --with-system-png
-ac_add_options --with-system-libvpx
-ac_add_options --with-system-nspr
-ac_add_options --with-system-nss
-ac_add_options --with-system-botan
-ac_add_options --with-system-webp
-ac_add_options --with-system-libevent
-ac_add_options --with-system-ffi
-
-# Features
-ac_add_options --enable-alsa
-ac_add_options --disable-jack
-ac_add_options --disable-crashreporter
-ac_add_options --disable-updater
-END
+  printf "%s" "$_google_api_key" >google-api-key
+  printf "%s" "$_mozilla_api_key" >mozilla-api-key
+  cp ../mozconfig.cfg .mozconfig
+  sed "s|@PWD@|${PWD@Q}|g" -i .mozconfig
 }
 
 build() {
   cd $pkgname-$pkgver
+  if [[ -n "${SOURCE_DATE_EPOCH}" ]]; then
+    export MOZ_BUILD_DATE=$(date --date "@${SOURCE_DATE_EPOCH}" "%Y%m%d%H%M%S")
+  fi
   ./mach configure
   ./mach build
   ./mach buildsymbols
