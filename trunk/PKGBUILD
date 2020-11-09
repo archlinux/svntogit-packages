@@ -5,7 +5,7 @@
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
 pkgver=20.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
