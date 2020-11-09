@@ -23,7 +23,7 @@ sha512sums=('f7845856cc563be628753bc875c36905ce75f14ff6e98a8460cfaa42b1afca27873
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  # rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+  rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
 
   # Upstream devendoring logic is badly broken, see:
   # https://bugs.archlinux.org/task/58670
@@ -31,14 +31,14 @@ prepare() {
   # https://github.com/pypa/setuptools/issues/1383
   # The simplest fix is to simply rewrite import paths to use the canonical
   # location in the first place
-  # for _module in setuptools pkg_resources '' ; do
-  #     find setuptools-$pkgver -name \*.py -exec sed -i \
-  #         -e 's/from '$_module.extern' import/import/' \
-  #         -e 's/from '$_module.extern'./from /' \
-  #         -e 's/import '$_module.extern'./import /' \
-  #         -e "s/__import__('$_module.extern./__import__('/" \
-  #         {} +
-  # done
+  for _module in setuptools pkg_resources '' ; do
+      find setuptools-$pkgver -name \*.py -exec sed -i \
+          -e 's/from '$_module.extern' import/import/' \
+          -e 's/from '$_module.extern'./from /' \
+          -e 's/import '$_module.extern'./import /' \
+          -e "s/__import__('$_module.extern./__import__('/" \
+          {} +
+  done
 
   # Fix for flake8
   sed -i 's/import six, ordered_set/import six\nimport ordered_set/' setuptools-$pkgver/setuptools/command/sdist.py
