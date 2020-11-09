@@ -4,7 +4,7 @@
 
 pkgname=python-setuptools
 pkgver=50.3.2
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
