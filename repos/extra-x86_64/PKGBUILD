@@ -1,11 +1,11 @@
 # Maintainer: Sébastien Luttringer
 
 pkgname=ipset
-pkgver=7.6
-pkgrel=2
+pkgver=7.7
+pkgrel=1
 pkgdesc='Administration tool for IP sets'
 arch=('x86_64')
-url='http://ipset.netfilter.org/'
+url='https://netfilter.org/projects/ipset/'
 license=('GPL2')
 makedepends=('git')
 depends=('glibc' 'libmnl')
