@@ -1,39 +1,58 @@
-# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
 # Contributor: Angel Velasquez <angvp@archlinux.org>
 # Contributor: Hugo Doria <hugo@archlinux.org>
 
 pkgname=nmap
-pkgver=7.80
-pkgrel=3
+pkgver=7.91
+pkgrel=1
 pkgdesc='Utility for network discovery and security auditing'
 url='https://nmap.org/'
 arch=('x86_64')
 license=('GPL2')
-depends=('pcre' 'openssl' 'lua')
-makedepends=('python2')
-optdepends=('python2: various scripts')
-validpgpkeys=('436D66AB9A798425FDA0E3F801AF9F036B9355D0')
+depends=('glibc' 'pcre' 'openssl' 'lua53' 'libpcap'
+         'libssh2' 'libssh2.so' 'zlib' 'gcc-libs')
 source=("https://nmap.org/dist/${pkgname}-${pkgver}.tar.bz2"
         "https://nmap.org/dist/sigs/${pkgname}-${pkgver}.tar.bz2.asc")
-sha256sums=('fcfa5a0e42099e12e4bf7a68ebe6fde05553383a682e816a7ec9256ab4773faa'
+sha256sums=('18cc4b5070511c51eb243cdd2b0b30ff9b2c4dc4544c6312f75ce3a67a593300'
             'SKIP')
+b2sums=('a758e0a20f8243b33b000c23e025b87bdb712390b82982a1aca219c9b98cd55c6ababb810328c7d0cdb5c884ef9bd5b187b9e4929454278342d7ee5ef441cded'
+        'SKIP')
+validpgpkeys=(
+  '436D66AB9A798425FDA0E3F801AF9F036B9355D0' # Nmap Project Signing Key (http://www.insecure.org/)
+)
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  # ensure we build devendored deps
+  rm -rf liblua libpcap libpcre macosx mwin32 libssh2 libz
+  autoreconf -fiv
+}
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	export PYTHON=python2
-	./configure \
-		--prefix=/usr \
-		--libexecdir=/usr/lib \
-		--mandir=/usr/share/man \
-		--with-libpcap=included \
-		--without-zenmap \
+  cd "${pkgname}-${pkgver}"
+  ./configure \
+    --prefix=/usr \
+    --with-libpcap=/usr \
+    --with-libpcre=/usr \
+    --with-zlib=/usr \
+    --with-libssh2=/usr \
+    --with-liblua=/usr \
+    --without-ndiff \
+    --without-zenmap
+  make
+}
 
-	make
+check() {
+  cd "${pkgname}-${pkgver}"
+  make check
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-	make DESTDIR="${pkgdir}" install
-	rm "${pkgdir}"/usr/bin/uninstall_*
-	install -Dm644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  cd "${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  install -Dm 644 README.md docs/nmap.usage.txt -t "${pkgdir}/usr/share/doc/${pkgname}"
+  install -Dm 644 LICENSE docs/3rd-party-licenses.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
+
+# vim: ts=2 sw=2 et:
