@@ -7,7 +7,7 @@ pkgdesc="Libalpm bindings for Python 3"
 arch=('x86_64')
 url="https://git.archlinux.org/pyalpm.git/"
 license=('GPL')
-makedepends=('git' 'python-pytest')
+makedepends=('git' 'python-setuptools' 'python-pytest')
 depends=('python>=3.6' 'pacman>=5.0')
 source=("git+https://git.archlinux.org/pyalpm.git#commit=81a1749b87793737961147a6843468b0dc3dd1e7" "memleak.patch")
 validpgpkeys=('E499C79F53C96A54E572FEE1C06086337C50773E')
