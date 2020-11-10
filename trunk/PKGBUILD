@@ -9,15 +9,19 @@ url="https://git.archlinux.org/pyalpm.git/"
 license=('GPL')
 makedepends=('git' 'python-setuptools' 'python-pytest')
 depends=('python>=3.6' 'pacman>=5.0')
-source=("git+https://git.archlinux.org/pyalpm.git#commit=81a1749b87793737961147a6843468b0dc3dd1e7" "memleak.patch")
+source=("git+https://git.archlinux.org/pyalpm.git#commit=81a1749b87793737961147a6843468b0dc3dd1e7" "memleak.patch"
+        pyalpm-gcc10.patch::https://git.archlinux.org/pyalpm.git/patch/?id=eaebfe83ba2b685156d3ed3cf000ee47ca5c5fb4)
 validpgpkeys=('E499C79F53C96A54E572FEE1C06086337C50773E')
 sha512sums=('SKIP'
-            'b7dacb28bc13f5c9fb9c9295d1a3d323b7b7c0893d69b110f3036b73a4930e8463b5a19011b0e5996ff55157768376c2e53ab97c557afe29bbe3b5d0c8a1e027')
+            'b7dacb28bc13f5c9fb9c9295d1a3d323b7b7c0893d69b110f3036b73a4930e8463b5a19011b0e5996ff55157768376c2e53ab97c557afe29bbe3b5d0c8a1e027'
+            '279b4cd4da9c67dde90132654cea7e0ef097e11c72a3b7bfe8259c9ec02d88e5d832d61ebde9b163e5e935c8ae113bd505e87c00786967745ea9368899a1a66b')
 
 prepare() {
   cd ${srcdir}/${pkgname}
   # Rever memleak patch
   patch -NRp1 -i ${srcdir}/memleak.patch
+
+  patch -p1 -i ../pyalpm-gcc10.patch
 }
 
 build() {
