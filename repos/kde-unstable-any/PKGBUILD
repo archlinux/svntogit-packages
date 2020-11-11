@@ -4,47 +4,48 @@
 
 pkgbase=qt6-doc
 pkgname=(qt6-doc qt6-examples)
-_qtver=6.0.0-beta3
+_qtver=6.0.0-beta4
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=('any')
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
-makedepends=(mariadb-libs unixodbc postgresql alsa-lib gst-plugins-base-libs
-             gtk3 libpulse cups freetds vulkan-headers qt6-tools clang python llvm)
+makedepends=(cmake mariadb-libs unixodbc postgresql alsa-lib gst-plugins-base-libs
+             gtk3 libpulse cups freetds vulkan-headers clang python llvm qt6-tools)
 groups=(qt6)
 _pkgfn="qt-everywhere-src-${_qtver}"
-source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/single/${_pkgfn}.tar.xz")
-sha256sums=('d5a2be779b8aa2374f454f81a0c2064f7306bfd4b6d8f79cae7faadc08ba4e5a')
+source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/${_qtver}/single/${_pkgfn}.tar.xz"
+         qt6-doc-destdir.patch::"https://code.qt.io/cgit/qt/qtbase.git/patch/?id=30ba1855"
+         qt6-doc-bindir.patch)
+sha256sums=('3b35a834491408e74c4ea97c6599e44d0657fcd00a0709083815d25a507d6899'
+            '4ded3d934f42cf04d6707857a55ab0ab19abac262b48057b979c3a1710b0ae12'
+            '60eebdf88559fefdb2b7c65b5f4ec091942aa1ffa371bedb4080545383b46109')
 
 prepare() {
-  mkdir -p $_pkgfn/{qtbase,qttools}/bin
-  ln -s /usr/lib/qt6/bin/{uic,rcc} $_pkgfn/qtbase/bin
-  ln -s /usr/lib/qt6/bin/{qtattributionsscanner,qdoc,qhelpgenerator} $_pkgfn/qttools/bin
+  patch -d $_pkgfn/qtbase -p1 -i ../../qt6-doc-bindir.patch # Use installed tools
+  patch -d $_pkgfn/qtbase -p1 -i ../../qt6-doc-destdir.patch # Honor DESTDIR
 }
 
 build() {
-# Use qmake, see https://bugreports.qt.io/browse/QTBUG-87382
-  cd $_pkgfn
-  ./configure -confirm-license -opensource \
-    -prefix /usr \
-    -docdir /usr/share/doc/qt6 \
-    -headerdir /usr/include/qt6 \
-    -archdatadir /usr/lib/qt6 \
-    -datadir /usr/share/qt6 \
-    -bindir /usr/lib/qt6/bin \
-    -sysconfdir /etc/xdg \
-    -nomake examples
-  export PATH="/usr/lib/qt6/bin:$PATH"
-  make docs
+  cmake -B build -S $_pkgfn \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DINSTALL_BINDIR=lib/qt6/bin \
+    -DINSTALL_DOCDIR=share/doc/qt6 \
+    -DINSTALL_ARCHDATADIR=lib/qt6 \
+    -DINSTALL_DATADIR=share/qt6 \
+    -DINSTALL_INCLUDEDIR=include/qt6 \
+    -DINSTALL_MKSPECSDIR=lib/qt6/mkspecs \
+    -DINSTALL_EXAMPLESDIR=share/doc/qt6/examples \
+    -DQT_FEATURE_journald=ON \
+    -DQT_FEATURE_openssl_linked=ON
+  cmake --build build --target docs
 }
 
 package_qt6-doc() {
   pkgdesc='A cross-platform application and UI framework (Documentation)'
-  cd $_pkgfn
-  INSTALL_ROOT="$pkgdir" make install_docs
+  DESTDIR="$pkgdir" cmake --build build --target install_docs
 
-  install -Dm644 LICENSE* -t "$pkgdir"/usr/share/licenses/$pkgbase
+  install -Dm644 $_pkgfn/LICENSE* -t "$pkgdir"/usr/share/licenses/$pkgbase
 }
 
 package_qt6-examples() {
