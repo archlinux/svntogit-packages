@@ -11,7 +11,7 @@ url="https://www.rasterbar.com/products/libtorrent/"
 arch=('x86_64')
 license=('BSD')
 depends=('boost-libs')
-makedepends=('boost' 'python2' 'python')
+makedepends=('boost' 'python')
 options=('!emptydirs')
 source=(https://github.com/arvidn/libtorrent/releases/download/libtorrent-$pkgver/$pkgname-$pkgver.tar.gz
         $pkgname-cxx14-fix.patch::https://github.com/arvidn/libtorrent/pull/5026.patch)
@@ -19,7 +19,6 @@ sha512sums=('50f912d85eefa94c560613cf53d9a2cb00bf4ed800f15e7a43dca35dd941a931a68
             '94ddc3bdfc33f7b5300cc01b7c821dbd9a1433cae93bb7d467a1a732e84e7be4a6e75fbd69e88802e2eecca9c8541ecd1856d4ca2b508af224562cb05de80cca')
 
 prepare() {
-  mkdir py2 py3
   cd $pkgname-$pkgver
   # https://bugs.archlinux.org/task/67754
   patch -p1 -i ../$pkgname-cxx14-fix.patch
@@ -30,33 +29,21 @@ prepare() {
   autoreconf -if
 }
 
-_build() (
-  cd py$1
-
-  # FS#50745
-  _boost="boost_python"
-  if [ $1 -eq 3 ]; then _boost="boost_python3"; fi
-
-  PYTHON=/usr/bin/python$1 \
-  ../$pkgname-$pkgver/configure \
+build() {
+  cd $pkgname-$pkgver
+  ./configure \
     --prefix=/usr \
     --enable-python-binding \
     --enable-examples \
     --disable-static \
     --with-libiconv \
-    --with-boost-python=$_boost
-)
-
-build() {
-  _build 2
-  _build 3
+    --with-boost-python=boost_python3
 }
 
 package() {
-  make -C py2 DESTDIR="$pkgdir" install
-  make -C py3 DESTDIR="$pkgdir" install
-  install -Dm644 $pkgname-$pkgver/COPYING \
-    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 
   # Remove most example binaries
   rm "$pkgdir"/usr/bin/{*_test,*_tester,simple_client,stats_counters}
