@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.66.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL2.1)
