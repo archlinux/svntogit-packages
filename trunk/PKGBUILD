@@ -2,7 +2,7 @@
 
 pkgname=pyalpm
 pkgver=0.9.2
-pkgrel=0
+pkgrel=1
 pkgdesc="Python 3 bindings for libalpm"
 arch=('x86_64')
 url="https://gitlab.archlinux.org/archlinux/pyalpm"
