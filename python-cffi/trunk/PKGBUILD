@@ -4,7 +4,7 @@
 pkgbase=python-cffi
 pkgname=(python-cffi python2-cffi)
 pkgver=1.14.3
-pkgrel=2
+pkgrel=3
 pkgdesc="Foreign Function Interface for Python calling C code"
 arch=('x86_64')
 url="https://cffi.readthedocs.org/"
