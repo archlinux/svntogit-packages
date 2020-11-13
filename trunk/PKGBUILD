@@ -8,8 +8,8 @@ pkgdesc="A Pacman package analyzer"
 arch=('any')
 url="https://projects.archlinux.org/namcap.git/"
 license=('GPL')
-depends=('python' 'pyalpm>=0.5' 'licenses'
-         'binutils' 'elfutils' 'python-pyelftools')
+depends=('python' 'pyalpm' 'licenses' 'binutils' 'elfutils' 'python-pyelftools')
+checkdepends=('systemd')
 makedepends=('python-setuptools')
 source=(https://sources.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz
         namcap-ignore-so-no-pie.patch
