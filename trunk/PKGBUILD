@@ -179,10 +179,10 @@ package_systemd() {
   mv "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so* systemd-libs
 
   # manpages shipped with systemd-sysvcompat
-  rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,shutdown}.8
+  rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,runlevel,shutdown,telinit}.8
 
   # executable (symlinks) shipped with systemd-sysvcompat
-  rm "$pkgdir"/usr/bin/{halt,init,poweroff,reboot,shutdown}
+  rm "$pkgdir"/usr/bin/{halt,init,poweroff,reboot,runlevel,shutdown,telinit}
 
   # files shipped with systemd-resolvconf
   rm "$pkgdir"/usr/{bin/resolvconf,share/man/man1/resolvconf.1}
@@ -257,11 +257,11 @@ package_systemd-sysvcompat() {
   depends=('systemd')
 
   install -D -m0644 -t "$pkgdir"/usr/share/man/man8 \
-    build/man/{halt,poweroff,reboot,shutdown}.8
+    build/man/{halt,poweroff,reboot,runlevel,shutdown,telinit}.8
 
   install -d -m0755 "$pkgdir"/usr/bin
   ln -s ../lib/systemd/systemd "$pkgdir"/usr/bin/init
-  for tool in halt poweroff reboot shutdown; do
+  for tool in halt poweroff reboot runlevel shutdown telinit; do
     ln -s systemctl "$pkgdir"/usr/bin/$tool
   done
 }
