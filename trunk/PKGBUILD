@@ -3,7 +3,7 @@
 
 pkgname=namcap
 pkgver=3.2.10
-pkgrel=1
+pkgrel=2
 pkgdesc="A Pacman package analyzer"
 arch=('any')
 url="https://projects.archlinux.org/namcap.git/"
@@ -40,4 +40,3 @@ package() {
   cd ${pkgname}-${pkgver}
   python setup.py install --root="${pkgdir}"
 }
-
