@@ -1,0 +1,55 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=pappl
+#https://github.com/michaelrsweet/pappl/commits/master
+_commit=ec5138a15d307588881337693cc4afcaab566903 # master 2020-11-15
+pkgver=1.0b1+5+gec5138a
+pkgrel=1
+pkgdesc="a simple C-based framework/library for developing CUPS Printer Applications"
+arch=('x86_64')
+url="https://www.msweet.org/pappl/"
+license=('Apache' 'custom')
+depends=('libcups' 'libjpeg-turbo' 'pam')
+makedepends=('git')
+source=(git+"https://github.com/michaelrsweet/pappl.git#commit=$_commit")
+md5sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g' | sed 's/v//'
+}
+
+build() {
+  cd "$pkgname" #-$pkgver"
+
+  # The build system uses only DSOFLAGS but not LDFLAGS to build some libraries.
+  export DSOFLAGS=${LDFLAGS}
+
+  ./configure --prefix=/usr
+  make
+}
+
+check() {
+  cd "$pkgname" #-$pkgver"
+#  make check
+
+  # there's currently  no real test suite, 
+  # the tool is only useful outside the fakeroot envireonment - when packaging it crashes:
+  # testpappl: client.c:771: avahi_client_get_host_name_fqdn: Assertion `client' failed.
+  # /startdir/PKGBUILD: line 43:  1878 Aborted                 (core dumped) ./testsuite/testpappl
+
+  # run it later outside fakeroot!
+  #./testsuite/testpappl 
+}
+
+package() {
+  cd "$pkgname" #-$pkgver"
+  make DESTDIR="$pkgdir/" install
+
+  # install the testing tool
+  install -Dm755 testsuite/testpappl -t "$pkgdir"/usr/bin
+  # install docs
+  install -Dm644 doc/* -t "$pkgdir"/usr/share/doc/$pkgname
+  # add license + exception
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" {LICENSE,NOTICE}
+}
