@@ -1,0 +1,70 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=cups-filters
+_commit=2aa4af5e282ad043ef289f31e99814b5995cbc80 # master 2020-11-13
+pkgver=1.27.5+256+g2aa4af5e
+pkgrel=1
+pkgdesc="OpenPrinting CUPS Filters"
+arch=('x86_64')
+url="https://wiki.linuxfoundation.org/openprinting/cups-filters"
+license=('custom')
+depends=('lcms2' 'poppler' 'qpdf' 'imagemagick' 'liblouis' 'ijs' 'libcups>=2.2.6-2' 'systemd')
+makedepends=('ghostscript' 'ttf-dejavu' 'python' 'mupdf-tools' 'psutils' 'git') # ttf-dejavu for make check
+optdepends=('ghostscript: for non-PostScript printers to print with CUPS to convert PostScript to raster images'
+	    'foomatic-db: drivers use Ghostscript to convert PostScript to a printable form directly'
+	    'foomatic-db-engine: drivers use Ghostscript to convert PostScript to a printable form directly'
+	    'foomatic-db-nonfree: drivers use Ghostscript to convert PostScript to a printable form directly'
+	    'antiword: to convert MS Word documents'
+	    'docx2txt: to convert Microsoft OOXML text from DOCX files')
+backup=(etc/cups/cups-browsed.conf)
+#source=(https://www.openprinting.org/download/cups-filters/$pkgname-$pkgver.tar.xz)
+source=("git+https://github.com/OpenPrinting/cups-filters#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  #git describe --tags | sed 's/-/+/g' | sed 's/v//'
+  git describe --tags | sed 's/release-1-27-5/1.27.5/;s/-/+/g'
+  #git rev-list --count HEAD # = 25
+  #printf "0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)" # 0.r25.2e43897
+}
+
+prepare() {
+  cd "$pkgname" 
+  autoreconf -vfi
+}
+
+build() {
+  cd "$pkgname" #-$pkgver
+  ./configure --prefix=/usr  \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin \
+    --localstatedir=/var \
+    --with-rcdir=no \
+    --enable-avahi \
+    --with-browseremoteprotocols=DNSSD,CUPS \
+    --with-test-font-path=/usr/share/fonts/TTF/DejaVuSans.ttf
+  make -j1 V=1
+}
+
+check() {
+  cd "$pkgname" #-$pkgver
+  make check
+}
+
+package() {
+  cd "$pkgname" #-$pkgver
+  make DESTDIR="$pkgdir/" install
+  
+  # add upstream systemd support file
+  install -Dm644 utils/cups-browsed.service "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
+  sed -i "s|/usr/sbin/cups-browsed|/usr/bin/cups-browsed|" "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
+  #sed -i "s|cups.service|org.cups.cupsd.service|g" "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
+  
+  # use cups group from cups pkg FS#56818
+  chgrp -R 209 "${pkgdir}"/etc/cups
+
+  # license
+  mkdir -p "${pkgdir}"/usr/share/licenses/${pkgname}
+  install -m644 "${srcdir}"/${pkgname}-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
