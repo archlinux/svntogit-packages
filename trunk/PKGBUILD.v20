@@ -1,14 +1,14 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=cups-filters
-_commit=2aa4af5e282ad043ef289f31e99814b5995cbc80 # master 2020-11-13
-pkgver=1.27.5+256+g2aa4af5e
+_commit=52c6150ffd0325c60b04bf5f34d7764899f855cd # master 2020-11-16
+pkgver=1.27.5+259+g52c6150f
 pkgrel=1
 pkgdesc="OpenPrinting CUPS Filters"
 arch=('x86_64')
 url="https://wiki.linuxfoundation.org/openprinting/cups-filters"
 license=('custom')
-depends=('lcms2' 'poppler' 'qpdf' 'imagemagick' 'liblouis' 'ijs' 'libcups>=2.2.6-2' 'systemd')
+depends=('lcms2' 'poppler' 'qpdf' 'imagemagick' 'liblouis' 'ijs' 'libcups' 'systemd')
 makedepends=('ghostscript' 'ttf-dejavu' 'python' 'mupdf-tools' 'psutils' 'git') # ttf-dejavu for make check
 optdepends=('ghostscript: for non-PostScript printers to print with CUPS to convert PostScript to raster images'
 	    'foomatic-db: drivers use Ghostscript to convert PostScript to a printable form directly'
@@ -18,8 +18,11 @@ optdepends=('ghostscript: for non-PostScript printers to print with CUPS to conv
 	    'docx2txt: to convert Microsoft OOXML text from DOCX files')
 backup=(etc/cups/cups-browsed.conf)
 #source=(https://www.openprinting.org/download/cups-filters/$pkgname-$pkgver.tar.xz)
-source=("git+https://github.com/OpenPrinting/cups-filters#commit=$_commit")
-sha256sums=('SKIP')
+source=("git+https://github.com/OpenPrinting/cups-filters#commit=$_commit"
+        test.patch)
+#sha256sums=('SKIP')
+sha256sums=('SKIP'
+            'c3236df810b329ddf276d707a7b24bb88e727bb050c3eaa2399575ca078ded4f')
 
 pkgver() {
   cd $pkgname
@@ -31,11 +34,16 @@ pkgver() {
 
 prepare() {
   cd "$pkgname" 
+  patch -Np1 -i ../test.patch
   autoreconf -vfi
 }
 
 build() {
   cd "$pkgname" #-$pkgver
+
+  # The build system uses only DSOFLAGS but not LDFLAGS to build some libraries.
+#  export DSOFLAGS=${LDFLAGS}
+  
   ./configure --prefix=/usr  \
     --sysconfdir=/etc \
     --sbindir=/usr/bin \
@@ -44,12 +52,19 @@ build() {
     --enable-avahi \
     --with-browseremoteprotocols=DNSSD,CUPS \
     --with-test-font-path=/usr/share/fonts/TTF/DejaVuSans.ttf
+
+#  make -qp | awk -F':' '/^[a-zA-Z0-9][^$#\/\t=]*:([^=]|$)/ {split($1,A,/ /);for(i in A)print A[i]}' | grep ^install
+#  return 1
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  
   make -j1 V=1
+  #make V=1
 }
 
 check() {
   cd "$pkgname" #-$pkgver
-  make check
+  make -j1 check # || /bin/true
 }
 
 package() {
@@ -66,5 +81,6 @@ package() {
 
   # license
   mkdir -p "${pkgdir}"/usr/share/licenses/${pkgname}
-  install -m644 "${srcdir}"/${pkgname}-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+  #install -m644 "${srcdir}"/${pkgname}-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+  #install -m644 "${srcdir}"/${pkgname}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
 }
