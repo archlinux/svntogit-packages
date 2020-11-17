@@ -1,8 +1,8 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=cups-filters
-_commit=52c6150ffd0325c60b04bf5f34d7764899f855cd # master 2020-11-16
-pkgver=1.27.5+259+g52c6150f
+_commit=378a821080ecb140a1319ee2be4cacc1150e82d6 # master 2020-11-16
+pkgver=1.27.5+260+g378a8210
 pkgrel=1
 pkgdesc="OpenPrinting CUPS Filters"
 arch=('x86_64')
@@ -19,10 +19,9 @@ optdepends=('ghostscript: for non-PostScript printers to print with CUPS to conv
 backup=(etc/cups/cups-browsed.conf)
 #source=(https://www.openprinting.org/download/cups-filters/$pkgname-$pkgver.tar.xz)
 source=("git+https://github.com/OpenPrinting/cups-filters#commit=$_commit"
-        test.patch)
-#sha256sums=('SKIP')
+	buildfix.diff)
 sha256sums=('SKIP'
-            'c3236df810b329ddf276d707a7b24bb88e727bb050c3eaa2399575ca078ded4f')
+            '4dcb21b719df28f1b275aef091014420dce2b57fbb1dacabd1eb067167629bd0')
 
 pkgver() {
   cd $pkgname
@@ -34,16 +33,12 @@ pkgver() {
 
 prepare() {
   cd "$pkgname" 
-  patch -Np1 -i ../test.patch
+  patch -Np1 -i ../buildfix.diff
   autoreconf -vfi
 }
 
 build() {
   cd "$pkgname" #-$pkgver
-
-  # The build system uses only DSOFLAGS but not LDFLAGS to build some libraries.
-#  export DSOFLAGS=${LDFLAGS}
-  
   ./configure --prefix=/usr  \
     --sysconfdir=/etc \
     --sbindir=/usr/bin \
@@ -57,14 +52,12 @@ build() {
 #  return 1
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  
-  make -j1 V=1
-  #make V=1
+  make #V=1
 }
 
 check() {
   cd "$pkgname" #-$pkgver
-  make -j1 check # || /bin/true
+  make check
 }
 
 package() {
@@ -74,7 +67,6 @@ package() {
   # add upstream systemd support file
   install -Dm644 utils/cups-browsed.service "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
   sed -i "s|/usr/sbin/cups-browsed|/usr/bin/cups-browsed|" "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
-  #sed -i "s|cups.service|org.cups.cupsd.service|g" "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
   
   # use cups group from cups pkg FS#56818
   chgrp -R 209 "${pkgdir}"/etc/cups
@@ -82,5 +74,5 @@ package() {
   # license
   mkdir -p "${pkgdir}"/usr/share/licenses/${pkgname}
   #install -m644 "${srcdir}"/${pkgname}-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
-  #install -m644 "${srcdir}"/${pkgname}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+  install -m644 "${srcdir}"/${pkgname}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
 }
