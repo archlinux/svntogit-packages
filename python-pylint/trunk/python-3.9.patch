@@ -1,0 +1,615 @@
+From c9be321222e0c765fe0aaff2aee2e0ba1552b22d Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Fri, 9 Oct 2020 23:41:22 +0200
+Subject: [PATCH 1/6] Handle class decorators during typing checks.
+
+---
+ CONTRIBUTORS.txt                     |  2 +
+ ChangeLog                            |  4 ++
+ doc/development_guide/contribute.rst |  5 ++-
+ pylint/checkers/typecheck.py         | 11 +++++-
+ tests/checkers/unittest_typecheck.py | 57 ++++++++++++++++++++++++++++
+ 5 files changed, 77 insertions(+), 2 deletions(-)
+
+diff --git a/pylint/checkers/typecheck.py b/pylint/checkers/typecheck.py
+index 0e669ec33..17dcd50c2 100644
+--- a/pylint/checkers/typecheck.py
++++ b/pylint/checkers/typecheck.py
+@@ -65,7 +65,7 @@
+ import astroid.arguments
+ import astroid.context
+ import astroid.nodes
+-from astroid import bases, decorators, exceptions, modutils, objects
++from astroid import bases, decorators, exceptions, helpers, modutils, objects
+ from astroid.interpreter import dunder_lookup
+ 
+ from pylint.checkers import BaseChecker, utils
+@@ -1720,9 +1720,18 @@ def visit_subscript(self, node):
+             return
+ 
+         inferred = safe_infer(node.value)
++
+         if inferred is None or inferred is astroid.Uninferable:
+             return
+ 
++        if inferred.decorators:
++            first_decorator = helpers.safe_infer(inferred.decorators.nodes[0])
++            if isinstance(first_decorator, astroid.ClassDef):
++                inferred = first_decorator.instantiate_class()
++            else:
++                return  # It would be better to handle function
++                # decorators, but let's start slow.
++
+         if not supported_protocol(inferred):
+             self.add_message(msg, args=node.value.as_string(), node=node.value)
+ 
+diff --git a/tests/checkers/unittest_typecheck.py b/tests/checkers/unittest_typecheck.py
+index 346f5f38d..500ae60d9 100644
+--- a/tests/checkers/unittest_typecheck.py
++++ b/tests/checkers/unittest_typecheck.py
+@@ -24,6 +24,7 @@
+ import pytest
+ 
+ from pylint.checkers import typecheck
++from pylint.interfaces import UNDEFINED
+ from pylint.testutils import CheckerTestCase, Message, set_config
+ 
+ try:
+@@ -286,6 +287,62 @@ def test_typing_namedtuple_unsubscriptable_object_issue1295(self):
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
++    def test_typing_option_object_is_subscriptable_issue3882(self):
++        module = astroid.parse(
++            """
++        import typing
++        test = typing.Optional[int]
++        """
++        )
++        subscript = module.body[-1].value
++        with self.assertNoMessages():
++            self.checker.visit_subscript(subscript)
++
++    def test_decorated_by_a_subscriptable_class_issue3882(self):
++        module = astroid.parse(
++            """
++        class Deco:
++            def __init__(self, f):
++                self.f = f
++
++            def __getitem__(self, item):
++                return item
++        @Deco
++        def decorated():
++            ...
++
++        test = decorated[None]
++        """
++        )
++        subscript = module.body[-1].value
++        with self.assertNoMessages():
++            self.checker.visit_subscript(subscript)
++
++    def test_decorated_by_an_unsubscriptable_class_issue3882(self):
++        module = astroid.parse(
++            """
++        class Deco:
++            def __init__(self, f):
++                self.f = f
++
++        @Deco
++        def decorated():
++            ...
++
++        test = decorated[None]
++        """
++        )
++        subscript = module.body[-1].value
++        with self.assertAddsMessages(
++            Message(
++                "unsubscriptable-object",
++                node=subscript.value,
++                args="decorated",
++                confidence=UNDEFINED,
++            )
++        ):
++            self.checker.visit_subscript(subscript)
++
+     def test_staticmethod_multiprocessing_call(self):
+         """Make sure not-callable isn't raised for descriptors
+ 
+
+From bdd1a7eb11f79a5ae67c170e794aa256b8af645b Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Fri, 13 Nov 2020 13:33:00 +0100
+Subject: [PATCH 2/6] Adding two more tests, with stacks of decorators.
+
+---
+ tests/checkers/unittest_typecheck.py | 60 ++++++++++++++++++++++++++++
+ 1 file changed, 60 insertions(+)
+
+diff --git a/tests/checkers/unittest_typecheck.py b/tests/checkers/unittest_typecheck.py
+index 500ae60d9..011447fd4 100644
+--- a/tests/checkers/unittest_typecheck.py
++++ b/tests/checkers/unittest_typecheck.py
+@@ -318,6 +318,66 @@ def decorated():
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
++    def test_decorated_by_subscriptable_then_unsubscriptable_class_issue3882(self):
++        module = astroid.parse(
++            """
++        class Unsubscriptable:
++            def __init__(self, f):
++                self.f = f
++
++        class Subscriptable:
++            def __init__(self, f):
++                self.f = f
++
++            def __getitem__(self, item):
++                return item
++
++        @Unsubscriptable
++        @Subscriptable
++        def decorated():
++            ...
++
++        test = decorated[None]
++        # TypeError: 'Unsubscriptable' object is not subscriptable
++        """
++        )
++        subscript = module.body[-1].value
++        with self.assertAddsMessages(
++            Message(
++                "unsubscriptable-object",
++                node=subscript.value,
++                args="decorated",
++                confidence=UNDEFINED,
++            )
++        ):
++            self.checker.visit_subscript(subscript)
++
++    def test_decorated_by_unsubscriptable_then_subscriptable_class_issue3882(self):
++        module = astroid.parse(
++            """
++        class Unsubscriptable:
++            def __init__(self, f):
++                self.f = f
++
++        class Subscriptable:
++            def __init__(self, f):
++                self.f = f
++
++            def __getitem__(self, item):
++                return item
++
++        @Subscriptable
++        @Unsubscriptable
++        def decorated():
++            ...
++
++        test = decorated[None]
++        """
++        )
++        subscript = module.body[-1].value
++        with self.assertNoMessages():
++            self.checker.visit_subscript(subscript)
++
+     def test_decorated_by_an_unsubscriptable_class_issue3882(self):
+         module = astroid.parse(
+             """
+
+From 48b57104cd7958bc483d143e217273ce3503884d Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Fri, 13 Nov 2020 13:49:07 +0100
+Subject: [PATCH 3/6] Refactor tests.
+
+---
+ tests/checkers/unittest_typecheck.py | 80 +++++++++++++---------------
+ 1 file changed, 36 insertions(+), 44 deletions(-)
+
+diff --git a/tests/checkers/unittest_typecheck.py b/tests/checkers/unittest_typecheck.py
+index 011447fd4..688b3c3c0 100644
+--- a/tests/checkers/unittest_typecheck.py
++++ b/tests/checkers/unittest_typecheck.py
+@@ -287,7 +287,28 @@ def test_typing_namedtuple_unsubscriptable_object_issue1295(self):
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
+-    def test_typing_option_object_is_subscriptable_issue3882(self):
++    def test_issue3882_class_decorators(self):
++        decorators = """
++        class Unsubscriptable:
++            def __init__(self, f):
++                self.f = f
++
++        class Subscriptable:
++            def __init__(self, f):
++                self.f = f
++
++            def __getitem__(self, item):
++                return item
++        """
++        self.typing_option_object_is_subscriptable(decorators)
++
++        self.decorated_by_a_subscriptable_class(decorators)
++        self.decorated_by_an_unsubscriptable_class(decorators)
++
++        self.decorated_by_subscriptable_then_unsubscriptable_class(decorators)
++        self.decorated_by_unsubscriptable_then_subscriptable_class(decorators)
++
++    def typing_option_object_is_subscriptable(self, decorators):
+         module = astroid.parse(
+             """
+         import typing
+@@ -298,16 +319,11 @@ def test_typing_option_object_is_subscriptable_issue3882(self):
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
+-    def test_decorated_by_a_subscriptable_class_issue3882(self):
++    def decorated_by_a_subscriptable_class(self, decorators):
+         module = astroid.parse(
+-            """
+-        class Deco:
+-            def __init__(self, f):
+-                self.f = f
+-
+-            def __getitem__(self, item):
+-                return item
+-        @Deco
++            decorators
++            + """
++        @Subscriptable
+         def decorated():
+             ...
+ 
+@@ -318,27 +334,16 @@ def decorated():
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
+-    def test_decorated_by_subscriptable_then_unsubscriptable_class_issue3882(self):
++    def decorated_by_subscriptable_then_unsubscriptable_class(self, decorators):
+         module = astroid.parse(
+-            """
+-        class Unsubscriptable:
+-            def __init__(self, f):
+-                self.f = f
+-
+-        class Subscriptable:
+-            def __init__(self, f):
+-                self.f = f
+-
+-            def __getitem__(self, item):
+-                return item
+-
++            decorators
++            + """
+         @Unsubscriptable
+         @Subscriptable
+         def decorated():
+             ...
+ 
+         test = decorated[None]
+-        # TypeError: 'Unsubscriptable' object is not subscriptable
+         """
+         )
+         subscript = module.body[-1].value
+@@ -352,20 +357,10 @@ def decorated():
+         ):
+             self.checker.visit_subscript(subscript)
+ 
+-    def test_decorated_by_unsubscriptable_then_subscriptable_class_issue3882(self):
++    def decorated_by_unsubscriptable_then_subscriptable_class(self, decorators):
+         module = astroid.parse(
+-            """
+-        class Unsubscriptable:
+-            def __init__(self, f):
+-                self.f = f
+-
+-        class Subscriptable:
+-            def __init__(self, f):
+-                self.f = f
+-
+-            def __getitem__(self, item):
+-                return item
+-
++            decorators
++            + """
+         @Subscriptable
+         @Unsubscriptable
+         def decorated():
+@@ -378,14 +373,11 @@ def decorated():
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
+-    def test_decorated_by_an_unsubscriptable_class_issue3882(self):
++    def decorated_by_an_unsubscriptable_class(self, decorators):
+         module = astroid.parse(
+-            """
+-        class Deco:
+-            def __init__(self, f):
+-                self.f = f
+-
+-        @Deco
++            decorators
++            + """
++        @Unsubscriptable
+         def decorated():
+             ...
+ 
+
+From d9fefa7e7b69646db37cb0fa4e731f9a71cd3e92 Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Fri, 13 Nov 2020 13:58:32 +0100
+Subject: [PATCH 4/6] Few more tests.
+
+---
+ tests/checkers/unittest_typecheck.py | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/tests/checkers/unittest_typecheck.py b/tests/checkers/unittest_typecheck.py
+index 688b3c3c0..e9cd3e696 100644
+--- a/tests/checkers/unittest_typecheck.py
++++ b/tests/checkers/unittest_typecheck.py
+@@ -300,7 +300,8 @@ def __init__(self, f):
+             def __getitem__(self, item):
+                 return item
+         """
+-        self.typing_option_object_is_subscriptable(decorators)
++        for generic in "Optional", "List", "ClassVar", "Final", "Literal":
++            self.typing_objects_are_subscriptable(generic)
+ 
+         self.decorated_by_a_subscriptable_class(decorators)
+         self.decorated_by_an_unsubscriptable_class(decorators)
+@@ -308,12 +309,14 @@ def __getitem__(self, item):
+         self.decorated_by_subscriptable_then_unsubscriptable_class(decorators)
+         self.decorated_by_unsubscriptable_then_subscriptable_class(decorators)
+ 
+-    def typing_option_object_is_subscriptable(self, decorators):
++    def typing_objects_are_subscriptable(self, generic):
+         module = astroid.parse(
+             """
+         import typing
+-        test = typing.Optional[int]
+-        """
++        test = typing.{}[int]
++        """.format(
++                generic
++            )
+         )
+         subscript = module.body[-1].value
+         with self.assertNoMessages():
+
+From d91aa7b36822456797164b9c17ad82888b9496ea Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Sun, 15 Nov 2020 23:15:57 +0100
+Subject: [PATCH 5/6] FIX: inferred.decorators does not exist on Module object.
+
+---
+ pylint/checkers/typecheck.py         |  2 +-
+ tests/checkers/unittest_typecheck.py | 20 ++++++++++++++++++++
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/pylint/checkers/typecheck.py b/pylint/checkers/typecheck.py
+index 17dcd50c2..0c6a5cbf2 100644
+--- a/pylint/checkers/typecheck.py
++++ b/pylint/checkers/typecheck.py
+@@ -1724,7 +1724,7 @@ def visit_subscript(self, node):
+         if inferred is None or inferred is astroid.Uninferable:
+             return
+ 
+-        if inferred.decorators:
++        if getattr(inferred, "decorators", None):
+             first_decorator = helpers.safe_infer(inferred.decorators.nodes[0])
+             if isinstance(first_decorator, astroid.ClassDef):
+                 inferred = first_decorator.instantiate_class()
+diff --git a/tests/checkers/unittest_typecheck.py b/tests/checkers/unittest_typecheck.py
+index e9cd3e696..f4a35e845 100644
+--- a/tests/checkers/unittest_typecheck.py
++++ b/tests/checkers/unittest_typecheck.py
+@@ -303,12 +303,32 @@ def __getitem__(self, item):
+         for generic in "Optional", "List", "ClassVar", "Final", "Literal":
+             self.typing_objects_are_subscriptable(generic)
+ 
++        self.getitem_on_modules()
+         self.decorated_by_a_subscriptable_class(decorators)
+         self.decorated_by_an_unsubscriptable_class(decorators)
+ 
+         self.decorated_by_subscriptable_then_unsubscriptable_class(decorators)
+         self.decorated_by_unsubscriptable_then_subscriptable_class(decorators)
+ 
++    def getitem_on_modules(self):
++        """Mainly validate the code won't crash if we're not having a function."""
++        module = astroid.parse(
++            """
++        import collections
++        test = collections[int]
++        """
++        )
++        subscript = module.body[-1].value
++        with self.assertAddsMessages(
++            Message(
++                "unsubscriptable-object",
++                node=subscript.value,
++                args="collections",
++                confidence=UNDEFINED,
++            )
++        ):
++            self.checker.visit_subscript(subscript)
++
+     def typing_objects_are_subscriptable(self, generic):
+         module = astroid.parse(
+             """
+
+From 72b3caad0181bf97747bea5ca8356287651a9a6c Mon Sep 17 00:00:00 2001
+From: Julien Palard <julien@palard.fr>
+Date: Sun, 15 Nov 2020 23:30:32 +0100
+Subject: [PATCH 6/6] Too much test per class.
+
+---
+ tests/checkers/unittest_typecheck.py | 147 ++++++++++++++-------------
+ 1 file changed, 76 insertions(+), 71 deletions(-)
+
+diff --git a/tests/checkers/unittest_typecheck.py b/tests/checkers/unittest_typecheck.py
+index f4a35e845..b33a491e0 100644
+--- a/tests/checkers/unittest_typecheck.py
++++ b/tests/checkers/unittest_typecheck.py
+@@ -287,6 +287,82 @@ def test_typing_namedtuple_unsubscriptable_object_issue1295(self):
+         with self.assertNoMessages():
+             self.checker.visit_subscript(subscript)
+ 
++    def test_staticmethod_multiprocessing_call(self):
++        """Make sure not-callable isn't raised for descriptors
++
++        astroid can't process descriptors correctly so
++        pylint needs to ignore not-callable for them
++        right now
++
++        Test for https://github.com/PyCQA/pylint/issues/1699
++        """
++        call = astroid.extract_node(
++            """
++        import multiprocessing
++        multiprocessing.current_process() #@
++        """
++        )
++        with self.assertNoMessages():
++            self.checker.visit_call(call)
++
++    def test_not_callable_uninferable_property(self):
++        """Make sure not-callable isn't raised for uninferable
++        properties
++        """
++        call = astroid.extract_node(
++            """
++        class A:
++            @property
++            def call(self):
++                return undefined
++
++        a = A()
++        a.call() #@
++        """
++        )
++        with self.assertNoMessages():
++            self.checker.visit_call(call)
++
++    def test_descriptor_call(self):
++        call = astroid.extract_node(
++            """
++        def func():
++            pass
++
++        class ADescriptor:
++            def __get__(self, instance, owner):
++                return func
++
++        class AggregateCls:
++            a = ADescriptor()
++
++        AggregateCls().a() #@
++        """
++        )
++        with self.assertNoMessages():
++            self.checker.visit_call(call)
++
++    def test_unknown_parent(self):
++        """Make sure the callable check does not crash when a node's parent
++        cannot be determined.
++        """
++        call = astroid.extract_node(
++            """
++        def get_num(n):
++            return 2 * n
++        get_num(10)()
++        """
++        )
++        with self.assertAddsMessages(
++            Message("not-callable", node=call, args="get_num(10)")
++        ):
++            self.checker.visit_call(call)
++
++
++class TestTypeCheckerOnDecorators(CheckerTestCase):
++    "Tests for pylint.checkers.typecheck on decorated functions."
++    CHECKER_CLASS = typecheck.TypeChecker
++
+     def test_issue3882_class_decorators(self):
+         decorators = """
+         class Unsubscriptable:
+@@ -417,74 +493,3 @@ def decorated():
+             )
+         ):
+             self.checker.visit_subscript(subscript)
+-
+-    def test_staticmethod_multiprocessing_call(self):
+-        """Make sure not-callable isn't raised for descriptors
+-
+-        astroid can't process descriptors correctly so
+-        pylint needs to ignore not-callable for them
+-        right now
+-
+-        Test for https://github.com/PyCQA/pylint/issues/1699
+-        """
+-        call = astroid.extract_node(
+-            """
+-        import multiprocessing
+-        multiprocessing.current_process() #@
+-        """
+-        )
+-        with self.assertNoMessages():
+-            self.checker.visit_call(call)
+-
+-    def test_not_callable_uninferable_property(self):
+-        """Make sure not-callable isn't raised for uninferable
+-        properties
+-        """
+-        call = astroid.extract_node(
+-            """
+-        class A:
+-            @property
+-            def call(self):
+-                return undefined
+-
+-        a = A()
+-        a.call() #@
+-        """
+-        )
+-        with self.assertNoMessages():
+-            self.checker.visit_call(call)
+-
+-    def test_descriptor_call(self):
+-        call = astroid.extract_node(
+-            """
+-        def func():
+-            pass
+-
+-        class ADescriptor:
+-            def __get__(self, instance, owner):
+-                return func
+-
+-        class AggregateCls:
+-            a = ADescriptor()
+-
+-        AggregateCls().a() #@
+-        """
+-        )
+-        with self.assertNoMessages():
+-            self.checker.visit_call(call)
+-
+-    def test_unknown_parent(self):
+-        """Make sure the callable check does not crash when a node's parent
+-        cannot be determined.
+-        """
+-        call = astroid.extract_node(
+-            """
+-        def get_num(n):
+-            return 2 * n
+-        get_num(10)()
+-        """
+-        )
+-        with self.assertAddsMessages(
+-            Message("not-callable", node=call, args="get_num(10)")
+-        ):
+-            self.checker.visit_call(call)
