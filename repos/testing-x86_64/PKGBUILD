@@ -8,7 +8,7 @@ pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xvfb' 'xorg-server-xnes
 _commit=5c400cae1f9817045378966effa6bca91e45aead # server-1.20-branch 2020-11-09
 
 pkgver=1.20.9.r21.g5c400cae1
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
