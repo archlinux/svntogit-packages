@@ -15,7 +15,7 @@ license=('GPL2')
 options=('strip')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
 source=("https://www.kernel.org/pub/linux/utils/util-linux/v$_pkgmajor/$pkgbase-$pkgver.tar."{xz,sign}
-        '0001-mount-Add-support-for-nosymfollow-mount-option.patch'
+        '0001-libmount-don-t-use-symfollow-for-helpers-on-user-mounts.patch'
         pam-{login,common,runuser,su}
         'util-linux.sysusers'
         '60-rfkill.rules'
@@ -23,7 +23,7 @@ source=("https://www.kernel.org/pub/linux/utils/util-linux/v$_pkgmajor/$pkgbase-
         'rfkill-block_.service')
 sha256sums=('09fac242172cd8ec27f0739d8d192402c69417617091d8c6e974841568f37eed'
             'SKIP'
-            'cafa7fa04c97e88929644ecacf30b29b54bb7a647fee8f909c4f98f3e692afb0'
+            '91db684edd908dd89ce9b5f00c56789d0a0eeeb5249f1bb4578e6024491823b4'
             '993a3096c2b113e6800f2abbd5d4233ebf1a97eef423990d3187d665d3490b92'
             'fc6807842f92e9d3f792d6b64a0d5aad87995a279153ab228b1b2a64d9f32f20'
             '95b7cdc4cba17494d7b87f37f8d0937ec54c55de0e3ce9d9ab05ad5cc76bf935'
@@ -36,7 +36,7 @@ sha256sums=('09fac242172cd8ec27f0739d8d192402c69417617091d8c6e974841568f37eed'
 prepare() {
   cd "$pkgbase-$pkgver"
 
-  patch -Np1 -R < ../0001-mount-Add-support-for-nosymfollow-mount-option.patch
+  patch -Np1 < ../0001-libmount-don-t-use-symfollow-for-helpers-on-user-mounts.patch
 }
 
 build() {
