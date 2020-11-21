@@ -3,21 +3,22 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=3.38.1
+pkgver=3.38.1+44+gbd42c9c23b
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
 license=(GPL)
-depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas libcanberra
-         startup-notification zenity libsm gnome-desktop upower libxkbcommon-x11
-         gnome-settings-daemon libgudev libinput pipewire xorg-server-xwayland)
+depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
+         libcanberra startup-notification zenity libsm gnome-desktop upower
+         libxkbcommon-x11 gnome-settings-daemon libgudev libinput pipewire
+         xorg-server-xwayland graphene)
 makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 provides=(libmutter-7.so)
 groups=(gnome)
 install=mutter.install
-_commit=113446f2e9ce1d4c1ec6754512b0d0f7c9ba0955  # tags/3.38.1^0
+_commit=bd42c9c23b6f33bc3827b0ddb149ce2dcfb914ef  # gnome-3-38
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
