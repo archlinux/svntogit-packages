@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=83.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -21,10 +21,12 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
+        0002-Bug-1667736-Update-packed_simd-to-compile-on-Rust-1..patch
         $pkgname.desktop)
 sha256sums=('d69e84e8b8449f828683d274c24e03095858362bfed21b08bdd7fe715eea5398'
             'SKIP'
-            '1dba448eb1605c9dc73c22861a5394b50055909399f056baee4887b29af1b51e'
+            '6ca7ff71cb4a7c72eca39769afe8e18ec81cba36d9b570df15fc243867049243'
+            '8da91fdb08fcc6e820111acda88c8f2484ef1c5271ce32997bfd919d507a238c'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
@@ -46,6 +48,9 @@ prepare() {
 
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
   patch -Np1 -i ../0001-Use-remoting-name-for-GDK-application-names.patch
+
+  # Fix build with Rust 1.48 https://bugs.archlinux.org/task/68747
+  patch -Np1 -i ../0002-Bug-1667736-Update-packed_simd-to-compile-on-Rust-1..patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
