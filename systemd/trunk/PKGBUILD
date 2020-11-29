@@ -6,7 +6,7 @@ pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='ddbbb1a91461e173fba2677466007ee1508184af' # git rev-parse v${pkgver}
 pkgver=247
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -67,6 +67,9 @@ _backports=(
 )
 
 _reverts=(
+  # https://bugs.archlinux.org/task/68776
+  # core: serialize u->pids until the processes have been moved to the scope cgroup
+  '428a9f6f1d0396b9eacde2b38d667cbe3f15eb55'
 )
 
 prepare() {
