@@ -110,6 +110,7 @@ build() {
 
   local _meson_options=(
     -Dversion-tag="${pkgver}-${pkgrel}-arch"
+    -Dmode=release
 
     -Dgnu-efi=true
     -Dima=false
@@ -169,7 +170,6 @@ package_systemd() {
           etc/systemd/journal-upload.conf
           etc/systemd/logind.conf
           etc/systemd/networkd.conf
-          etc/systemd/oomd.conf
           etc/systemd/pstore.conf
           etc/systemd/resolved.conf
           etc/systemd/sleep.conf
