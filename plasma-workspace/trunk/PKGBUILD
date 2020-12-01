@@ -9,7 +9,7 @@ pkgver=5.20.4
 pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
-url='https://www.kde.org/workspaces/plasmadesktop/'
+url='https://kde.org/plasma-desktop/'
 license=(LGPL)
 depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appstream-qt phonon-qt5
          xorg-xrdb xorg-xsetroot kactivitymanagerd kholidays xorg-xmessage milou prison kwin
