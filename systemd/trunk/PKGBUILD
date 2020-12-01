@@ -6,7 +6,7 @@ pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='ddbbb1a91461e173fba2677466007ee1508184af' # git rev-parse v${pkgver}
 pkgver=247
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -64,12 +64,12 @@ _backports=(
   '72a4466e6e80693f4455c0c5edf946f8a440845a'
   # oom: fix oomd.conf install location
   '2bb703e440c844162cc258dfa0385c33d7bc32b3'
+
+  # scope: on unified, make sure to unwatch all PIDs once they've been moved to the cgroup scope
+  'e9eec8b5d2c106c5dd51382a155e6045c7c17c1a'
 )
 
 _reverts=(
-  # https://bugs.archlinux.org/task/68776
-  # core: serialize u->pids until the processes have been moved to the scope cgroup
-  '428a9f6f1d0396b9eacde2b38d667cbe3f15eb55'
 )
 
 prepare() {
