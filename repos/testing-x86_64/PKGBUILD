@@ -4,9 +4,9 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='ddbbb1a91461e173fba2677466007ee1508184af' # git rev-parse v${pkgver}
-pkgver=247
-pkgrel=3
+_tag='dcc360e35ecdeadfeaf8441628cfebb452acd59b' # git rev-parse v${pkgver}
+pkgver=247.1
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -60,13 +60,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # home: fix homed.conf install location
-  '72a4466e6e80693f4455c0c5edf946f8a440845a'
-  # oom: fix oomd.conf install location
-  '2bb703e440c844162cc258dfa0385c33d7bc32b3'
-
-  # scope: on unified, make sure to unwatch all PIDs once they've been moved to the cgroup scope
-  'e9eec8b5d2c106c5dd51382a155e6045c7c17c1a'
 )
 
 _reverts=(
