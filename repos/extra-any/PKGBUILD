@@ -3,7 +3,7 @@
 pkgbase=python-wstools
 pkgname=('python-wstools' 'python2-wstools')
 pkgver=0.4.10
-pkgrel=1
+pkgrel=2
 pkgdesc="WSDL parsing services package for Web Services for Python"
 arch=('any')
 url="https://github.com/pycontribs/wstools"
