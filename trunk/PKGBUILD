@@ -6,7 +6,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.24
+pkgver=2.2.25
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
@@ -29,7 +29,7 @@ validpgpkeys=(
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
         'drop-import-clean.patch'
         'avoid-beta-warning.patch')
-sha256sums=('9090b400faae34f08469d78000cfec1cee5b9c553ce11347cc96ef16eab98c46'
+sha256sums=('c55307b247af4b6f44d2916a25ffd1fb64ce2e509c3c3d028dbe7fbf309dc30a'
             'SKIP'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
