@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=11.0.0
-pkgrel=3
+pkgrel=4
 _ocaml_ver=4.11.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -15,9 +15,11 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
+        stack-clash-fixes.patch
         llvm-config.h)
 sha256sums=('913f68c898dfb4a03b397c5e11c6a2f39d0f22ed7665c9cefa87a34423a72469'
             'SKIP'
+            'bdcaa7559223bd42a381086f7cc23fc73f88ebb1966a7c235f897db0f73b7d20'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -25,6 +27,9 @@ validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstel
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
+
+  # https://bugs.llvm.org/show_bug.cgi?id=48007
+  patch -Np2 -i ../stack-clash-fixes.patch
 }
 
 build() {
