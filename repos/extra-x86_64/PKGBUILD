@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.3.1
-pkgrel=2
+pkgrel=3
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -32,7 +32,6 @@ depends=(
   libiec61883
   libmfx
   libmodplug
-  libomxil-bellagio
   libpulse
   librav1e.so
   libraw1394
@@ -68,7 +67,9 @@ depends=(
   zlib
 )
 makedepends=(
+  amf-headers
   avisynthplus
+  clang
   ffnvcodec-headers
   git
   ladspa
@@ -109,6 +110,7 @@ pkgver() {
 prepare() {
   cd ffmpeg
 
+  git cherry-pick -n 7c59e1b0f285cd7c7b35fcd71f49c5fd52cf9315 # fix build against libsrt 1.4.2
   patch -Np1 -i "${srcdir}"/vmaf-model-path.patch
 }
 
@@ -120,7 +122,10 @@ build() {
     --disable-debug \
     --disable-static \
     --disable-stripping \
+    --enable-amf \
     --enable-avisynth \
+    --enable-cuda-llvm \
+    --enable-lto \
     --enable-fontconfig \
     --enable-gmp \
     --enable-gnutls \
@@ -163,7 +168,6 @@ build() {
     --enable-libxvid \
     --enable-nvdec \
     --enable-nvenc \
-    --enable-omx \
     --enable-shared \
     --enable-version3
 
