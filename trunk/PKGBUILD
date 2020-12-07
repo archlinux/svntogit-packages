@@ -1,15 +1,15 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=noto-fonts-cjk
-pkgver=20190409
-_commit=cf29231ab8029678af4bbc1a9480e2b296a5b2d3
-pkgrel=2
+pkgver=20201206
+_commit=782eab531e724779772302b835661b7b12a6b3a8
+pkgrel=1
 pkgdesc="Google Noto CJK fonts"
 arch=(any)
 url="https://www.google.com/get/noto/"
 license=(custom:SIL)
 source=($pkgname-$pkgver.zip::"https://github.com/googlei18n/noto-cjk/archive/$_commit.zip" 70-noto-cjk.conf)
-sha256sums=('02b5de2cb3a4141fcbd92dd63e2df0d5c9ded3b5986ff41cf40644aebc519fc3'
+sha256sums=('d27c4e636364b5d8e51fce001247e95cf466be520db93c2251ed773990da60f3'
             '357e9ed6553087567ec5a28f835db5c43d3cd68a688e4677f759cca465379a32')
 
 package() {
