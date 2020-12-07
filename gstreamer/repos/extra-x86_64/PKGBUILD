@@ -2,7 +2,7 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gstreamer
-pkgver=1.18.1
+pkgver=1.18.2
 pkgrel=1
 pkgdesc="Multimedia graph framework - core"
 url="https://gstreamer.freedesktop.org/"
@@ -10,7 +10,7 @@ arch=(x86_64)
 license=(LGPL)
 depends=(libxml2 glib2 libunwind libcap libelf python)
 makedepends=(gobject-introspection git valgrind bash-completion meson gmp gsl gtk3)
-_commit=29a8099d1d4bd8717c13923e710e92e67e335353  # tags/1.18.1^0
+_commit=6a62351b8a8afce82d2ceba79f79dae6af5f15cf  # tags/1.18.2^0
 install=gstreamer.install
 source=("git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git#commit=$_commit")
 sha256sums=('SKIP')
