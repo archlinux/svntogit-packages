@@ -4,10 +4,10 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
-pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
+pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-mesa' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=20.3.0
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -38,7 +38,7 @@ build() {
     -D platforms=x11,wayland \
     -D dri-drivers=i915,i965,r100,r200,nouveau \
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,swr,iris,zink \
-    -D vulkan-drivers=amd,intel \
+    -D vulkan-drivers=amd,intel,swrast \
     -D vulkan-overlay-layer=true \
     -D vulkan-device-select-layer=true \
     -D swr-arches=avx,avx2 \
@@ -87,7 +87,7 @@ _install() {
 
 package_vulkan-mesa-layers() {
   pkgdesc="Mesa's Vulkan layers"
-  depends=('libdrm' 'libxcb' 'wayland')
+  depends=('libdrm' 'libxcb' 'wayland' 'python')
   conflicts=('vulkan-mesa-layer')
   replaces=('vulkan-mesa-layer')
 
@@ -103,7 +103,7 @@ package_vulkan-mesa-layers() {
 
 package_opencl-mesa() {
   pkgdesc="OpenCL support for AMD/ATI Radeon mesa drivers"
-  depends=('expat' 'libdrm' 'libelf' 'libclc' 'clang' 'zstd')
+  depends=('libdrm' 'libclc' 'clang')
   optdepends=('opencl-headers: headers necessary for OpenCL development')
   provides=('opencl-driver')
 
@@ -129,7 +129,7 @@ package_vulkan-intel() {
 
 package_vulkan-radeon() {
   pkgdesc="Radeon's Vulkan mesa driver"
-  depends=('wayland' 'libx11' 'libxshmfence' 'libelf' 'libdrm' 'zstd' 'llvm-libs')
+  depends=('wayland' 'libx11' 'libxshmfence' 'libelf' 'libdrm' 'llvm-libs')
   optdepends=('vulkan-mesa-layers: additional vulkan layers')
   provides=('vulkan-driver')
 
@@ -139,9 +139,21 @@ package_vulkan-radeon() {
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
 }
 
+package_vulkan-mesa() {
+  pkgdesc="Vulkan swrast driver"
+  depends=('wayland' 'libx11' 'libxshmfence' 'libdrm' 'zstd' 'llvm-libs')
+  optdepends=('vulkan-mesa-layers: additional vulkan layers')
+  provides=('vulkan-driver')
+
+  _install fakeinstall/usr/share/vulkan/icd.d/lvp_icd*.json
+  _install fakeinstall/usr/lib/libvulkan_lvp.so
+
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
+}
+
 package_libva-mesa-driver() {
   pkgdesc="VA-API implementation for gallium"
-  depends=('libdrm' 'libx11' 'llvm-libs' 'expat' 'libelf' 'libxshmfence' 'zstd')
+  depends=('libdrm' 'libx11' 'llvm-libs' 'expat' 'libelf' 'libxshmfence')
 
   _install fakeinstall/usr/lib/dri/*_drv_video.so
 
@@ -150,7 +162,7 @@ package_libva-mesa-driver() {
 
 package_mesa-vdpau() {
   pkgdesc="Mesa VDPAU drivers"
-  depends=('libdrm' 'libx11' 'llvm-libs' 'expat' 'libelf' 'libxshmfence' 'zstd')
+  depends=('libdrm' 'libx11' 'llvm-libs' 'expat' 'libelf' 'libxshmfence')
 
   _install fakeinstall/usr/lib/vdpau
 
