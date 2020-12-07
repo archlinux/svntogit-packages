@@ -3,8 +3,8 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=50.3.2
-pkgrel=4
+pkgver=51.0.0
+pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
@@ -18,7 +18,7 @@ checkdepends=('python-jaraco.envs' 'python-mock' 'python-pip' 'python-pytest-fix
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('f7845856cc563be628753bc875c36905ce75f14ff6e98a8460cfaa42b1afca27873d0ef331f027a6b5f7259043c4a66f4b3b04898e955a865bfed50d13e15514')
+sha512sums=('8374f94a409a1e4ac80fcb413cacfa7e9aa40946060ebef4ea2d7d6e4f8635c027f7cd904e2bf3b626e918a55304df4567c702e5cf62c95563f9a0604307bcff')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -40,8 +40,9 @@ prepare() {
           {} +
   done
 
-  # Fix for flake8
-  sed -i 's/import six, ordered_set/import six\nimport ordered_set/' setuptools-$pkgver/setuptools/command/sdist.py
+  # https://github.com/pypa/setuptools/issues/2466
+  sed -i '/ignore:lib2to3 package is deprecated:DeprecationWarning/a \    ignore:Creating a LegacyVersion has been deprecated and will be removed in the next major release:DeprecationWarning' \
+      setuptools-$pkgver/pytest.ini
 
   # Remove post-release tag since we are using stable tags
   sed -e '/tag_build = .post/d' \
