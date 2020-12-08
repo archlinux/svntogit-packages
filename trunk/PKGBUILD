@@ -1,8 +1,8 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 pkgname=apparmor
-pkgver=3.0.0
-pkgrel=3
+pkgver=3.0.1
+pkgrel=1
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
@@ -19,22 +19,25 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/logprof.conf'
         'etc/apparmor/notify.conf'
         'etc/apparmor/parser.conf'
-        'etc/apparmor/subdomain.conf'
         'etc/apparmor/severity.db')
-source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver%.[0-9]}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
-        "${pkgname}-3.0.0-utils_test.patch")
-sha512sums=('2465a8bc400e24e548b0589b7b022fb8325c53858429b9c54204f989d5589d7bd99c9507bde88a48f9965a55edcbac98efeeb6b93aeefe6a27afa0b7e851aea6'
+source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
+        "${pkgname}-3.0.1-python_ldflags.patch"
+)
+sha512sums=('e1073e7b2cde7cc4cefcfddce8fa5069845b5873c260b9fbd4bea2ff801708101d813ff30e23a64da36f3c6394cd9339e01a170e9add69deef2d70ecd9ed9687'
             'SKIP'
-            'cc2048d9d43a15e7f429e022b352e15a023865f0e5babdec28eec943144ef2838b882d130bee4d40198b9c1b6dbb52f7ed6dc92f5824f8c5b18c3ebe46829149')
-# AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
-validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB')
+            '04d313c5fd95e975e1df9313869166d7318560fc83218d8b0ae7c17fed31883d4a5f3334b3ad28d22864a1ac41a3ac846a38fbc6c59fec3bc6b111ddb0015890')
+b2sums=('c530d159a4139de8e59d9d975af866259b56d555e3abe2d1e2a6bfd2db57d8371d643bb93f1cd6ca96172960c09a74cc05c82d34a2e253c4c1f6ecce747f4129'
+        'SKIP'
+        '0ba81da585d4aca8cf88c08e8350e35d84b2675d53d0f435bb309fc875ddcfd3245740494da24502d5ef77be13e63863d35c04461c4e6dd8ce3ef48e69b4536b')
+validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB') # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 _core_perl="/usr/bin/core_perl"
 
 prepare() {
   cd "${pkgname}-${pkgver}"
-  # fix issue with test trying to access /var/log/wtmp
-  # https://gitlab.com/apparmor/apparmor/-/issues/120
-  patch -Np1 -i "../${pkgname}-3.0.0-utils_test.patch"
+
+  # add missing LDFLAGS for python library
+  # https://gitlab.com/apparmor/apparmor/-/issues/129
+  patch -Np1 -i ../"${pkgname}-3.0.1-python_ldflags.patch"
 
   # fix PYTHONPATH and add LD_LIBRARY_PATH for aa-logprof based check:
   # https://gitlab.com/apparmor/apparmor/issues/39
@@ -82,12 +85,13 @@ check() {
   make -C binutils check
   echo "INFO: Running check parser"
   make -C parser check
-
-  # check-logprof (included in check) fails:
-  # https://gitlab.com/apparmor/apparmor/issues/36
-  # echo "INFO: Running check-logprof profiles"
-  # make -C profiles check-logprof
-
+  # NOTE: the profiles checks are notoriously broken, so run each separately
+  echo "INFO: Running check-abstractions.d profiles"
+  make -C profiles check-abstractions.d
+#  # many hardcoded paths are not accounted for:
+#  # https://gitlab.com/apparmor/apparmor/-/issues/137
+#  echo "INFO: Running check-logprof profiles"
+#  make -C profiles check-logprof
   echo "INFO: Running check-parser profiles"
   make -C profiles check-parser
   echo "INFO: Running check utils"
