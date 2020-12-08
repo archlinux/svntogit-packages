@@ -2,7 +2,7 @@
 # Contributor: Nikolay Rysev <mad.f3ka@gmail.com>
 
 pkgname=fprintd
-pkgver=v1.90.6
+pkgver=1.90.6
 pkgrel=1
 pkgdesc="D-Bus service to access fingerprint readers"
 url="https://fprint.freedesktop.org/"
@@ -18,7 +18,7 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/^V_//;s/_/./g;s/-/+/g'
+  git describe --tags | sed 's/^v//;s/^V_//;s/_/./g;s/-/+/g'
 }
 
 prepare() {
