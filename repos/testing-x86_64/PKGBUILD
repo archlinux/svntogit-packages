@@ -6,7 +6,7 @@ pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='dcc360e35ecdeadfeaf8441628cfebb452acd59b' # git rev-parse v${pkgver}
 pkgver=247.1
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -68,6 +68,13 @@ _backports=(
   '31063db0b4842a452c6eadde5b969aaee2a0516a'
   # test: add tests for device_new_from_nulstr()
   'e6f882871568e4a331ac473871ee8a884f6e48d6'
+
+  # network: do not set broadcast if prefixlen is 31 or 32
+  'df8aa086420e6ce61e32898b2bb7c88b87fd1c43'
+  # network: fix verification for broadcast address
+  '05a7023d242b9012216c661f253df1c9c3d45b39'
+  # network: ignore broadcast address for /31 or /32 addresses
+  '2a236f9fc0ff8fb2152032551436fde74da7217a'
 )
 
 _reverts=(
