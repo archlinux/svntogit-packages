@@ -3,15 +3,15 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=12.5
+pkgver=13.1
 _majorver=${pkgver%.*}
-pkgrel=4
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
 license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
-             'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang')
+             'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
         postgresql-perl-rpath.patch
@@ -21,22 +21,22 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql-check-db-dir
         postgresql.sysusers
         postgresql.tmpfiles)
-sha256sums=('bd0d25341d9578b5473c9506300022de26370879581f5fddd243a886ce79ff95'
-            'd8173b336551d022f00792c0e2f1a52c6938a0003ce86b4f3cfd3aa84128612e'
-            'bd8e0f6ecb7c1b9b5d34eaa1d456cac20160e8350a9a151e31557a0ec7a51deb'
+sha256sums=('12345c83b89aa29808568977f5200d6da00f88a035517f925293355432ffe61f'
+            '5e355a0357d402b3d40666cf5cc4e88c4e7010382adcb573099c5e7cd04fb83a'
+            'af6186d40128e043f333da4591455bf62b7c96e80214835f5c8c60b635ea9afb'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             '25fb140b90345828dc01a4f286345757e700a47178bab03d217a7a5a79105b57'
-            'bb24b8ce8c69935b7527ed54e10a8823068e31c8aa5b8ffea81ce6993264e8db'
+            '7db9626c322928b2465aa126b48ba7f0eebd366bf2aa19c9c0a92b488cb469c5'
             '7fa8f0ef3f9d40abd4749cc327c2f52478cb6dfb6e2405bd0279c95e9ff99f12'
             '4a4c0bb9ceb156cc47e9446d8393d1f72b4fe9ea1d39ba17213359df9211da57')
-b2sums=('7f7458346a0823d155f5caea0061aa14048d6f3cac27b1ea23dba03b02a39f39314ad1d44e589520d5e287004ffd32e042fea99ebfeda24b2cc23867b402d336'
-        '7204c1ed073b7f60cd4ddf1ce0802c25ce8fa3b5a7dd0a92869775e5a25262ed5d8e0534aee8568ac93b049d6d215fd49d2a92dc487058e92273685eb5e5ba05'
-        '748515d1fcb0176dac4d74435e8fbe655989e31cc65cb2871bf05822dd5cc52b2e4014b8915f039c6f09b0230236add830ce981c7dc1b2269bdaad6620e88e8b'
+b2sums=('609ac10f87da800754223c7f7d6b02efa3ed1308a5d27cc793c937be983f4041576e20de3b2efe514e3f61dc863e6212ec01d73adb93f6bcc373a596b2946675'
+        'fbc850533af293bb4c7e3a0c6a2cef73ec95e7de03bfdf29e2cf1b697ffb018285344a5ec1b4abe12f0b7a7a8bd3fa07749a7a537f9af17bbf620f12b73f39bc'
+        '5135c5f9dafe427de8d3740d4a67c6dba2869be47dc52b4190b8aa1148e702992fde1821371b68e93b224f5805f697d490ea28ec80d7ce55e5a224551b0a6247'
         '3eab84d332d96678fe6e435ee243c8f1a82b838f601d61d3604d11e918aed7a62202edca5e476c4b9031ed284570e6fcd6c659cfdbd9624aa0019d3233755f81'
         '2209b7550acad7955102ec6922754b4046b2a2ad2a7e1cfb2cc4053c0705abac7aa7d7968eab617f50894797d06345f51c9a669926bd2a77dcf688206a2027e0'
         'a4255df47b7ac1418d20aa73aa0f6e70c7952a10d706e5523043c48b2c3b6d8e39838049dfcc826913cd0f2c06502561d1abe8b19cce7071db66139ae93a37bf'
-        '2e8efa4d5aaaba08743146a45bd2d9e136171ef6271ea665287617d31a420a5c31e401fd756a3350b81456692014b2e85a5fe87beacba782c19b31f346efc4d0'
+        '2eaf8867cc71b8e838925e1e1e2c37b5edd69c3fe7c144410a8683662ba0c342122803217d436d808e18826d28da352978e5d15dd1bc91b6b44dbaf4cfcd4d51'
         '5e9cba2f45604db83eb77c7bbb54bc499a38274be6cd97abb056c9bdf18e637a8ac354e18f41f614f7e1a2d6f13c2a0b562ab0aaebf9447cf5eb2d60e6501e12'
         '8a8e5ec24ea338b2b51b8d2be5a336ac8d4cc6b25200ed0f0d564df9942997478df0c54da2fac7b27d677774a34398f69047eecd0f97bdc0df8fe50a1b5ed74d')
 
@@ -66,13 +66,14 @@ build() {
     --with-systemd
     --with-ldap
     --with-llvm
+    --with-libxslt
     --enable-nls
     --enable-thread-safety
     --disable-rpath
   )
 
   # only build plpython3 for now
-  ./configure ${options[@]} \
+  ./configure "${options[@]}" \
     PYTHON=/usr/bin/python
   make -C src/pl/plpython all
   make -C contrib/hstore_plpython all
@@ -86,7 +87,7 @@ build() {
   make distclean
 
   # regular build with everything
-  ./configure ${options[@]} \
+  ./configure "${options[@]}" \
     PYTHON=/usr/bin/python2
   make world
 }
@@ -108,7 +109,7 @@ check() {
 package_postgresql-libs() {
   pkgdesc="Libraries for use with PostgreSQL"
   depends=('krb5' 'openssl>=1.0.0' 'readline>=6.0' 'zlib' 'libldap')
-  provides=('postgresql-client')
+  provides=('postgresql-client' 'libpq.so' 'libecpg.so' 'libecpg_compat.so' 'libpgtypes.so')
   conflicts=('postgresql-client')
 
   cd postgresql-${pkgver}
@@ -164,7 +165,8 @@ package_postgresql-docs() {
 package_postgresql() {
   pkgdesc='Sophisticated object-relational DBMS'
   backup=('etc/pam.d/postgresql' 'etc/logrotate.d/postgresql')
-  depends=("postgresql-libs>=${pkgver}" 'krb5' 'libxml2' 'readline>=6.0' 'openssl>=1.0.0' 'pam' 'icu' 'systemd-libs' 'libldap' 'llvm-libs')
+  depends=("postgresql-libs>=${pkgver}" 'krb5' 'libxml2' 'readline>=6.0'
+           'openssl>=1.0.0' 'pam' 'icu' 'systemd-libs' 'libldap' 'llvm-libs' 'libxslt')
   optdepends=('python2: for PL/Python 2 support'
               'python: for PL/Python 3 support'
               'perl: for PL/Perl support'
