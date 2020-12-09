@@ -204,7 +204,7 @@ package_qemu-block-gluster() {
 
 package_qemu-guest-agent() {
   pkgdesc="QEMU Guest Agent"
-  depends=(gcc-libs glib2 libudev.so)
+  depends=(gcc-libs glib2 libudev.so liburing)
   install=qemu-guest-agent.install
 
   install -D build-full/qga/qemu-ga "$pkgdir/usr/bin/qemu-ga"
