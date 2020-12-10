@@ -3,7 +3,7 @@
 
 pkgname=fprintd
 pkgver=1.90.7
-pkgrel=1
+pkgrel=2
 pkgdesc="D-Bus service to access fingerprint readers"
 url="https://fprint.freedesktop.org/"
 arch=(x86_64)
@@ -40,5 +40,4 @@ package() {
   depends+=(libfprint-2.so)
 
   DESTDIR="$pkgdir" meson install -C build
-  install -d -m 700 "$pkgdir/var/lib/fprint"
 }
