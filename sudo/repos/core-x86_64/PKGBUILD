@@ -5,7 +5,7 @@
 pkgname=sudo
 _sudover=1.9.4
 pkgver=${_sudover/p/.p}
-pkgrel=1
+pkgrel=2
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
 url="https://www.sudo.ws/sudo/"
@@ -18,16 +18,21 @@ backup=('etc/pam.d/sudo'
         'etc/sudoers')
 install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
+        $pkgname-runas-unknown-user.patch::https://github.com/sudo-project/sudo/commit/a7d670ee3404.patch
         sudo_logsrvd.service
         sudo.pam)
 sha256sums=('8b91bd2cc73af18a06a01406e38d154b837107be759f72e89cefeaa94e1103f0'
             'SKIP'
+            '0c0d3ff785e0743cfae614497a3792b1f9f4f4d2b750247c8bab5d0d477a702d'
             '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
 prepare() {
   cd "$srcdir/$pkgname-$_sudover"
+
+  # https://bugzilla.sudo.ws/show_bug.cgi?id=948
+  patch -Np1 -i ../$pkgname-runas-unknown-user.patch
 }
 
 build() {
