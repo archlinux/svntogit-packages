@@ -1,0 +1,51 @@
+From 040e22d005985a19a0dc435a7631f91700804ce4 Mon Sep 17 00:00:00 2001
+From: Carlos Garnacho <carlosg@gnome.org>
+Date: Thu, 10 Dec 2020 03:55:08 +0100
+Subject: [PATCH] libtracker-data: Avoid deletion of empty rows in FTS table
+
+Starting with SQLite 3.34.0, this turns into a consistency error. Ensure
+rows being deleted have actually some content before proceeding to deletion,
+and ensure we don't process individual properties one by one in the course
+of a whole rdfs:Resource deletion.
+
+Fixes: https://bugs.archlinux.org/task/68903
+---
+ src/libtracker-data/tracker-data-update.c         | 2 ++
+ src/libtracker-data/tracker-db-interface-sqlite.c | 5 +++--
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/src/libtracker-data/tracker-data-update.c b/src/libtracker-data/tracker-data-update.c
+index e97006631..cb2f39eff 100644
+--- a/src/libtracker-data/tracker-data-update.c
++++ b/src/libtracker-data/tracker-data-update.c
+@@ -1902,6 +1902,8 @@ cache_delete_resource_type_full (TrackerData  *data,
+ 		if (strcmp (tracker_class_get_uri (class), TRACKER_PREFIX_RDFS "Resource") == 0 &&
+ 		    g_hash_table_size (data->resource_buffer->tables) == 0) {
+ 			tracker_db_interface_sqlite_fts_delete_id (iface, database, data->resource_buffer->id);
++			data->resource_buffer->fts_updated = TRUE;
++
+ 			/* skip subclass query when deleting whole resource
+ 			   to improve performance */
+ 
+diff --git a/src/libtracker-data/tracker-db-interface-sqlite.c b/src/libtracker-data/tracker-db-interface-sqlite.c
+index 260b81d87..f5e91de29 100644
+--- a/src/libtracker-data/tracker-db-interface-sqlite.c
++++ b/src/libtracker-data/tracker-db-interface-sqlite.c
+@@ -2315,11 +2315,12 @@ tracker_db_interface_sqlite_fts_create_delete_all_query (TrackerDBInterface *db_
+ 	g_string_append_printf (insert_str,
+ 	                        "INSERT INTO \"%s\".fts5 (fts5, rowid %s) "
+ 	                        "SELECT 'delete', rowid %s FROM \"%s\".fts_view "
+-	                        "WHERE rowid = ?",
++	                        "WHERE rowid = ? AND COALESCE(NULL %s) IS NOT NULL",
+ 				database,
+ 	                        db_interface->fts_properties,
+ 	                        db_interface->fts_properties,
+-	                        database);
++	                        database,
++				db_interface->fts_properties);
+ 	return g_string_free (insert_str, FALSE);
+ }
+ 
+-- 
+GitLab
+
