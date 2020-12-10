@@ -2,7 +2,7 @@
 # Contributor: Nikolay Rysev <mad.f3ka@gmail.com>
 
 pkgname=fprintd
-pkgver=1.90.6
+pkgver=1.90.7
 pkgrel=1
 pkgdesc="D-Bus service to access fingerprint readers"
 url="https://fprint.freedesktop.org/"
@@ -12,7 +12,7 @@ depends=(glib2 libfprint polkit dbus dbus-glib libsystemd)
 makedepends=(gtk-doc git meson pam_wrapper python-cairo python-dbus
              python-dbusmock)
 groups=(fprint)
-_commit=52058c1ea0c3bd0eeb6e10c81af98aa687227f7f  # tags/v1.90.6^0
+_commit=4612c1f3ed6e0acb7fda392ca0e5201107e00818  # tags/v1.90.7^0
 source=("git+https://gitlab.freedesktop.org/libfprint/fprintd.git#commit=$_commit")
 sha256sums=('SKIP')
 
