@@ -2,7 +2,7 @@
 # Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 
 pkgname=archlinux-keyring
-pkgver=20201028
+pkgver=20201210
 pkgrel=1
 pkgdesc='Arch Linux PGP keyring'
 arch=(any)
@@ -10,7 +10,7 @@ url='https://projects.archlinux.org/archlinux-keyring.git/'
 license=(GPL)
 install=$pkgname.install
 source=(https://sources.archlinux.org/other/$pkgname/${pkgname}-${pkgver}.tar.gz{,.sig})
-sha256sums=('d9797e64da8446c74f3c1a69a52d35ef1d0b9ec09b9930e9f7e902bb5eac5d49'
+sha256sums=('e350246064c36911b7bb816fae4f59bc91e69912309c2ca7ad80caf6f2ba4117'
             'SKIP')
 validpgpkeys=('4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'  # Pierre Schmitz <pierre@archlinux.de>
               'A314827C4E4250A204CE6E13284FC34C8E4B1A25'  # Thomas Bächler <thomas@bchlr.de>
