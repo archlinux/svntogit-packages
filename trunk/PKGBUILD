@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=3.38.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -12,7 +12,7 @@ license=(GPL)
 depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
          libcanberra startup-notification zenity libsm gnome-desktop upower
          libxkbcommon-x11 gnome-settings-daemon libgudev libinput pipewire
-         xorg-server-xwayland graphene)
+         xorg-xwayland graphene)
 makedepends=(gobject-introspection git egl-wayland meson xorg-server sysprof)
 checkdepends=(xorg-server-xvfb)
 provides=(libmutter-7.so)
@@ -37,7 +37,6 @@ build() {
   arch-meson $pkgname build \
     -D egl_device=true \
     -D wayland_eglstream=true \
-    -D xwayland_initfd=disabled \
     -D installed_tests=false
   meson compile -C build
 }
