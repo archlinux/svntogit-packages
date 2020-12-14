@@ -1,16 +1,19 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgbase=gtkmm3
 pkgname=(gtkmm3 gtkmm3-docs)
-pkgver=3.24.2
-pkgrel=2
+pkgver=3.24.3
+pkgrel=1
 pkgdesc="C++ bindings for GTK+ 3"
-url="http://www.gtkmm.org/"
+url="https://www.gtkmm.org/"
 arch=(x86_64)
 license=(LGPL)
 depends=(gtk3 pangomm atkmm)
-makedepends=(git mm-common glibmm-docs cairomm-docs pangomm-docs atkmm-docs)
-_commit=72c50bb8629558e1f0df3d86c16e4290cc94fd5e  # tags/3.24.2^0
+makedepends=(git mm-common glibmm-docs cairomm-docs pangomm-docs atkmm-docs meson)
+checkdepends=(xorg-server-xvfb)
+options=(!emptydirs)
+_commit=a99220925b22a02d58e02fb1c5020d0c1d3ba389  # tags/3.24.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gtkmm.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -21,26 +24,29 @@ pkgver() {
 
 prepare() {
   cd gtkmm
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd gtkmm
-  ./configure --prefix=/usr --enable-maintainer-mode
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson gtkmm build -D maintainer-mode=true
+  meson compile -C build
+}
+
+check() {
+  xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
 }
 
 package_gtkmm3() {
-  cd gtkmm
-  sed -i -e 's/^doc_subdirs/#doc_subdirs/' Makefile
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
+
+  mkdir -p docs/usr/share
+  mv "$pkgdir"/usr/share/{devhelp,doc} docs/usr/share
 }
 
 package_gtkmm3-docs() {
   pkgdesc+=" (documentation)"
   depends=()
+  options=(!strip)
 
-  cd gtkmm
-  make -C docs DESTDIR="$pkgdir" install
+  mv docs/* "$pkgdir"
 }
