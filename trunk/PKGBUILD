@@ -1,5 +1,5 @@
-# Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Sven-Hendrik Haase <sh@lutzhaase.com>
 # Contributor: Imanol Celaya <ornitorrincos@archlinux-es.org>
 # Contributor: Lukas Jirkovsky <l.jirkovsky@gmail.com>
 # Contributor: Dan Vratil <progdan@progdansoft.com>
@@ -7,15 +7,16 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.13.3
+pkgver=4.14.0
 _clangver=11.0.0
 pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(LGPL)
-depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine clang=$_clangver qbs clazy syntax-highlighting yaml-cpp desktop-file-utils)
-makedepends=(llvm python)
+depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine qt5-svg qt5-quick3d qt5-serialport
+         clang=$_clangver qbs clazy syntax-highlighting yaml-cpp)
+makedepends=(cmake llvm python)
 options=(docs)
 optdepends=('qt5-doc: integrated Qt documentation'
             'qt5-examples: welcome page examples'
@@ -28,42 +29,29 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'bzr: bazaar support'
             'valgrind: analyze support'
             'perf: performer analyzer')
-source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-        qtcreator-clang-libs.patch)
-sha256sums=('7b0317ca9354284e98967e94a30a1b813db379017d28d9847847498c113df9e5'
-            '0f6d0dc41a87aae9ef371b1950f5b9d823db8b5685c6ac04a7a7ac133eb19a3f')
+source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz")
+sha256sums=('d240109351e96446ff149cbd56341ec02ba37bfa50462a85e4d02dfe6b21201e')
 
 prepare() {
-  mkdir -p build
-
   cd qt-creator-opensource-src-$pkgver
-  # fix hardcoded libexec path
-  sed -e 's|libexec\/qtcreator|lib\/qtcreator|g' -i qtcreator.pri
-  sed -e 's|libexec|lib|g' -i src/tools/tools.pro
-  # use system qbs
-  rm -r src/shared/qbs
 
-  # Fix build with clang 10
-  patch -p1 -i ../qtcreator-clang-libs.patch
+# use system qbs
+  rm -r src/shared/qbs
+# Fix linking to clang
+  sed -e 's|clangFormat|libclang|' -i src/plugins/clangformat/CMakeLists.txt  
+# Fix libexec path
+  sed -e 's|libexec/qtcreator|lib/qtcreator|' -i cmake/QtCreatorAPIInternal.cmake
 }
 
 build() {
-  cd build
-
-  qmake LLVM_INSTALL_DIR=/usr QBS_INSTALL_DIR=/usr \
-    KSYNTAXHIGHLIGHTING_LIB_DIR=/usr/lib KSYNTAXHIGHLIGHTING_INCLUDE_DIR=/usr/include/KF5/KSyntaxHighlighting \
-    CONFIG+=journald QMAKE_CFLAGS_ISYSTEM=-I \
-    DEFINES+=QBS_ENABLE_PROJECT_FILE_UPDATES \
-    "$srcdir"/qt-creator-opensource-src-$pkgver/qtcreator.pro
-  make
-  make docs
+  cmake -B build -S qt-creator-opensource-src-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DWITH_DOCS=ON
+  cmake --build build
 }
 
 package() {
-  cd build
+  DESTDIR="$pkgdir" cmake --install build
 
-  make INSTALL_ROOT="$pkgdir/usr/" install
-  make INSTALL_ROOT="$pkgdir/usr/" install_docs
-
-  install -Dm644 "$srcdir"/qt-creator-opensource-src-$pkgver/LICENSE.GPL3-EXCEPT "$pkgdir"/usr/share/licenses/qtcreator/LICENSE.GPL3-EXCEPT
+  install -Dm644 qt-creator-opensource-src-$pkgver/LICENSE.GPL3-EXCEPT "$pkgdir"/usr/share/licenses/qtcreator/LICENSE.GPL3-EXCEPT
 }
