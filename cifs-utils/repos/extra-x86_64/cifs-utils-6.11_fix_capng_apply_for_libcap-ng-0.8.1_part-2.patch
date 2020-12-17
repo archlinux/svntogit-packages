@@ -1,0 +1,58 @@
+From 0fddcee4b1b9c9f16b3cfe1b2daec87d2b8b19dd Mon Sep 17 00:00:00 2001
+From: Alexander Koch <mail@alexanderkoch.net>
+Date: Wed, 16 Dec 2020 18:02:31 +0100
+Subject: [PATCH] cifs.upcall: drop bounding capabilities only if CAP_SETPCAP
+ is given
+
+Make drop_call_capabilities() in cifs.upcall update the bounding capabilities
+only if CAP_SETCAP is present.
+
+This is an addendum to the patch recently provided in [1]. Without this
+additional change, cifs.upcall can still fail while trying to mount a CIFS
+network share with krb5:
+
+  kernel: CIFS: Attempting to mount //server.domain.lan/myshare
+  cifs.upcall[39484]: key description: cifs.spnego;0;0;39010000;ver=0x2;host=server.domain.lan>
+  cifs.upcall[39484]: ver=2
+  cifs.upcall[39484]: host=server.domain.lan
+  cifs.upcall[39484]: ip=172.22.3.14
+  cifs.upcall[39484]: sec=1
+  cifs.upcall[39484]: uid=1000
+  cifs.upcall[39484]: creduid=1000
+  cifs.upcall[39484]: user=username
+  cifs.upcall[39484]: pid=39481
+  cifs.upcall[39484]: get_cachename_from_process_env: pathname=/proc/39481/environ
+  cifs.upcall[39484]: get_cachename_from_process_env: cachename = FILE:/tmp/.krb5cc_1000
+  cifs.upcall[39484]: drop_all_capabilities: Unable to apply capability set: Success
+  cifs.upcall[39484]: Exit status 1
+
+[1] https://marc.info/?l=linux-cifs&m=160595758021261
+
+Signed-off-by: Alexander Koch <mail@alexanderkoch.net>
+Signed-off-by: Jonas Witschel <diabonas@archlinux.org>
+---
+ cifs.upcall.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/cifs.upcall.c b/cifs.upcall.c
+index 1559434..b62ab50 100644
+--- a/cifs.upcall.c
++++ b/cifs.upcall.c
+@@ -115,8 +115,13 @@ trim_capabilities(bool need_environ)
+ static int
+ drop_all_capabilities(void)
+ {
++	capng_select_t set = CAPNG_SELECT_CAPS;
++
+ 	capng_clear(CAPNG_SELECT_BOTH);
+-	if (capng_apply(CAPNG_SELECT_BOTH)) {
++	if (capng_have_capability(CAPNG_EFFECTIVE, CAP_SETPCAP)) {
++		set = CAPNG_SELECT_BOTH;
++	}
++	if (capng_apply(set)) {
+ 		syslog(LOG_ERR, "%s: Unable to apply capability set: %m\n", __func__);
+ 		return 1;
+ 	}
+-- 
+2.29.2
+
