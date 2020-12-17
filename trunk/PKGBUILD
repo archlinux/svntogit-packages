@@ -1,0 +1,97 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=gtk4
+pkgname=(gtk4 gtk4-update-icon-cache)
+pkgver=4.0.0
+pkgrel=1
+pkgdesc="GObject-based multi-platform GUI toolkit"
+arch=(x86_64)
+url="https://www.gtk.org/"
+depends=(glib2 cairo pango fribidi gdk-pixbuf2 libepoxy libgl libegl harfbuzz
+         libxkbcommon graphene iso-codes tracker3 colord wayland libxrandr
+         libx11 libxrender libxi libxext libxcursor libxdamage libxfixes
+         libxcomposite fontconfig libxinerama vulkan-icd-loader
+         libcloudproviders libcups rest json-glib ffmpeg gst-plugins-bad-libs
+         librsvg dconf shared-mime-info desktop-file-utils adwaita-icon-theme
+         cantarell-fonts)
+makedepends=(git meson gtk-doc glib2-docs wayland-protocols vulkan-headers
+             sysprof python shaderc sassc gobject-introspection pandoc)
+license=(LGPL)
+_commit=591c2f05956935adbebed5fc345a309dde2d449c  # tags/4.0.0^0
+source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
+        vulkan-fix.diff
+        gtk-query-immodules-4.0.hook
+        gtk4-update-icon-cache.{hook,script})
+sha256sums=('SKIP'
+            'b92488d5a0b078e1f3ec4a5f9ffd7bdb17690aca447cc2da1c9281478ac51d36'
+            '1e6a448b7d02d95d4ee8cdedb5052cc764a03e3cf6d7d755bff22793aba200a7'
+            'f81264107299efae62932f542a5661bef8d4e9de1c8137007cf231f0cfb085c2'
+            'de9d96decf15d0ce7d69616425146f5f850086a6f45cc8ac2ee74309408650cd')
+
+pkgver() {
+  cd gtk
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd gtk
+
+  # Remove conflicting tag
+  git tag -d 4.0
+
+  # Fix build with vulkan-headers 162
+  git apply -3 ../vulkan-fix.diff
+}
+
+build() {
+  CFLAGS+=" -DG_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS"
+  arch-meson gtk build \
+    -D broadway_backend=true \
+    -D cloudproviders=enabled \
+    -D sysprof=enabled \
+    -D tracker=enabled \
+    -D colord=enabled \
+    -D gtk_doc=true \
+    -D man-pages=true
+  meson compile -C build
+  ninja -C build g{d,s,t}k4-doc
+}
+
+package_gtk4() {
+  depends+=(gtk4-update-icon-cache)
+  provides+=(libgtk-4.so)
+  install=gtk4.install
+
+  DESTDIR="$pkgdir" meson install -C build
+
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/gtk-4.0/settings.ini" <<END
+[Settings]
+gtk-icon-theme-name = Adwaita
+gtk-theme-name = Adwaita
+gtk-font-name = Cantarell 11
+END
+
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 gtk-query-immodules-4.0.hook
+
+  # gtk-update-icon-cache is also used by other toolkits
+  mkdir -p guic/usr/{bin,share/man/man1}
+  mv {"$pkgdir",guic}/usr/bin/gtk4-update-icon-cache
+  mv {"$pkgdir",guic}/usr/share/man/man1/gtk4-update-icon-cache.1
+}
+
+package_gtk4-update-icon-cache() {
+  pkgdesc="GTK icon cache updater"
+  depends=(gdk-pixbuf2 librsvg hicolor-icon-theme)
+  provides=("gtk-update-icon-cache=$pkgver")
+  conflicts=(gtk-update-icon-cache)
+  replaces=('gtk-update-icon-cache<4.0.0')
+
+  mv -t "$pkgdir" guic/*
+  ln -s gtk4-update-icon-cache "$pkgdir/usr/bin/gtk-update-icon-cache"
+  ln -s gtk4-update-icon-cache.1 "$pkgdir/usr/share/man/man1/gtk-update-icon-cache.1"
+
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 gtk4-update-icon-cache.hook
+  install -D gtk4-update-icon-cache.script "$pkgdir/usr/share/libalpm/scripts/gtk4-update-icon-cache"
+}
+
+# vim:set ts=2 sw=2 et:
