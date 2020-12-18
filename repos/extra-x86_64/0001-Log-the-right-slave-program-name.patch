@@ -1,0 +1,127 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 18 Dec 2020 23:08:02 +0000
+Subject: [PATCH] Log the right slave program name
+
+---
+ ossp-alsap.c |  2 +-
+ ossp-padsp.c |  2 +-
+ ossp-slave.c | 40 ++++++++++++++++++++--------------------
+ ossp-slave.h |  2 +-
+ 4 files changed, 23 insertions(+), 23 deletions(-)
+
+diff --git a/ossp-alsap.c b/ossp-alsap.c
+index 72f3bd5..6b8228b 100644
+--- a/ossp-alsap.c
++++ b/ossp-alsap.c
+@@ -577,7 +577,7 @@ int main(int argc, char **argv)
+ {
+ 	int rc;
+ 
+-	ossp_slave_init(argc, argv);
++	ossp_slave_init("ossp-alsap", argc, argv);
+ 
+ 	page_size = sysconf(_SC_PAGE_SIZE);
+ 
+diff --git a/ossp-padsp.c b/ossp-padsp.c
+index 3143960..c505b57 100644
+--- a/ossp-padsp.c
++++ b/ossp-padsp.c
+@@ -1479,7 +1479,7 @@ int main(int argc, char **argv)
+ {
+ 	int rc;
+ 
+-	ossp_slave_init(argc, argv);
++	ossp_slave_init("ossp-padsp", argc, argv);
+ 
+ 	page_size = sysconf(_SC_PAGE_SIZE);
+ 
+diff --git a/ossp-slave.c b/ossp-slave.c
+index a290636..a0a9590 100644
+--- a/ossp-slave.c
++++ b/ossp-slave.c
+@@ -21,27 +21,27 @@
+ 
+ #include "ossp-slave.h"
+ 
+-static const char *usage =
+-"usage: ossp-SLAVE [options]\n"
+-"\n"
+-"proxies commands from osspd to pulseaudio\n"
+-"\n"
+-"options:\n"
+-"    -u UID            uid to use\n"
+-"    -g GID            gid to use\n"
+-"    -c CMD_FD         fd to receive commands from osspd\n"
+-"    -n NOTIFY_FD      fd to send async notifications to osspd\n"
+-"    -m MMAP_FD        fd to use for mmap\n"
+-"    -o MMAP_OFFSET    mmap offset\n"
+-"    -s MMAP_SIZE      mmap size\n"
+-"    -l LOG_LEVEL      set log level\n"
+-"    -t                enable log timestamps\n";
++#define USAGE \
++	"usage: %s [options]\n" \
++	"\n" \
++	"proxies commands from osspd to audio output\n" \
++	"\n" \
++	"options:\n" \
++	"    -u UID            uid to use\n" \
++	"    -g GID            gid to use\n" \
++	"    -c CMD_FD         fd to receive commands from osspd\n" \
++	"    -n NOTIFY_FD      fd to send async notifications to osspd\n" \
++	"    -m MMAP_FD        fd to use for mmap\n" \
++	"    -o MMAP_OFFSET    mmap offset\n" \
++	"    -s MMAP_SIZE      mmap size\n" \
++	"    -l LOG_LEVEL      set log level\n" \
++	"    -t                enable log timestamps\n"
+ 
+ char ossp_user_name[OSSP_USER_NAME_LEN];
+ int ossp_cmd_fd = -1, ossp_notify_fd = -1;
+ void *ossp_mmap_addr[2];
+ 
+-void ossp_slave_init(int argc, char **argv)
++void ossp_slave_init(const char *slave_name, int argc, char **argv)
+ {
+ 	int have_uid = 0, have_gid = 0;
+ 	uid_t uid;
+@@ -89,23 +89,23 @@ void ossp_slave_init(int argc, char **argv)
+ 	}
+ 
+ 	if (!have_uid || !have_gid || ossp_cmd_fd < 0 || ossp_notify_fd < 0) {
+-		fputs(usage, stderr);
++		fprintf(stderr, USAGE, slave_name);
+ 		_exit(1);
+ 	}
+ 
+ 	snprintf(ossp_user_name, sizeof(ossp_user_name), "uid%d", uid);
+ 	if (getpwuid_r(uid, &pw_buf, pw_sbuf, sizeof(pw_sbuf), &pw) == 0)
+ 		snprintf(ossp_user_name, sizeof(ossp_user_name), "%s",
+ 			 pw->pw_name);
+ 
+-	snprintf(ossp_log_name, sizeof(ossp_log_name), "ossp-padsp[%s:%d]",
+-		 ossp_user_name, getpid());
++	snprintf(ossp_log_name, sizeof(ossp_log_name), "%s[%s:%d]",
++		 slave_name, ossp_user_name, getpid());
+ 
+ 	if (mmap_fd >= 0) {
+ 		void *p;
+ 
+ 		if (!mmap_off || !mmap_size) {
+-			fputs(usage, stderr);
++			fprintf(stderr, USAGE, slave_name);
+ 			_exit(1);
+ 		}
+ 
+diff --git a/ossp-slave.h b/ossp-slave.h
+index 10c22cd..02522d9 100644
+--- a/ossp-slave.h
++++ b/ossp-slave.h
+@@ -19,7 +19,7 @@ extern char ossp_user_name[OSSP_USER_NAME_LEN];
+ extern int ossp_cmd_fd, ossp_notify_fd;
+ extern void *ossp_mmap_addr[2];
+ 
+-void ossp_slave_init(int argc, char **argv);
++void ossp_slave_init(const char *slave_name, int argc, char **argv);
+ int ossp_slave_process_command(int cmd_fd,
+ 			       ossp_action_fn_t const *action_fn_tbl,
+ 			       int (*action_pre_fn)(void),

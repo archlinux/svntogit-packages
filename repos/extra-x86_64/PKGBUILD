@@ -1,9 +1,9 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Jonathan Liu <net147@gmail.com>
 
 pkgname=ossp
 pkgver=1.3.2+11+g9e94d67
-pkgrel=2
+pkgrel=3
 pkgdesc="Emulate OSS device using CUSE"
 arch=(x86_64)
 url="https://sourceforge.net/projects/osspd/"
@@ -13,8 +13,12 @@ makedepends=(libpulse alsa-lib git)
 optdepends=("libpulse: PulseAudio backend"
             "alsa-lib: ALSA backend")
 _commit=9e94d673070623c955646e802d42950906b6e184  # master
-source=("git+https://github.com/heftig/osspd#commit=$_commit")
-sha256sums=('SKIP')
+source=("git+https://github.com/heftig/osspd#commit=$_commit"
+        0001-Log-the-right-slave-program-name.patch
+        0002-Hack-to-work-with-modern-PulseAudio.patch)
+sha256sums=('SKIP'
+            '102d34362ed782c74792d08741ccc4780137c3e95b0b2e4eb15073ba7f162590'
+            '900cc0d8ac2d37a42a87afec4760a2cd99e95ae022262c4a4d144ee5c1312c10')
 
 pkgver() {
   cd osspd
@@ -23,22 +27,23 @@ pkgver() {
 
 prepare() {
   cd osspd
+  git apply -3 ../*.patch
   sed -i 's|/sbin|/bin|g' Makefile
   sed -i 's|GROUP="audio"|SUBSYSTEM=="cuse", MODE="0666"|' 98-osscuse.rules
 }
 
+_make() {
+  make prefix=/usr UDEVDIR=/usr/lib/udev/rules.d "$@"
+}
+
 build() {
   cd osspd
-  make
+  _make
 }
 
 package() {
   cd osspd
-  make install \
-    DESTDIR="$pkgdir" \
-    prefix=/usr \
-    UDEVDIR=/usr/lib/udev/rules.d
-  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 README
+  _make DESTDIR="$pkgdir" install
 
   install -Dm644 /dev/stdin "$pkgdir/usr/lib/systemd/system/osspd.service" <<END
 [Unit]
@@ -56,4 +61,7 @@ cuse
 snd-seq-oss
 END
 
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 README
 }
+
+# vim:set sw=2 et:
