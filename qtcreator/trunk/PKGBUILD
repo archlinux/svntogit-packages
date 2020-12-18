@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=4.14.0
 _clangver=11.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -38,7 +38,7 @@ prepare() {
 # use system qbs
   rm -r src/shared/qbs
 # Fix linking to clang
-  sed -e 's|clangFormat|libclang|' -i src/plugins/clangformat/CMakeLists.txt  
+  sed -e 's|clangFormat|clang-cpp|' -i src/plugins/clangformat/CMakeLists.txt  
 # Fix libexec path
   sed -e 's|libexec/qtcreator|lib/qtcreator|' -i cmake/QtCreatorAPIInternal.cmake
 }
