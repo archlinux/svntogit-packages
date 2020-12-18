@@ -1,0 +1,38 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 18 Dec 2020 23:17:36 +0000
+Subject: [PATCH] Hack to work with modern PulseAudio
+
+---
+ ossp-padsp.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/ossp-padsp.c b/ossp-padsp.c
+index c505b57..b4ac097 100644
+--- a/ossp-padsp.c
++++ b/ossp-padsp.c
+@@ -22,6 +22,8 @@
+ #include <sys/stat.h>
+ #include <sys/types.h>
+ #include <unistd.h>
++#include <linux/limits.h>
++#include <stdlib.h>
+ 
+ #include <pulse/pulseaudio.h>
+ #include <sys/soundcard.h>
+@@ -1478,9 +1480,15 @@ static void action_post(void)
+ int main(int argc, char **argv)
+ {
+ 	int rc;
++	static char runtime_dir[PATH_MAX];
+ 
+ 	ossp_slave_init("ossp-padsp", argc, argv);
+ 
++	snprintf(runtime_dir, sizeof runtime_dir, "/run/user/%llu",
++		(long long unsigned) getuid());
++	if (access(runtime_dir, R_OK | X_OK) == 0)
++		setenv("XDG_RUNTIME_DIR", runtime_dir, 0);
++
+ 	page_size = sysconf(_SC_PAGE_SIZE);
+ 
+ 	mainloop = pa_threaded_mainloop_new();
