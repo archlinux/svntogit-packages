@@ -1,0 +1,92 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Dan McGee <dan@archlinux.org>
+
+pkgname=postgresql-old-upgrade
+pkgver=12.5
+_majorver=${pkgver%.*}
+pkgrel=2
+pkgdesc='PostgreSQL build for migrating between major versions with pg_upgrade'
+url='https://www.postgresql.org/'
+arch=('x86_64')
+license=('custom:PostgreSQL')
+depends=("postgresql-libs>=${_majorver}" 'libxml2' 'openssl>=1.0.0' 'pam'
+         'zlib' 'icu' 'systemd-libs' 'libldap' 'krb5' 'llvm-libs')
+makedepends=('python' 'python2' 'perl' 'tcl>=8.6.0' 'systemd' 'llvm' 'clang')
+optdepends=('python2: for PL/Python 2 support'
+            'python: for PL/Python 3 support'
+            'perl: for PL/Perl support'
+            'tcl: for PL/Tcl support')
+source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
+        icu68.patch)
+sha256sums=('bd0d25341d9578b5473c9506300022de26370879581f5fddd243a886ce79ff95'
+            'ef6e69a308254e8ee5fcf1e23a600e7165377987a76b1131f55cf41353ce6230')
+sha512sums=('9895bcb1bb26206500666ab4441e663ef83702d428b85a6ff177a4eaf44b0ae06b35d5c4da2672ccb4ec18296649af95bf2f0aed526afaa6a216a8c2d2c5627e'
+            '60ea1330ab38a0f6960aaa3ca590f1e03db65f9ea42aa9d08cbe77ed8305b2e14528834de5406c78df52579af1e03fac7980a6d026f2f6a07cf4796b44b189f0')
+b2sums=('7f7458346a0823d155f5caea0061aa14048d6f3cac27b1ea23dba03b02a39f39314ad1d44e589520d5e287004ffd32e042fea99ebfeda24b2cc23867b402d336'
+        '8392acfb26105578efaec8f0a9d6ab0499025fa9540e6b45ebf3b6873506eaf2548ca551a5a5c9a9053495239d1d831397b51b17db5d0e12917f7f558807ba72')
+
+prepare() {
+  cd postgresql-${pkgver}
+  patch -Np0 -i ../icu68.patch
+}
+
+build() {
+  cd postgresql-${pkgver}
+  local options=(
+    --prefix=/opt/pgsql-${_majorver}
+    --with-gssapi
+    --with-libxml
+    --with-openssl
+    --with-perl
+    --with-python
+    --with-tcl
+    --with-pam
+    --without-readline
+    --with-system-tzdata=/usr/share/zoneinfo
+    --with-uuid=e2fs
+    --with-icu
+    --with-systemd
+    --with-ldap
+    --with-llvm
+    --disable-nls
+    --enable-thread-safety
+  )
+
+  # only build plpython3 for now
+  ./configure "${options[@]}" \
+    PYTHON=/usr/bin/python
+  make -C src/pl/plpython all
+  make -C contrib/hstore_plpython all
+  make -C contrib/ltree_plpython all
+
+  # save plpython3 build and Makefile.global
+  cp -a src/pl/plpython{,3}
+  cp -a contrib/hstore_plpython{,3}
+  cp -a contrib/ltree_plpython{,3}
+  cp -a src/Makefile.global{,.python3}
+  make distclean
+
+  # regular build with everything
+  ./configure "${options[@]}" \
+    PYTHON=/usr/bin/python2
+  make -C src all
+  make -C contrib all
+}
+
+package() {
+  cd postgresql-${pkgver}
+  make -C src DESTDIR="${pkgdir}" install
+  make -C contrib DESTDIR="${pkgdir}" install
+
+  # install plpython3
+  mv src/Makefile.global src/Makefile.global.save
+  cp src/Makefile.global.python3 src/Makefile.global
+  touch -r src/Makefile.global.save src/Makefile.global
+  make -C src/pl/plpython3 DESTDIR="${pkgdir}" install
+  make -C contrib/hstore_plpython3 DESTDIR="${pkgdir}" install
+  make -C contrib/ltree_plpython3 DESTDIR="${pkgdir}" install
+
+  install -Dm 644 COPYRIGHT -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
