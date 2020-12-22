@@ -7,8 +7,8 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.28.0
-pkgrel=2
+pkgver=1.28.1dev+7+g3f5df3cdc6
+pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
@@ -17,9 +17,9 @@ _pppver=2.4.7
 makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver" modemmanager
              iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
-             glib2-docs iwd dnsmasq libpsl audit meson)
+             glib2-docs iwd dnsmasq openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=6f32c5c10736d194322c760b108ce7d5de44d4a0  # tags/1.28.0^0
+_commit=3f5df3cdc6c52a79f970c0a9de9200a18df6b3fb  # nm-1-28
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -57,7 +57,6 @@ build() {
     -D config_plugins_default=keyfile
 
     # handlers for resolv.conf
-    -D resolvconf=no
     -D netconfig=no
     -D config_dns_rc_manager_default=auto
 
@@ -99,6 +98,7 @@ package_networkmanager() {
               'modemmanager: cellular network support'
               'iwd: wpa_supplicant alternative'
               'dhclient: alternative DHCP client'
+              'openresolv: alternative resolv.conf manager'
               'firewalld: Firewall support')
   backup=(etc/NetworkManager/NetworkManager.conf)
   groups=(gnome)
@@ -116,7 +116,7 @@ END
   # packaged configuration
   install -Dm644 /dev/stdin "$pkgdir/usr/lib/NetworkManager/conf.d/20-connectivity.conf" <<END
 [connectivity]
-uri=http://www.archlinux.org/check_network_status.txt
+uri=http://archlinux.org/check_network_status.txt
 END
 
   shopt -s globstar
