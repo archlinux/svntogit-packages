@@ -1,8 +1,11 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=ps-printer-app
-_commit=2c3639efab94b27a2b1bb67a83d5794b6153d284 # master 2020-11-15
-pkgver=0.r27.2c3639e
+#_ps-printer-app
+_commit=a862941362488691b00bf8aad945be248ea9cc7c # master 2020-12-22
+#_cups-filters_commit=26d6884b3a7ad52d1e7afe8fc25dcd7674c1156b  # master 2020-12-22
+#_pappl_commit=4a64919a254f1ff3d3dcc7d64b1cdfe78fab4059 #  = 1.0.0
+pkgver=0.r50.a862941
 pkgrel=1
 epoch=
 pkgdesc="a Printer Application for PostScript printers that uses PAPPL to support IPP printing"
@@ -10,8 +13,13 @@ arch=('x86_64')
 url="https://github.com/OpenPrinting/ps-printer-app"
 license=('Apache')
 groups=()
-#depends=('pappl')
-makedepends=('git' 'pappl' 'cups-filters' 'libcups')
+#depends=('pappl' 'cups-filters')
+depends=('cups-filters')
+makedepends=('git' #'libcups' 
+	    # to build internal cups-filter static libs
+	     'lcms2' 'poppler' 'qpdf' 'imagemagick' 'liblouis' 'ijs' 'systemd'
+	     'ghostscript' 'ttf-dejavu' 'python' 'mupdf-tools'
+)
 checkdepends=()
 optdepends=()
 provides=()
@@ -23,9 +31,17 @@ install=
 changelog=
 #source=("$pkgname-$pkgver.tar.gz"
 #        "$pkgname-$pkgver.patch")
-source=("git+https://github.com/OpenPrinting/ps-printer-app#commit=$_commit")
+source=("git+https://github.com/OpenPrinting/ps-printer-app#commit=$_commit"
+	pappl.zip::https://github.com/michaelrsweet/pappl/archive/master.zip
+	cups-filters.zip::https://github.com/OpenPrinting/cups-filters/archive/master.zip
+#"git+https://github.com/OpenPrinting/ps-printer-app#commit=$_ps-printer-app_commit"
+	#"git+https://github.com/OpenPrinting/cups-filters#commit=$_cups-filters_commit"
+	#"git+https://github.com/michaelrsweet/pappl.git#commit=$_pappl_commit"
+	)
 noextract=()
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+            'SKIP'
+	    'SKIP')
 #validpgpkeys=()
 
 pkgver() {
@@ -40,31 +56,61 @@ pkgver() {
 #	patch -p1 -i "$srcdir/$pkgname-$pkgver.patch"
 #}
 
-In file included from ps-printer-app.c:23:
-/usr/include/ppd/ppd.h:30:12: fatal error: versioning.h: No such file or directory
-   30 | #  include "versioning.h"
-      |            ^~~~~~~~~~~~~~
-compilation terminated.
-make: *** [Makefile:37: ps-printer-app.o] Error 1
+#In file included from ps-printer-app.c:23:
+#/usr/include/ppd/ppd.h:30:12: fatal error: versioning.h: No such file or directory
+#   30 | #  include "versioning.h"
+#      |            ^~~~~~~~~~~~~~
+#compilation terminated.
+#make: *** [Makefile:37: ps-printer-app.o] Error 1
 
 
-^ new cups-filters owns that ppd.h with
+#^ new cups-filters owns that ppd.h with
 #  include "versioning.h" that should probably be 
 #  include <cups/versioning.h>
 
-
 build() {
-	cd "$pkgname" #-$pkgver"
+  cd "$pkgname"
+
+# testing-x86_64-build -r ~/arch64/chroots/ -- -I ~/arch64/packages/cups-filters-1.27.5+298+g26d6884b-1-x86_64.pkg.tar.zst
+# https://github.com/OpenPrinting/ps-printer-app#building-and-installing
+  
+  pushd ../pappl-master
+  ./configure && make
+  popd
+  
+  pushd ../cups-filters-master
+  ./autogen.sh && ./configure && make
+  popd
+  
+	#cd "$pkgname" #-$pkgver"
 	# ./configure --prefix=/usr
-	make
+	#make
+	
+  gcc -v -o ps-printer-app ps-printer-app.c \
+    ../pappl-master/pappl/libpappl.a \
+    ../cups-filters-master/.libs/libppd.a \
+    ../cups-filters-master/.libs/libcupsfilters.a \
+    -ldl -lpthread -lppd -lcups -lavahi-common -lavahi-client -lgnutls -ljpeg -lpng16 -ltiff -lz -lm -lusb-1.0 -lpam -lqpdf -lstdc++ \
+    -I. \
+    -I../pappl-master \
+    -I../cups-filters-master \
+    -I../cups-filters-master/cupsfilters 
+
 }
 
 check() {
 	cd "$pkgname" #-$pkgver"
-	make -k check
+#	make -k check
 }
 
 package() {
 	cd "$pkgname" #-$pkgver"
-	make DESTDIR="$pkgdir/" install
+	#make DESTDIR="$pkgdir/" install
+	
+	# see Makefile
+	install -m755 -Dt "${pkgdir}"/usr/bin ps-printer-app
+	install -m644 -Dt "${pkgdir}"/usr/share/man/man1 ps-printer-app.1
+	install -m644 -Dt "${pkgdir}"/usr/share/ppd generic-ps-printer.ppd
+	install -m644 -Dt "${pkgdir}"/usr/share/ps-printer-app testpage.ps
+	install -m644 -Dt "${pkgdir}"/usr/lib/systemd/system ps-printer-app.service
 }
