@@ -15,7 +15,7 @@ arch=(x86_64)
 url='https://www.qt.io'
 license=(LGPL)
 depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine qt5-svg qt5-quick3d qt5-serialport
-         clang=$_clangver qbs clazy syntax-highlighting yaml-cpp)
+         clang=$_clangver clazy syntax-highlighting yaml-cpp)
 makedepends=(cmake llvm python)
 options=(docs)
 optdepends=('qt5-doc: integrated Qt documentation'
@@ -23,6 +23,7 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'qt5-translations: for other languages'
             'gdb: debugger'
             'cmake: cmake project support'
+            'qbs: QBS project support'
             'x11-ssh-askpass: ssh support'
             'git: git support'
             'mercurial: mercurial support'
