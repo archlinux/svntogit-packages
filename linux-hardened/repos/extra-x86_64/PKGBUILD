@@ -4,14 +4,14 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.9.16.a
+pkgver=5.10.4.a
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
 license=(GPL2)
 makedepends=(
-  bc kmod libelf
+  bc kmod libelf pahole cpio perl tar xz
   xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
 )
 options=('!strip')
@@ -20,20 +20,19 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
-  sphinx-workaround.patch
+  drm-amd-display-add-get_dig_frontend-impl-for-DCEx.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
-  '65EEFE022108E2B708CBFCF7F9E712E59AF5F22A'  # Daniel Micay
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('b0d7abae88e5f91893627c645e680a95c818defd1b4fcaf3e2afb4b2b6b4ab86'
+sha256sums=('904e396c26e9992a16cd1cc989460171536bed7739bf36049f6eb020ee5d56ec'
             'SKIP'
-            '3c1f201e97ceed65c4a282b6aae167b20ccabe5a86824f9a25f9f195d86f9c08'
+            '0406850c58a3d248ef92de86f1bea1f0777e15c05a8747ce2c7f07a223abf62a'
             'SKIP'
-            'e3db4b85ab6a98de1c66fd06bb5bfab68dba1fa3366b2b88b00da06ba29267d2'
-            '8cb21e0b3411327b627a9dd15b8eb773295a0d2782b1a41b2a8839d1b2f5778c')
+            '8c642f2f61b3e5bc37b9e02678ba5001afbe2996a7514f5466f6e98df42b7095'
+            '56ca378a03341bbe8ddd13a5630922b0c4e0d505b738aec3b21dcfa55ff200d7')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
