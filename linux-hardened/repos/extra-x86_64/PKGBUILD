@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.10.4.a
+pkgver=5.10.5.a
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -20,19 +20,19 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
-  drm-amd-display-add-get_dig_frontend-impl-for-DCEx.patch
+  ALSA-hda-hdmi-fix-incorrect-mutex-unlock-in-silent_stream_disable.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('904e396c26e9992a16cd1cc989460171536bed7739bf36049f6eb020ee5d56ec'
+sha256sums=('3991a9e16a187d78d5f414d89236ae5d7f404a69e60c4c42a9d262ee19612ef4'
             'SKIP'
-            '0406850c58a3d248ef92de86f1bea1f0777e15c05a8747ce2c7f07a223abf62a'
+            '7d7709d52c1dc80d07a0f6afeae99e5a55c2b012f2b5f995e426c2bc80b102bb'
             'SKIP'
-            '8c642f2f61b3e5bc37b9e02678ba5001afbe2996a7514f5466f6e98df42b7095'
-            '56ca378a03341bbe8ddd13a5630922b0c4e0d505b738aec3b21dcfa55ff200d7')
+            'f5872ca178ea33ad5fbcf3ad24662111979dd82108a8037fbab737b9e923c05f'
+            'e6f6e235a3d97c624e0a3b3ac32f57c0794a4ff651c06445b41719f0fe6c49c6')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -42,7 +42,6 @@ prepare() {
   cd $_srcname
 
   echo "Setting version..."
-  sed -e "/^EXTRAVERSION =/s/=.*/= .${pkgver##*.}/" -i Makefile
   scripts/setlocalversion --save-scmversion
   echo "-$pkgrel" > localversion.10-pkgrel
   echo "${pkgbase#linux}" > localversion.20-pkgname
