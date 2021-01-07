@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=84.0.1
+pkgver=84.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -22,7 +22,7 @@ options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop)
-sha256sums=('ae5500d270a199f9a10674fbd4ba7a6beac1f260a4c009bbca8ea39967592243'
+sha256sums=('92bfd518d4f9760c897388a8e06130b171c1c43524d8af181add9daac2be7b37'
             'SKIP'
             '8b236bbf3ae5cb28d1dd742f543c0079fac06af5aa80bc2051defeba95f0ae21'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf')
