@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=5.10.5.a
-pkgrel=1
+pkgrel=2
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -21,6 +21,7 @@ source=(
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
   ALSA-hda-hdmi-fix-incorrect-mutex-unlock-in-silent_stream_disable.patch
+  revert-drm-amd-display-fix-memory-leaks-in-s3-resume.patch::'https://git.kernel.org/pub/scm/linux/kernel/git/stable/stable-queue.git/plain/queue-5.10/revert-drm-amd-display-fix-memory-leaks-in-s3-resume.patch?id=2f168cf391c8f615a95ab7d5264db880b225ab22'
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -32,7 +33,8 @@ sha256sums=('3991a9e16a187d78d5f414d89236ae5d7f404a69e60c4c42a9d262ee19612ef4'
             '7d7709d52c1dc80d07a0f6afeae99e5a55c2b012f2b5f995e426c2bc80b102bb'
             'SKIP'
             'f5872ca178ea33ad5fbcf3ad24662111979dd82108a8037fbab737b9e923c05f'
-            'e6f6e235a3d97c624e0a3b3ac32f57c0794a4ff651c06445b41719f0fe6c49c6')
+            'e6f6e235a3d97c624e0a3b3ac32f57c0794a4ff651c06445b41719f0fe6c49c6'
+            '5a9a3feaa46d4347572d86e2aa3a0a967d0de239598d7bde3444940367d8e08c')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
