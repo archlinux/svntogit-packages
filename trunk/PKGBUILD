@@ -3,7 +3,7 @@
 
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
-pkgver=3.60
+pkgver=3.60.1
 pkgrel=1
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
@@ -13,7 +13,7 @@ depends=(nspr sqlite zlib sh 'p11-kit>=0.23.19')
 makedepends=(perl python gyp)
 source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
         certdata2pem.py bundle.sh)
-sha256sums=('84abd5575ab874c53ae511bd461e5d0868d1a1b384ee40753154cdd1d590fe3d'
+sha256sums=('2051c20b61112df24bad533ac37f6c66c1bc0d6ea70bb9d9cad102d20324279d'
             'd2a1579dae05fd16175fac27ef08b54731ecefdf414085c610179afcf62b096c'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
@@ -57,7 +57,6 @@ package_nss() {
   ln -s nss.pc "$pkgdir$libdir/pkgconfig/mozilla-nss.pc"
 
   install -Dt "$pkgdir$libdir" dist/Release/lib/*.so
-  install -Dt "$pkgdir$libdir" -m644 dist/Release/lib/*.chk
 
   local vmajor vminor vpatch
   { read vmajor; read vminor; read vpatch; } \
