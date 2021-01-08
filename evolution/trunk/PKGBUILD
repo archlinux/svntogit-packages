@@ -3,7 +3,7 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.38.2
+pkgver=3.38.3
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -14,7 +14,7 @@ depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
 options=(!emptydirs)
-_commit=ed22ee60ceaac1aa69637c5ee6cc68cf81e3d961  # tags/3.38.2^0
+_commit=b831ff49af59dad60a98fdf7913cecfd1d619fbf  # tags/3.38.3^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -28,8 +28,6 @@ prepare() {
 }
 
 build() {
-  CFLAGS+=" $CPPFLAGS"
-  CXXFLAGS+=" $CPPFLAGS"
   cmake -S $pkgbase -B build -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
