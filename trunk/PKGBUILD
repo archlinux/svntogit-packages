@@ -27,5 +27,5 @@ check() {
 package() {
   cd "${srcdir}/mpc-${pkgver}"
   make DESTDIR="${pkgdir}" install
-  mv ${pkgdir}/usr/share/info/{mpc,libmpc}.info
+  mv "${pkgdir}"/usr/share/info/{mpc,libmpc}.info
 }
