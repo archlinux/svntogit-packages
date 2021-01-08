@@ -272,7 +272,7 @@ package_gcc-fortran() {
   cd gcc-build
   make -C $CHOST/libgfortran DESTDIR="$pkgdir" install-cafexeclibLTLIBRARIES \
     install-{toolexeclibDATA,nodist_fincludeHEADERS,gfor_cHEADERS}
-  make -C $CHOST/32/libgfortran DESTDIR=$pkgdir install-cafexeclibLTLIBRARIES \
+  make -C $CHOST/32/libgfortran DESTDIR="$pkgdir" install-cafexeclibLTLIBRARIES \
     install-{toolexeclibDATA,nodist_fincludeHEADERS,gfor_cHEADERS}
   make -C $CHOST/libgomp DESTDIR="$pkgdir" install-nodist_fincludeHEADERS
   make -C gcc DESTDIR="$pkgdir" fortran.install-{common,man,info}
@@ -315,11 +315,11 @@ package_gcc-ada() {
   install -m755 gnat1 "$pkgdir/${_libdir}"
 
   cd "$srcdir"/gcc-build/$CHOST/libada
-  make DESTDIR=${pkgdir} INSTALL="install" \
+  make DESTDIR="${pkgdir}" INSTALL="install" \
     INSTALL_DATA="install -m644" install-libada
 
   cd "$srcdir"/gcc-build/$CHOST/32/libada
-  make DESTDIR=${pkgdir} INSTALL="install" \
+  make DESTDIR="${pkgdir}" INSTALL="install" \
     INSTALL_DATA="install -m644" install-libada
 
   ln -s gcc "$pkgdir/usr/bin/gnatgcc"
