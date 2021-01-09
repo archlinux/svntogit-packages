@@ -4,8 +4,8 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.10.5.a
-pkgrel=2
+pkgver=5.10.6.a
+pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -20,21 +20,17 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
   config         # the main kernel config file
-  ALSA-hda-hdmi-fix-incorrect-mutex-unlock-in-silent_stream_disable.patch
-  revert-drm-amd-display-fix-memory-leaks-in-s3-resume.patch::'https://git.kernel.org/pub/scm/linux/kernel/git/stable/stable-queue.git/plain/queue-5.10/revert-drm-amd-display-fix-memory-leaks-in-s3-resume.patch?id=2f168cf391c8f615a95ab7d5264db880b225ab22'
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('3991a9e16a187d78d5f414d89236ae5d7f404a69e60c4c42a9d262ee19612ef4'
+sha256sums=('7767d02c1cb5eb2a8d3c2b15a3f93e85b98baa6e9d93a3b9e3ec0e959d0a690b'
             'SKIP'
-            '7d7709d52c1dc80d07a0f6afeae99e5a55c2b012f2b5f995e426c2bc80b102bb'
+            '7862c3dae1721557ffb6ea62e0d5a94ba1eeca445a7373d0abb5ec0c7f823ea3'
             'SKIP'
-            'f5872ca178ea33ad5fbcf3ad24662111979dd82108a8037fbab737b9e923c05f'
-            'e6f6e235a3d97c624e0a3b3ac32f57c0794a4ff651c06445b41719f0fe6c49c6'
-            '5a9a3feaa46d4347572d86e2aa3a0a967d0de239598d7bde3444940367d8e08c')
+            'f3a46621377e121eaac60136379c54e83913b0dded670e8dae3cdbb07f29f9aa')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
