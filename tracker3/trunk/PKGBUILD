@@ -3,8 +3,8 @@
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
 pkgname=tracker3
-pkgver=3.0.2
-pkgrel=2
+pkgver=3.0.3
+pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
 arch=(x86_64)
@@ -16,11 +16,9 @@ makedepends=(gobject-introspection vala git gtk-doc bash-completion meson
 checkdepends=(python-gobject python-dbus)
 provides=(libtracker-sparql-3.0.so)
 groups=(gnome)
-_commit=7324a45d8f5f2c221e9cdc96f8d28ffe32598ef0  # tags/3.0.2^0
-source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit"
-        353.patch)
-sha256sums=('SKIP'
-            '1445d235392de75c65ab28a0e358056c8ce7df9127f6e146cb3e2a4879c09f3d')
+_commit=6c09ec119eb4de5453c8da8576540a1fed3a2bd7  # tags/3.0.3^0
+source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd tracker
@@ -29,10 +27,6 @@ pkgver() {
 
 prepare() {
   cd tracker
-
-  # https://gitlab.gnome.org/GNOME/tracker/-/merge_requests/353
-  # https://bugs.archlinux.org/task/68903
-  git apply -3 ../353.patch
 }
 
 build() {
