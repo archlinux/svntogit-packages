@@ -16,23 +16,23 @@ sha512sums=('SKIP'
             'b7dacb28bc13f5c9fb9c9295d1a3d323b7b7c0893d69b110f3036b73a4930e8463b5a19011b0e5996ff55157768376c2e53ab97c557afe29bbe3b5d0c8a1e027')
 
 prepare() {
-  cd ${srcdir}/${pkgname}
+  cd "${pkgname}"
   # Revert memleak patch which causes 'random' segfauts since
   # the handle is still used while it's already cleaned up.
-  patch -NRp1 -i ${srcdir}/memleak.patch
+  patch -NRp1 -i "${srcdir}/memleak.patch"
 }
 
 build() {
-  cd ${srcdir}/${pkgname}
+  cd "${pkgname}"
   python setup.py build
 }
 
 check() {
-  cd ${srcdir}/${pkgname}
+  cd "${pkgname}"
   PYTHONPATH="$PWD/build/lib.linux-$CARCH-3.9" pytest
 }
 
 package() {
-  cd ${srcdir}/${pkgname}
+  cd "${pkgname}"
   python setup.py install --root=${pkgdir}
 }
