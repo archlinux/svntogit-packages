@@ -2,23 +2,41 @@
 
 pkgname=libetpan
 pkgver=1.9.4
-pkgrel=2
+pkgrel=3
 pkgdesc="A portable middleware for email access"
 arch=('x86_64')
 url="https://www.etpan.org/libetpan.html"
 license=("custom:etpan")
 depends=('libgcrypt' 'gnutls' 'libsasl' 'zlib')
 makedepends=('expat')
-source=($pkgname-$pkgver.tar.gz::https://github.com/dinhviethoa/${pkgname}/archive/${pkgver}.tar.gz)
-sha256sums=('82ec8ea11d239c9967dbd1717cac09c8330a558e025b3e4dc6a7594e80d13bb1')
+provides=('libetpan.so')
+source=($pkgname-$pkgver.tar.gz::https://github.com/dinhviethoa/${pkgname}/archive/${pkgver}.tar.gz
+        CVE-2020-15953_1.diff::https://github.com/dinhvh/libetpan/commit/1002a0121a8f5a9aee25357769807f2c519fa50b.patch
+        CVE-2020-15953_2.diff::https://github.com/dinhvh/libetpan/commit/298460a2adaabd2f28f417a0f106cb3b68d27df9.patch
+        avoid_user_LDFLAGS_into_Libs.diff::https://github.com/dinhvh/libetpan/commit/8e904aa1c92bd0993123dd46d5a10a58f0516721.patch
+)
+sha256sums=('82ec8ea11d239c9967dbd1717cac09c8330a558e025b3e4dc6a7594e80d13bb1'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+)
 
 prepare() {
   cd "${pkgname}"-${pkgver}
-  libtoolize --force --copy
-  aclocal -I m4
-  autoheader
-  autoconf
-  automake --add-missing --foreign --force --copy
+  
+  # CVE-2020-15953 - https://bugs.archlinux.org/task/69284
+  patch -Np1 -i ../CVE-2020-15953_1.diff
+  patch -Np1 -i ../CVE-2020-15953_2.diff
+
+  # Don't put user LDFLAGS into Libs
+  patch -Np1 -i ../avoid_user_LDFLAGS_into_Libs.diff
+
+#  libtoolize --force --copy
+#  aclocal -I m4
+#  autoheader
+#  autoconf
+#  automake --add-missing --foreign --force --copy
+  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
@@ -28,6 +46,7 @@ build() {
     --disable-db \
     --with-openssl=no \
     --with-gnutls=yes
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
