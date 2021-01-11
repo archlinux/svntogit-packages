@@ -3,15 +3,15 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=sudo
-_sudover=1.9.4p2
+_sudover=1.9.5
+pkgrel=1
 pkgver=${_sudover/p/.p}
-pkgrel=2
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
 url="https://www.sudo.ws/sudo/"
 license=('custom')
 groups=('base-devel')
-depends=('glibc' 'libgcrypt' 'pam' 'libldap')
+depends=('glibc' 'libgcrypt' 'pam' 'libldap' 'zlib')
 backup=('etc/pam.d/sudo'
         'etc/sudo.conf'
         'etc/sudo_logsrvd.conf'
@@ -20,7 +20,7 @@ install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
         sudo_logsrvd.service
         sudo.pam)
-sha256sums=('c34af1fa79d40d0869e4010bdd64005290ea2e1ba35638ef07fcc684c4470f64'
+sha256sums=('3718b16de71fd6076858d5a1efe93a0d11d2f713fc51f24a314dfee78e4e83a5'
             'SKIP'
             '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
