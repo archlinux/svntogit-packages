@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.66.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -16,11 +16,12 @@ checkdepends=(desktop-file-utils)
 _commit=bacbec652d356895ec493f3de2f2f6f4c7dafde0  # tags/2.66.4^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         noisy-glib-compile-schemas.diff
-        glib-compile-schemas.hook gio-querymodules.hook)
+        glib-compile-schemas.hook gio-querymodules.{hook,script})
 sha256sums=('SKIP'
             '81a4df0b638730cffb7fa263c04841f7ca6b9c9578ee5045db6f30ff0c3fc531'
             '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
-            '557c88177f011ced17bdeac1af3f882b2ca33b386a866fdf900b35f927a2bbe8')
+            '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
+            '92d08db5aa30bda276bc3d718e7ff9dd01dc40dcab45b359182dcc290054e24e')
 
 pkgver() {
   cd glib
@@ -56,7 +57,9 @@ package_glib2() {
               'libelf: gresource inspection tool')
 
   DESTDIR="$pkgdir" meson install -C build
+
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+  install -D gio-querymodules.script "$pkgdir/usr/share/libalpm/scripts/gio-querymodules"
 
   # Avoid a dep on sysprof
   sed -i 's/, sysprof-capture-4//' "$pkgdir"/usr/lib/pkgconfig/*.pc
@@ -68,7 +71,8 @@ package_glib2() {
     "$pkgdir/usr/share/glib-2.0/codegen"
 
   # Split docs
-  mv "$pkgdir/usr/share/gtk-doc" "$srcdir"
+  mkdir -p docs/usr/share
+  mv {"$pkgdir",docs}/usr/share/gtk-doc
 }
 
 package_glib2-docs() {
@@ -76,10 +80,8 @@ package_glib2-docs() {
   depends=()
   license+=(custom)
 
-  mkdir -p "$pkgdir/usr/share"
-  mv gtk-doc "$pkgdir/usr/share"
-
-  install -Dt "$pkgdir/usr/share/licenses/glib2-docs" -m644 glib/docs/reference/COPYING
+  mv -t "$pkgdir" docs/*
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 glib/docs/reference/COPYING
 }
 
 # vim:set sw=2 et:
