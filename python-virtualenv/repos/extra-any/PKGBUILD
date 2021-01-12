@@ -4,7 +4,7 @@
 
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=20.2.2
+pkgver=20.3.0
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
@@ -21,13 +21,16 @@ replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=($pkgbase-$pkgver.tar.gz::https://github.com/pypa/virtualenv/archive/$pkgver.tar.gz)
-sha512sums=('315964781935b6e26badbc15423f3d7c22c58a6147475d9838a8e4d12ffddecfcab9c74ee4230a1135c0d58ed9c74029ec430edceb4003d0d95b3493563c27b2')
+sha512sums=('e83f09149889735e0645e48ad64d948e3c134152e17cea15e54b87be37f204169d43448ecbc65b8b3d54353bcf79aec227ddbc324a7df11102c83a5cf0233992')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
 prepare() {
   # TODO: figure out why
   sed -i '/test_py_info_to_system_raises/i @pytest.mark.skip' virtualenv-$pkgver/tests/unit/discovery/py_info/test_py_info.py
+
+  # workaround pip vendorod certifi
+  sed -i "s|pkgutil.get_data(\"pip._vendor.certifi\", \"cacert.pem\")|open(os.path.join('/etc/ssl/certs/ca-certificates.crt'), 'rb').read()|" virtualenv-$pkgver/tests/conftest.py
 
   cp -a virtualenv-$pkgver{,-py2}
 }
