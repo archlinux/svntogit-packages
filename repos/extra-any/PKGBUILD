@@ -5,7 +5,7 @@
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
 pkgver=20.3.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
@@ -52,7 +52,7 @@ check() {
 }
 
 package_python-virtualenv() {
-  depends=('python-setuptools' 'python-appdirs' 'python-distlib' 'python-filelock' 'python-six')
+  depends=('python-appdirs' 'python-distlib' 'python-filelock' 'python-six')
 
   cd virtualenv-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir" --skip-build
@@ -67,7 +67,7 @@ package_python-virtualenv() {
 }
 
 package_python2-virtualenv() {
-  depends=('python2-setuptools' 'python2-appdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
+  depends=('python2-appdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
            'python2-importlib-metadata' 'python2-importlib_resources' 'python2-pathlib2')
 
   cd virtualenv-$pkgver-py2
