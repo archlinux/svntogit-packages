@@ -3,7 +3,7 @@
 pkgbase=python-automat
 pkgname=('python-automat' 'python2-automat')
 pkgver=20.2.0
-pkgrel=4
+pkgrel=5
 arch=('any')
 license=('MIT')
 pkgdesc="Self-service finite-state machines for the programmer on the go."
@@ -38,7 +38,7 @@ check() {
 }
 
 package_python-automat() {
-  depends=('python-attrs' 'python-setuptools')
+  depends=('python-attrs')
 
   cd automat-$pkgver
   python setup.py install --root="$pkgdir" --optimize=1
@@ -46,7 +46,7 @@ package_python-automat() {
 }
 
 package_python2-automat() {
-  depends=('python2-attrs' 'python2-setuptools')
+  depends=('python2-attrs')
 
   cd automat-$pkgver-py2
   python2 setup.py install --root="$pkgdir" --optimize=1
