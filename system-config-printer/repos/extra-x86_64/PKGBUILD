@@ -2,7 +2,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=system-config-printer
-pkgver=1.5.14
+pkgver=1.5.15
 pkgrel=1
 pkgdesc="A CUPS printer configuration tool and status applet"
 url="https://github.com/OpenPrinting/system-config-printer"
@@ -14,31 +14,20 @@ makedepends=('intltool' 'xmlto' 'docbook-xsl' 'desktop-file-utils' 'libsecret')
 optdepends=('libsecret: password management'
             'python-pysmbc: SMB browser support'
             'cups-pk-helper: PolicyKit helper to configure cups with fine-grained privileges')
-source=(https://github.com/OpenPrinting/system-config-printer/releases/download/v${pkgver}/system-config-printer-${pkgver}.tar.xz{,.asc}
-        autoconf-2-70.diff
-)
-sha256sums=('0e7b8cea3762e3eaf0167a955e6667db077f4717a42230a64e07d04988a4e9d0'
-            'SKIP'
-            'e43c45255f19017b0ab925839861dd48692054985e829650c99cdc86ea61f1a5')
+source=(https://github.com/OpenPrinting/system-config-printer/releases/download/v${pkgver}/system-config-printer-${pkgver}.tar.xz{,.asc})
+sha256sums=('fbd226ce215bf014213dded81b43b9d4d90470524f5bf7cd21ecc71d4aefa689'
+            'SKIP')
 validpgpkeys=('7ADB58203CA5F046F28025B215AA6A7F4D4227D7') # "Zdenek Dohnal (Associate Software Engineer) <zdohnal@redhat.com>"
-
-prepare() {
-  cd ${pkgname}-${pkgver}
-  # fix build with autoconf 2.70
-  # https://github.com/OpenPrinting/system-config-printer/issues/201
-  patch -Np1 -i ../autoconf-2-70.diff
-
-  # create missing dummy files
-  touch README
-  autoreconf -vfi
-}
 
 build() {
   cd ${pkgname}-${pkgver}
+
   ./configure --prefix=/usr \
     --sbindir=/usr/bin \
     --sysconfdir=/etc \
-    --with-udevdir=/usr/lib/udev --with-udev-rules
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-udevdir=/usr/lib/udev \
+    --with-udev-rules
   make
 }
 
@@ -51,7 +40,7 @@ package() {
   # Compile *.pyo
   find "$pkgdir" -name '*.py' -exec python -O -mpy_compile {} +
   
-  # fix dbus policy location - --with-dbusdir doens't work
+  # fix dbus policy location
   install -dm755 "$pkgdir"/usr/share/dbus-1/system.d
   mv "$pkgdir"/etc/dbus-1/system.d/* "$pkgdir"/usr/share/dbus-1/system.d
   rm -rf "$pkgdir"/etc/dbus-1
