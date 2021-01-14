@@ -8,15 +8,13 @@ pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
 arch=('x86_64')
 license=('custom')
-depends=('glibc' 'e2fsprogs' 'libss.so' 'libcom_err.so' 'libldap' 'keyutils' 'libkeyutils.so')
+depends=('glibc' 'e2fsprogs' 'libss.so' 'libcom_err.so' 'libldap' 'keyutils')
 makedepends=('perl')
 provides=(
   libgssapi_krb5.so
   libgssrpc.so
   libk5crypto.so
-  libkadm5clnt.so
   libkadm5clnt_mit.so
-  libkadm5srv.so
   libkadm5srv_mit.so
   libkdb5.so
   libkdb_ldap.so
