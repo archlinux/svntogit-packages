@@ -2,15 +2,33 @@
 
 pkgname=krb5
 _pkgvermajor=1.18
-pkgver=1.18.2
+pkgver=1.18.3
 pkgrel=1
 pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
 arch=('x86_64')
 license=('custom')
-depends=('e2fsprogs' 'libldap' 'keyutils')
+depends=('glibc' 'e2fsprogs' 'libss.so' 'libcom_err.so' 'libldap' 'keyutils' 'libkeyutils.so')
 makedepends=('perl')
-backup=('etc/krb5.conf' 'var/lib/krb5kdc/kdc.conf')
+provides=(
+  libgssapi_krb5.so
+  libgssrpc.so
+  libk5crypto.so
+  libkadm5clnt.so
+  libkadm5clnt_mit.so
+  libkadm5srv.so
+  libkadm5srv_mit.so
+  libkdb5.so
+  libkdb_ldap.so
+  libkrad.so
+  libkrb5.so
+  libkrb5support.so
+  libverto.so
+)
+backup=(
+  'etc/krb5.conf'
+  'var/lib/krb5kdc/kdc.conf'
+)
 options=('!emptydirs')
 source=(https://web.mit.edu/kerberos/dist/krb5/${_pkgvermajor}/${pkgname}-${pkgver}.tar.gz{,.asc}
         krb5-config_LDFLAGS.patch
@@ -19,7 +37,7 @@ source=(https://web.mit.edu/kerberos/dist/krb5/${_pkgvermajor}/${pkgname}-${pkgv
         krb5-kpropd.service
         krb5-kpropd@.service
         krb5-kpropd.socket)
-sha512sums=('7cbb1b28e677fea3e0794e93951f3caaa2c49bb1175dd187951e72a466cc69d96c3b833d838000fe911c1a437d96a558e550f27c53a8b332fb9dfc7cbb7ec44c'
+sha512sums=('cf0bf6cf8f622fa085954e6da998d952cf64dc7ccc319972ed81ea0542089cabf2d0e8243df84da01ad6f40584768ca2f02d108630c6741fa7b3d7d98c887c01'
             'SKIP'
             '5a3782ff17b383f8cd0415fd13538ab56afd788130d6ad640e9f2682b7deaae7f25713ce358058ed771091040dccf62a3bc87e6fd473d505ec189a95debcc801'
             'ae1fa980e8e30a83dfef7fe233be70a9ec530ebaffc344a0e7eba61e7de4c800421b45cf203f1e526cc8351754038d6539184b30aa049a567e2a9e80f0d39841'
@@ -34,7 +52,7 @@ prepare() {
   cd ${pkgname}-${pkgver}
 
   # cf https://bugs.gentoo.org/show_bug.cgi?id=448778
-  patch -p1 < "${srcdir}"/krb5-config_LDFLAGS.patch
+  patch -Np1 < "${srcdir}"/krb5-config_LDFLAGS.patch
 
   # FS#25384
   sed -i "/KRB5ROOT=/s/\/local//" src/util/ac_check_krb5.m4
