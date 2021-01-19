@@ -2,7 +2,7 @@
 # Contributor: Nikolay Rysev <mad.f3ka@gmail.com>
 
 pkgname=fprintd
-pkgver=1.90.8
+pkgver=1.90.9
 pkgrel=1
 pkgdesc="D-Bus service to access fingerprint readers"
 url="https://fprint.freedesktop.org/"
@@ -12,11 +12,11 @@ depends=(glib2 libfprint polkit dbus dbus-glib libsystemd)
 makedepends=(gtk-doc git meson pam_wrapper python-cairo python-dbus
              python-dbusmock)
 groups=(fprint)
-_commit=7d22a2b5b9d323638bb213aefb8627d897c8e482  # tags/v1.90.8^0
+_commit=da60bddb3e5be024c6c1958437cb13e0ce0ffac8  # tags/v1.90.9^0
 source=("git+https://gitlab.freedesktop.org/libfprint/fprintd.git#commit=$_commit"
-        dirmode.diff)
+        0001-data-Use-the-correct-mode-for-the-state-dir.patch)
 sha256sums=('SKIP'
-            'f57bd61e28a8c5cb183f27d3aba5847ae2a5e3ba9d9796bfd4a967caa173bb49')
+            'da1fa15963d004db79176f9795f1b42899d6295380c4275e420627eff02d7db1')
 
 pkgver() {
   cd $pkgname
@@ -26,8 +26,9 @@ pkgver() {
 prepare() {
   cd $pkgname
 
-  # Fix StateDirectoryMode https://bugs.archlinux.org/task/68932
-  git apply -3 ../dirmode.diff
+  # https://gitlab.freedesktop.org/libfprint/fprintd/-/merge_requests/119
+  # https://bugs.archlinux.org/task/68932
+  git apply -3 ../0001-data-Use-the-correct-mode-for-the-state-dir.patch
 }
 
 build() {
