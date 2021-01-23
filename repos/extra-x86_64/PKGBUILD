@@ -5,19 +5,21 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=brltty
-pkgver=6.1
-pkgrel=5
+pkgver=6.2
+pkgrel=3
 pkgdesc="Braille display driver for Linux/Unix"
 arch=('x86_64')
 url="https://brltty.app"
 license=('LGPL2.1')
-depends=('bluez-libs' 'expat' 'gcc-libs' 'glibc' 'liblouis' 'libspeechd' 'pcre'
+depends=('bluez-libs' 'gcc-libs' 'glibc' 'liblouis' 'libspeechd' 'pcre'
 'polkit' 'tcl')
 makedepends=('alsa-lib' 'at-spi2-atk' 'at-spi2-core' 'atk' 'cython' 'dbus'
-'espeak-ng' 'festival' 'glib2' 'gpm' 'icu' 'java-environment' 'libxaw' 'ncurses'
-'ocaml-ctypes' 'ocaml-findlib' 'speech-dispatcher' 'systemd-libs')
+'dracut' 'espeak-ng' 'expat' 'festival' 'glib2' 'gpm' 'icu' 'java-environment'
+'libxaw' 'ncurses' 'ocaml-ctypes' 'ocaml-findlib' 'speech-dispatcher'
+'systemd-libs')
 optdepends=('at-spi2-core: X11/GNOME Apps accessibility'
             'atk: ATK bridge for X11/GNOME accessibility'
+            'dracut: for dracut based initramfs support'
             'espeak-ng: espeak-ng driver'
             'java-runtime: Java support'
             'libxaw: X11 support'
@@ -33,17 +35,16 @@ backup=(etc/brltty.conf)
 options=('!emptydirs')
 install=brltty.install
 source=("https://brltty.app/archive/${pkgname}-${pkgver}.tar.bz2"
-        "${pkgname}.tmpfiles"
-        "${pkgname}.sysusers")
-sha512sums=('a27236fc6211dfe1b9867871eca475a5c82471ea10c1bc3006916f9420764c6f91d5f2cfc5c44c6c76f1120f3ef21c821ca9a804d81ebcad6ecad886c2ef84ad'
-            'a530fe66983768f9dc544af01c586abc101dfa2ed76885b4f1fd78c483b59e8445f2c0dbbfb865dd1cf2874342c346bd35ce978ab246e9cdd31d2d489a14e770'
-            'cc2e2d5f33d4e11d6ff828aefc0773ccdc02127ce2f00649c1e3f8d4b39b90789f4a0e41385b344f850c38bd4a1df36d3d9d413a59144d431defdd343633f800')
-b2sums=('ed3744173f59c85ac9e2bdef45e65dc98d178e51332f2fc0903763067c0f9a6a806c60989a36c825baa3dbdd1ed0629395318c22134413aa27791e17b3398413'
-        '59f50e367d2e6c6704902ebbd254232aa17c741c9a43ba27d0ebaa5fd4a86f62bc8bdd08e8e4562437dea0efa9d49845e40c022b8c4d7110675d81bf63ac4df4'
-        'e6b7453360ef92254ff1049b387c9ee45f3be0e0259c9c3670154938f61ec4142b2de330401d09e1290ed9ffe8e390ede3472dab0e2f4c69b497f9ac19795aad')
+        "${pkgname}-6.2-systemd_sysusers_groups.patch"
+)
+sha512sums=('9cf102e87c082ed4e8a88b08fe4c2c40fde7bf566ba64ba39fbc4e392d639816b4dc176c20713a6ab6aa244de1aecdb80533b21331f01726b86d85d100090a55'
+            '32ba91271e2247b4a330cd213ed75b591268cb99a79c2efd9ae675804faee027c6b2f782768cb2329a65fc914ca2400b2901f35ce1fc2522c6691b343799eb02')
+b2sums=('6aeeeeea27f5069944bc1822087f3b58948192951d33790d61085917d875bc4041d04f5993171a7559154a5b6eee0633fce510fef040ed5b6f4b00fc9298dfd5'
+        '036e36d558594bb06af1eb41ff5fc9ae52ccf4bad54556c3f4f81a5e2f31f574039835e5e756455527c327a73d563a3db54a9f32e3478545a2a22c2725aaeee2')
 
 prepare() {
   cd "${pkgname}-${pkgver}"
+  patch -Np1 -i ../"${pkgname}-6.2-systemd_sysusers_groups.patch"
   ./autogen
 }
 
@@ -53,6 +54,7 @@ build() {
               --sysconfdir=/etc \
               --localstatedir=/var \
               --mandir=/usr/share/man \
+              --with-scripts-directory=/usr/lib/brltty \
               --with-tables-directory=/usr/share/brltty \
               --with-writable-directory=/run/brltty \
               --enable-gpm \
@@ -61,16 +63,17 @@ build() {
 }
 
 package() {
-  depends+=('libasound.so' 'libdbus-1.so' 'libgio-2.0.so' 'libglib-2.0.so'
-  'libgobject-2.0.so' 'libicuuc.so' 'libgpm.so' 'libncursesw.so'
-  'libsystemd.so')
+  depends+=('libasound.so' 'libdbus-1.so' 'libexpat.so' 'libgio-2.0.so'
+  'libglib-2.0.so' 'libgobject-2.0.so' 'libicuuc.so' 'libgpm.so'
+  'libncursesw.so' 'libsystemd.so')
   cd "${pkgname}-${pkgver}"
   make INSTALL_ROOT="${pkgdir}" install
-  make INSTALL_ROOT="${pkgdir}" install -C Autostart/Systemd
-  make INSTALL_ROOT="${pkgdir}" install -C Autostart/Udev
+  make INSTALL_ROOT="${pkgdir}" install-systemd
+  make INSTALL_ROOT="${pkgdir}" install-udev
+  make INSTALL_ROOT="${pkgdir}" install-dracut
+  make INSTALL_ROOT="${pkgdir}" install-polkit
   install -vDm 644 "Documents/${pkgname}.conf" -t "${pkgdir}/etc/"
-  install -vDm 644 "../${pkgname}.sysusers" \
-    "${pkgdir}/usr/lib/sysusers.d/${pkgname}.conf"
-  install -vDm 644 "../${pkgname}.tmpfiles" \
-    "${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
+
+  # fix directory permission and ownership
+  install -vdm 750 -o root -g 102 "$pkgdir/usr/share/polkit-1/rules.d"
 }
