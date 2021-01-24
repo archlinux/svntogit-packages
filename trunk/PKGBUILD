@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.10.9.a
+pkgver=5.10.10.hardened1
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -16,9 +16,10 @@ makedepends=(
 )
 options=('!strip')
 _srcname=linux-${pkgver%.*}
+_srctag=${pkgver%.*}-${pkgver##*.}
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
-  https://github.com/anthraxx/${pkgbase}/releases/download/${pkgver}/${pkgbase}-${pkgver}.patch{,.sig}
+  https://github.com/anthraxx/${pkgbase}/releases/download/${_srctag}/${pkgbase}-${_srctag}.patch{,.sig}
   config         # the main kernel config file
 )
 validpgpkeys=(
@@ -26,11 +27,11 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('7f733e0dd8bbb6929aae2191cf6b9dc0b0ec1dad77ab3f5d3aad1b7fe96c4751'
+sha256sums=('60ed866fa951522a5255ea37ec3ac2006d3f3427d4783a13ef478464f37cdb19'
             'SKIP'
-            'dce5e28606f181d40fec3099668e323d67cd0d93f248b231146c35a7ecf47c56'
+            '105f51e904d80f63c1421203e093b612fc724edefd3e388b64f8d371c0b3a842'
             'SKIP'
-            '4b1726568cc2f7ee97b119047f8180fb24d30118fac9579573498c950f366ebf')
+            'eb1da1a028a1c967222b5bdac1db2b2c4d8285bafd714892f6fc821c10416341')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
