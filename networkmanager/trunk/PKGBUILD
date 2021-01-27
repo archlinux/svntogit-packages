@@ -7,8 +7,8 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.28.1dev+7+g3f5df3cdc6
-pkgrel=2
+pkgver=1.28.1dev+15+gaa2bc9e6e4
+pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
@@ -19,13 +19,13 @@ makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_ppp
              libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
              glib2-docs iwd dnsmasq openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=3f5df3cdc6c52a79f970c0a9de9200a18df6b3fb  # nm-1-28
+_commit=aa2bc9e6e404814469c0c661c47a712a262b2d4e  # nm-1-28
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd NetworkManager
-  git describe | sed 's/-dev/dev/;s/-rc/rc/;s/-/+/g'
+  git describe --abbrev=10 | sed 's/-dev/dev/;s/-rc/rc/;s/-/+/g'
 }
 
 prepare() {
