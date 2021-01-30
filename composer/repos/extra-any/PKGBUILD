@@ -1,25 +1,23 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=composer
-pkgver=2.0.8
-pkgrel=2
+pkgver=2.0.9
+pkgrel=1
 pkgdesc="Dependency Manager for PHP"
 arch=('any')
 license=('MIT')
 url='https://getcomposer.org/'
 depends=('php' 'unzip')
 makedepends=('git')
-checkdepends=('php7' 'php7-intl')
 source=("${pkgname}::git+https://github.com/composer/composer.git#tag=${pkgver}"
-        "${pkgname}-${pkgver}.phar::https://getcomposer.org/download/${pkgver}/composer.phar")
+	"${pkgname}-${pkgver}.phar::https://getcomposer.org/download/${pkgver}/composer.phar")
 sha256sums=('SKIP'
-            '2021f0d52b446e0efe3c548cc058ab5671fa38cdbcf814e7911c7e9d71d61538')
-COMPOSER_FLAGS="--ansi --no-interaction --no-progress --prefer-dist"
+	'24faa5bc807e399f32e9a21a33fbb5b0686df9c8850efabe2c047c2ccfb9f9cc')
 
 prepare() {
 	cd "${srcdir}/${pkgname}"
 
-	php "${srcdir}/${pkgname}-${pkgver}.phar" install --no-dev ${COMPOSER_FLAGS}
+	php "${srcdir}/${pkgname}-${pkgver}.phar" install --no-interaction --no-dev --no-progress --prefer-dist
 }
 
 build() {
@@ -29,21 +27,20 @@ build() {
 }
 
 check() {
-	cd "${srcdir}/${pkgname}"
+	cd "${srcdir}"
 
-	# check if the upstream build and ours differ
-	diff -q ${srcdir}/${pkgname}-${pkgver}.phar composer.phar > /dev/null || msg2 "Upstream composer differs from ours"
+	mkdir integration-test
+	cd integration-test
 
-	# Install the dev dependencies to run the unit tests
-	bin/composer install ${COMPOSER_FLAGS}
-
-	bin/composer validate
-
-	git config --global user.email composer@example.com
-	git config --global user.name composer
-
-	# use PHP 7 to run tests as this version of PHPUnit is not compatible
-	php7 -d extension=intl vendor/bin/simple-phpunit
+	php "${srcdir}/${pkgname}/composer.phar" init \
+		--no-interaction \
+		--type=project \
+		--name='archlinux/test' \
+		--description='Composer Test Project' \
+		--license='GPL-3.0-or-later' \
+		--require='symfony/console:*'
+	php "${srcdir}/${pkgname}/composer.phar" update --no-interaction --no-progress --prefer-dist
+	php "${srcdir}/${pkgname}/composer.phar" validate --no-interaction
 }
 
 package() {
