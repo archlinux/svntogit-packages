@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=11.0.1
-pkgrel=1
+pkgrel=2
 _ocaml_ver=4.11.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -15,9 +15,11 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
+        amdgpu-avoid-an-illegal-operand-in-si-shrink-instr.patch
         llvm-config.h)
 sha256sums=('ccd87c254b6aebc5077e4e6977d08d4be888e7eb672c6630a26a15d58b59b528'
             'SKIP'
+            '85b6977005899bc76fcc548e0b6501cae5f50a8ad03060b9f58d03d775323327'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -25,6 +27,10 @@ validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstel
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
+
+  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/4107
+  # https://bugs.llvm.org/show_bug.cgi?id=48921#c2
+  patch -Np2 -i ../amdgpu-avoid-an-illegal-operand-in-si-shrink-instr.patch
 }
 
 build() {
