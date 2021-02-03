@@ -3,7 +3,7 @@
 
 pkgname=wpa_supplicant
 pkgver=2.9
-pkgrel=7
+pkgrel=8
 epoch=2
 pkgdesc='A utility providing key negotiation for WPA wireless networks'
 url='https://w1.fi/wpa_supplicant/'
@@ -13,6 +13,7 @@ depends=(openssl libdbus readline libnl)
 install=wpa_supplicant.install
 source=(
   https://w1.fi/releases/${pkgname}-${pkgver}.tar.gz{,.asc}
+  https://w1.fi/security/2020-2/0001-P2P-Fix-copying-of-secondary-device-types-for-P2P-gr.patch
   CVE-2019-16275.patch
   tls.patch             # More permissive TLS fallback
   systemd.patch         # Unit improvements from Ubuntu
@@ -22,6 +23,7 @@ source=(
 validpgpkeys=('EC4AA0A991A5F2464582D52D2B6EF432EFC895FA') # Jouni Malinen
 sha256sums=('fcbdee7b4a64bea8177973299c8c824419c413ec2e3a95db63dd6a5dc3541f17'
             'SKIP'
+            'c4d65cc13863e0237d0644198558e2c47b4ed91e2b2be4516ff590724187c4a5'
             'bf91a135e717265969f1ab0319297c9d2e6f695928a17e3b3fa5accc8ef7b297'
             '449c7dad67b246b5b93e796f57c2f90c5c32cfc5b16f7aa4f17802dc260d3414'
             'dd14f99618bb4db40eadfaf4ced29d6139ccf319429a1eef54c2c08c80924742'
@@ -30,13 +32,13 @@ sha256sums=('fcbdee7b4a64bea8177973299c8c824419c413ec2e3a95db63dd6a5dc3541f17'
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
-  local i; for i in "${source[@]}"; do
-    case $i in
-      *.patch)
-        echo "Applying patch $i"
-        patch -p1 -i "$srcdir/$i"
-        ;;
-    esac
+  local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
   done
 
   cd "$srcdir/$pkgname-$pkgver/$pkgname"
