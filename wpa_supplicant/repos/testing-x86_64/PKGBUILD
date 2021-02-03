@@ -1,0 +1,80 @@
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=wpa_supplicant
+pkgver=2.9
+pkgrel=8
+epoch=2
+pkgdesc='A utility providing key negotiation for WPA wireless networks'
+url='https://w1.fi/wpa_supplicant/'
+arch=(x86_64)
+license=(GPL)
+depends=(openssl libdbus readline libnl)
+install=wpa_supplicant.install
+source=(
+  https://w1.fi/releases/${pkgname}-${pkgver}.tar.gz{,.asc}
+  https://w1.fi/security/2020-2/0001-P2P-Fix-copying-of-secondary-device-types-for-P2P-gr.patch
+  CVE-2019-16275.patch
+  tls.patch             # More permissive TLS fallback
+  systemd.patch         # Unit improvements from Ubuntu
+  roam-properties.patch # https://bugs.archlinux.org/task/65482
+  config
+)
+validpgpkeys=('EC4AA0A991A5F2464582D52D2B6EF432EFC895FA') # Jouni Malinen
+sha256sums=('fcbdee7b4a64bea8177973299c8c824419c413ec2e3a95db63dd6a5dc3541f17'
+            'SKIP'
+            'c4d65cc13863e0237d0644198558e2c47b4ed91e2b2be4516ff590724187c4a5'
+            'bf91a135e717265969f1ab0319297c9d2e6f695928a17e3b3fa5accc8ef7b297'
+            '449c7dad67b246b5b93e796f57c2f90c5c32cfc5b16f7aa4f17802dc260d3414'
+            'dd14f99618bb4db40eadfaf4ced29d6139ccf319429a1eef54c2c08c80924742'
+            '1ad3b61397c4a1dbafbf89059bccdda07cfe7eaff9f23ee25bed7bdd82c2bd87'
+            '6f71a04875465178992e78216603d3c4735ee717a31738a6e30702c7a81c6c4e')
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
+  done
+
+  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  cp "$srcdir/config" ./.config
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+
+  make LIBDIR=/usr/lib BINDIR=/usr/bin
+  make LIBDIR=/usr/lib BINDIR=/usr/bin eapol_test
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  make LIBDIR=/usr/lib BINDIR=/usr/bin DESTDIR="$pkgdir" install
+  install -Dm755 eapol_test "$pkgdir/usr/bin/eapol_test"
+
+  install -d -m755 "$pkgdir/etc/wpa_supplicant"
+  install -Dm644 wpa_supplicant.conf \
+    "$pkgdir/usr/share/doc/wpa_supplicant/wpa_supplicant.conf"
+
+
+install -d -m755 "$pkgdir"/usr/share/dbus-1/{system.d,system-services}
+install -m644 \
+dbus/fi.w1.wpa_supplicant1.service \
+"$pkgdir/usr/share/dbus-1/system-services/"
+
+ install -Dm644 dbus/dbus-wpa_supplicant.conf \
+"$pkgdir/usr/share/dbus-1/system.d/wpa_supplicant.conf"
+
+  install -d -m755 "$pkgdir/usr/share/man/man"{5,8}
+  install -m644 doc/docbook/*.5 "$pkgdir/usr/share/man/man5/"
+  install -m644 doc/docbook/*.8 "$pkgdir/usr/share/man/man8/"
+  rm -f "$pkgdir/usr/share/man/man8/wpa_"{priv,gui}.8
+
+  install -d -m755 "$pkgdir/usr/lib/systemd/system"
+  install -m644 systemd/*.service "$pkgdir/usr/lib/systemd/system/"
+}
