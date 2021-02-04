@@ -16,9 +16,11 @@ optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qt5-webengine-icu-68.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=9236b21c")
+         qt5-webengine-icu-68.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=9236b21c"
+         qt5-webengine-glibc-2.33.patch)
 sha256sums=('c8afca0e43d84f7bd595436fbe4d13a5bbdb81ec5104d605085d07545b6f91e0'
-            'e3364f29db7a1630e9959123b34e6bcd25ba66cd1714638b8b9b6fd6fd527539')
+            'e3364f29db7a1630e9959123b34e6bcd25ba66cd1714638b8b9b6fd6fd527539'
+            '5600cfa40254fa3fa2cb541d3b55cc8f7a9231de8d2830c25a7651aa392de16f')
 
 prepare() {
   mkdir -p build
@@ -27,6 +29,7 @@ prepare() {
   sed -i 's|use_jumbo_build=true|use_jumbo_build=false|' -i ${_pkgfqn}/src/buildtools/config/common.pri
 
   patch -d $_pkgfqn/src/3rdparty/ -p1 -i "$srcdir"/qt5-webengine-icu-68.patch # Fix build with ICU 68
+  patch -d $_pkgfqn -p1 -i "$srcdir/qt5-webengine-glibc-2.33.patch" # Fix text rendering when building with glibc 2.33
 }
 
 build() {
