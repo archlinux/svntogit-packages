@@ -19,6 +19,9 @@ source=(
   0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
   0002-virt-vbox-Add-support-for-the-new-VBG_IOCTL_ACQUIRE_.patch
   sphinx-workaround.patch
+  # binutils 2.33 fix
+  # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?id=1d489151e9f9d1647110277ff77282fe4d96d09b
+  Do_not_fail_on_missing_symbol_table.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -30,7 +33,8 @@ sha256sums=('030ae544f346bfa2ce619dd9e17e93d10ec393632d3b6d6cf5d1fc84b914d449'
             'be2066dd6133357007e8c7da9d5de3194b13409ebbfba8821db1849588fced1e'
             'b439f57b84bc98730c0265695abb92385ee4dcd35a5c00d4cb3d3155c75fb491'
             '4fd74bb2a7101d700fba91806141339d8c9e46a14f8fc1fe276cfb68f1eec0f5'
-            'b7c814c8183e4645947a6dcc3cbf80431de8a8fd4e895b780f9a5fd92f82cb8e')
+            'b7c814c8183e4645947a6dcc3cbf80431de8a8fd4e895b780f9a5fd92f82cb8e'
+            '2a62cd628031b5f9f7bb4739bd9d2264056d3ab94aaa2cf973cdb0d509a94fdb')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
