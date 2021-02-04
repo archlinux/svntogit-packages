@@ -6,8 +6,8 @@
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
-pkgver=2.32
-pkgrel=5
+pkgver=2.33
+pkgrel=1
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -20,18 +20,16 @@ source=(https://ftp.gnu.org/gnu/glibc/glibc-$pkgver.tar.xz{,.sig}
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
-        sdt.h sdt-config.h
-        bz26534.patch)
+        sdt.h sdt-config.h)
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
-md5sums=('720c7992861c57cf97d66a2f36d8d1fa'
+md5sums=('390bbd889c7e8e8a7041564cb6b27cca'
          'SKIP'
          '07ac979b6ab5eeb778d55f041529d623'
          '476e9113489f93b348b21e144b6a8fcf'
          '6e052f1cb693d5d3203f50f9d4e8c33b'
          '91fec3b7e75510ae2ac42533aa2e695e'
-         '680df504c683640b02ed4a805797c0b2'
-         'fc57038c1297c7c11258e8dda1623ec2')
+         '680df504c683640b02ed4a805797c0b2')
 
 prepare() {
   mkdir -p glibc-build lib32-glibc-build
