@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.10.13.hardened1
+pkgver=5.10.14.hardened1
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -27,11 +27,11 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('06698c0ce35ceefa9b79ceb108ec7fb86de05f51fe615f3ae5cc82e293dfe1f2'
+sha256sums=('fa27b79f198b5be969e497ed5461860df48e0591c85e60699fc8be26837a1d2a'
             'SKIP'
-            '02711dbe227e2b9a8dbb8301fbacd9c560cc2382608472918c3a4775676bc6de'
+            'ddc605b2e00d01b155ccd0f0789731e8410964f2fb70e0d7b4a1f9d9788504d1'
             'SKIP'
-            'cebe20e1cc4b9d98f4725bc5db944cc0b964a52eadc22ca126ae90e9124b3c7f')
+            '12a13bc22d6ae4781cb51253a3ad717ad8dc1b6cf08c1231fed9b0d32a00e9f8')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
