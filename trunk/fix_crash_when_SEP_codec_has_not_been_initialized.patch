@@ -1,0 +1,45 @@
+From 326d70edd99c3f21cf299dba55214e2c8957e622 Mon Sep 17 00:00:00 2001
+From: Luiz Augusto von Dentz <luiz.von.dentz@intel.com>
+Date: Mon, 23 Nov 2020 10:20:06 -0800
+Subject: [PATCH] a2dp: Fix crash when SEP codec has not been initialized
+
+If SEP has not been properly discovered avdtp_get_codec may return NULL
+thus causing crashes such as:
+
+https://github.com/bluez/bluez/issues/57
+---
+ profiles/audio/a2dp.c | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+
+diff --git a/profiles/audio/a2dp.c b/profiles/audio/a2dp.c
+index 59d11a0aa..f1e4fa990 100644
+--- a/profiles/audio/a2dp.c
++++ b/profiles/audio/a2dp.c
+@@ -1887,8 +1887,8 @@ static void register_remote_sep(void *data, void *user_data)
+ 				sep, remote_sep_free) == FALSE) {
+ 		error("Could not register remote sep %s", sep->path);
+ 		free(sep->path);
+-		sep->path = NULL;
+-		goto done;
++		free(sep);
++		return;
+ 	}
+ 
+ 	DBG("Found remote SEP: %s", sep->path);
+@@ -2627,10 +2627,15 @@ static void store_remote_sep(void *data, void *user_data)
+ 	GKeyFile *key_file = user_data;
+ 	char seid[4], value[256];
+ 	struct avdtp_service_capability *service = avdtp_get_codec(sep->sep);
+-	struct avdtp_media_codec_capability *codec = (void *) service->data;
++	struct avdtp_media_codec_capability *codec;
+ 	unsigned int i;
+ 	ssize_t offset;
+ 
++	if (!service)
++		return;
++
++	codec = (void *) service->data;
++
+ 	sprintf(seid, "%02hhx", avdtp_get_seid(sep->sep));
+ 
+ 	offset = sprintf(value, "%02hhx:%02hhx:%02hhx:",
