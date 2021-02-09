@@ -2,7 +2,7 @@
 # Maintainer: Dan McGee <dan@archlinux.org>
 
 pkgname=git
-pkgver=2.30.0
+pkgver=2.30.1
 pkgrel=1
 pkgdesc='the fast distributed version control system'
 arch=('x86_64')
@@ -31,7 +31,7 @@ source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar."{xz,sign}
         'git-daemon@.service'
         'git-daemon.socket'
         'git-sysusers.conf')
-sha256sums=('55735021109565721af805af382c45cce73c3cfaa59daad22443d1477d334d19'
+sha256sums=('f988a8a095089978dab2932af4edb22b4d7d67d67b81aaa1986fa29ef45d9467'
             'SKIP'
             '14c0b67cfe116b430645c19d8c4759419657e6809dfa28f438c33a005245ad91'
             'ac4c90d62c44926e6d30d18d97767efc901076d4e0283ed812a349aece72f203'
