@@ -3,7 +3,7 @@
 
 pkgbase=lvm2
 pkgname=('lvm2' 'device-mapper')
-pkgver=2.02.187
+pkgver=2.03.11
 pkgrel=3
 arch=('x86_64')
 url='https://sourceware.org/lvm2/'
@@ -12,21 +12,13 @@ makedepends=('git' 'systemd' 'thin-provisioning-tools')
 validpgpkeys=('88437EF5C077BD113D3B7224228191C1567E2C17'  # Alasdair G Kergon <agk@redhat.com>
               'D501A478440AE2FD130A1BE8B9112431E509039F') # Marian Csontos <marian.csontos@gmail.com>
 source=("git+https://sourceware.org/git/lvm2.git#tag=v${pkgver//./_}?signed"
-        '0001-fix-ordering-in-initramfs.patch'
         'lvm2_install'
-        'lvm2_hook'
-        'sd-lvm2_install'
         '11-dm-initramfs.rules')
 sha256sums=('SKIP'
-            '7a34b263e51d5a71e0595bba163de478f4f14a26015b11e682406e4adf7ba656'
-            'cc51940a8437f3c8339bb9cec7e929b2cc0852ffc8a0b2463e6f67ca2b9950f6'
-            '97d7c92e4954bc0108e7cd183b2eb5fe7ecc97e6f56369669e6537cb6ed45d80'
-            'b749c2da0e9307b0c2c3858d024a19c268e01e393e876a284fe1a302427f72f1'
+            '7fae2e70b2bf3d81e5ab8710bf1c76a81e26ec10063978f21bafbdddd3790185'
             'e10f24b57582d6e2da71f7c80732a62e0ee2e3b867fe84591ccdb53e80fa92e0')
 
 _backports=(
-  # udev: remove unsupported OPTIONS+="event_timeout" rule
-  '125f27ac37bc9b93cc96f64052b9681b3d479ee1'
 )
 
 prepare() {
@@ -38,12 +30,9 @@ prepare() {
     git show "${_c}" -- ':(exclude)WHATS_NEW' | git apply
   done
 
-  patch -Np1 < ../0001-fix-ordering-in-initramfs.patch
-
   # remove install section from systemd units that are enabled by default
   sed -i -e '/^\[Install\]$/,$d' \
     scripts/dm_event_systemd_red_hat.socket.in \
-    scripts/lvm2_lvmetad_systemd_red_hat.socket.in \
     scripts/lvm2_lvmpolld_systemd_red_hat.socket.in \
     scripts/lvm2_monitoring_systemd_red_hat.service.in
 }
@@ -55,16 +44,13 @@ build() {
     --sbindir=/usr/bin
     --sysconfdir=/etc
     --localstatedir=/var
-    --enable-applib
     --enable-cmdlib
     --enable-dmeventd
-    --enable-lvmetad
     --enable-lvmpolld
     --enable-pkgconfig
     --enable-readline
     --enable-udev_rules
     --enable-udev_sync
-    --enable-use-lvmetad
     --with-cache=internal
     --with-default-dm-run-dir=/run
     --with-default-locking-dir=/run/lock/lvm
@@ -119,8 +105,8 @@ package_device-mapper() {
 
 package_lvm2() {
   pkgdesc="Logical Volume Manager 2 utilities"
-  depends=('bash' "device-mapper>=${pkgver}" 'libdevmapper.so' 'systemd-libs'
-    'libudev.so' 'libutil-linux' 'libblkid.so' 'readline' 'libreadline.so'
+  depends=('bash' "device-mapper>=${pkgver}" 'systemd-libs'
+    'libudev.so' 'util-linux-libs' 'libblkid.so' 'readline' 'libreadline.so'
     'thin-provisioning-tools')
   conflicts=('lvm' 'mkinitcpio<0.7')
   backup=('etc/lvm/lvm.conf'
@@ -130,21 +116,17 @@ package_lvm2() {
   cd lvm2/
 
   make DESTDIR="${pkgdir}" install_lvm2
-  # install applib
-  make -C liblvm DESTDIR="${pkgdir}" install
   # /etc directories
   install -d "${pkgdir}"/etc/lvm/{archive,backup}
   # mkinitcpio hook
-  install -D -m0644 "${srcdir}/lvm2_hook" "${pkgdir}/usr/lib/initcpio/hooks/lvm2"
   install -D -m0644 "${srcdir}/lvm2_install" "${pkgdir}/usr/lib/initcpio/install/lvm2"
-  install -D -m0644 "${srcdir}/sd-lvm2_install" "${pkgdir}/usr/lib/initcpio/install/sd-lvm2"
-  # extra udev rule for lvmetad in non-systemd initramfs
+  ln -s /usr/lib/initcpio/install/lvm2 "${pkgdir}/usr/lib/initcpio/install/sd-lvm2"
+  # extra udev rule for non-systemd initramfs
   install -D -m0644 "${srcdir}/lvm2-initramfs/udev/69-dm-lvm-metad.rules" "${pkgdir}/usr/lib/initcpio/udev/69-dm-lvm-metad.rules"
   # systemd support
   make DESTDIR="${pkgdir}" install_systemd_units
   rm -f "${pkgdir}/usr/lib/systemd/system/"dm-*
   install -d -m0755 "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants"
-  ln -sf ../lvm2-lvmetad.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmetad.socket"
   ln -sf ../lvm2-lvmpolld.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmpolld.socket"
   ln -sf ../lvm2-monitor.service "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-monitor.service"
   make DESTDIR="${pkgdir}" install_systemd_generators
