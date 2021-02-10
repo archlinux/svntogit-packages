@@ -1,53 +1,71 @@
-# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Laurent Carlier <lordheavym@gmail.com>
 # Contributor: Stéphane Gaudreault <stephane@archlinux.org>
 # Contributor: Andrej Gelenberg <andrej.gelenberg@udo.edu>
 
 pkgbase=elfutils
-pkgname=(elfutils libelf)
-pkgver=0.182
+pkgname=('elfutils' 'libelf')
+pkgver=0.183
 pkgrel=1
-pkgdesc='Utilities to handle ELF object files and DWARF debugging information'
-arch=(x86_64)
-url='https://sourceware.org/elfutils/'
-license=(LGPL3 GPL GPL3)
-makedepends=(gcc-libs zlib bzip2 xz libmicrohttpd sqlite libarchive curl)
-options=(staticlibs)
-source=(https://sourceware.org/elfutils/ftp/${pkgver}/elfutils-${pkgver}.tar.bz2{,.sig})
-sha512sums=('8ab0735bbe11b4383169341bf674ace360038b6ae5239f1d5a991c46260cd4bce545e078735b7de3b8fab132bb5da41f60689ff1b1d7ebccfada117a954a2c81'
+pkgdesc='Handle ELF object files and DWARF debugging information'
+arch=('x86_64')
+url="https://sourceware.org/elfutils/"
+license=('LGPL3' 'GPL3')
+makedepends=('bzip2' 'curl' 'gcc-libs' 'libarchive' 'libmicrohttpd' 'sqlite'
+'xz' 'zlib' 'zstd')
+options=('staticlibs')
+source=("https://sourceware.org/${pkgbase}/ftp/${pkgver}/${pkgbase}-${pkgver}.tar.bz2"{,.sig})
+sha512sums=('bdafdd738a33cebe4f87849e5e6f1133881e77ef71b27faa0f0234ff80e9674f506957898326c2a55fd8438cbd189f7930597d0b4b9ca6c77921cc0cbd83b6b7'
             'SKIP')
-validpgpkeys=('47CC0331081B8BC6D0FD4DA08370665B57816A6A')  # Mark J. Wielaard <mark@klomp.org>
-validpgpkeys+=('EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A') # Mark Wielaard <mjw@gnu.org>
+b2sums=('8dd92e7c2df13d51bb51085f6cf762ea1ec7b803dcebf1202a4441ba152ed0e3332b1267276de4650d5ed5c5bed656f72f4c4e9bbf20700be45312a202351574'
+        'SKIP')
+validpgpkeys=(
+  '47CC0331081B8BC6D0FD4DA08370665B57816A6A'  # Mark J. Wielaard <mark@klomp.org>
+  'EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A'  # Mark Wielaard <mjw@gnu.org>
+)
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+  autoreconf -fiv
+}
 
 build() {
-  cd $pkgbase-$pkgver
-
+  cd "$pkgbase-$pkgver"
   CFLAGS+=" -g"  # required for test-suite success
-  ./configure --prefix=/usr --program-prefix="eu-" --enable-deterministic-archives
-
+  ./configure --prefix=/usr \
+              --sysconfdir=/etc \
+              --program-prefix="eu-" \
+              --enable-deterministic-archives
   make
 }
 
 check() {
-  cd $pkgbase-$pkgver
-
+  cd "$pkgbase-$pkgver"
   # Some tests fail due to limited capabilities of build chroot
-  make check || :
-}
-
-package_elfutils() {
-  depends=(gcc-libs zlib bzip2 xz libmicrohttpd sqlite libarchive curl
-           "libelf=$pkgver-$pkgrel")
-
-  cd $pkgbase-$pkgver
-  make DESTDIR="$pkgdir" install
-
-  mkdir "$srcdir/libelf" 
-  mv "$pkgdir"/usr/{lib,include} "$srcdir/libelf/"
+  make check || echo "Known problem: The build environment might lack enough resources."
 }
 
 package_libelf() {
-  pkgdesc='Libraries to handle ELF object files and DWARF debugging information'
-  depends=(gcc-libs zlib bzip2 xz curl)
+  pkgdesc+=" (libraries)"
+  depends=('gcc-libs' 'libbz2.so' 'libcurl.so' 'xz' 'zlib' 'zstd')
+  provides=('libasm.so' 'libdebuginfod.so' 'libdw.so' 'libelf.so')
 
-  mv libelf "$pkgdir/usr"
+  cd "$pkgbase-$pkgver"
+  make DESTDIR="$pkgdir" install
+  # remove files provided by elfutils
+  rm -rvf "${pkgdir}"{/etc,/usr/{bin,share}}
+}
+
+package_elfutils() {
+  pkgdesc+=" (utilities)"
+  depends=('gcc-libs' 'glibc' 'libarchive.so' "libelf=${pkgver}-${pkgrel}"
+  'libasm.so' 'libdebuginfod.so' 'libdw.so' 'libelf.so' 'libmicrohttpd.so'
+  'sqlite')
+
+  cd "$pkgbase-$pkgver"
+  make DESTDIR="$pkgdir" install
+  install -vDm 644 {AUTHORS,ChangeLog,NEWS,NOTES,README} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+  # remove files provided by libelf
+  rm -rvf "${pkgdir}/usr/"{include,lib}
 }
