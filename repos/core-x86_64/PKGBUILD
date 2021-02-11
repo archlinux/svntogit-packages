@@ -3,8 +3,8 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.66.6
-pkgrel=2
+pkgver=2.66.7
+pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -13,13 +13,11 @@ depends=(pcre libffi util-linux-libs zlib)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus sysprof)
 checkdepends=(desktop-file-utils)
-_commit=d5ec4f360fb5a2ef0df1862999f970dc67fa352c  # tags/2.66.6^0
+_commit=95115f029d9c170c2e966cd7d3547b6394c92a4a  # tags/2.66.7^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
-        0001-giochannel-Fix-length_size-bounds-check.patch
         noisy-glib-compile-schemas.diff
         glib-compile-schemas.hook gio-querymodules.{hook,script})
 sha256sums=('SKIP'
-            'd2dbc00679545cedb33d0179d69a9be5c12b3f00d426e227ca07687384f3407c'
             '81a4df0b638730cffb7fa263c04841f7ca6b9c9578ee5045db6f30ff0c3fc531'
             '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
             '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
@@ -32,9 +30,6 @@ pkgver() {
 
 prepare() {
   cd glib
-
-  # https://bugs.archlinux.org/task/69569
-  git apply -3 ../0001-giochannel-Fix-length_size-bounds-check.patch
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../noisy-glib-compile-schemas.diff
