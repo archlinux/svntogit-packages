@@ -3,13 +3,13 @@
 
 pkgname=xfce4-power-manager
 pkgver=4.16.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Power manager for Xfce desktop"
 arch=('x86_64')
 url="https://www.xfce.org/"
 license=('GPL2')
 groups=('xfce4')
-depends=('libxfce4ui' 'upower' 'libnotify' 'hicolor-icon-theme')
+depends=('libxfce4ui' 'upower' 'libnotify' 'xfce4-notifyd' 'hicolor-icon-theme')
 makedepends=('intltool' 'xfce4-panel')
 source=(https://archive.xfce.org/src/xfce/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.bz2)
 sha256sums=('eb9c587c01b502fa45a32e7fc2aba98fa6d8391475133883654f77e562c43bf3')
