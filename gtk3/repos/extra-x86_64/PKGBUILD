@@ -2,8 +2,8 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=gtk3
-pkgver=3.24.24
-pkgrel=2
+pkgver=3.24.25
+pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -20,7 +20,7 @@ conflicts=(gtk3-print-backends)
 replaces=("gtk3-print-backends<=3.22.26-1")
 license=(LGPL)
 install=gtk3.install
-_commit=de8329b3ce4b235eac9ddcbb6cd121cc83dd9e74  # tags/3.24.24^0
+_commit=5c6aa76979499fa4fc1c202fd30e6977827c7730  # tags/3.24.25^0
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         gtk-query-immodules-3.0.hook)
 sha256sums=('SKIP'
