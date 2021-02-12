@@ -11,7 +11,7 @@ _GRUB_EMU_BUILD="0"
 
 _GRUB_EXTRAS_COMMIT="8a245d5c1800627af4cefa99162a89c7a46d8842"
 _GNULIB_COMMIT="be584c56eb1311606e5ea1a36363b97bddb6eed3"
-_UNIFONT_VER="13.0.02"
+_UNIFONT_VER="13.0.05"
 
 [[ "${CARCH}" == "x86_64" ]] && _EFI_ARCH="x86_64"
 [[ "${CARCH}" == "i686" ]] && _EFI_ARCH="i386"
@@ -71,7 +71,7 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#tag=grub-${_pkgver}?signe
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
-            'ee02036aec9350dc35ebaaa205c43f9f9ad14efc56d63c12b177ac4fd424e94f'
+            'c4e61e9336d8d024479ea72616722c6c47c93f76dc173e8ad3edf9f9e07c3115'
             'SKIP'
             '171415ab075d1ac806f36c454feeb060f870416f24279b70104bba94bd6076d4'
             'a5198267ceb04dceb6d2ea7800281a42b3f91fd02da55d2cc9ea20d47273ca29'
