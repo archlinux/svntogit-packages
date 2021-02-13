@@ -3,9 +3,9 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=13.1
+pkgver=13.2
 _majorver=${pkgver%.*}
-pkgrel=3
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -13,7 +13,6 @@ license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
              'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
-        icu68.patch
         postgresql-run-socket.patch
         postgresql-perl-rpath.patch
         postgresql.pam
@@ -22,8 +21,7 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql-check-db-dir
         postgresql.sysusers
         postgresql.tmpfiles)
-sha256sums=('12345c83b89aa29808568977f5200d6da00f88a035517f925293355432ffe61f'
-            'fa784fe8b94833539cdb52f3986561bba3673e3b1d80e18d9e097826c5658454'
+sha256sums=('5fd7fcd08db86f5b2aed28fcfaf9ae0aca8e9428561ac547764c2a2b0f41adfc'
             '02ffb53b0a5049233f665c873b96264db77daab30e5a2194d038202d815a8e6a'
             'af6186d40128e043f333da4591455bf62b7c96e80214835f5c8c60b635ea9afb'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
@@ -32,8 +30,7 @@ sha256sums=('12345c83b89aa29808568977f5200d6da00f88a035517f925293355432ffe61f'
             '7db9626c322928b2465aa126b48ba7f0eebd366bf2aa19c9c0a92b488cb469c5'
             '7fa8f0ef3f9d40abd4749cc327c2f52478cb6dfb6e2405bd0279c95e9ff99f12'
             '4a4c0bb9ceb156cc47e9446d8393d1f72b4fe9ea1d39ba17213359df9211da57')
-b2sums=('609ac10f87da800754223c7f7d6b02efa3ed1308a5d27cc793c937be983f4041576e20de3b2efe514e3f61dc863e6212ec01d73adb93f6bcc373a596b2946675'
-        '0f829658a4fdc39b83f62b47bc3f5ca61c8bfc1cea166286ce797939f008542147fb10773267f46ef98e7e330975223e784f5117eefa1e8b75d850f7e0c7c59e'
+b2sums=('982feffdd98d3f519ff1e790d35ac828710d3ca6cbf935a78bf04011dbc12b4523b451bc7f2421a788a709d1746b2cca9135842bfc1d5048ef5951ed48b20b6a'
         '71dc1b4e41294fd235db05317c991d42de082c49d38a2f97d1394572a93a4aa77f42ec29b4e6cf0a17adb3a4471afcb1e2464870f2b9e847906bf49541763a53'
         '5135c5f9dafe427de8d3740d4a67c6dba2869be47dc52b4190b8aa1148e702992fde1821371b68e93b224f5805f697d490ea28ec80d7ce55e5a224551b0a6247'
         '3eab84d332d96678fe6e435ee243c8f1a82b838f601d61d3604d11e918aed7a62202edca5e476c4b9031ed284570e6fcd6c659cfdbd9624aa0019d3233755f81'
@@ -45,7 +42,6 @@ b2sums=('609ac10f87da800754223c7f7d6b02efa3ed1308a5d27cc793c937be983f4041576e20d
 
 prepare() {
   cd postgresql-${pkgver}
-  patch -p0 < ../icu68.patch
   patch -p1 < ../postgresql-run-socket.patch
   patch -p1 < ../postgresql-perl-rpath.patch
 }
