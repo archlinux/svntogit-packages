@@ -1,7 +1,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-cryptography
-pkgver=3.4.4
+pkgver=3.4.5
 pkgrel=1
 pkgdesc="A package designed to expose cryptographic recipes and primitives to Python developers"
 arch=('x86_64')
@@ -12,7 +12,7 @@ makedepends=('python-setuptools-rust')
 checkdepends=('python-pytest-runner' 'python-pytest-subtests' "python-cryptography-vectors=$pkgver"
               'python-iso8601' 'python-pretend' 'python-hypothesis' 'python-pytz')
 source=("https://pypi.io/packages/source/c/cryptography/cryptography-$pkgver.tar.gz")
-sha512sums=('3c94cb3eccc67cd1d7be9d16353f94a08019534517bbe9cd97ee75f05631418d1688fa7efc7284a62482d22b731de524f45268cf357d47a37a2fb033f1b9b3fc')
+sha512sums=('a8cf49193cbc11eb36fbcdd6987e7333a29af849607f63ea2bb6faad9caf4b3d7d8f09b9c30bee0e5ccda115bb64b3665d5be3f143759c7d6e3772ebf652642c')
 
 prepare() {
   # https://github.com/pyca/cryptography/pull/5777
