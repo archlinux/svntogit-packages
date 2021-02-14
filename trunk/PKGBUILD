@@ -1,14 +1,14 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=5.4.98
+pkgver=5.10.16
 pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
 license=(GPL2)
 makedepends=(
-  bc kmod libelf cpio perl tar xz
+  bc kmod libelf pahole cpio perl tar xz
   xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
 )
 options=('!strip')
@@ -17,20 +17,18 @@ source=(
   https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
   0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
-  0002-virt-vbox-Add-support-for-the-new-VBG_IOCTL_ACQUIRE_.patch
-  sphinx-workaround.patch
+#  0002-virt-vbox-Add-support-for-the-new-VBG_IOCTL_ACQUIRE_.patch
+#  sphinx-workaround.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
-sha256sums=('83a248d6fbe388f133769d736f36b754767abc9d66f1c034b537ad778fbd46b1'
+sha256sums=('536fe3ea273bfcc72b3571d3b3a7ff0a5bcdc16068efd22e42c4f9d03c200a37'
             'SKIP'
-            'be2066dd6133357007e8c7da9d5de3194b13409ebbfba8821db1849588fced1e'
-            'b439f57b84bc98730c0265695abb92385ee4dcd35a5c00d4cb3d3155c75fb491'
-            '4fd74bb2a7101d700fba91806141339d8c9e46a14f8fc1fe276cfb68f1eec0f5'
-            'b7c814c8183e4645947a6dcc3cbf80431de8a8fd4e895b780f9a5fd92f82cb8e')
+            '14d52a4f598bdbf752546c4bab4dd096173db1f958df7dde97d17bb347b7073f'
+            '757e6de2a76284cd86f443d8a9830e775291ba01d9d339cff9b9b3e4b205b7b3')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -72,6 +70,8 @@ _package() {
   depends=(coreutils kmod initramfs)
   optdepends=('crda: to set the correct wireless channels of your country'
               'linux-firmware: firmware images needed for some devices')
+  provides=(WIREGUARD-MODULE)
+  replaces=(wireguard-lts)
 
   cd $_srcname
   local kernver="$(<version)"
@@ -86,7 +86,7 @@ _package() {
   echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
   echo "Installing modules..."
-  make INSTALL_MOD_PATH="$pkgdir/usr" modules_install
+  make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 modules_install
 
   # remove build and source links
   rm "$modulesdir"/{source,build}
@@ -161,6 +161,9 @@ _package-headers() {
         strip -v $STRIP_SHARED "$file" ;;
     esac
   done < <(find "$builddir" -type f -perm -u+x ! -name vmlinux -print0)
+
+  echo "Stripping vmlinux..."
+  strip -v $STRIP_STATIC "$builddir/vmlinux"
 
   echo "Adding symlink..."
   mkdir -p "$pkgdir/usr/src"
