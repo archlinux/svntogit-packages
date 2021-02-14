@@ -21,7 +21,7 @@ source=(https://github.com/mesonbuild/meson/releases/download/${pkgver/rc/.rc}/m
         arch-meson)
 sha512sums=('a5e7ef00de9c8244096b8b8f85aa609e95a0645cf54973ce3676e7c7c02231ce51d9d5cad95b03c6e2dbfb06ba100a86deb084b772effe86e3572418d1cdda38'
             'SKIP'
-            '26ba3e3f0644a3cc6da716a6ea33f5b33caa1be87532aac51d71d2cb45d0b6d41a7ba309cb778da8836e759c42647c3b60b6674f713b6dbdfa49f23ce4276c46'
+            '4e643d1db5a09c061f1118aee4018e820c86ad164c469eeb5823a17e7ec83be0a875b1a841ae22078c84777b4951f198fb55c31aa31a8f37209fae0de06e61ea'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('19E2D6D9B46D8DAA6288F877C24E631BABB1FE70') # Jussi Pakkanen <jpakkane@gmail.com>
 
