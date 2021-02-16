@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.10.16
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -70,7 +70,7 @@ _package() {
   depends=(coreutils kmod initramfs)
   optdepends=('crda: to set the correct wireless channels of your country'
               'linux-firmware: firmware images needed for some devices')
-  provides=(WIREGUARD-MODULE)
+  provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE)
   replaces=(wireguard-lts)
 
   cd $_srcname
