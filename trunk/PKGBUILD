@@ -5,8 +5,8 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.20.5
-pkgrel=2
+pkgver=5.21.0
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -17,7 +17,7 @@ depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appst
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin kinit plasma-wayland-protocols)
 groups=(plasma)
 source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
-sha256sums=('357ef43092efb4d45f7c6ae9249a538be3484c855d0e35ae3b0b1e8d3db6c624'
+sha256sums=('fa7f0bbbad8a8b485f40746da13f7899bc69025f97b19dfa9e08352c6ca0cbd4'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
@@ -39,7 +39,6 @@ package_plasma-workspace() {
               'appmenu-gtk-module: global menu support for GTK2 and some GTK3 applications'
               'qt5-virtualkeyboard: virtual keyboard support in lock screen'
               'baloo: Baloo search runner' 'discover: manage applications installation from the launcher')
-  provides=(notification-daemon)
   backup=('etc/pam.d/kde')
 
   DESTDIR="$pkgdir" cmake --install build
