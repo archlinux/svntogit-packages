@@ -1,0 +1,84 @@
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->binutils->glibc
+
+pkgname=binutils
+pkgver=2.36.1
+pkgrel=2
+pkgdesc='A set of programs to assemble and manipulate binary and object files'
+arch=(x86_64)
+url='https://www.gnu.org/software/binutils/'
+license=(GPL)
+groups=(base-devel)
+depends=(glibc zlib elfutils)
+makedepends=(elfutils git)
+conflicts=(binutils-multilib)
+replaces=(binutils-multilib)
+options=(staticlibs !distcc !ccache)
+#_commit=cb5f6a3e146cc70bc2d864989386df80acec5d3e
+#source=(git+https://sourceware.org/git/binutils-gdb.git#commit=$_commit)
+source=(https://ftp.gnu.org/gnu/binutils/binutils-$pkgver.tar.xz{,.sig})
+sha256sums=('e81d9edf373f193af428a0f256674aea62a9d74dfe93f65192d4eae030b0f3b0'
+            'SKIP')
+validpgpkeys=(3A24BC1E8FB409FA9F14371813FCEF89DD9E3C4F)
+
+prepare() {
+  [[ ! -d binutils-gdb ]] && ln -s binutils-$pkgver binutils-gdb
+  mkdir -p binutils-build
+
+  cd binutils-gdb
+
+  # Turn off development mode (-Werror, gas run-time checks, date in sonames)
+  sed -i '/^development=/s/true/false/' bfd/development.sh
+
+  # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
+}
+
+build() {
+  cd binutils-build
+
+  "$srcdir/binutils-gdb/configure" \
+    --prefix=/usr \
+    --with-lib-path=/usr/lib:/usr/local/lib \
+    --with-bugurl=https://bugs.archlinux.org/ \
+    --enable-cet \
+    --enable-deterministic-archives \
+    --enable-gold \
+    --enable-ld=default \
+    --enable-lto \
+    --enable-plugins \
+    --enable-relro \
+    --enable-targets=x86_64-pep \
+    --enable-threads \
+    --disable-gdb \
+    --disable-werror \
+    --with-debuginfod \
+    --with-pic \
+    --with-system-zlib
+
+  make configure-host
+  make tooldir=/usr
+}
+
+check() {
+  cd binutils-build
+
+  # unset LDFLAGS as testsuite makes assumptions about which ones are active
+  # ignore failures in gold testsuite...
+  make -k LDFLAGS="" check || true
+}
+
+package() {
+  cd binutils-build
+  make prefix="$pkgdir/usr" tooldir="$pkgdir/usr" install
+
+  # Remove unwanted files
+  rm -f "$pkgdir"/usr/share/man/man1/{dlltool,nlmconv,windres,windmc}*
+
+  # No shared linking to these files outside binutils
+  rm -f "$pkgdir"/usr/lib/lib{bfd,opcodes}.so
+  echo 'INPUT( /usr/lib/libbfd.a -liberty -lz -ldl )' > "$pkgdir/usr/lib/libbfd.so"
+  echo 'INPUT( /usr/lib/libopcodes.a -lbfd )' > "$pkgdir/usr/lib/libopcodes.so"
+}
