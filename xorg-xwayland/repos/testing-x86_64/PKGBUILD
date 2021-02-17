@@ -1,0 +1,61 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+pkgname=xorg-xwayland
+
+# https://gitlab.freedesktop.org/xorg/xserver/-/commits/xwayland-21.1
+_commit=fdc61c5a3cc2637a52928c8e2fd4d50118c7ffea # xwayland 21.1 branch
+
+pkgver=1.20.0.r853.gfdc61c5a3
+pkgrel=1
+arch=('x86_64')
+license=('custom')
+groups=('xorg')
+url="https://xorg.freedesktop.org"
+pkgdesc="run X clients under wayland"
+depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2' 
+         'pixman' 'xorg-server-common')
+makedepends=('meson' 'git' 
+             'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
+             'xorg-font-util'
+             'wayland' 'wayland-protocols'
+             'libdrm' 'mesa-libgl'
+             'systemd'
+             'egl-wayland'
+)
+source=("git+https://gitlab.freedesktop.org/xorg/xserver#commit=${_commit}")
+sha256sums=('SKIP')
+provides=('xorg-server-xwayland')
+conflicts=('xorg-server-xwayland')
+replaces=('xorg-server-xwayland')
+
+pkgver() {
+  cd xserver
+  git describe --tags | sed 's/^xorg.server.//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  arch-meson xserver build \
+    -D ipv6=true \
+    -D xvfb=false \
+    -D xcsecurity=true \
+    -D xwayland_eglstream=true \
+    -D glamor=true \
+    -D xkb_dir=/usr/share/X11/xkb \
+    -D xkb_output_dir=/var/lib/xkb
+
+  # Print config
+  meson configure build
+  ninja -C build
+}
+
+package() {
+
+  # bin + manpage + .pc file
+  install -m755 -Dt "${pkgdir}"/usr/bin build/hw/xwayland/Xwayland
+  install -m644 -Dt "${pkgdir}"/usr/share/man/man1 build/hw/xwayland/Xwayland.1
+  install -m644 -Dt "${pkgdir}"/usr/lib/pkgconfig build/hw/xwayland/xwayland.pc
+
+  # license
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xserver/COPYING
+}
+
