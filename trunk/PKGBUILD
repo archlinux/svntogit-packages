@@ -3,15 +3,16 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=mkinitcpio
-pkgver=29
+pkgver=30
 pkgrel=1
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url="https://projects.archlinux.org/mkinitcpio.git/"
 license=('GPL')
 depends=('awk' 'mkinitcpio-busybox>=1.19.4-2' 'kmod' 'util-linux>=2.23' 'libarchive' 'coreutils'
-         'bash' 'diffutils' 'findutils' 'grep' 'filesystem>=2011.10-1' 'gzip' 'systemd')
-optdepends=('xz: Use lzma or xz compression for the initramfs image'
+         'bash' 'diffutils' 'findutils' 'grep' 'filesystem>=2011.10-1' 'zstd' 'systemd')
+optdepends=('gzip: Use gzip compression for the initramfs image'
+            'xz: Use lzma or xz compression for the initramfs image'
             'bzip2: Use bzip2 compression for the initramfs image'
             'lzop: Use lzo compression for the initramfs image'
             'lz4: Use lz4 compression for the initramfs image'
@@ -20,9 +21,9 @@ provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
-sha512sums=('cc03159f16ae12a0d1ebf6a1827f8cdaf73ad0910bf2b1b0f30b737b1cff472130eb41c3669c180291a9861c3c3167498d1f9d60cb9782aeb1ef1d0cd2156068'
+sha512sums=('ef43a8ddc01697fa43bede4eebad3271bbc89efa57ba7e4e9f321e8174ff2af74d857b308c5c0f37b42a91906c91c1b022f9a651c70d5d3e9dfc8dc441a60ee4'
             'SKIP')
-b2sums=('4303216cc3c020bf58491a18b13785660e08f418a333f5b975b29b1da4f6b4427f5bbda358018a34e6894217c6368fdf3fe73d361e770a4b6e40abb12ba2fd02'
+b2sums=('2001f9ac12bfa7369ad32842956cd21b2a786cd28133b6d3256e4aa77210c78ec6cac8a710ff8c2feb5a4797c1a33ce8c8c7dfabd84d7927c08bf8377e330300'
         'SKIP')
 validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'    # Giancarlo Razzolini
               '86CFFCA918CF3AF47147588051E8B148A9999C34')   # Evangelos Foutras
