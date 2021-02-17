@@ -1,6 +1,6 @@
 # Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
 pkgname=dracut
-pkgver=051
+pkgver=052
 pkgrel=1
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
@@ -18,7 +18,7 @@ optdepends=('binutils: --uefi option support'
 provides=('initramfs')
 backup=('etc/dracut.conf')
 source=(https://mirrors.edge.kernel.org/pub/linux/utils/boot/dracut/dracut-${pkgver}.tar{.gz,.sign})
-sha512sums=('e714ca395aa3534c28793b91fd79ec400f6e87ae98f67042e20d1312e25693f31629537475f2445587bc548bac94731e3cec8cba928ac34cebf05b1b08f67e07'
+sha512sums=('c36fbcd4c40c9f9c90d285338758e2dfa47fa68499a08f697f2fb51404dce513aed7d74a570620a698ba39cd8e42dc3dcbeec274fda4867149a1019cf35d10b1'
             'SKIP')
 validpgpkeys=(
   '7F3D64824AC0B6B8009E50504BC0896FB5693595' # Harald Hoyer <harald@redhat.com>
