@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=11.0.1
-pkgrel=2
+pkgver=11.1.0
+pkgrel=1
 _ocaml_ver=4.11.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -17,7 +17,7 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         amdgpu-avoid-an-illegal-operand-in-si-shrink-instr.patch
         llvm-config.h)
-sha256sums=('ccd87c254b6aebc5077e4e6977d08d4be888e7eb672c6630a26a15d58b59b528'
+sha256sums=('ce8508e318a01a63d4e8b3090ab2ded3c598a50258cc49e2625b9120d4c03ea5'
             'SKIP'
             '85b6977005899bc76fcc548e0b6501cae5f50a8ad03060b9f58d03d775323327'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
