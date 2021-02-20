@@ -3,7 +3,7 @@
 
 pkgname=gtk3
 pkgver=3.24.25
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -33,6 +33,9 @@ pkgver() {
 
 prepare() {
   cd gtk
+
+  # https://bugs.archlinux.org/task/69705
+  git cherry-pick -n 22960c5c20cf5a2d4666645f259d376784a11331
 }
 
 build() {
