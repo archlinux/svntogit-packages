@@ -24,7 +24,7 @@ pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
 _pkgver=2.04
 pkgver=${_pkgver/-/}
-pkgrel=9
+pkgrel=10
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -82,6 +82,9 @@ sha256sums=('SKIP'
 _backports=(
 	# grub-mkconfig: Use portable "command -v" to detect installed programs
 	'28a7e597de0d5584f65e36f9588ff9041936e617'
+
+	# build: Fix GRUB i386-pc build with Ubuntu gcc
+	'6643507ce30f775008e093580f0c9499dfb2c485'
 )
 
 _configure_options=(
