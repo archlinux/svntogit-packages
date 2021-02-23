@@ -7,9 +7,9 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.14.0
+pkgver=4.14.1
 _clangver=11.1.0
-pkgrel=5
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -32,7 +32,7 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
          qtcreator-fix-clang-paths.patch::"https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=86348d56")
-sha256sums=('d240109351e96446ff149cbd56341ec02ba37bfa50462a85e4d02dfe6b21201e'
+sha256sums=('ef6fdcbaebb0d3d37cfdbc68f8b9e94ffeb6f63194564da5ce77760bb7790367'
             '99518ed7e9525bba7a8f49111c948b56fae224298f06d7dc93bb905bbcd87de4')
 
 prepare() {
@@ -40,17 +40,12 @@ prepare() {
 
 # use system qbs
   rm -r src/shared/qbs
-# Fix linking to clang
-  sed -e 's|clangFormat|clang-cpp|' -i src/plugins/clangformat/CMakeLists.txt  
-# Fix libexec path
-  sed -e 's|libexec/qtcreator|lib/qtcreator|' -i cmake/QtCreatorAPIInternal.cmake
-# Fix clang include path
-  patch -p1 -i ../qtcreator-fix-clang-paths.patch
 }
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DWITH_DOCS=ON
   cmake --build build
 }
