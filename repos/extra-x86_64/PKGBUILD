@@ -4,35 +4,56 @@
 # Contributor: Douglas Soares de Andrade <dsa@aur.archlinux.org>
 
 pkgbase=qscintilla
-pkgname=('qscintilla-qt5' 'python-qscintilla-qt5')
-pkgver=2.11.6
-pkgrel=2
-license=('GPL')
-arch=('x86_64')
+pkgname=(qscintilla-qt5 python-qscintilla-qt5 qscintilla-qt6 python-qscintilla-qt6)
+pkgver=2.12.0
+pkgrel=1
+license=(GPL)
+arch=(x86_64)
 url="https://www.riverbankcomputing.com/software/qscintilla/intro"
-makedepends=('python-pyqt5' 'qt5-tools' 'sip' 'pyqt-builder')
-source=("https://www.riverbankcomputing.com/static/Downloads/QScintilla/$pkgver/QScintilla-$pkgver.tar.gz")
-sha256sums=('e7346057db47d2fb384467fafccfcb13aa0741373c5d593bc72b55b2f0dd20a7')
+makedepends=(python-pyqt5 qt5-tools python-pyqt6 qt6-tools sip pyqt-builder)
+source=("https://www.riverbankcomputing.com/static/Downloads/QScintilla/$pkgver/QScintilla_src-$pkgver.tar.gz")
+sha256sums=('2116181cce3076aa4897e36182532d0e6768081fb0cf6dcdd5be720519ab1434')
 
 build() {
-  cd QScintilla-${pkgver}
-  export QMAKEFEATURES=$PWD/Qt4Qt5/features/
+  cp -r QScintilla_src-$pkgver{,-qt5}
 
-  cd Qt4Qt5
+  cd QScintilla_src-$pkgver-qt5/src
+  export QMAKEFEATURES=$PWD/src/features/
   qmake-qt5
   make
 
-  cd ../designer-Qt4Qt5
-  qmake-qt5 INCLUDEPATH+=../Qt4Qt5 QMAKE_LIBDIR+=../Qt4Qt5
+  cd ../designer
+  qmake-qt5 INCLUDEPATH+=../src QMAKE_LIBDIR+=../src
   make
 
-  cd ..
+  cd ../Python
+  mv pyproject{-qt5,}.toml
   sip-build \
     --no-make \
-    --qsci-features-dir Qt4Qt5/features \
-    --qsci-include-dir Qt4Qt5 \
-    --qsci-library-dir Qt4Qt5 \
+    --qsci-features-dir ../src/features \
+    --qsci-include-dir ../src \
+    --qsci-library-dir ../src \
     --api-dir /usr/share/qt/qsci/api/python
+  cd build
+  make
+
+  cd "$srcdir"/QScintilla_src-$pkgver/src
+  export QMAKEFEATURES=$PWD/src/features/
+  qmake-qt6
+  make
+
+  cd ../designer
+  qmake-qt6 INCLUDEPATH+=../src QMAKE_LIBDIR+=../src
+  make
+
+  cd ../Python
+  mv pyproject{-qt6,}.toml
+  sip-build \
+    --no-make \
+    --qsci-features-dir ../src/features \
+    --qsci-include-dir ../src \
+    --qsci-library-dir ../src \
+    --qmake=/usr/bin/qmake-qt6
   cd build
   make
 }
@@ -41,11 +62,11 @@ package_qscintilla-qt5() {
   pkgdesc="A port to Qt5 of Neil Hodgson's Scintilla C++ editor class"
   depends=(qt5-base)
 
-  cd QScintilla-${pkgver}/Qt4Qt5
-  make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+  cd QScintilla_src-$pkgver-qt5/src
+  make DESTDIR="$pkgdir" INSTALL_ROOT="$pkgdir" install
 
-  cd ../designer-Qt4Qt5
-  make DESTDIR="${pkgdir}" INSTALL_ROOT="${pkgdir}" install
+  cd ../designer
+  make DESTDIR="$pkgdir" INSTALL_ROOT="$pkgdir" install
 }
 
 package_python-qscintilla-qt5() {
@@ -53,6 +74,25 @@ package_python-qscintilla-qt5() {
   depends=(qscintilla-qt5 python-pyqt5)
   replaces=(python-qscintilla-qt5-common)
 
-  cd QScintilla-${pkgver}/build
-  make INSTALL_ROOT="$pkgdir" install -j1
+  cd QScintilla_src-$pkgver-qt5/Python/build
+  make INSTALL_ROOT="$pkgdir" install
+}
+
+package_qscintilla-qt6() {
+  pkgdesc="A port to Qt6 of Neil Hodgson's Scintilla C++ editor class"
+  depends=(qt6-base)
+
+  cd QScintilla_src-$pkgver/src
+  make DESTDIR="$pkgdir" INSTALL_ROOT="$pkgdir" install
+
+  cd ../designer
+  make DESTDIR="$pkgdir" INSTALL_ROOT="$pkgdir" install
+}
+
+package_python-qscintilla-qt6() {
+  pkgdesc="Python bindings for QScintilla2"
+  depends=(qscintilla-qt6 python-pyqt6)
+
+  cd QScintilla_src-$pkgver/Python/build
+  make INSTALL_ROOT="$pkgdir" install
 }
