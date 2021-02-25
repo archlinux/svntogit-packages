@@ -30,10 +30,8 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'bzr: bazaar support'
             'valgrind: analyze support'
             'perf: performer analyzer')
-source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz"
-         qtcreator-fix-clang-paths.patch::"https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=86348d56")
-sha256sums=('ef6fdcbaebb0d3d37cfdbc68f8b9e94ffeb6f63194564da5ce77760bb7790367'
-            '99518ed7e9525bba7a8f49111c948b56fae224298f06d7dc93bb905bbcd87de4')
+source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz")
+sha256sums=('ef6fdcbaebb0d3d37cfdbc68f8b9e94ffeb6f63194564da5ce77760bb7790367')
 
 prepare() {
   cd qt-creator-opensource-src-$pkgver
