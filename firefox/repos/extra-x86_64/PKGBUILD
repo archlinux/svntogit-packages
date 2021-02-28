@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=86.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -21,10 +21,12 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
+        0002-Bug-1694670.-Fix-the-OOB-check-in-write_u32-u16.-r-a.patch
         $pkgname.desktop)
 sha256sums=('c3ac474a2cf6a8e31a962f57c7357dbe67b5088b6aceea9980f25ce7a99b58dd'
             'SKIP'
-            '9b4b36d525be7920413017a4e4300cf881836353d06f874637d368e3d293316d'
+            'ea8c317a50e84829c3b94ad73b5b9cfb8a08a73e406f8bd9bfb7730854611539'
+            '7ca4d5270c5bf4505ab867807bfff65b30cd1d0d8c50b76b406a3233ae3b5ad3'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
@@ -46,6 +48,9 @@ prepare() {
 
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
   patch -Np1 -i ../0001-Use-remoting-name-for-GDK-application-names.patch
+
+  # https://bugs.archlinux.org/task/69821
+  patch -Np1 -i ../0002-Bug-1694670.-Fix-the-OOB-check-in-write_u32-u16.-r-a.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
