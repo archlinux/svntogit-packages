@@ -11,7 +11,7 @@ _GRUB_EMU_BUILD="0"
 
 _GRUB_EXTRAS_COMMIT="8a245d5c1800627af4cefa99162a89c7a46d8842"
 _GNULIB_COMMIT="be584c56eb1311606e5ea1a36363b97bddb6eed3"
-_UNIFONT_VER="13.0.05"
+_UNIFONT_VER="13.0.06"
 
 [[ "${CARCH}" == "x86_64" ]] && _EFI_ARCH="x86_64"
 [[ "${CARCH}" == "i686" ]] && _EFI_ARCH="i386"
@@ -24,7 +24,7 @@ pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
 _pkgver=2.04
 pkgver=${_pkgver/-/}
-pkgrel=10
+pkgrel=10.1
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -66,17 +66,19 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#tag=grub-${_pkgver}?signe
         '0004-add-GRUB_COLOR_variables.patch'
         '0005-grub-install-fix-inverted-test-for-NLS-enabled-when-.patch'
         '0006-BootHole.patch'
+        '0007-next-security.patch'
         'grub.default')
 
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
-            'c4e61e9336d8d024479ea72616722c6c47c93f76dc173e8ad3edf9f9e07c3115'
+            'b7668a5d498972dc4981250c49f83601babce797be19b4fdd0f2f1c6cfbd0fc5'
             'SKIP'
             '171415ab075d1ac806f36c454feeb060f870416f24279b70104bba94bd6076d4'
             'a5198267ceb04dceb6d2ea7800281a42b3f91fd02da55d2cc9ea20d47273ca29'
             '06820004912a3db195a76e68b376fce1ba6507ac740129f0b99257ef07aba1ea'
             '55c559b6d8c4a832a43cc35c7635de37402ec9e3e3bfd8b2b7761a06f0bfda02'
+            'f36847261155feb068fedb4c3dde6e76d770f0aa7bee5144db8a2e2dd4a4b327'
             '791fadf182edf8d5bee4b45c008b08adce9689a9624971136527891a8f67d206')
 
 _backports=(
@@ -132,6 +134,9 @@ prepare() {
 
 	echo "Patch BootHole..."
 	patch -Np1 -i "${srcdir}/0006-BootHole.patch"
+
+	echo "Patch more vulnerabilities..."
+	patch -Np1 -i "${srcdir}/0007-next-security.patch"
 
 	echo "Fix DejaVuSans.ttf location so that grub-mkfont can create *.pf2 files for starfield theme..."
 	sed 's|/usr/share/fonts/dejavu|/usr/share/fonts/dejavu /usr/share/fonts/TTF|g' -i "configure.ac"
