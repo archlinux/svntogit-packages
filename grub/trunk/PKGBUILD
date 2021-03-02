@@ -22,9 +22,10 @@ _UNIFONT_VER="13.0.06"
 pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
-_pkgver=2.04
+_commit='8fcfd1e0fc72d58766ce3dc09cf883c032f063f6'
+_pkgver=2.04.r340.g8fcfd1e0f
 pkgver=${_pkgver/-/}
-pkgrel=10
+pkgrel=1
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -58,14 +59,12 @@ validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' S
               'BE5C23209ACDDACEB20DB0A28C8189F1988C2166'  # Daniel Kiper <dkiper@net-space.pl>
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
-source=("git+https://git.savannah.gnu.org/git/grub.git#tag=grub-${_pkgver}?signed"
+source=("git+https://git.savannah.gnu.org/git/grub.git#commit=${_commit}"
         "git+https://git.savannah.gnu.org/git/grub-extras.git#commit=${_GRUB_EXTRAS_COMMIT}"
         "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_GNULIB_COMMIT}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
         '0003-10_linux-detect-archlinux-initramfs.patch'
         '0004-add-GRUB_COLOR_variables.patch'
-        '0005-grub-install-fix-inverted-test-for-NLS-enabled-when-.patch'
-        '0006-BootHole.patch'
         'grub.default')
 
 sha256sums=('SKIP'
@@ -75,16 +74,9 @@ sha256sums=('SKIP'
             'SKIP'
             '171415ab075d1ac806f36c454feeb060f870416f24279b70104bba94bd6076d4'
             'a5198267ceb04dceb6d2ea7800281a42b3f91fd02da55d2cc9ea20d47273ca29'
-            '06820004912a3db195a76e68b376fce1ba6507ac740129f0b99257ef07aba1ea'
-            '55c559b6d8c4a832a43cc35c7635de37402ec9e3e3bfd8b2b7761a06f0bfda02'
             '791fadf182edf8d5bee4b45c008b08adce9689a9624971136527891a8f67d206')
 
 _backports=(
-	# grub-mkconfig: Use portable "command -v" to detect installed programs
-	'28a7e597de0d5584f65e36f9588ff9041936e617'
-
-	# build: Fix GRUB i386-pc build with Ubuntu gcc
-	'6643507ce30f775008e093580f0c9499dfb2c485'
 )
 
 _configure_options=(
@@ -126,12 +118,6 @@ prepare() {
 	echo "Patch to enable GRUB_COLOR_* variables in grub-mkconfig..."
 	## Based on http://lists.gnu.org/archive/html/grub-devel/2012-02/msg00021.html
 	patch -Np1 -i "${srcdir}/0004-add-GRUB_COLOR_variables.patch"
-
-	echo "Patch to NLS installation..."
-	patch -Np1 -i "${srcdir}/0005-grub-install-fix-inverted-test-for-NLS-enabled-when-.patch"
-
-	echo "Patch BootHole..."
-	patch -Np1 -i "${srcdir}/0006-BootHole.patch"
 
 	echo "Fix DejaVuSans.ttf location so that grub-mkfont can create *.pf2 files for starfield theme..."
 	sed 's|/usr/share/fonts/dejavu|/usr/share/fonts/dejavu /usr/share/fonts/TTF|g' -i "configure.ac"
