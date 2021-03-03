@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=53.1.0
+pkgver=54.0.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -12,13 +12,13 @@ license=('PSF')
 url="https://pypi.org/project/setuptools/"
 depends=('python-appdirs' 'python-packaging' 'python-ordered-set')
 makedepends=('git')
-checkdepends=('python-jaraco.envs' 'python-mock' 'python-pip' 'python-pytest-fixture-config'
-              'python-pytest-flake8' 'python-pytest-virtualenv' 'python-wheel' 'python-paver'
-              'python-pytest-cov' 'python-sphinx')
+checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip'
+              'python-pytest-fixture-config' 'python-pytest-flake8' 'python-pytest-virtualenv'
+              'python-wheel' 'python-paver' 'python-pytest-cov' 'python-sphinx')
 provides=('python-distribute')
 replaces=('python-distribute')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('4252719bc376e021b1d35e89c93ce1552e3da8ad36a54fe4eff7aa7c227aa239b49e0c84a9b06611a2f2a0ecaf595a8d686269f42530086e65c5042c6cb4f946')
+source=("https://github.com/pypa/setuptools/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
+sha512sums=('3d4a2f944df09998b00e282c95bbe10fad3a4e9a4afca2fb4f78a5847c55222d1633b6678e7277d4cd71263cb2fc9d65f6b96f5dc3ba75ddd7da5d4bec0ed6b9')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
