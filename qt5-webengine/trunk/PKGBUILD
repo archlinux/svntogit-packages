@@ -2,34 +2,38 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.15.2
+_qtver=5.15.3
 pkgver=${_qtver/-/}
-pkgrel=5
+pkgrel=1
+_commit=a059e7404a6db799f4da0ad696e65ae9c854b4b0
+# Upstream won't tag releases, because potatoes https://lists.qt-project.org/pipermail/interest/2021-March/036386.html
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 
-         'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx' 'krb5' 'ttf-font')
-makedepends=('python2' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs' 'libxtst')
+         'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx' 'libxtst' 'ttf-font')
+makedepends=('git' 'python2' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs' 'libxtst')
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
-_pkgfqn="${pkgname/5-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/${_qtver}/submodules/${_pkgfqn}.tar.xz"
-         qt5-webengine-icu-68.patch::"https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=9236b21c"
-         qt5-webengine-glibc-2.33.patch)
-sha256sums=('c8afca0e43d84f7bd595436fbe4d13a5bbdb81ec5104d605085d07545b6f91e0'
-            'e3364f29db7a1630e9959123b34e6bcd25ba66cd1714638b8b9b6fd6fd527539'
-            '5600cfa40254fa3fa2cb541d3b55cc8f7a9231de8d2830c25a7651aa392de16f')
+_pkgfqn=qtwebengine
+source=(git+https://code.qt.io/qt/qtwebengine.git#commit=$_commit
+        git+https://code.qt.io/qt/qtwebengine-chromium.git
+        qt5-webengine-glibc-2.33.patch)
+sha256sums=('SKIP'
+            'SKIP'
+            '2294e5390c869963fc58f7bf1ee0a254a3f7fce3ed00c04e34a5f03e2b31b624')
 
 prepare() {
   mkdir -p build
 
-# Disable jumbo build https://bugreports.qt.io/browse/QTBUG-88657
-  sed -i 's|use_jumbo_build=true|use_jumbo_build=false|' -i ${_pkgfqn}/src/buildtools/config/common.pri
+  cd ${_pkgfqn}
+  git submodule init
+  git submodule set-url src/3rdparty "$srcdir"/qtwebengine-chromium
+  git submodule set-branch --branch 87-based src/3rdparty
+  git submodule update
 
-  patch -d $_pkgfqn/src/3rdparty/ -p1 -i "$srcdir"/qt5-webengine-icu-68.patch # Fix build with ICU 68
-  patch -d $_pkgfqn -p1 -i "$srcdir/qt5-webengine-glibc-2.33.patch" # Fix text rendering when building with glibc 2.33
+  patch -p1 -i "$srcdir"/qt5-webengine-glibc-2.33.patch # Fix text rendering when building with glibc 2.33
 }
 
 build() {
