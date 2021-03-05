@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.3
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 _commit=a059e7404a6db799f4da0ad696e65ae9c854b4b0
 # Upstream won't tag releases, because potatoes https://lists.qt-project.org/pipermail/interest/2021-March/036386.html
 arch=('x86_64')
@@ -13,7 +13,7 @@ license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 
          'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx' 'libxtst' 'ttf-font')
-makedepends=('git' 'python2' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs' 'libxtst')
+makedepends=('git' 'python2' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs')
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn=qtwebengine
@@ -58,4 +58,7 @@ package() {
     -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
 
   install -Dm644 "$srcdir"/${_pkgfqn}/src/3rdparty/chromium/LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE.chromium
+
+  # Fix cmake dependency versions
+  sed -e "s|$pkgver\ |5.15.2 |" -i "$pkgdir"/usr/lib/cmake/*/*Config.cmake
 }
