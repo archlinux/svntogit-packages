@@ -17,8 +17,6 @@ source=(
   https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
   0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
-#  0002-virt-vbox-Add-support-for-the-new-VBG_IOCTL_ACQUIRE_.patch
-#  sphinx-workaround.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -28,7 +26,7 @@ validpgpkeys=(
 sha256sums=('9be37146feba42be05137cf900a7d9012990b5a1d5e59bc0c8da1f86952930a3'
             'SKIP'
             '14d52a4f598bdbf752546c4bab4dd096173db1f958df7dde97d17bb347b7073f'
-            '757e6de2a76284cd86f443d8a9830e775291ba01d9d339cff9b9b3e4b205b7b3')
+            '6992aed5d5398f9442f0ce94d5d5b6503bf492df0ebe719ed6e0fc1dc2ee1929')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
