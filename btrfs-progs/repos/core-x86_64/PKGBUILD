@@ -4,7 +4,7 @@
 
 pkgname=btrfs-progs
 pkgver=5.10.1
-pkgrel=2
+pkgrel=3
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs')
@@ -31,7 +31,7 @@ sha256sums=('SKIP'
             '1417750311a611d384d6929a951da403b22c298cb769fdcf765bc27725d84cc9'
             'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
             '35efeee8590d6d60c711ae9cdc918e4841ab61d10cb02359e65e36ebff95ffc5'
-            '8b1f8a1176141c5c6abe772dcb93cd87c083c7415c856b4fcb563491c9916836'
+            'deaaf377fc6fe94a0374a313c7df0975852734ecd68f0654581c6deeeb5ff7b8'
             '9a0b6cc23f7bd97b83b6c38dd2b4e4373fead8bd3ccfb82a47c72971e9d6f8ad')
 
 prepare() {
