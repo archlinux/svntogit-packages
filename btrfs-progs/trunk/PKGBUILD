@@ -3,8 +3,8 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=btrfs-progs
-pkgver=5.10.1
-pkgrel=3
+pkgver=5.11
+pkgrel=1
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs')
@@ -19,7 +19,6 @@ provides=('btrfs-progs-unstable')
 license=('GPL2')
 validpgpkeys=('F2B41200C54EFB30380C1756C565D5F9D76D583B')
 source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v$pkgver.tar."{sign,xz}
-        'https://github.com/kdave/btrfs-progs/commit/dcfda5527538993dc7b2291cb9b9b9967f3b3c4a.patch'
         'initcpio-install-btrfs'
         'initcpio-hook-btrfs'
         'btrfs-scrub@.service'
@@ -27,11 +26,10 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
 install=btrfs-progs.install
 options=(!staticlibs)
 sha256sums=('SKIP'
-            '1379cc731feae7f473ad9e37c845bbfb873381ef67b340f1a22fbca9a4da0344'
-            '1417750311a611d384d6929a951da403b22c298cb769fdcf765bc27725d84cc9'
+            'd41961b0a92160c80f894ad9a1882822889c2e1d084cbf3e08b8c214a5cf0137'
             'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
             '35efeee8590d6d60c711ae9cdc918e4841ab61d10cb02359e65e36ebff95ffc5'
-            'deaaf377fc6fe94a0374a313c7df0975852734ecd68f0654581c6deeeb5ff7b8'
+            'eaa7af92d28bfa8940bb551560fd7be777f9f175292eaa72b5f6ef00fb240252'
             '9a0b6cc23f7bd97b83b6c38dd2b4e4373fead8bd3ccfb82a47c72971e9d6f8ad')
 
 prepare() {
