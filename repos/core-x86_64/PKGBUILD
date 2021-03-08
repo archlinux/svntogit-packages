@@ -8,7 +8,7 @@
 
 pkgbase=audit
 pkgname=('audit' 'python-audit')
-pkgver=3.0
+pkgver=3.0.1
 pkgrel=1
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
@@ -17,8 +17,8 @@ makedepends=('glibc' 'krb5' 'libcap-ng' 'libldap' 'swig' 'linux-headers' 'python
 license=('GPL')
 options=('emptydirs')
 source=(https://people.redhat.com/sgrubb/audit/${pkgname}-${pkgver}.tar.gz)
-sha512sums=('b82ec73c85a8ebb5108b526673d6fe08cbe0b51376788f3ea6ed5747c4612158462893e719496dffbd723f833f84383a2d1d55fd78a3ed985ecfd19545060c88')
-b2sums=('f9c94f7163522068f5f37163a242cb913acc87b5465f7f8550fad27ac1dc673fd7a98e208bd5e6fb136eac1fdadd659e599e7722426937481bbf8c66d86a1617')
+sha512sums=('ad2897c9f539681f0f65b08cd0e650c528957fd4799755c2bcc47f869e04272aad31684c46847124d7b42dde243a16ba2754936890189610814c7007c0381d8c')
+b2sums=('f29687ebc76f4eb88184cce1a3da0b8ca4464b2f81f56d71048ac4a64a713f33d6964e46e78b73c72b6ac2495f80114866773b3b86753c1d0dead25df73f7c43')
 
 prepare() {
   cd ${pkgbase}-${pkgver}
