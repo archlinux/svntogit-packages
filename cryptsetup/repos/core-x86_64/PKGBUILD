@@ -3,7 +3,7 @@
 
 pkgname=cryptsetup
 pkgver=2.3.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Userspace setup tool for transparent encryption of block devices using dm-crypt'
 arch=(x86_64)
 license=('GPL')
@@ -15,14 +15,22 @@ provides=('libcryptsetup.so')
 options=('!emptydirs')
 validpgpkeys=('2A2918243FDE46648D0686F9D9B0577BD93E98FC') # Milan Broz <gmazyland@gmail.com>
 source=("https://www.kernel.org/pub/linux/utils/cryptsetup/v${pkgver%.*}/${pkgname}-${pkgver}.tar."{xz,sign}
+        '0001-fix-partial-reads-from-TTY.patch'
         'hooks-encrypt'
         'install-encrypt'
         'install-sd-encrypt')
 sha256sums=('9d16eebb96b53b514778e813019b8dd15fea9fec5aafde9fae5febf59df83773'
             'SKIP'
+            'cefa7d7f7d4a05c354da9b6f0cb9d764191a1aa870d989724633daee137a16ff'
             'c17e7e0a3dc9567dc6492e6520abac8b04b570e6318bc6ac8965a1839984b0c2'
             'd325dc239ecc9a5324407b0782da6df2573e8491251836d6c4e65fa61339ce57'
             '31d816b3650a57512a5f9b52c1995fa65a161faa8b37975d07c9a1b8e1a119db')
+
+prepare() {
+  cd "${srcdir}"/$pkgname-${pkgver}
+
+  patch -Np1 < ../0001-fix-partial-reads-from-TTY.patch
+}
 
 build() {
   cd "${srcdir}"/$pkgname-${pkgver}
@@ -39,6 +47,9 @@ package() {
   cd "${srcdir}"/$pkgname-${pkgver}
 
   make DESTDIR="${pkgdir}" install
+
+  # install docs
+  install -D -m0644 -t "${pkgdir}"/usr/share/doc/cryptsetup/ FAQ docs/{Keyring,LUKS2-locking}.txt
 
   # install hook
   install -D -m0644 "${srcdir}"/hooks-encrypt "${pkgdir}"/usr/lib/initcpio/hooks/encrypt
