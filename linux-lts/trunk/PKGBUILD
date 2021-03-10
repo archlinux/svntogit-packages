@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.10.22
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -25,7 +25,7 @@ validpgpkeys=(
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
 sha256sums=('245b16b532d67ca34805bd66790e3697d19269499d9b27056d73bfd0823163df'
             'SKIP'
-            '14d52a4f598bdbf752546c4bab4dd096173db1f958df7dde97d17bb347b7073f'
+            '1d1ddbc2456fa688cc6b1b26e0187b5d8309241bd605f1102870978bdca03485'
             '6992aed5d5398f9442f0ce94d5d5b6503bf492df0ebe719ed6e0fc1dc2ee1929')
 
 export KBUILD_BUILD_HOST=archlinux
