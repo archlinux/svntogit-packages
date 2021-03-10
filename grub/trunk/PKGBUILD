@@ -25,7 +25,7 @@ epoch=2
 _commit='39cfb3eb5caa71967f4e9e741d859e15d645c32f'
 _pkgver=2.04.r358.g39cfb3eb5
 pkgver=${_pkgver/-/}
-pkgrel=1
+pkgrel=2
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -72,7 +72,7 @@ sha256sums=('SKIP'
             'SKIP'
             'b7668a5d498972dc4981250c49f83601babce797be19b4fdd0f2f1c6cfbd0fc5'
             'SKIP'
-            '5f2d7cde16e8edc34b613511e6abf2550b8de55bcc3039e5bfc3971164419093'
+            '5dee6628c48eef79812bb9e86ee772068d85e7fcebbd2b2b8d1e19d24eda9dab'
             '580a81b00088773d554832b0d74c85bf16fec37728802973c45993bcb97cd7d5'
             '791fadf182edf8d5bee4b45c008b08adce9689a9624971136527891a8f67d206')
 
