@@ -6,35 +6,26 @@
 pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=20.3.4
-pkgrel=3
+pkgver=21.0.0
+pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
              'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
-             'valgrind' 'glslang' 'vulkan-icd-loader' 'meson')
+             'valgrind' 'glslang' 'vulkan-icd-loader' 'cmake' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
-        LICENSE
-        0001-vulkan-device_select-Stop-using-device-properties-2.patch)
-sha512sums=('81c4d032213b4aef842f1594e0e89bc0045f7ca7ce5f267b62a0f8236eb12ab09c1f780d8b3776b3072f37cd0bd8829f8a1330a749ccf462471b262ef8097477'
+        LICENSE)
+sha512sums=('32f4a74fbc1456dac478fdc3a85e37cedb9ac1e1b7c5434706dc24930a70bc9e857ba6b5bf1e7e05798e259f8ff0b05bad5252c07253cb5d6a9707c7c2e147ad'
             'SKIP'
-            'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7'
-            '73a923dac10616ab46b825cd45f73ca849ddad69432dbf680c1129cc9a92004218affa33bd1a6ee185fa0143ccd3d3622ba40512ec049a160a61cc13fe92da0a')
+            'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
               'E3E8F480C52ADD73B278EE78E1ECBE07D7D70895'  # Juan Antonio Suárez Romero (Igalia, S.L.) <jasuarez@igalia.com>
               'A5CC9FEC93F2F837CB044912336909B6B25FADFA'  # Juan A. Suarez Romero <jasuarez@igalia.com>
               '71C4B75620BC75708B4BDB254C95FAAB3EB073EC'  # Dylan Baker <dylan@pnwbakers.com>
               '57551DE15B968F6341C248F68D8E31AFC32428A6') # Eric Engestrom <eric@engestrom.ch>
-
-prepare() {
-  cd mesa-$pkgver
-  
-  # FS#69744
-  patch -Np1 -i ../0001-vulkan-device_select-Stop-using-device-properties-2.patch
-}
 
 build() {
   arch-meson mesa-$pkgver build \
@@ -65,8 +56,9 @@ build() {
     -D libunwind=enabled \
     -D llvm=enabled \
     -D lmsensors=enabled \
-    -D osmesa=gallium \
+    -D osmesa=true \
     -D shared-glapi=enabled \
+    -D microsoft-clc=disabled \
     -D valgrind=enabled
 
   # Print config
