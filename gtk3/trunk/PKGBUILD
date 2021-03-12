@@ -3,7 +3,7 @@
 
 pkgname=gtk3
 pkgver=3.24.27
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -11,10 +11,10 @@ url="https://www.gtk.org/"
 depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2
          dconf libxcomposite libxdamage pango shared-mime-info at-spi2-atk
          wayland libxkbcommon adwaita-icon-theme json-glib librsvg
-         desktop-file-utils mesa cantarell-fonts colord rest libcups libcanberra
-         fribidi iso-codes tracker3 libcloudproviders gtk-update-icon-cache)
-makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson
-             wayland-protocols)
+         wayland-protocols desktop-file-utils mesa cantarell-fonts colord rest
+         libcups libcanberra fribidi iso-codes tracker3 libcloudproviders
+         gtk-update-icon-cache)
+makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 provides=(gtk3-print-backends libgtk-3.so libgdk-3.so libgailutil-3.so)
 conflicts=(gtk3-print-backends)
 replaces=("gtk3-print-backends<=3.22.26-1")
