@@ -22,10 +22,10 @@ _UNIFONT_VER='13.0.06'
 pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
-_commit='39cfb3eb5caa71967f4e9e741d859e15d645c32f'
-_pkgver=2.04.r358.g39cfb3eb5
+_tag='7d42d00f0e314f1535752bd5126a6b8d1be3352b' # git rev-parse grub-${_pkgver}
+_pkgver=2.06-rc1
 pkgver=${_pkgver/-/}
-pkgrel=2
+pkgrel=1
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -59,7 +59,7 @@ validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' S
               'BE5C23209ACDDACEB20DB0A28C8189F1988C2166'  # Daniel Kiper <dkiper@net-space.pl>
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
-source=("git+https://git.savannah.gnu.org/git/grub.git#commit=${_commit}"
+source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
         "git+https://git.savannah.gnu.org/git/grub-extras.git#commit=${_GRUB_EXTRAS_COMMIT}"
         "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_GNULIB_COMMIT}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
