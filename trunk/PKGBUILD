@@ -9,7 +9,7 @@ arch=('x86_64')
 url='https://git-scm.com/'
 license=('GPL2')
 depends=('curl' 'expat' 'perl' 'perl-error' 'perl-mailtools'
-         'openssl' 'pcre2' 'grep' 'shadow')
+         'openssl' 'pcre2' 'grep' 'shadow' 'zlib')
 makedepends=('python' 'libgnome-keyring' 'xmlto' 'asciidoc')
 optdepends=('tk: gitk and git gui'
             'perl-libwww: git svn'
