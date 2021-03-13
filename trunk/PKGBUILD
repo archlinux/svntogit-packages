@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.21.2
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -38,7 +38,8 @@ package_plasma-workspace() {
               'kdepim-addons: displaying PIM events in the calendar'
               'appmenu-gtk-module: global menu support for GTK2 and some GTK3 applications'
               'qt5-virtualkeyboard: virtual keyboard support in lock screen'
-              'baloo: Baloo search runner' 'discover: manage applications installation from the launcher')
+              'baloo: Baloo search runner' 'discover: manage applications installation from the launcher'
+              'ksysguard: data sources for the system monitor applets')
   backup=('etc/pam.d/kde')
 
   DESTDIR="$pkgdir" cmake --install build
