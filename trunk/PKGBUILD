@@ -3,7 +3,7 @@
 
 pkgname=gtk3
 pkgver=3.24.27
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -42,7 +42,8 @@ build() {
     -D cloudproviders=true \
     -D colord=yes \
     -D gtk_doc=true \
-    -D man=true
+    -D man=true \
+    -D tracker3=true
   meson compile -C build
 }
 
