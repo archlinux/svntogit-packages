@@ -6,7 +6,7 @@ pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='f948f652768a5279087e13961ebb87f345626e2e' # git rev-parse v${pkgver}
 pkgver=247.4
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -63,6 +63,8 @@ _backports=(
 )
 
 _reverts=(
+  # resolved: gracefully handle with packets with too large RR count
+  'fdfffdaf20a18a50c9a6d858359cf4af6d2f4c8b'
 )
 
 prepare() {
