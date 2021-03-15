@@ -35,7 +35,7 @@ build() {
 }
 
 check() {
-  TRACKER_DEBUG=sqlite,sql-statements dbus-run-session meson test -C build --print-errorlogs -t 3
+  dbus-run-session meson test -C build --print-errorlogs -t 3
 }
 
 package() {
