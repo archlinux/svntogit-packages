@@ -1,7 +1,7 @@
 # Maintainer: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=acl
-pkgver=2.3.0
+pkgver=2.3.1
 pkgrel=1
 pkgdesc='Access control list utilities, libraries and headers'
 arch=('x86_64')
@@ -15,7 +15,7 @@ validpgpkeys=('600CD204FBCEA418BD2CA74F154343260542DF34'  # Brandon Philips <bra
               'B902B5271325F892AC251AD441633B9FE837F581'  # Frysinger <vapier@gentoo.org>
               '259B3792B3D6D319212CC4DCD5BF9FEB0313653A') # Andreas Gruenbacher <andreas.gruenbacher@gmail.com>
 source=("https://download.savannah.gnu.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.gz"{,.sig})
-sha256sums=('bd38fdbbb03c79374af51467ebe5497cbc0335b82577f30c951a41a95b533009'
+sha256sums=('760c61c68901b37fdd5eefeeaf4c0c7a26bdfdd8ac747a1edff1ce0e243c11af'
             'SKIP')
 
 build() {
@@ -25,6 +25,7 @@ build() {
     --libdir=/usr/lib \
     --libexecdir=/usr/lib \
     --prefix=/usr
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
