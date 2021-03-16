@@ -1,15 +1,15 @@
 # Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
 
 pkgname=libgudev
-pkgver=234
+pkgver=236
 pkgrel=1
 pkgdesc="GObject bindings for libudev"
 url="https://wiki.gnome.org/Projects/libgudev"
 arch=(x86_64)
 license=(LGPL2.1)
 depends=(systemd-libs glib2)
-makedepends=(systemd gobject-introspection gtk-doc git)
-_commit=e9342ee019482a08fe435d6b656f8a6bdd196bce  # tags/234^0
+makedepends=(systemd gobject-introspection gtk-doc git meson umockdev vala)
+_commit=e4a0b196615690e4c1910af3cd57872af4f8e2ec  # tags/236^0
 source=("git+https://gitlab.gnome.org/GNOME/libgudev.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -20,30 +20,22 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
-}
-
-check() {
-  cd $pkgname
-  make check
 }
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --enable-gtk-doc \
-    --disable-umockdev
-  sed -i 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build -D gtk_doc=true
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
   depends+=(libg{lib,object}-2.0.so libudev.so)
   provides+=(libgudev-1.0.so)
 
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
 
 # vim:set ts=2 sw=2 et:
