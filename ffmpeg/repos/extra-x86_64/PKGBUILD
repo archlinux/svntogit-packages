@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.3.2
-pkgrel=1
+pkgrel=2
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -55,6 +55,7 @@ depends=(
   libxml2
   libxv
   libxvidcore.so
+  libzimg.so
   opencore-amr
   openjpeg2
   opus
@@ -166,6 +167,7 @@ build() {
     --enable-libxcb \
     --enable-libxml2 \
     --enable-libxvid \
+    --enable-libzimg \
     --enable-nvdec \
     --enable-nvenc \
     --enable-shared \
