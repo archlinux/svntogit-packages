@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.68.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -62,7 +62,8 @@ package_glib2() {
   install -D gio-querymodules.script "$pkgdir/usr/share/libalpm/scripts/gio-querymodules"
 
   # Avoid a dep on sysprof
-  sed -i 's/, sysprof-capture-4//' "$pkgdir"/usr/lib/pkgconfig/*.pc
+  sed -re '/^Requires\.private:/s/,? *sysprof-capture-[^,]*(,|$)/\1/' \
+    -i "$pkgdir"/usr/lib/pkgconfig/*.pc
 
   export PYTHONHASHSEED=0
   python -m compileall -d /usr/share/glib-2.0/codegen \
