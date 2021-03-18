@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.66.7
+pkgver=2.68.0
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -13,8 +13,7 @@ depends=(pcre libffi util-linux-libs zlib)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus sysprof)
 checkdepends=(desktop-file-utils)
-_commit=95115f029d9c170c2e966cd7d3547b6394c92a4a  # tags/2.66.7^0
-source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
+source=("git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$pkgver"
         noisy-glib-compile-schemas.diff
         glib-compile-schemas.hook gio-querymodules.{hook,script})
 sha256sums=('SKIP'
@@ -38,6 +37,7 @@ prepare() {
 build() {
   CFLAGS+=" -DG_DISABLE_CAST_CHECKS"
   arch-meson glib build \
+    -D glib_debug=disabled \
     -D selinux=disabled \
     -D sysprof=enabled \
     -D man=true \
