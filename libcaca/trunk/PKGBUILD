@@ -1,27 +1,58 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libcaca
 pkgver=0.99.beta19
-pkgrel=3
+pkgrel=4
 pkgdesc="Color AsCii Art library"
-arch=('x86_64')
-license=('custom:WTFPL')
 url="http://caca.zoy.org/wiki/libcaca"
-depends=('imlib2' 'ncurses')
-options=(!emptydirs)
-source=(http://libcaca.zoy.org/files/libcaca/${pkgname}-${pkgver}.tar.gz)
-md5sums=('a3d4441cdef488099f4a92f4c6c1da00')
+arch=(x86_64)
+license=(custom:WTFPL)
+depends=(imlib2 ncurses)
+makedepends=(git)
+_commit=caae67dce5d72ceceac79468bed47b58ea8e4a29  # tags/v0.99.beta19
+source=("git+https://github.com/cacalabs/libcaca#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd libcaca
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd libcaca
+
+  # CVE-2021-3410
+  # https://bugs.archlinux.org/task/70053
+  git cherry-pick -n 46b4ea7c e4968ba6
+
+  # Fix up version
+  sed -i '/^AC_INIT/s/beta19pre/beta19/;/^LT_MICRO=/s/18/19/' configure.ac
+
+  autoreconf -fvi
+}
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr --mandir=/usr/share/man \
-    --enable-shared --disable-doc \
-    --disable-cxx --disable-gl --disable-csharp --disable-static
+  cd libcaca
+  ./configure \
+    --prefix=/usr \
+    --libexecdir=/usr/lib \
+    --mandir=/usr/share/man \
+    --enable-shared \
+    --disable-csharp \
+    --disable-cxx \
+    --disable-doc \
+    --disable-gl \
+    --disable-python \
+    --disable-slang \
+    --disable-static
   make
 }
 
 package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="${pkgdir}" install
-  install -Dm644 COPYING "${pkgdir}/usr/share/licenses/libcaca/COPYING"
+  cd libcaca
+  make DESTDIR="$pkgdir" install
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
 }
+
+# vim:set sw=2 noet:
