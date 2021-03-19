@@ -2,7 +2,7 @@
 
 pkgname=rrdtool
 pkgver=1.7.2
-pkgrel=5
+pkgrel=6
 pkgdesc="Data logging and graphing application"
 arch=('x86_64')
 url="https://www.rrdtool.org"
