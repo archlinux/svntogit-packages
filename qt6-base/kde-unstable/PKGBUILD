@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt6-base
-_qtver=6.1.0-beta1
+_qtver=6.1.0-beta2
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=(x86_64)
@@ -27,7 +27,7 @@ _pkgfn="${pkgname/6-/}-everywhere-src-${_qtver}"
 source=("https://download.qt.io/development_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz"
          qt6-base-cflags.patch
          qt6-base-nostrip.patch)
-sha256sums=('6f4ccc0deca0a4f8c858cba80226fe1747c6ca52e6035fbb6336fd3f6b6f2a63'
+sha256sums=('806abe847b0a9d8b87112155cd13f1ac5f30f663e1fe54f931bfeb1d2daa9041'
             'cf707cd970650f8b60f8897692b36708ded9ba116723ec8fcd885576783fe85c'
             '4b93f6a79039e676a56f9d6990a324a64a36f143916065973ded89adc621e094')
 
@@ -40,6 +40,8 @@ build() {
   cmake -B build -S $_pkgfn \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DINSTALL_BINDIR=lib/qt6/bin \
+    -DINSTALL_PUBLICBINDIR=usr/bin \
+    -DINSTALL_LIBEXECDIR=lib/qt6 \
     -DINSTALL_DOCDIR=share/doc/qt6 \
     -DINSTALL_ARCHDATADIR=lib/qt6 \
     -DINSTALL_DATADIR=share/qt6 \
@@ -57,9 +59,10 @@ package() {
 
   install -Dm644 $_pkgfn/LICENSE* -t "$pkgdir"/usr/share/licenses/$pkgbase
 
-  # Symlinks for backwards compatibility
-  mkdir -p "$pkgdir"/usr/bin
-  for _b in $(ls "$pkgdir"/usr/lib/qt6/bin); do
-    ln -rs "$pkgdir"/usr/lib/qt6/bin/$_b "$pkgdir"/usr/bin/$_b-qt6
-  done
+  # Install symlinks for user-facing tools
+  cd "$pkgdir"
+  mkdir usr/bin
+  while read _line; do
+    ln -s $_line
+  done < "$srcdir"/build/user_facing_tool_links.txt
 }
