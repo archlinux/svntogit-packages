@@ -2,8 +2,8 @@
 
 pkgbase=python-incremental
 pkgname=('python-incremental' 'python2-incremental')
-pkgver=17.5.0
-pkgrel=6
+pkgver=21.3.0
+pkgrel=1
 pkgdesc='A small library that versions your Python projects'
 arch=('any')
 license=('MIT')
@@ -11,8 +11,8 @@ url='https://github.com/hawkowl/incremental'
 makedepends=('python-setuptools' 'python2-setuptools' 'python-click' 'python2-click'
              'python-twisted' 'python2-twisted')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner')
-source=("$pkgbase-$pkgver.tar.gz::https://github.com/hawkowl/incremental/archive/incremental-$pkgver.tar.gz")
-sha512sums=('42490edf99355d6c1da0015273e92549bd72ecb2674dd4ce5d0b4a7d34ae9d425ebd1708a2420f67963b4baef5b2a12b76a23d67abb7d306e6208e08d79175d7')
+source=("https://github.com/hawkowl/incremental/archive/incremental-$pkgver.tar.gz")
+sha512sums=('99a9e27b8513c4a13a74d37ae3d2c912af78ff9c6c528de1cba84767e2c08c9fc00cb54832efcccc70b922ac1582dd116cf8e8ba3f69926b424cf204ba4f0e7d')
 
 prepare() {
   cp -a incremental-incremental-$pkgver{,-py2}
