@@ -5,7 +5,7 @@
 pkgname=qt6-base
 _qtver=6.0.2
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -40,6 +40,7 @@ build() {
   cmake -B build -S $_pkgfn \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DINSTALL_BINDIR=lib/qt6/bin \
+    -DINSTALL_LIBEXECDIR=lib/qt6 \
     -DINSTALL_DOCDIR=share/doc/qt6 \
     -DINSTALL_ARCHDATADIR=lib/qt6 \
     -DINSTALL_DATADIR=share/qt6 \
@@ -59,7 +60,7 @@ package() {
 
   # Symlinks for backwards compatibility
   mkdir -p "$pkgdir"/usr/bin
-  for _b in $(ls "$pkgdir"/usr/lib/qt6/bin); do
-    ln -rs "$pkgdir"/usr/lib/qt6/bin/$_b "$pkgdir"/usr/bin/$_b-qt6
+  for _b in qmake androidqt androidtestrunner; do
+    ln -s /usr/lib/qt6/bin/$_b "$pkgdir"/usr/bin/${_b}6
   done
 }
