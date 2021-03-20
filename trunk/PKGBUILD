@@ -11,6 +11,9 @@ url='https://community.kde.org/Frameworks'
 license=(LGPL)
 depends=(cmake)
 makedepends=(python-sphinx python-requests qt5-tools)
+optdepends=('python-pyxdg: to generate fastlane metadata for Android apps'
+            'python-requests: to generate fastlane metadata for Android apps'
+            'python-yaml: to generate fastlane metadata for Android apps')
 groups=(kf5)
 source=("https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz"{,.sig}
         ECM-no-init.py.patch)
