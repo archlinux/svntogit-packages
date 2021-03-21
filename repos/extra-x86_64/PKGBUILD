@@ -3,7 +3,7 @@
 
 pkgname=gtk2
 pkgver=2.24.33
-pkgrel=1
+pkgrel=2
 pkgdesc="GObject-based multi-platform GUI toolkit (legacy)"
 arch=(x86_64)
 url="https://www.gtk.org/"
@@ -12,7 +12,7 @@ depends=(atk pango libxcursor libxinerama libxrandr libxi libxcomposite libxdama
 makedepends=(gobject-introspection git gtk-doc)
 optdepends=('gnome-themes-standard: Default widget theme'
             'adwaita-icon-theme: Default icon theme'
-            'python2: gtk-builder-convert')
+            'python: gtk-builder-convert')
 provides=(libgailutil.so libg{d,t}k-x11-2.0.so)
 license=(LGPL)
 install=gtk2.install
@@ -34,7 +34,6 @@ pkgver() {
 prepare() {
   cd gtk
   git apply -3 ../xid-collision-debug.patch
-  sed -i '1s/python$/&2/' gtk/gtk-builder-convert
   NOCONFIGURE=1 ./autogen.sh
 }
 
