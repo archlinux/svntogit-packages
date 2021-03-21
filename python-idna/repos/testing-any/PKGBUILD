@@ -1,7 +1,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-idna
-pkgver=3.0
+pkgver=3.1
 pkgrel=1
 pkgdesc="Internationalized Domain Names in Applications (IDNA)"
 arch=('any')
@@ -10,7 +10,7 @@ url="https://github.com/kjd/idna"
 depends=('python')
 makedepends=('python-setuptools')
 source=("https://pypi.io/packages/source/i/idna/idna-$pkgver.tar.gz")
-sha512sums=('2ed384e75fb3d873a19c6ee49915a48a757b3617227015f92f5e21b130cf30816ce3abf25d9ffd8931e080e645416fb0551b1be18a2d0233e02bce2e4b6556f3')
+sha512sums=('23c02520d00a99855d552a9b9def529f0baeec7d27e8036c544dd654ade15243fd5c9e5ad02e73b83a9ca3bb335ab2584233d17345a6a5e6d5ac089e8ac81e8a')
 
 prepare() {
    rm -r idna-$pkgver/*.egg-info
