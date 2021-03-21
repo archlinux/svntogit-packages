@@ -2,15 +2,15 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=yelp-tools
-pkgver=3.38.0
+pkgver=40.0
 pkgrel=1
 pkgdesc="Collection of tools for building and converting documentation"
 url="https://gitlab.gnome.org/GNOME/yelp-tools"
 arch=(any)
-depends=(yelp-xsl libxslt libxml2 itstool docbook-xsl mallard-ducktype)
-makedepends=(git)
+depends=(yelp-xsl python-lxml itstool libxml2 docbook-xsl mallard-ducktype)
+makedepends=(git meson)
 license=(GPL)
-_commit=901865178e6d15f62cb939dce50a01abe3fbdb2c  # tags/3.38.0^0
+_commit=00297c603474c28c757da82732e70e23dc6c0e2d  # tags/40.0^0
 source=("git+https://gitlab.gnome.org/GNOME/yelp-tools.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -18,18 +18,20 @@ pkgver() {
   cd $pkgname
   git describe --tags | sed 's/-/+/g'
 }
+
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  ./configure --prefix=/usr
-  make
+  arch-meson $pkgname build -D help=true
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
