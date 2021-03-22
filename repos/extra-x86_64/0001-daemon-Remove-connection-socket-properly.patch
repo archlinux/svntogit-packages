@@ -1,0 +1,140 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Mon, 22 Mar 2021 00:18:29 +0000
+Subject: [PATCH] daemon: Remove connection socket properly
+
+The naming scheme for the non-abstract socket was changed but
+`new_connection_data_free` was not adjusted to match.
+
+`GDBusServer` will remove the socket when it stops, but only if
+`g_dbus_server_start` was called. So we can simplify the process
+somewhat. Also don't bother removing the directory now that all sockets
+share it.
+
+Fixes: 29a00938055d3c7c11533bdda3f84ec51d4cbb32 (daemon: Use named sockets to avoid network permission requirement)
+---
+ daemon/gvfsdaemon.c | 48 ++++++++++++++++++---------------------------
+ 1 file changed, 19 insertions(+), 29 deletions(-)
+
+diff --git a/daemon/gvfsdaemon.c b/daemon/gvfsdaemon.c
+index 2533d9fa..f9124a76 100644
+--- a/daemon/gvfsdaemon.c
++++ b/daemon/gvfsdaemon.c
+@@ -89,9 +89,7 @@ struct _GVfsDaemon
+ 
+ typedef struct {
+   GVfsDaemon *daemon;
+-  char *socket_dir;
+-  GDBusServer *server;
+-  
++
+   GDBusConnection *conn;
+ } NewConnectionData;
+ 
+@@ -656,18 +654,6 @@ static void
+ new_connection_data_free (void *memory)
+ {
+   NewConnectionData *data = memory;
+-  gchar *socket;
+-  
+-  /* Remove the socket and dir after connected */
+-  if (data->socket_dir)
+-    {
+-      socket = g_strdup_printf ("%s/socket", data->socket_dir);
+-      g_unlink (socket);
+-      g_free (socket);
+-      rmdir (data->socket_dir);
+-      g_free (data->socket_dir);
+-    }
+-
+   g_free (data);
+ }
+ 
+@@ -769,18 +755,21 @@ daemon_peer_connection_setup (GVfsDaemon *daemon,
+ }
+ 
+ static void
+-generate_address (char **address,
+-                  char **socket_dir)
++generate_address (gchar **address, gchar **socket_path)
+ {
+-  gchar tmp[9];
++  gchar tmp[16] = "socket-";
++  gchar *socket_dir;
+ 
+-  *socket_dir = g_build_filename (g_get_user_runtime_dir (), "gvfsd", NULL);
+-  g_mkdir (*socket_dir, 0700);
++  gvfs_randomize_string (tmp + 7, 8);
++  tmp[15] = '\0';
+ 
+-  gvfs_randomize_string (tmp, 8);
+-  tmp[8] = '\0';
++  socket_dir = g_build_filename (g_get_user_runtime_dir (), "gvfsd", NULL);
++  g_mkdir (socket_dir, 0700);
+ 
+-  *address = g_strdup_printf ("unix:path=%s/socket-%s", *socket_dir, tmp);
++  *socket_path = g_build_filename (socket_dir, tmp, NULL);
++  *address = g_strdup_printf ("unix:path=%s", *socket_path);
++
++  g_free (socket_dir);
+ }
+ 
+ static gboolean
+@@ -814,50 +803,51 @@ handle_get_connection (GVfsDBusDaemon *object,
+   GError *error;
+   gchar *address1;
+   NewConnectionData *data;
+-  char *socket_dir;
++  gchar *socket_path;
+   gchar *guid;
+-  
+-  generate_address (&address1, &socket_dir);
++
++  generate_address (&address1, &socket_path);
+ 
+   data = g_new (NewConnectionData, 1);
+   data->daemon = daemon;
+-  data->socket_dir = socket_dir;
+   data->conn = NULL;
+ 
+   guid = g_dbus_generate_guid ();
+   error = NULL;
+   server = g_dbus_server_new_sync (address1,
+                                    G_DBUS_SERVER_FLAGS_NONE,
+                                    guid,
+                                    daemon->auth_observer,
+                                    NULL, /* GCancellable */
+                                    &error);
+   g_free (guid);
+ 
+   if (server == NULL)
+     {
+       g_dbus_method_invocation_return_gerror (invocation, error);
+       g_printerr ("daemon: Error creating server at address %s: %s\n", address1, error->message);
+       g_error_free (error);
+       goto error_out;
+     }
+ 
+   g_dbus_server_start (server);
+-  data->server = server;
+ 
+   g_signal_connect (server, "new-connection", G_CALLBACK (daemon_new_connection_func), data);
+-  
++
+   gvfs_dbus_daemon_complete_get_connection (object,
+                                             invocation,
+                                             address1,
+                                             "");
+ 
+   g_free (address1);
++  g_free (socket_path);
+   return TRUE;
+ 
+  error_out:
+   new_connection_data_free (data);
+   g_free (address1);
++  g_unlink (socket_path);
++  g_free (socket_path);
+   return TRUE;
+ }
+ 
