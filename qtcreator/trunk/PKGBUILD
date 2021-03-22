@@ -7,7 +7,7 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.14.1
+pkgver=4.14.2
 _clangver=11.1.0
 pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
@@ -31,20 +31,14 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer')
 source=("https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz")
-sha256sums=('ef6fdcbaebb0d3d37cfdbc68f8b9e94ffeb6f63194564da5ce77760bb7790367')
-
-prepare() {
-  cd qt-creator-opensource-src-$pkgver
-
-# use system qbs
-  rm -r src/shared/qbs
-}
+sha256sums=('bd2bb62474f07466d8b59b0f751f29064deea3ed56173bce82548cb80e2d1a29')
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
-    -DWITH_DOCS=ON
+    -DWITH_DOCS=ON \
+    -DBUILD_QBS=OFF
   cmake --build build
 }
 
