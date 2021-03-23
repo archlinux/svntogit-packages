@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.68.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -17,7 +17,7 @@ source=("git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$pkgver"
         noisy-glib-compile-schemas.diff
         glib-compile-schemas.hook gio-querymodules.{hook,script})
 sha256sums=('SKIP'
-            '81a4df0b638730cffb7fa263c04841f7ca6b9c9578ee5045db6f30ff0c3fc531'
+            'b1cb539389aaabd13671424452f2805112a359b96c9e0e7f80fad804a77f9c7e'
             '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
             '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
             '92d08db5aa30bda276bc3d718e7ff9dd01dc40dcab45b359182dcc290054e24e')
@@ -29,6 +29,10 @@ pkgver() {
 
 prepare() {
   cd glib
+
+  # https://bugs.archlinux.org/task/70131
+  # https://gitlab.gnome.org/GNOME/glib/-/merge_requests/2010
+  git cherry-pick -n 07ab2e26c937 77649d3d3d94
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../noisy-glib-compile-schemas.diff
