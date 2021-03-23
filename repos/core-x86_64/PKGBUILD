@@ -4,14 +4,14 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.68.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
 arch=(x86_64)
 depends=(pcre libffi util-linux-libs zlib)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
-             meson dbus sysprof)
+             meson dbus)
 checkdepends=(desktop-file-utils)
 source=("git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$pkgver"
         noisy-glib-compile-schemas.diff
@@ -39,7 +39,6 @@ build() {
   arch-meson glib build \
     -D glib_debug=disabled \
     -D selinux=disabled \
-    -D sysprof=enabled \
     -D man=true \
     -D gtk_doc=true
   meson compile -C build
@@ -60,10 +59,6 @@ package_glib2() {
 
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
   install -D gio-querymodules.script "$pkgdir/usr/share/libalpm/scripts/gio-querymodules"
-
-  # Avoid a dep on sysprof
-  sed -re '/^Requires\.private:/s/,? *sysprof-capture-[^,]*(,|$)/\1/' \
-    -i "$pkgdir"/usr/lib/pkgconfig/*.pc
 
   export PYTHONHASHSEED=0
   python -m compileall -d /usr/share/glib-2.0/codegen \
