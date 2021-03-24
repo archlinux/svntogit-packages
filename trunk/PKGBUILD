@@ -25,7 +25,9 @@ prepare() {
 }
 
 build() {
-  arch-meson vte build -D docs=true -D b_lto=false
+  arch-meson vte build \
+    -D b_lto=false \
+    -D docs=true
   meson compile -C build
 }
 
