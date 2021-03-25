@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=40.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -15,7 +15,7 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
          xorg-xwayland graphene)
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
-provides=(libmutter-7.so)
+provides=(libmutter-8.so)
 groups=(gnome)
 install=mutter.install
 _commit=21a09fb7928c17519d67ffd8c1ae80071f92fdbf  # tags/40.0^0
