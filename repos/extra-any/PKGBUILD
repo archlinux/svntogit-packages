@@ -1,38 +1,41 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
-_brotli_ver=1.0.7
-_openssl_ver=1.1.1h
+_brotli_ver=1.0.9
+_openssl_ver=1.1.1j
 pkgbase=edk2
 pkgname=('edk2-armvirt' 'edk2-shell' 'edk2-ovmf')
-pkgver=202011
+pkgver=202102
 pkgrel=1
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=('any')
 url="https://github.com/tianocore/edk2"
 license=('BSD')
-makedepends=('aarch64-linux-gnu-gcc' 'acpica' 'iasl' 'util-linux-libs' 'nasm' 'python')
+makedepends=('aarch64-linux-gnu-gcc' 'acpica' 'git' 'iasl' 'util-linux-libs' 'nasm' 'python')
 options=(!makeflags)
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archive/${pkgbase}-stable${pkgver}.tar.gz"
         "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
         "brotli-${_brotli_ver}.tar.gz::https://github.com/google/brotli/archive/v${_brotli_ver}.tar.gz"
+        "${pkgbase}-202102-brotli-1.0.9.patch"
         "50-edk2-ovmf-i386-secure.json"
         "50-edk2-ovmf-x86_64-secure.json"
         "60-edk2-ovmf-i386.json"
         "60-edk2-ovmf-x86_64.json"
         "70-edk2-armvirt-aarch64.json")
-sha512sums=('53e9d2dcc2d4a885e6c48b87195e361ea1263de5501c62b22ad37a4ec350b4e171ea580fbb151874ec474a6b202fa7114d440ef9d2673bc9aff7a295c89ea2a0'
-            'da50fd99325841ed7a4367d9251c771ce505a443a73b327d8a46b2c6a7d2ea99e43551a164efc86f8743b22c2bdb0020bf24a9cbd445e9d68868b2dc1d34033a'
+sha512sums=('d3dab4559b5d24b03d1066039beac787f6c8d3c4fbc14294c4836bcdf6eaa9d1f9654b65e24eeb0709348b63a9b13ebbfcfa11609ff710374838d91b51b9f414'
+            '51e44995663b5258b0018bdc1e2b0e7e8e0cce111138ca1f80514456af920fce4e409a411ce117c0f3eb9190ac3e47c53a43f39b06acd35b7494e2bec4a607d5'
             'SKIP'
-            'a82362aa36d2f2094bca0b2808d9de0d57291fb3a4c29d7c0ca0a37e73087ec5ac4df299c8c363e61106fccf2fe7f58b5cf76eb97729e2696058ef43b1d3930a'
+            'b8e2df955e8796ac1f022eb4ebad29532cb7e3aa6a4b6aee91dbd2c7d637eee84d9a144d3e878895bb5e62800875c2c01c8f737a1261020c54feacf9f676b5f5'
+            'fe0fd592d4b436a35a49a74ad5dd989311b297b9abacb13ed8d4da0986169c91ffbc34cef0f2d52bf40c833d252f6e65311ab0e4e4ca6798390febfb9a787a4a'
             '55e4187b11b27737f61e528c02ff43b9381c0cb09140e803531616766f9cb9401115d88d946b56171784cc028f9571279640eb39b6a9fa8e02ec0c8d1b036a3e'
             'a1236585b30d720540de2e9527d8c90ff2d428e800b3da545b23461dc698dc91fe441b62bb8cbca76e08f4ec1eb485619e9ab26157deb06e7fb33e7f5f9dd8b6'
             'c81e072aabfb01d29cf5194111524e2c4c8684979de6b6793db10299c95bb94f7b1d0a98b057df0664d7a894a2b40e9b4c3576112fae400a95eaf5fe5fc9369b'
             '2030dc1d49d56fce8af56c5777fd40f04041e39ff806dd8c021e161227bdd646982024db6758230b8332dc68f16bc6918e1d54ad3c022e21e148d6b65ea778b3'
             'fa6d36a3c0225e4a5df532e77b18a035d65b0856d6a48875def5007de3f83d8d1d202d5b91e887d424112a3fa377dc9a09bdf44e5fcdccc36854675f95a211a4')
-b2sums=('bd79f68f051226fa7de4d0d3035b3274ac0907d8471ba7aee123abff6fb1c72205abb6a7178ed3d07b00b6ee82d8d3c0e97c81013d9906733f95644e847bb209'
-        'ac9ba6fb0c4da0a761e8655b6907634365ddb114216acfcfc981e13c211577b6bd23ea8d2ad0999c0960b039f5d3dead5733e6dc07c5231ab953307a9015cd36'
+b2sums=('48a0804ad92cce9d5783dc9ea1e8815414f77fb49d7f51401f314215d203a4be2b70e446267200366e2d0c41df92aa07d399207be3c0dbf565bece1b7eb452dd'
+        'e5699abeca83acd82546e74a0645f2a765d51f22226f8c537d92285eb0b11e12b0a9476cbd3cb6a594e9840433d713be39884fb4dcd5c3968b36ad4f582ed23a'
         'SKIP'
-        'b9fc554cd23c8387b648638b6f9bb2d29fa87035856d03cf284662f9281984f3bf8e40109e61155ece18673f4391bc0fff704f8ab800a2041d3ce1824478d2ae'
+        '8b9939d5224396ef33b43e019250ba4bc8949903583615e8dc02c85340fc0a1e2d1632161e00b0ee7355d77f05529ac772f482e05d2089afd71a0bf71e803904'
+        'eb549f711aa31b0a46f3e9b74076e52e0e1734045c227f410016c6de46a3b7b2959287d49b5ef853236c57fa3b3143b1da31fd9ef6fd592ba22ba9af15941a76'
         '96502e0c8b748d6db0fcd4e767264f778319b4517fe4bf2e6e4f92e35bf09f388fb7f39c349e66444368820c31a6ff76e952053ac9f9696a59f7f0a929a650d1'
         '4a438a2f7726c6a9ff1a40506ddb5f724d5c220b57997784fefe4a180e249b4f1e9adc8e353e7dbc492a1bde0165442d873409656ce2fbbc9fd35c690b7692e4'
         '5da17cfe08368542f04b47121b296c56a6702233207b1cdb822eea42c8fb43d8856e86d19122621caf97e4332814c839204d7ce191041128ee3921b23f137bb6'
@@ -46,6 +49,9 @@ _build_plugin='GCC5'
 prepare() {
   mv -v "$pkgbase-$pkgbase-stable$pkgver" "$pkgbase-$pkgver"
   cd "$pkgbase-$pkgver"
+  # patch to be able to use brotli 1.0.9
+  patch -Np1 -i "../${pkgbase}-202102-brotli-1.0.9.patch"
+  # NOTE: patching brotli itself is not necessary (extra/brotli cherry-picks a patch for the pkgconfig integration)
 
   # symlinking openssl into place
   rm -rfv CryptoPkg/Library/OpensslLib/openssl
