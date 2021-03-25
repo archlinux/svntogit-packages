@@ -1,11 +1,11 @@
-# Maintainer:  David Runge <dvzrv@archlinux.org>
-# Contributor:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=expat
-pkgver=2.2.10
-pkgrel=2
+pkgver=2.3.0
+pkgrel=1
 pkgdesc='An XML parser library'
 arch=('x86_64')
 url="https://libexpat.github.io/"
@@ -13,10 +13,10 @@ license=('MIT')
 depends=('glibc')
 makedepends=('cmake')
 provides=('libexpat.so')
-source=("https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/expat-${pkgver}.tar.bz2"{,.asc})
-sha512sums=('9623e86024d09e3bb0cf51fd0d56ecaee5fb8c8acb71589104a63b510f73c1e84abb0ccea4e2c196bdf1d30b5ad0633a915758f75813717d031d633e34f022b7'
+source=("https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/${pkgname}-${pkgver}.tar.bz2"{,.asc})
+sha512sums=('937468f2c298503a2c8d3f70b36e2c79d6b603e758abe0613fd2b636d3cf6906946776fdfe6725a8d6e90748ed7f7f07ad0d7a07c4328f6669bc89482c0e535b'
             'SKIP')
-b2sums=('e837353deb2fa6a9fbeff9c1843e63f33a1622bf26f6a914a1e2e572324d4826165bf175ac13038666c8e4eb785167bd3dafe7bc5b4c98e92e608f20709f053d'
+b2sums=('cac52d8f67a1019985b5568ed1baf9adfda2366a67374fc1e97db0493b1e528805d916e33bd69ab34cd88debef05082a271534e475cfa22c11bff5157bbc70c2'
         'SKIP')
 validpgpkeys=(3176EF7DB2367F1FCA4F306B1F9B0E909AF37285) # Sebastian Pipping
 
