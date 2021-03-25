@@ -25,7 +25,7 @@ validpgpkeys=(
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
 sha256sums=('930ae76b9a3b64b98802849aca332d17a706f20595de21e1ae729b55ee461add'
             'SKIP'
-            '78670c06fec7cebfb08e7ec2ea43f508ea825f93280d5a1eaba7c34d48058cb5'
+            '7a35b1afafb35371478ddcb3db6509905163a9da49000abd4213900669a0791b'
             '6992aed5d5398f9442f0ce94d5d5b6503bf492df0ebe719ed6e0fc1dc2ee1929')
 
 export KBUILD_BUILD_HOST=archlinux
@@ -52,7 +52,7 @@ prepare() {
   echo "Setting config..."
   cp ../config .config
   make olddefconfig
-
+return 1
   make -s kernelrelease > version
   echo "Prepared $pkgbase version $(<version)"
 }
