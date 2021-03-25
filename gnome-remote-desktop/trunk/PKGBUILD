@@ -1,17 +1,19 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=gnome-remote-desktop
-pkgver=0.1.9
+pkgver=40.0
 pkgrel=1
 pkgdesc="GNOME Remote Desktop server"
 url="https://wiki.gnome.org/Projects/Mutter/RemoteDesktop"
 arch=(x86_64)
 license=(GPL2)
-depends=(cairo freerdp glib2 pipewire systemd libvncserver libsecret libnotify dconf)
+depends=(cairo freerdp glib2 pipewire systemd libvncserver libsecret libnotify
+         dconf fuse3 libxkbcommon)
 makedepends=(git meson)
-checkdepends=(xorg-server-xvfb python-dbus python-gobject mutter)
+checkdepends=(xorg-server-xvfb python-dbus python-gobject mutter
+              pipewire-media-session)
 groups=(gnome)
-_commit=ba216dc82c7cdfcd2b99066b8be480e6a76cc60b  # tags/0.1.9^0
+_commit=b64efe3e52cc334ac911f3ac967cd68afb907ae1  # tags/40.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-remote-desktop.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -22,11 +24,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # Test fixes
-  sed -e 's|-noreset|& -nolisten local|' \
-      -e 's|dbus-run-session --||' \
-      -i tests/vnc-test-runner.sh
 }
 
 build() {
@@ -34,24 +31,22 @@ build() {
   meson compile -C build
 }
 
-_run_tests() {
+check() (
   mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
   glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/build/src}"
   export XDG_RUNTIME_DIR GSETTINGS_SCHEMA_DIR
-
-  sed 's/exec pipewire-media-session .*/exec pipewire-media-session -d bluez5,alsa-seq,alsa-pcm/' \
-    </etc/pipewire/pipewire.conf >pipewire.conf
-  export PIPEWIRE_CONFIG_FILE="$PWD/pipewire.conf"
+  unset DBUS_SESSION_BUS_ADDRESS
 
   pipewire &
-  trap "kill $!; wait" EXIT
+  _p1=$!
 
-  meson test -C build --print-errorlogs
-}
+  pipewire-media-session &
+  _p2=$!
 
-check() {
-  dbus-run-session bash -c "$(declare -f _run_tests); _run_tests"
-}
+  trap "kill $_p1 $_p2; wait" EXIT
+
+  meson test -C build --print-errorlogs -t 2
+)
 
 package() {
   DESTDIR="$pkgdir" meson install -C build
