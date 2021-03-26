@@ -2,16 +2,16 @@
 # Contributor: Renchi Raju <renchi@green.tam.uiuc.edu>
 
 pkgname=emacs
-pkgver=27.1
-pkgrel=3
+pkgver=27.2
+pkgrel=1
 pkgdesc="The extensible, customizable, self-documenting real-time display editor"
 arch=('x86_64')
 url="https://www.gnu.org/software/emacs/emacs.html"
 license=('GPL3')
 depends=('librsvg' 'gpm' 'giflib' 'libxpm' 'libotf' 'm17n-lib' 'gtk3' 'hicolor-icon-theme' 'desktop-file-utils' 'alsa-lib' 'gnutls' 'jansson' 'cairo' 'harfbuzz')
-validpgpkeys=('B29426DEFB07724C3C35E5D36592E9A3A0B0F199' '28D3BED851FDF3AB57FEF93C233587A47C207910')
+validpgpkeys=('E6C9029C363AD41D787A8EBB91C1262F01EB8D39' '28D3BED851FDF3AB57FEF93C233587A47C207910')
 source=(https://ftp.gnu.org/gnu/emacs/$pkgname-$pkgver.tar.xz{,.sig})
-sha1sums=('d1b6b9efa666614c5628dda9ea78628796a73f7f'
+sha1sums=('8d18e2bfb6e28cf060ce7587290954e9c582aa25'
           'SKIP')
 
 build() {
