@@ -120,6 +120,7 @@ build() {
     -Ddefault-hierarchy=unified
     -Ddefault-kill-user-processes=false
     -Ddefault-locale=C
+    -Dlocalegen-path=/usr/bin/locale-gen
     -Ddns-over-tls=openssl
     -Dfallback-hostname='archlinux'
     -Dnologin-path=/usr/bin/nologin
