@@ -1,10 +1,9 @@
 # vim: set ts=2 sw=2 et:
-# Maintainer: Dan McGee <dan@archlinux.org>
-# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Maintainer: 
 
 pkgname=pacman
 pkgver=5.2.2
-pkgrel=2
+pkgrel=3
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -24,11 +23,11 @@ validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@a
 source=(https://sources.archlinux.org/other/pacman/$pkgname-$pkgver.tar.gz{,.sig}
         pacman.conf
         makepkg.conf
-        pacman-5.2.2-fix-strip-messing-up-file-attributes.patch::'https://git.archlinux.org/pacman.git/patch/?id=88d054093c1c99a697d95b26bd9aad5bc4d8e170')
+        pacman-5.2.2-fix-strip-messing-up-file-attributes.patch::'https://git.archlinux.org/pacman.git/patch/?id=88d054093c1c99a697d95b26bd9aad5bc4d8e170')  
 sha256sums=('bb201a9f2fb53c28d011f661d50028efce6eef2c1d2a36728bdd0130189349a0'
             'SKIP'
             '3353f363088c73f1f86a890547c0f87c7473e5caf43bbbc768c2e9a7397f2aa2'
-            '9c769f13c09a6f24c393a9762474eded2f269d8966e7764d9160d62232a7919b'
+            '46a7fda0f2ebd2957db1c0264ed8a659df0916ba30e1353ecc70ef47d2b118ff'
             '871fd97b3f13f1718358e4b8e046a56c0262c9042b5e3b5d60835606735798bd')
 
 
