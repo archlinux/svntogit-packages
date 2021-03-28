@@ -1,8 +1,8 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
 
 pkgname=krb5
-_pkgvermajor=1.18
-pkgver=1.18.3
+_pkgvermajor=1.19
+pkgver=1.19.1
 pkgrel=1
 pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
@@ -35,7 +35,7 @@ source=(https://web.mit.edu/kerberos/dist/krb5/${_pkgvermajor}/${pkgname}-${pkgv
         krb5-kpropd.service
         krb5-kpropd@.service
         krb5-kpropd.socket)
-sha512sums=('cf0bf6cf8f622fa085954e6da998d952cf64dc7ccc319972ed81ea0542089cabf2d0e8243df84da01ad6f40584768ca2f02d108630c6741fa7b3d7d98c887c01'
+sha512sums=('36bf33802119ada4650a8f69f1daca95aaf882dc96bfa7061f0340a5decd588c31fc10108ddadf1042934e0e2c3bbd975deec565b0a7f0fc2baf8b8cc6d97491'
             'SKIP'
             '5a3782ff17b383f8cd0415fd13538ab56afd788130d6ad640e9f2682b7deaae7f25713ce358058ed771091040dccf62a3bc87e6fd473d505ec189a95debcc801'
             'ae1fa980e8e30a83dfef7fe233be70a9ec530ebaffc344a0e7eba61e7de4c800421b45cf203f1e526cc8351754038d6539184b30aa049a567e2a9e80f0d39841'
