@@ -7,7 +7,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='e878547b1a4aaee27c90e835a986a6a96a00c507' # git rev-parse v${_tag_name}
 _tag_name=248-rc4
 pkgver="${_tag_name/-/}"
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -22,6 +22,7 @@ validpgpkeys=('63CDA1E5D3FC22B998D20DD6327F26951A015CC4'  # Lennart Poettering <
 source=("git+https://github.com/systemd/systemd-stable#tag=${_tag}?signed"
         "git+https://github.com/systemd/systemd#tag=v${_tag_name%.*}?signed"
         '0001-Use-Arch-Linux-device-access-groups.patch'
+        '0002-Disable-SYSTEMD_URLIFY-by-default.patch'
         'initcpio-hook-udev'
         'initcpio-install-systemd'
         'initcpio-install-udev'
@@ -41,7 +42,8 @@ source=("git+https://github.com/systemd/systemd-stable#tag=${_tag}?signed"
         '30-systemd-update.hook')
 sha512sums=('SKIP'
             'SKIP'
-            '5b7cf0b51df7ee76f9dc644aee1084f88748791e9e37a35d99781846d21574a16e8e84f4f26dacd60a8f9da3be0aaafc4312877b7d0959f654aeaf0086665e57'
+            '882e486b6d88c8bafc50088845e41a49686e98981967f72ca1fb4ef07a01767400632f4b648fd31857d2a2a24a8fd65bcc2a8983284dd4fff2380732741d4c41'
+            '313f3d6cc3d88f718509007e029213a82d84b196afdadc6ef560580acf70ab480aaecd7622f51726cc1af7d7841c6ec5390f72890b055a54fc74722341395651'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
             '8e76f8334b95ce7fee9190f4a1016b16109f3a75b68635fc227b2b4791cf8179ef09b532b66b4ed885ddf98ed76befed3106f3c3088f1819ed8cdf4c13e0805a'
             'a25b28af2e8c516c3a2eec4e64b8c7f70c21f974af4a955a4a9d45fd3e3ff0d2a98b4419fe425d47152d5acae77d64e69d8d014a7209524b75a81b0edb10bf3a'
@@ -86,6 +88,9 @@ prepare() {
 
   # Replace cdrom/dialout/tape groups with optical/uucp/storage
   patch -Np1 -i ../0001-Use-Arch-Linux-device-access-groups.patch
+
+  # https://github.com/gwsw/less/issues/140
+  patch -Np1 -i ../0002-Disable-SYSTEMD_URLIFY-by-default.patch
 }
 
 build() {
