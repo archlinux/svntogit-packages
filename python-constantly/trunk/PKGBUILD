@@ -1,52 +1,32 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
-pkgbase=python-constantly
-pkgname=('python-constantly' 'python2-constantly')
+pkgname=python-constantly
 pkgver=15.1.0
-pkgrel=8
+pkgrel=9
 pkgdesc='Symbolic constants in Python'
 arch=('any')
 license=('MIT')
 url='https://github.com/twisted/constantly'
-makedepends=('python-setuptools' 'python2-setuptools' 'git')
-checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'python-twisted' 'python2-twisted')
-source=("git+https://github.com/twisted/constantly.git#tag=$pkgver")
-md5sums=('SKIP')
-
-prepare() {
-  cp -a constantly{,-py2}
-}
+depends=('python')
+makedepends=('python-setuptools')
+checkdepends=('python-pytest-runner' 'python-twisted')
+source=("https://github.com/twisted/constantly/archive/$pkgver/$pkgname-$pkgver.tar.gz")
+sha512sums=('eeaa74552fe8e01c40566ac3c8b3d41085f800863ac516e30fe1242f40d3401e4e872279149776f29d3ba78a7a16337a794ad26230efab4dd1847d42bffa81ce')
 
 build() {
-  cd "$srcdir"/constantly
+  cd constantly-$pkgver
   python setup.py build
-
-  cd "$srcdir"/constantly-py2
-  python2 setup.py build
 }
 
 check() {
-  cd "$srcdir"/constantly
+  cd constantly-$pkgver
   python setup.py ptr
-
-  cd "$srcdir"/constantly-py2
-  python2 setup.py ptr
 }
 
-package_python-constantly() {
-  depends=('python')
-
-  cd constantly
+package() {
+  cd constantly-$pkgver
   python setup.py install --root="$pkgdir" --optimize=1
-  install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
-}
-
-package_python2-constantly() {
-  depends=('python2')
-
-  cd constantly-py2
-  python2 setup.py install --root="$pkgdir" --optimize=1
-  install -D -m644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
 
 # vim:set ts=2 sw=2 et:
