@@ -1,59 +1,33 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
-pkgbase=python-wstools
-pkgname=('python-wstools' 'python2-wstools')
+pkgname=python-wstools
 pkgver=0.4.10
-pkgrel=3
+pkgrel=4
 pkgdesc="WSDL parsing services package for Web Services for Python"
 arch=('any')
 url="https://github.com/pycontribs/wstools"
 license=('custom')
-makedepends=('python-pbr' 'python2-pbr' 'python-setuptools' 'python2-setuptools')
-checkdepends=('python-pytest-runner' 'python2-pytest-runner' 'autopep8' 'python2-autopep8'
-              'python-pytest-cov' 'python2-pytest-cov')
-source=("https://github.com/pycontribs/wstools/archive/$pkgver/$pkgbase-$pkgver.tar.gz")
+depends=('python-six')
+makedepends=('python-pbr' 'python-setuptools')
+checkdepends=('python-pytest-runner' 'autopep8' 'python-pytest-cov')
+source=("https://github.com/pycontribs/wstools/archive/$pkgver/$pkgname-$pkgver.tar.gz")
 sha512sums=('1acd8e62d71c7d330f1e953a0da1956291c5dfb25ff9b8b8799c83feaa4230e384955735b131bab7b430b92ae6c18498927d416d2d1e11fb5c5dad93417c671a')
 
 export PBR_VERSION=$pkgver
 
-prepare() {
-  cp -a wstools-$pkgver{,-py2}
-  sed -e 's|#! /usr/bin/env python$|#!/usr/bin/env python2|' \
-      -e 's|#!/usr/bin/env python$|#!/usr/bin/env python2|' \
-      -i wstools-$pkgver-py2/wstools/{c14n.py,Namespaces.py,XMLSchema.py,Utility.py,__init__.py}
-}
-
 build() {
-  cd "$srcdir"/wstools-$pkgver
+  cd wstools-$pkgver
   python setup.py build
-
-  cd "$srcdir"/wstools-$pkgver-py2
-  python2 setup.py build
 }
 
 check() {
-  cd "$srcdir"/wstools-$pkgver
+  cd wstools-$pkgver
   python setup.py test
-
-  cd "$srcdir"/wstools-$pkgver-py2
-  python2 setup.py test
 }
 
-package_python-wstools() {
-  depends=('python-six')
-
+package() {
   cd wstools-$pkgver
   python setup.py install --root="$pkgdir" --optimize=1
-
-  install -d "$pkgdir/usr/share/licenses/$pkgname"
-  install -Dm644 docs/* "$pkgdir/usr/share/licenses/$pkgname"/
-}
-
-package_python2-wstools() {
-  depends=('python2-six')
-
-  cd wstools-$pkgver-py2
-  python2 setup.py install --root="$pkgdir" --optimize=1
 
   install -d "$pkgdir/usr/share/licenses/$pkgname"
   install -Dm644 docs/* "$pkgdir/usr/share/licenses/$pkgname"/
