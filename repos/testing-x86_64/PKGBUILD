@@ -4,10 +4,10 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='e878547b1a4aaee27c90e835a986a6a96a00c507' # git rev-parse v${_tag_name}
-_tag_name=248-rc4
+_tag='e13126bd95857eb9344e030edbb4c603aab63884' # git rev-parse v${_tag_name}
+_tag_name=248
 pkgver="${_tag_name/-/}"
-pkgrel=4
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -84,17 +84,11 @@ prepare() {
     git revert -n "${_c}"
   done
 
-  git merge --ff-only 'a81c7ac8d408a2618d488e708b40530bcdad6bd1'
-
   # Replace cdrom/dialout/tape groups with optical/uucp/storage
   patch -Np1 -i ../0001-Use-Arch-Linux-device-access-groups.patch
 
   # https://github.com/gwsw/less/issues/140
   patch -Np1 -i ../0002-Disable-SYSTEMD_URLIFY-by-default.patch
-
-  # units: make locale directory writable for systemd-localed
-  # https://github.com/systemd/systemd/pull/19139
-  sed -i '/ReadWritePaths=/s|$| /usr/lib/locale|' units/systemd-localed.service.in
 }
 
 build() {
