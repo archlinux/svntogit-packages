@@ -3,7 +3,7 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=40rc+2+g438414fc
+pkgver=40.0
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -13,7 +13,7 @@ depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost
          libxdmcp systemd)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl meson)
 checkdepends=(check)
-_commit=438414fc118b70d8860717671729d52454a84cd6  # master
+_commit=3246bf1af8589899621649df523e6840e4858cda  # tags/40.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0001-pam-arch-Update-to-match-pambase-20200721.1-2.patch
         0002-Xsession-Don-t-start-ssh-agent-by-default.patch
