@@ -5,14 +5,11 @@
 
 pkgname=python-twisted
 pkgver=21.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Asynchronous networking framework written in Python"
 arch=('any')
 url="https://twistedmatrix.com/"
 license=('MIT')
-# Adding replaces here because python2-twisted is no longer supported, all the command line tools
-# are now provided by the python3 variant.
-replaces=('python2-twisted')
 depends=('python-zope-interface' 'python-constantly' 'python-incremental' 'python-automat'
          'python-hyperlink' 'python-attrs')
 optdepends=('python-pyopenssl: for TLS client hostname verification'
@@ -30,6 +27,8 @@ checkdepends=('python-pyhamcrest' 'subversion' 'xorg-server-xvfb' 'tk' 'openssh'
               'python-gobject' 'python-subunit' 'python-h2' 'python-priority' 'python-cryptography'
               'python-idna' 'python-pyasn1' 'python-pyserial' 'python-bcrypt'
               'python-cython-test-exception-raiser')
+# Conflicts with the command line tools used to be provided by the python2 package.
+conflicts=("python2-twisted<=20.3.0-3")
 source=("https://github.com/twisted/twisted/archive/twisted-$pkgver.tar.gz")
 sha512sums=('fa743dcf22f3c17dfd17f39b7df0cc31fb8ce3e989478ada9a026424ec2de35e6a403ef35acdef5905eed008d42e3c2fee6b7ccdda433e6c250f1feaa83ea8a4')
 
