@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=40.0
-pkgrel=2
+pkgrel=3
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -12,7 +12,7 @@ license=(GPL)
 depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
          libcanberra startup-notification zenity libsm gnome-desktop upower
          libxkbcommon-x11 gnome-settings-daemon libgudev libinput pipewire
-         xorg-xwayland graphene)
+         xorg-xwayland graphene libxkbfile)
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
 checkdepends=(xorg-server-xvfb)
 provides=(libmutter-8.so)
