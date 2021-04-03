@@ -1,9 +1,10 @@
-# Maintainer: Ray Rashif <schiv@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Ray Rashif <schiv@archlinux.org>
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples)
-pkgver=4.5.1
+pkgver=4.5.2
 pkgrel=1
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
@@ -18,10 +19,16 @@ optdepends=('opencv-samples: samples'
             'opencl-icd-loader: For coding with OpenCL'
             'python-numpy: Python bindings'
             'java-runtime: Java interface')
-source=("$pkgbase-$pkgver.tar.gz::https://github.com/opencv/opencv/archive/$pkgver.zip"
-        "opencv_contrib-$pkgver.tar.gz::https://github.com/opencv/opencv_contrib/archive/$pkgver.tar.gz")
-sha256sums=('5fbc26ee09e148a4d494b225d04217f7c913ca1a4d46115b70cca3565d7bbe05'
-            '12c3b1ddd0b8c1a7da5b743590a288df0934e5cef243e036ca290c2e45e425f5')
+source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
+        https://github.com/opencv/opencv_contrib/archive/$pkgver/opencv_contrib-$pkgver.tar.gz
+        opencv-lapack-3.9.1.patch)
+sha256sums=('be976b9ef14f1deaa282fb6e30d75aa8016a2d5c1f08e85795c235148940d753'
+            '9f52fd3114ac464cb4c9a2a6a485c729a223afb57b9c24848484e55cef0b5c2a'
+            '5233d9b4b8e3f4600e3f4ebef2b0ad5621faf25efbdfee96ee720a83cc81d0cc')
+
+prepare() {
+  patch -d $pkgname-$pkgver -p1 < opencv-lapack-3.9.1.patch # Fix build with LAPACK 3.9.1
+}
 
 build() {
   export JAVA_HOME="/usr/lib/jvm/default"
