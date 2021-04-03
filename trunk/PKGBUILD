@@ -162,8 +162,8 @@ package_systemd() {
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
               'polkit: allow administration as unprivileged user'
               'curl: machinectl pull-tar and pull-raw'
-              'libfido2: unlocking LUKS2 volumes'
-              'tpm2-tss: unlocking LUKS2 volumes')
+              'libfido2: unlocking LUKS2 volumes with FIDO2 token'
+              'tpm2-tss: unlocking LUKS2 volumes with TPM2')
   backup=(etc/pam.d/systemd-user
           etc/systemd/coredump.conf
           etc/systemd/homed.conf
