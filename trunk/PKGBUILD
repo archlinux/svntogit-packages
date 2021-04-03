@@ -3,7 +3,7 @@
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
 pkgname=tracker3
-pkgver=3.1.0
+pkgver=3.1.1
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
@@ -13,10 +13,10 @@ depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp libsoup
          json-glib)
 makedepends=(gobject-introspection vala git gtk-doc bash-completion meson
              asciidoc systemd)
-checkdepends=(python-gobject python-dbus)
+checkdepends=(python-gobject python-dbus python-tappy)
 provides=(libtracker-sparql-3.0.so)
 groups=(gnome)
-_commit=29219e06b9433cf188bdc56c9710cd466ddb3f75  # tags/3.1.0^0
+_commit=aa5d1d33ba2aee01344aace0674b8fa6c1647c29  # tags/3.1.1^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -30,7 +30,7 @@ prepare() {
 }
 
 build() {
-  arch-meson tracker build --buildtype debug
+  arch-meson tracker build -D tests_tap_protocol=true
   meson compile -C build
 }
 
