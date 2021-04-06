@@ -3,27 +3,35 @@
 
 pkgname=cups-pdf
 pkgver=3.0.1
-pkgrel=5
+pkgrel=6
 pkgdesc="PDF printer for cups"
 arch=(x86_64)
 depends=('cups' 'ghostscript')
 install=cups-pdf.install
 url="https://www.cups-pdf.de/welcome.shtml"
 license=('GPL2')
-source=(https://www.cups-pdf.de/src/cups-pdf_$pkgver.tar.gz)
+source=(https://www.cups-pdf.de/src/cups-pdf_$pkgver.tar.gz
+        remove-deprecated-ghostscript-setpdfwrite-operator.diff)
 backup=(etc/cups/cups-pdf.conf)
 # http://www.cups-pdf.de/src/cups-pdf_3.0.1.tar.gz.md5 - no other checksums
-md5sums=('5071bf192b9c6eb5ada4337b6917b939')
+md5sums=('5071bf192b9c6eb5ada4337b6917b939'
+         '08eb1f7037ec8c6197437204d533db22')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # remove unsupported ghostscript operator - FS#70313
+  patch -Np1 -i ../remove-deprecated-ghostscript-setpdfwrite-operator.diff
+}  
 
 build() {
-  cd "$srcdir"/$pkgname-$pkgver/src
+  cd "$pkgname-$pkgver"/src
   [ -z "$CC" ] && CC=gcc
 #  $CC $CFLAGS -Wall -o cups-pdf cups-pdf.c
-  $CC $CFLAGS -s cups-pdf.c -o cups-pdf -lcups  
+  $CC $CFLAGS $LDFLAGS -s cups-pdf.c -o cups-pdf -lcups  
 }
 
 package() {
-  cd "$srcdir"/$pkgname-$pkgver/src
+  cd "$pkgname-$pkgver"/src
   install -D -m700 cups-pdf "$pkgdir"/usr/lib/cups/backend/cups-pdf
 
   # Install Postscript Color printer
