@@ -3,24 +3,24 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=3.38.4
+pkgver=40.0
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
 arch=(x86_64)
 license=(GPL2)
-depends=(accountsservice gcr gjs gnome-bluetooth upower gnome-session
+depends=(accountsservice gcr gjs gnome-bluetooth upower gnome-session gtk4
          gnome-settings-daemon gnome-themes-extra gsettings-desktop-schemas
          libcanberra-pulse libgdm libsecret mutter nm-connection-editor unzip
          gstreamer libibus gnome-autoar gnome-disk-utility gst-plugin-pipewire)
-makedepends=(gtk-doc gnome-control-center evolution-data-server gobject-introspection git meson
-             sassc asciidoc bash-completion)
+makedepends=(gtk-doc gnome-control-center evolution-data-server
+             gobject-introspection git meson sassc asciidoc bash-completion)
 optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
 install=gnome-shell.install
-_commit=d91b41ade09ea9960678416ab919ececf12ec8d1  # tags/3.38.4^0
+_commit=c40d382c5634ca4f92e3bf2f6e7a7ed0d0e8d46b  # tags/40.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
@@ -45,6 +45,6 @@ build() {
 }
 
 package() {
-  depends+=(libmutter-7.so)
+  depends+=(libmutter-8.so)
   DESTDIR="$pkgdir" meson install -C build
 }
