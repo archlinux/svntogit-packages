@@ -1,50 +1,36 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=dleyna-renderer
-pkgver=0.6.0
-pkgrel=4
+pkgver=0.7.0
+pkgrel=1
 pkgdesc="Library to discover and manipulate Digital Media Renderers"
+url="https://github.com/phako/dleyna-renderer"
 arch=(x86_64)
-url="http://01.org/dleyna"
 license=(LGPL2.1)
 depends=(dleyna-connector-dbus gupnp-av gupnp-dlna libsoup)
-makedepends=(git)
-_commit=334baba53e253957637b86764347dcc27cf091ab  # tags/0.6.0
-source=("git+https://github.com/01org/dleyna-renderer#commit=$_commit"
-        167.patch)
-sha256sums=('SKIP'
-            '7f7a85204f83e82cc86345d9ef3a1368ecc221bcf3a1c75fe08e9bded68ba709')
+makedepends=(git meson docbook-xsl)
+_commit=7032c94c4c41a56fead1668440d75462f25d3ac4  # tags/v0.7.0^0
+source=("git+https://github.com/phako/dleyna-renderer#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  git describe --tags | sed 's/^v//;s/-/+/g'
 }
 
 prepare() {
   cd $pkgname
-
-  # https://bugs.archlinux.org/task/66483
-  # https://github.com/intel/dleyna-renderer/pull/167
-  git apply -3 ../167.patch
-
-  NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
-  CFLAGS+=" -Wno-deprecated-declarations"
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --disable-static --libexecdir=/usr/lib
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build
+  meson compile -C build
 }
 
 check() {
-  cd $pkgname
-  make check
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" meson install -C build
 }
