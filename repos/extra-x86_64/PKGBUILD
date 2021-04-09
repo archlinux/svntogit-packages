@@ -1,9 +1,10 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
-pkgname=gtk3
+pkgbase=gtk3
+pkgname=(gtk3 gtk3-docs gtk3-demos)
 pkgver=3.24.28
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -15,9 +16,6 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2
          libcups libcanberra fribidi iso-codes libcloudproviders
          gtk-update-icon-cache)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
-provides=(gtk3-print-backends libgtk-3.so libgdk-3.so libgailutil-3.so)
-conflicts=(gtk3-print-backends)
-replaces=("gtk3-print-backends<=3.22.26-1")
 license=(LGPL)
 install=gtk3.install
 _commit=23db3508899f8304482b68e04a181bb081549081  # tags/3.24.28^0
@@ -36,17 +34,34 @@ prepare() {
 }
 
 build() {
-  CFLAGS+=" -DG_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS"
+  # https://gitlab.gnome.org/GNOME/gtk/-/commit/df4b564d69cc7d2e751537eff61259b36f37e9e5
+  CFLAGS+=" -DG_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS -DG_DISABLE_ASSERT"
+
   arch-meson gtk build \
     -D broadway_backend=true \
     -D cloudproviders=true \
+    -D tracker3=false \
     -D colord=yes \
     -D gtk_doc=true \
     -D man=true
   meson compile -C build
 }
 
-package() {
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_gtk3() {
+  provides=(gtk3-print-backends libgtk-3.so libgdk-3.so libgailutil-3.so)
+  conflicts=(gtk3-print-backends)
+  replaces=("gtk3-print-backends<=3.22.26-1")
+
   DESTDIR="$pkgdir" meson install -C build
 
   install -Dm644 /dev/stdin "$pkgdir/usr/share/gtk-3.0/settings.ini" <<END
@@ -58,8 +73,30 @@ END
 
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 gtk-query-immodules-3.0.hook
 
-  rm "$pkgdir/usr/bin/gtk-update-icon-cache"
-  rm "$pkgdir/usr/share/man/man1/gtk-update-icon-cache.1"
+  cd "$pkgdir"
+
+  rm usr/bin/gtk-update-icon-cache
+  rm usr/share/man/man1/gtk-update-icon-cache.1
+
+  _pick docs usr/share/gtk-doc
+
+  _pick demo usr/bin/gtk3-{demo,demo-application,icon-browser,widget-factory}
+  _pick demo usr/share/applications/gtk3-{demo,icon-browser,widget-factory}.desktop
+  _pick demo usr/share/glib-2.0/schemas/org.gtk.Demo.gschema.xml
+  _pick demo usr/share/icons/hicolor/*/apps/gtk3-{demo,widget-factory}[-.]*
+  _pick demo usr/share/man/man1/gtk3-{demo,demo-application,icon-browser,widget-factory}.1
+}
+
+package_gtk3-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+  mv docs/* "$pkgdir"
+}
+
+package_gtk3-demos() {
+  pkgdesc+=" (demo applications)"
+  depends=(gtk3)
+  mv demo/* "$pkgdir"
 }
 
 # vim:set ts=2 sw=2 et:
