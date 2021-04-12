@@ -4,7 +4,7 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk3-docs gtk3-demos)
 pkgver=3.24.28
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -34,11 +34,8 @@ prepare() {
 }
 
 build() {
+  CFLAGS+=" -DG_ENABLE_DEBUG -DG_DISABLE_CAST_CHECKS"
   local meson_options=(
-    # https://gitlab.gnome.org/GNOME/gtk/-/commit/df4b564d69cc7d2e751537eff61259b36f37e9e5
-    --buildtype release
-    -D c_args="-DG_ENABLE_DEBUG"
-
     -D broadway_backend=true
     -D cloudproviders=true
     -D tracker3=false
