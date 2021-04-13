@@ -26,7 +26,6 @@ source=(https://xorg.freedesktop.org/releases/individual/xserver/${pkgbase}-${pk
 validpgpkeys=('7B27A3F1A6E18CD9588B4AE8310180050905E40C'
               'C383B778255613DFDB409D91DB221A6900000011'
               'DD38563A8A8224537D1F90E45B8A2D50A0ECD0D3'
-              ''
               '3BB639E56F861FA2E86505690FDD682D974CA72A')
 sha256sums=('914c796e3ffabe1af48071d40ccc85e92117c97a9082ed1df29e4d64e3c34c49'
             'SKIP'
