@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.3
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=4
 _commit=a059e7404a6db799f4da0ad696e65ae9c854b4b0
 # Upstream won't tag releases, because potatoes https://lists.qt-project.org/pipermail/interest/2021-March/036386.html
 arch=('x86_64')
