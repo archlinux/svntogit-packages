@@ -4,7 +4,7 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
-pkgver=460.67
+pkgver=465.24.02
 pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -16,7 +16,7 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            '80fdc023a8ce80e3a103896f28a5564bb43903af6bfc719f755c48eb225e79ec6abf219ab20eb80ada5808ef932ef5fa0fe710c6e0a07dd8a248daff2ba3b898')
+            '1beb59554a8fafdd61f4ebe6ffc1b714eb2cf67efe0aa7ddae5b146c9c4d932820f93dd91ec79162b65582364cab8ba9559ebf8f5174814eb670bb522f0e357f')
 
 
 create_links() {
@@ -195,11 +195,11 @@ package_nvidia-utils() {
     ln -s nvidia "${pkgdir}/usr/share/doc/nvidia-utils"
 
     # new power management support
-    install -D -m644 nvidia-suspend.service "${pkgdir}/usr/lib/systemd/system/nvidia-suspend.service"
-    install -D -m644 nvidia-hibernate.service "${pkgdir}/usr/lib/systemd/system/nvidia-hibernate.service"
-    install -D -m644 nvidia-resume.service "${pkgdir}/usr/lib/systemd/system/nvidia-resume.service"
-    install -D -m755 nvidia "${pkgdir}/usr/lib/systemd/system-sleep/nvidia"
-    install -D -m755 nvidia-sleep.sh "${pkgdir}/usr/bin/nvidia-sleep.sh"
+    install -D -m644 systemd/system/nvidia-suspend.service "${pkgdir}/usr/lib/systemd/system/nvidia-suspend.service"
+    install -D -m644 systemd/system/nvidia-hibernate.service "${pkgdir}/usr/lib/systemd/system/nvidia-hibernate.service"
+    install -D -m644 systemd/system/nvidia-resume.service "${pkgdir}/usr/lib/systemd/system/nvidia-resume.service"
+    install -D -m755 systemd/system-sleep/nvidia "${pkgdir}/usr/lib/systemd/system-sleep/nvidia"
+    install -D -m755 systemd/nvidia-sleep.sh "${pkgdir}/usr/bin/nvidia-sleep.sh"
 
     # distro specific files must be installed in /usr/share/X11/xorg.conf.d
     install -D -m644 "${srcdir}/nvidia-drm-outputclass.conf" "${pkgdir}/usr/share/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf"
