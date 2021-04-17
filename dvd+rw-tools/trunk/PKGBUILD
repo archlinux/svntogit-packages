@@ -24,7 +24,7 @@ sha512sums=('938f9ec5597158af275c7bf63002696ba362f6f22a219108c6a1df28792f0485046
             '4424c24a143b3346330e04039b170da5e8201617e6b620d8e33897e80580e9b4e572ca4757dd885ba09d1df45151a277ddb299f2735f18a19e9deffac731d8aa')
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}-${pkgver}
   # patches from Gentoo/Fedora
   # see https://bugs.gentoo.org/257360, https://bugzilla.redhat.com/show_bug.cgi?id=426068
   # and https://bugzilla.redhat.com/show_bug.cgi?id=243036
@@ -38,10 +38,10 @@ build() {
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}-${pkgver}
   install -m755 -d "${pkgdir}/usr/bin"
   install -m755 -d "${pkgdir}/usr/share/man/man1"
 
   install -m755 growisofs dvd+rw-booktype dvd+rw-format dvd+rw-mediainfo dvd-ram-control "${pkgdir}/usr/bin/"
-  install -m644 growisofs.1 ${pkgdir}/usr/share/man/man1/growisofs.1
+  install -m644 growisofs.1 "${pkgdir}"/usr/share/man/man1/growisofs.1
 }
