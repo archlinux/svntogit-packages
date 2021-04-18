@@ -3,7 +3,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=40.0+52+gd2a492de9
+pkgver=40.0+55+gf4f82bcb9
 pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -14,11 +14,11 @@ depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
          libxkbcommon-x11 gnome-settings-daemon libgudev libinput pipewire
          xorg-xwayland graphene libxkbfile)
 makedepends=(gobject-introspection git egl-wayland meson xorg-server)
-checkdepends=(xorg-server-xvfb)
+checkdepends=(xorg-server-xvfb pipewire-media-session)
 provides=(libmutter-8.so)
 groups=(gnome)
 install=mutter.install
-_commit=d2a492de94297d815c8140356b93b6befffdfde0  # master
+_commit=f4f82bcb96936fe108c0dd06936010ab5dee13ee  # master
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -42,16 +42,27 @@ build() {
   meson compile -C build
 }
 
-check() (
+_check() (
   mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
   glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/build/data}"
   export XDG_RUNTIME_DIR GSETTINGS_SCHEMA_DIR
 
-  # Stacking test flaky
+  pipewire &
+  _p1=$!
+
+  pipewire-media-session &
+  _p2=$!
+
+  trap "kill $_p1 $_p2; wait" EXIT
+
+  meson test -C build --print-errorlogs
+)
+
+check() {
   dbus-run-session xvfb-run \
     -s '-screen 0 1920x1080x24 -nolisten local +iglx -noreset' \
-    meson test -C build --print-errorlogs || :
-)
+    bash -c "$(declare -f _check); _check"
+}
 
 package() {
   DESTDIR="$pkgdir" meson install -C build
