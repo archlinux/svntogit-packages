@@ -5,7 +5,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=openssh
-pkgver=8.5p1
+pkgver=8.6p1
 pkgrel=1
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 url='https://www.openssh.com/portable.html'
@@ -25,7 +25,7 @@ source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgve
         'sshd.conf'
         'sshd.pam'
         'glibc-2.31.patch')
-sha256sums=('f52f3f41d429aa9918e38cf200af225ccdd8e66f052da572870c89737646ec25'
+sha256sums=('c3e6e4da1621762c850d03b47eed1e48dff4cc9608ddeb547202a234df8ed7ae'
             'SKIP'
             '4031577db6416fcbaacf8a26a024ecd3939e5c10fe6a86ee3f0eea5093d533b7'
             'e40f8b7c8e5e2ecf3084b3511a6c36d5b5c9f9e61f2bb13e3726c71dc7d4fbc7'
