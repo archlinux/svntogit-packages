@@ -3,8 +3,8 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=87.0
-pkgrel=2
+pkgver=88.0
+pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -21,12 +21,10 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
-        0002-Bug-1701089-Accept-vp09-codec-string-in-Widevine-man.patch
         $pkgname.desktop)
-sha256sums=('ce98be0522f971b6950f22c738c4b2caf19cf7f48ab2ae2e6d46694af7fd58ab'
+sha256sums=('6b50dbfb393f843e4401e23965a1d8f7fd44b5a7628d95138294094094eee297'
             'SKIP'
-            '1375163e9a21f75cfadb8ee77ca3d7f5f2405bfa5ec3940d8153f89d55e94e5f'
-            '2af9ddd8969b7143f112caa24d07a88e5ea0ac17e8adc32f2e92a58830a18a68'
+            '1b6814e85f13dcf069482ad1acfc1a099661922c85e3344aa4ee059288506ccc'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
@@ -48,9 +46,6 @@ prepare() {
 
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
   patch -Np1 -i ../0001-Use-remoting-name-for-GDK-application-names.patch
-
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1704022
-  patch -Np1 -i ../0002-Bug-1701089-Accept-vp09-codec-string-in-Widevine-man.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
