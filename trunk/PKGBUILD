@@ -73,7 +73,7 @@ sha256sums=('SKIP'
             'b7668a5d498972dc4981250c49f83601babce797be19b4fdd0f2f1c6cfbd0fc5'
             'SKIP'
             '5dee6628c48eef79812bb9e86ee772068d85e7fcebbd2b2b8d1e19d24eda9dab'
-            '580a81b00088773d554832b0d74c85bf16fec37728802973c45993bcb97cd7d5'
+            'afe26438026785b582cb26b401ea78d6971eaf37bea361a5deccdf22e369dd4c'
             '791fadf182edf8d5bee4b45c008b08adce9689a9624971136527891a8f67d206')
 
 _backports=(
