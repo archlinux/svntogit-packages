@@ -1,0 +1,73 @@
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: lydgate
+
+pkgname=mlocate
+pkgver=0.26.git.20170220
+_commit=c98bf6595703456558a6f9c163c746cdaa9e591f
+pkgrel=7
+pkgdesc='Merging locate/updatedb implementation'
+url='https://pagure.io/mlocate'
+arch=('x86_64')
+license=('GPL')
+backup=('etc/updatedb.conf')
+depends=('glibc')
+makedepends=('git')
+install=mlocate.install
+source=("git+https://pagure.io/mlocate.git#commit=$_commit"
+        'git+https://git.savannah.gnu.org/git/gnulib.git#commit=5861339993f3014cfad1b94fc7fe366fc2573598'
+	'sysusers.d'
+	'updatedb.conf'
+	'updatedb.timer'
+	'updatedb.service')
+sha256sums=('SKIP'
+            'SKIP'
+            '1713a8fc8b81f4a390bf8597c4c0e917474379002dcc984aad2f44218d10c82a'
+            'd00796741e2194032d0185b40de70ff5c8a11fda416a70434eb0aa2020981f91'
+            '94520117a4a2e16b5f2311c406904369d72690b8998c39ee4cf758009fdddbcb'
+            'af0db83e34ffd0325101042760d4a5e3bccacbc3a0ef42c997e42507bf4ba6a3')
+
+prepare() {
+	cd "${srcdir}/${pkgname}"
+	sed -i '/^groupname /s/mlocate/locate/' Makefile.am
+	../gnulib/gnulib-tool --import # See file: ./HACKING
+	autoreconf --install
+}
+
+build() {
+	cd "${srcdir}/${pkgname}"
+	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var/lib
+	make
+}
+
+check() {
+	cd "${srcdir}/${pkgname}"
+	make check
+}
+
+package() {
+	cd "${srcdir}/${pkgname}"
+
+	make DESTDIR="${pkgdir}" install
+
+	# fix group and permissions of /var/lib/mlocate; the Makefile does not
+	# do this because it uses a group name instead of a group id and fails
+	# https://lists.archlinux.org/pipermail/arch-general/2018-June/045165.html
+	chgrp 21 "${pkgdir}/var/lib/mlocate"
+	chmod 750 "${pkgdir}/var/lib/mlocate"
+
+	chgrp 21 "${pkgdir}/usr/bin/locate"
+	chmod 2755 "${pkgdir}/usr/bin/locate"
+	ln -s locate "${pkgdir}/usr/bin/slocate"
+
+	install -dm755 "${pkgdir}/var/lib"
+	install -dm750 -g21 "${pkgdir}/var/lib/locate"
+
+	install -Dm644 ../updatedb.conf "${pkgdir}/etc/updatedb.conf"
+	install -Dm644 ../sysusers.d "${pkgdir}/usr/lib/sysusers.d/locate.conf"
+	install -Dm644 ../updatedb.timer "${pkgdir}/usr/lib/systemd/system/updatedb.timer"
+	install -Dm644 ../updatedb.service "${pkgdir}/usr/lib/systemd/system/updatedb.service"
+
+	install -d "${pkgdir}/usr/lib/systemd/system/timers.target.wants"
+	ln -s ../updatedb.timer "${pkgdir}/usr/lib/systemd/system/timers.target.wants/updatedb.timer"
+}
