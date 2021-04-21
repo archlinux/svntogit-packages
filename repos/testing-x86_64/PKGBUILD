@@ -1,0 +1,70 @@
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Contributor: lod <aur@cyber-anlage.de>
+
+pkgname=amdvlk
+pkgver=2021.Q2.1
+pkgrel=2
+pkgdesc="AMD's standalone Vulkan driver"
+arch=(x86_64)
+url="https://github.com/GPUOpen-Drivers"
+license=('MIT')
+provides=('vulkan-driver')
+makedepends=('perl-xml-xpath' 'python' 'wayland' 'libxrandr' 'xorg-server-devel' 'cmake' 'ninja' 'git')
+makedepends+=('python2') # spvgen
+source=("https://github.com/GPUOpen-Drivers/AMDVLK/archive/v-${pkgver}.tar.gz"
+        amdvlk.sh)
+sha256sums=('c491929f959404527816ec9a88755916282aceeb191cd7bfb0440682e202e186'
+            '6c00a8cb4ca4481d470f75ee7ea8a4effd1dac2c81317db506903e8d1f37d215')
+            
+prepare() {
+  local nrepos path name revision
+  
+  nrepos=$(xpath -q -e //project AMDVLK-v-${pkgver}/default.xml | wc -l)
+  
+  while (($nrepos>0))
+  do
+    path=$(xpath -q -e //project[$nrepos]/@path AMDVLK-v-${pkgver}/default.xml | sed 's/ path="drivers\/\(.*\)"/\1/g')
+    name=$(xpath -q -e //project[$nrepos]/@name AMDVLK-v-${pkgver}/default.xml | sed 's/ name="\(.*\)"/\1/g')
+    revision=$(xpath -q -e //project[$nrepos]/@revision AMDVLK-v-${pkgver}/default.xml | sed 's/ revision="\(.*\)"/\1/g')
+    git clone https://github.com/GPUOpen-Drivers/$name $path
+      pushd $path
+        git checkout $revision
+      popd
+    (( nrepos-- ))
+  done
+}
+
+build() {
+  cd ${srcdir}/spvgen/external
+  python2 fetch_external_sources.py
+
+  cd ${srcdir}/xgl
+  cmake -H. -Bbuilds/Release64 \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_WAYLAND_SUPPORT=On \
+    -G Ninja
+    
+  ninja -C builds/Release64
+  # only for compiling glsl with the standalone compiler (amdllpc)
+  #ninja -C builds/Release64 spvgen
+}
+
+package() {
+  install -m755 -d "${pkgdir}"/usr/lib
+  install -m755 -d "${pkgdir}"/usr/share/vulkan/icd.d
+  install -m755 -d "${pkgdir}"/usr/share/vulkan/implicit_layer.d
+  install -m755 -d "${pkgdir}"/usr/share/licenses/${pkgname}
+
+  install xgl/builds/Release64/icd/amdvlk64.so "${pkgdir}"/usr/lib/
+  #install xgl/builds/Release64/spvgen/spvgen.so ${pkgdir}/usr/lib/
+  install AMDVLK/json/Redhat/amd_icd64.json "${pkgdir}"/usr/share/vulkan/icd.d/
+  install AMDVLK/json/Redhat/amd_icd64.json "${pkgdir}"/usr/share/vulkan/implicit_layer.d/
+  install AMDVLK/LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/
+  
+  sed -i "s#/lib64#/lib#g" "${pkgdir}"/usr/share/vulkan/icd.d/amd_icd64.json
+  sed -i "s#/lib64#/lib#g" "${pkgdir}"/usr/share/vulkan/implicit_layer.d/amd_icd64.json
+
+  # force radv as default driver - see FS#69289
+  install -m755 -d "${pkgdir}"/etc/profile.d 
+  install amdvlk.sh "${pkgdir}"/etc/profile.d/
+}
