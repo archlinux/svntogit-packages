@@ -5,7 +5,7 @@
 
 pkgname=python-twisted
 pkgver=21.2.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Asynchronous networking framework written in Python"
 arch=('any')
 url="https://twistedmatrix.com/"
@@ -31,6 +31,12 @@ checkdepends=('python-pyhamcrest' 'subversion' 'xorg-server-xvfb' 'tk' 'openssh'
 conflicts=("python2-twisted<=20.3.0-3")
 source=("https://github.com/twisted/twisted/archive/twisted-$pkgver.tar.gz")
 sha512sums=('fa743dcf22f3c17dfd17f39b7df0cc31fb8ce3e989478ada9a026424ec2de35e6a403ef35acdef5905eed008d42e3c2fee6b7ccdda433e6c250f1feaa83ea8a4')
+
+prepare() {
+  cd twisted-twisted-$pkgver
+  # Remove upper bounds
+  sed -i 's/, < 4.0//' setup.cfg
+}
 
 build() {
   cd twisted-twisted-$pkgver
