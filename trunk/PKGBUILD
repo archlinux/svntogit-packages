@@ -4,32 +4,31 @@
 # Contributor: Douglas Soares de Andrade <dsandrade@gmail.com>
 
 pkgname=python-urwid
-pkgver=2.1.1
-pkgrel=3
+pkgver=2.1.2
+pkgrel=1
 pkgdesc='Curses-based user interface library'
-url='http://excess.org/urwid/'
+url='http://urwid.org/'
 arch=('x86_64')
 license=('LGPL')
 depends=('python' 'glibc')
 makedepends=('glibc' 'python-setuptools')
-source=(https://github.com/urwid/urwid/archive/release-${pkgver}/${pkgname}-${pkgver}.tar.gz)
-sha256sums=('06fc11e62083f0de2ae8525d278bd5ca7f06bcf10773e299812ab5f617f8bd50')
-sha512sums=('6ab861c02edff37e31b1a5b138e71abf978f8ef9a54e0993b740ec62c0986ce1e25c2421a4a4b0d428a8cd64970496b23790074c911b6e4990b3d821a3bf2b4c')
+source=(https://pypi.org/packages/source/u/urwid/urwid-${pkgver}.tar.gz)
+sha256sums=('588bee9c1cb208d0906a9f73c613d2bd32c3ed3702012f51efe318a3f2127eae')
+sha512sums=('f102bdde5f5d39d4bce455020bbe4f18290589da0750a3b15b1e2bc8acf8a405f02295d7efa3009877801a36bfbfade92ec963086122e9b133db137d816a1ea5')
 
 build() {
-  (cd urwid-release-${pkgver}
+  cd urwid-${pkgver}
     python setup.py build
-  )
 }
 
 check() {
-  (cd urwid-release-${pkgver}
+  cd urwid-${pkgver}
     python setup.py test
-  )
+  
 }
 
 package() {
-  cd urwid-release-${pkgver}
+  cd urwid-${pkgver}
   python setup.py install --prefix=/usr --root="${pkgdir}" -O1 --skip-build
   rm -r "${pkgdir}"/usr/lib/python*/site-packages/urwid/tests
 }
