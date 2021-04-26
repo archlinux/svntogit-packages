@@ -60,7 +60,6 @@ validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' S
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
 source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
-        "git+https://git.savannah.gnu.org/git/grub-extras.git#commit=${_GRUB_EXTRAS_COMMIT}"
         "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_GNULIB_COMMIT}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
@@ -68,7 +67,6 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
         'grub.default')
 
 sha256sums=('SKIP'
-            'SKIP'
             'SKIP'
             'b7668a5d498972dc4981250c49f83601babce797be19b4fdd0f2f1c6cfbd0fc5'
             'SKIP'
@@ -155,12 +153,6 @@ _build_grub-common_and_bios() {
 	echo "Copy the source for building the bios part..."
 	cp -r "${srcdir}/grub/" "${srcdir}/grub-bios/"
 	cd "${srcdir}/grub-bios/"
-
-	echo "Add the grub-extra sources for bios build..."
-	install -d "${srcdir}/grub-bios/grub-extras"
-	cp -r "${srcdir}/grub-extras/915resolution" \
-		"${srcdir}/grub-bios/grub-extras/915resolution"
-	export GRUB_CONTRIB="${srcdir}/grub-bios/grub-extras/"
 
 	echo "Unset all compiler FLAGS for bios build..."
 	unset CFLAGS
