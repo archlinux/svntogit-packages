@@ -9,10 +9,6 @@ _IA32_EFI_IN_ARCH_X64="1"
 ## "1" to enable EMU build, "0" to disable
 _GRUB_EMU_BUILD="0"
 
-_GRUB_EXTRAS_COMMIT='8a245d5c1800627af4cefa99162a89c7a46d8842'
-_GNULIB_COMMIT='be584c56eb1311606e5ea1a36363b97bddb6eed3'
-_UNIFONT_VER='13.0.06'
-
 [[ "${CARCH}" == 'x86_64' ]] && _EFI_ARCH='x86_64'
 [[ "${CARCH}" == 'i686' ]] && _EFI_ARCH='i386'
 
@@ -23,6 +19,8 @@ pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
 _tag='7d42d00f0e314f1535752bd5126a6b8d1be3352b' # git rev-parse grub-${_pkgver}
+_gnulib_commit='be584c56eb1311606e5ea1a36363b97bddb6eed3'
+_unifont_ver='13.0.06'
 _pkgver=2.06-rc1
 pkgver=${_pkgver/-/}
 pkgrel=1
@@ -60,8 +58,8 @@ validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' S
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
 source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
-        "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_GNULIB_COMMIT}"
-        "https://ftp.gnu.org/gnu/unifont/unifont-${_UNIFONT_VER}/unifont-${_UNIFONT_VER}.bdf.gz"{,.sig}
+        "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_gnulib_commit}"
+        "https://ftp.gnu.org/gnu/unifont/unifont-${_unifont_ver}/unifont-${_unifont_ver}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
         '0002-10_linux-detect-archlinux-initramfs.patch'
         'grub.default')
@@ -131,7 +129,7 @@ prepare() {
 
 	echo "Avoid problem with unifont during compile of grub..."
 	# http://savannah.gnu.org/bugs/?40330 and https://bugs.archlinux.org/task/37847
-	gzip -cd "${srcdir}/unifont-${_UNIFONT_VER}.bdf.gz" > "unifont.bdf"
+	gzip -cd "${srcdir}/unifont-${_unifont_ver}.bdf.gz" > "unifont.bdf"
 
 	echo "Run bootstrap..."
 	./bootstrap \
