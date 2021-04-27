@@ -5,8 +5,8 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=4.3.2
-pkgrel=6
+pkgver=4.4
+pkgrel=1
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -35,6 +35,7 @@ depends=(
   libpulse
   librav1e.so
   libraw1394
+  librsvg-2.so
   libsoxr
   libssh
   libtheora
@@ -92,7 +93,7 @@ provides=(
   libswresample.so
   libswscale.so
 )
-_tag=f719f869907764e6412a6af6e178c46e5f915d25
+_tag=dc91b913b6260e85e1304c74ff7bb3c22a8c9fb1
 source=(
   git+https://git.ffmpeg.org/ffmpeg.git#tag=${_tag}
   vmaf-model-path.patch
@@ -150,6 +151,7 @@ build() {
     --enable-libopus \
     --enable-libpulse \
     --enable-librav1e \
+    --enable-librsvg \
     --enable-libsoxr \
     --enable-libspeex \
     --enable-libsrt \
