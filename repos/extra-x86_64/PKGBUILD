@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv)
 pkgver=4.5.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Open Source Computer Vision Library"
 arch=(x86_64)
 license=(BSD)
@@ -21,13 +21,16 @@ optdepends=('opencv-samples: samples'
             'java-runtime: Java interface')
 source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
         https://github.com/opencv/opencv_contrib/archive/$pkgver/opencv_contrib-$pkgver.tar.gz
-        opencv-lapack-3.9.1.patch)
+        opencv-lapack-3.9.1.patch
+        opencv-openexr3.patch)
 sha256sums=('be976b9ef14f1deaa282fb6e30d75aa8016a2d5c1f08e85795c235148940d753'
             '9f52fd3114ac464cb4c9a2a6a485c729a223afb57b9c24848484e55cef0b5c2a'
-            '5233d9b4b8e3f4600e3f4ebef2b0ad5621faf25efbdfee96ee720a83cc81d0cc')
+            '5233d9b4b8e3f4600e3f4ebef2b0ad5621faf25efbdfee96ee720a83cc81d0cc'
+            'dcddc1dd30139ac3ace668e0d530798c5691dfd2ad1e5e717db6010d659229ba')
 
 prepare() {
   patch -d $pkgname-$pkgver -p1 < opencv-lapack-3.9.1.patch # Fix build with LAPACK 3.9.1
+  patch -d $pkgname-$pkgver -p1 < opencv-openexr3.patch # Fix build with OpenEXR 3
 }
 
 build() {
