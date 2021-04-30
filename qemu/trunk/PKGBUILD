@@ -12,7 +12,7 @@ license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
 _headlessdeps=(seabios gnutls libpng libaio numactl libnfs
                lzo snappy curl vde2 libcap-ng spice libcacard usbredir libslirp
-               libssh zstd liburing ndctl dtc)
+               libssh zstd liburing ndctl dtc fuse3)
 depends=(virglrenderer sdl2 vte3 libpulse libjack.so brltty "${_headlessdeps[@]}")
 makedepends=(spice-protocol python ceph libiscsi glusterfs python-sphinx xfsprogs ninja)
 source=(https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
