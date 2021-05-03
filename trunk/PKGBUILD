@@ -3,8 +3,8 @@
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=apache
-pkgver=2.4.46
-pkgrel=3
+pkgver=2.4.47
+pkgrel=1
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('x86_64')
 url='https://www.apache.org/dist/httpd'
@@ -22,9 +22,9 @@ provides=('mod_proxy_uwsgi')
 conflicts=('mod_proxy_uwsgi')
 replaces=('mod_proxy_uwsgi')
 depends=('zlib' 'apr-util' 'pcre' 'libnghttp2' 'openssl' 'libxcrypt')
-makedepends=('libxml2' 'lua53' 'curl' 'brotli' 'jansson')
+makedepends=('libxml2' 'lua' 'curl' 'brotli' 'jansson')
 optdepends=(
-    'lua53: for mod_lua module'
+    'lua: for mod_lua module'
     'libxml2: for mod_proxy_html, mod_xml2enc modules'
     'curl: for mod_md module'
     'jansson: for mod_md module'
@@ -41,16 +41,18 @@ source=(
     httpd.service
     arch.layout
 )
-sha256sums=('740eddf6e1c641992b22359cabc66e6325868c3c5e2e3f98faf349b61ecf41ea'
+sha256sums=('23d006dbc8e578116a1138fa457eea824048458e89c84087219f0372880c03ca'
             'SKIP'
             'd305f8b52ac2a9bbda7bb0776496471e69e9d30642740f594d00086a8c7e344c'
             '63da1a420f4714a3e7af2672d28384419cc7eedbe7bf35baebd02938fabc15bf'
             '0bbbfae23a917b2fce0bf8f900f60319b50769224a96314e9301a75ccd078e16'
             'f574bac6d5f398e7a649fc0e1ca66ff01ad4ef34dac71258e93d8a9d9a2b3960'
             'dda05c6e76f12624e418ca18a36f2e90ec1c5b1cc52fed7142fce6076ec413f3')
+# following keys are coming from https://downloads.apache.org/httpd/KEYS
 validpgpkeys=('A93D62ECC3C8EA12DB220EC934EA76E6791485A8' # Jim Jagielski
               'B9E8213AEFB861AF35A41F2C995E35221AD84DFF'
-	      'E3480043595621FE56105F112AB12A7ADC55C003') # Daniel Ruggeri 
+              'C55AB7B9139EB2263CD1AABC19B033D1760C227B' # christophe.jaillet@wanadoo.fr
+              'E3480043595621FE56105F112AB12A7ADC55C003') # Daniel Ruggeri 
 
 prepare() {
   cd httpd-${pkgver}
