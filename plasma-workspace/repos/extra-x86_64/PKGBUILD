@@ -5,7 +5,7 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.21.4
+pkgver=5.21.5
 pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
@@ -16,8 +16,8 @@ depends=(knotifyconfig libksysguard ktexteditor libqalculate kde-cli-tools appst
          plasma-integration kdelibs4support kpeople kactivities-stats libkscreen kquickcharts kuserfeedback)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt kdesignerplugin kinit plasma-wayland-protocols)
 groups=(plasma)
-source=("https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz"{,.sig} kde.pam)
-sha256sums=('ba0b184570b62be84be2f8108fccadd08de8f3abf8a0f615a6f06f829bd628d5'
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
+sha256sums=('9cb16ef4bca9ade0ca82d0cc539533ba9f9be47811ae13d154effc085618e90a'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('2D1D5B0588357787DE9EE225EC94D18F7F05997E'  # Jonathan Riddell <jr@jriddell.org>
@@ -52,7 +52,7 @@ package_plasma-workspace() {
 
 package_plasma-wayland-session() {
   pkgdesc='Plasma Wayland session'
-  depends=(plasma-workspace qt5-wayland kwayland-integration xorg-server-xwayland)
+  depends=(plasma-workspace qt5-wayland kwayland-integration xorg-xwayland)
   groups=()
 
   install -Dm644 build/login-sessions/plasmawayland.desktop "$pkgdir"/usr/share/wayland-sessions/plasmawayland.desktop
