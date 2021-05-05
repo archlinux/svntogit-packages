@@ -8,7 +8,7 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
 pkgver=1.30.4
-pkgrel=2
+pkgrel=3
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
@@ -31,6 +31,9 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
+
+  # https://bugs.archlinux.org/task/70710
+  git cherry-pick -n 8acad5a20cc61081438294efc634c0e245452e35
 }
 
 build() {
