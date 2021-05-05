@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=40.0+67+g79acae417
+pkgver=40.0+78+g954131c1c
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -21,7 +21,7 @@ optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
 install=gnome-shell.install
-_commit=79acae41769ab46a3d11851c64e14779a3035bd2  # master
+_commit=954131c1c8a58a87d597270f357b0d0c7556662c  # master
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
