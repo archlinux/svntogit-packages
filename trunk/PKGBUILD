@@ -14,10 +14,11 @@ url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 _pppver=2.4.9
-makedepends=(intltool dhclient iptables gobject-introspection gtk-doc "ppp=$_pppver" modemmanager
-             iproute2 nss polkit wpa_supplicant curl systemd libmm-glib
-             libnewt libndp libteam vala perl-yaml python-gobject git vala jansson bluez-libs
-             glib2-docs iwd dnsmasq openresolv libpsl audit meson)
+makedepends=(intltool dhclient dhcpcd iptables gobject-introspection gtk-doc
+             "ppp=$_pppver" modemmanager iproute2 nss polkit wpa_supplicant curl
+             systemd libmm-glib libnewt libndp libteam vala perl-yaml
+             python-gobject git vala jansson bluez-libs glib2-docs iwd dnsmasq
+             openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
 _commit=a3e45da9f984d58e3b76d6ca064033541d819eca  # tags/1.30.4^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
@@ -60,9 +61,6 @@ build() {
     -D netconfig=no
     -D config_dns_rc_manager_default=symlink
 
-    # dhcp clients
-    -D dhcpcd=no
-
     # miscellaneous
     -D vapi=true
     -D docs=true
@@ -98,6 +96,7 @@ package_networkmanager() {
               'modemmanager: cellular network support'
               'iwd: wpa_supplicant alternative'
               'dhclient: alternative DHCP client'
+              'dhcpcd: alternative DHCP client'
               'openresolv: alternative resolv.conf manager'
               'firewalld: Firewall support')
   backup=(etc/NetworkManager/NetworkManager.conf)
