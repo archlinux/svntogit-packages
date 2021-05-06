@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.4
-pkgrel=2
+pkgrel=3
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -63,6 +63,7 @@ depends=(
   sdl2
   speex
   srt
+  svt-av1
   v4l-utils
   vmaf
   xz
@@ -111,7 +112,7 @@ pkgver() {
 
 prepare() {
   cd ffmpeg
-
+  git cherry-pick -n 988f2e9eb063db7c1a678729f58aab6eba59a55b # fix nvenc on older gpus
   patch -Np1 -i "${srcdir}"/vmaf-model-path.patch
 }
 
@@ -156,6 +157,7 @@ build() {
     --enable-libspeex \
     --enable-libsrt \
     --enable-libssh \
+    --enable-libsvtav1 \
     --enable-libtheora \
     --enable-libv4l2 \
     --enable-libvidstab \
