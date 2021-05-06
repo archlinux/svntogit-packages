@@ -17,7 +17,7 @@ arch=('x86_64')
 license=('MIT' 'Apache')
 
 makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
-             'curl' 'cmake' 'musl')
+             'curl' 'cmake' 'musl' 'ninja')
 checkdepends=('procps-ng' 'gdb')
 
 options=('!emptydirs' '!strip')
@@ -62,7 +62,7 @@ cargo = "/usr/bin/cargo"
 rustc = "/usr/bin/rustc"
 python = "/usr/bin/python"
 extended = true
-sanitizers = false
+sanitizers = true
 profiler = true
 vendor = true
 
