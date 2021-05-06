@@ -25,15 +25,17 @@ options=('!emptydirs' '!strip')
 source=(
   "https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
   "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
-  0001-Change-LLVM-targets.patch
-  libexec.diff
+  0001-bootstrap-Change-libexec-dir.patch
+  0001-cargo-Change-libexec-dir.patch
+  0002-compiler-Change-LLVM-targets.patch
 )
 sha256sums=('33bec45b11a24fae2178cdd76794c3dc3c23c24ade7dfaedc09a74c278379a63'
             'SKIP'
             'def1fc00c764cd3abbba925c712ac38860a756a43b696b291f46fee09e453274'
             'SKIP'
-            'e182b27caacd70ad1c7b40c679a4152bead1c4b592148bb3009c2f10b30e0e88'
-            '9ba3070dbc877ab5e045b6a20be9134f80d8aece42766b4cfbad2a4a60c27514')
+            '9ce4373ca98a3d340807da7e1d3215796926add15ca3344c2f3970de534a5d6a'
+            '2c80a6bbd33b5f7291a6f6b0931c298631944edc18d36e3b9986e8ca25ce9ae1'
+            'bbdc88799adc7fd07d368129bac7d6614f5da1682325e4042ba743e8c5f1bb54')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
@@ -41,11 +43,13 @@ validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag a
 prepare() {
   cd "rustc-$pkgver-src"
 
-  # Use our *-pc-linux-gnu targets, making LTO with clang simpler
-  patch -Np1 -i ../0001-Change-LLVM-targets.patch
+  # Patch bootstrap and cargo so credential helpers
+  # are in /usr/lib instead of /usr/libexec
+  patch -Np1 -i ../0001-bootstrap-Change-libexec-dir.patch
+  patch -d src/tools/cargo -Np1 < ../0001-cargo-Change-libexec-dir.patch
 
-  # Patch cargo so credential helpers are in /usr/lib instead of /usr/libexec
-  patch -Np1 -i ../libexec.diff
+  # Use our *-pc-linux-gnu targets, making LTO with clang simpler
+  patch -Np1 -i ../0002-compiler-Change-LLVM-targets.patch
 
   cat >config.toml <<END
 [llvm]
