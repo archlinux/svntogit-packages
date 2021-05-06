@@ -3,7 +3,7 @@
 # When releasing a xorgproto version with updated keysyms, rebuild libx11
 
 pkgname=xorgproto
-pkgver=2021.3
+pkgver=2021.4
 pkgrel=1
 pkgdesc="combined X.Org X11 Protocol headers"
 arch=('any')
@@ -12,7 +12,7 @@ license=('custom')
 makedepends=('xorg-util-macros' 'meson')
 checkdepends=('python-libevdev')
 source=(https://xorg.freedesktop.org/archive/individual/proto/$pkgname-$pkgver.tar.bz2{,.sig})
-sha512sums=('3965e8f7f9fbfb2ad8c315865e112e2743915e6b9669fb1ee9bdd376fe4dce0145d547c679a321763b3eaa54832c7a92ff627f36505e914d2a4c48c2246a800e'
+sha512sums=('0d905e5f135daf7005e23371cbdc41a62d99567e0a20784e71ead0092ffd1e7582733819f7198add1d97edcc9aa80012ae01d2be8367280d69b41d0c25349367'
             'SKIP')
 validpgpkeys=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # "Peter Hutterer (Who-T) <office@who-t.net>"
 
@@ -34,9 +34,7 @@ package() {
 
   # missing docs
   install -m755 -d "${pkgdir}/usr/share/doc/${pkgname}"
-  install -m644 "$pkgname"-$pkgver/*.txt "${pkgdir}/usr/share/doc/${pkgname}/"
   install -m644 "$pkgname"-$pkgver/PM_spec "${pkgdir}/usr/share/doc/${pkgname}/"
-  rm "${pkgdir}"/usr/share/doc/${pkgname}/meson_options.txt
 
   # licenses
   install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
