@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.3
 pkgver=${_qtver/-/}
-pkgrel=4
+pkgrel=5
 _commit=a059e7404a6db799f4da0ad696e65ae9c854b4b0
 # Upstream won't tag releases, because potatoes https://lists.qt-project.org/pipermail/interest/2021-March/036386.html
 arch=('x86_64')
@@ -20,11 +20,13 @@ _pkgfqn=qtwebengine
 source=(git+https://code.qt.io/qt/qtwebengine.git#commit=$_commit
         git+https://code.qt.io/qt/qtwebengine-chromium.git
         v8-call-new-ListFormatter-createInstance.patch
-        qt5-webengine-glibc-2.33.patch)
+        qt5-webengine-glibc-2.33.patch
+        qtbug-91773.patch)
 sha256sums=('SKIP'
             'SKIP'
             '44ebcff050a1c849819d66399c14bd711801d0eb64f518d292d3d6efedce3b3a'
-            '2294e5390c869963fc58f7bf1ee0a254a3f7fce3ed00c04e34a5f03e2b31b624')
+            '2294e5390c869963fc58f7bf1ee0a254a3f7fce3ed00c04e34a5f03e2b31b624'
+            '02009c7f87a216131ab96418c9ddb21e697e61668a970b972242f0015b36ba4c')
 
 prepare() {
   mkdir -p build
@@ -36,6 +38,7 @@ prepare() {
   git submodule update
 
   git cherry-pick -n 199ea00a9eea13315a652c62778738629185b059 # Fix crashes with some locales
+  patch -p1 < "$srcdir"/qtbug-91773.patch # Fix load signals 4d4fc9cd120376f30ce0630b1e8c7bf174d44fae
   patch -p1 -d src/3rdparty/chromium/v8 -i "$srcdir"/v8-call-new-ListFormatter-createInstance.patch # Fix build with ICU 69
   patch -p1 -i "$srcdir"/qt5-webengine-glibc-2.33.patch # Fix text rendering when building with glibc 2.33
 }
