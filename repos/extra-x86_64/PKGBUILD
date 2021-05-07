@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt6-declarative
-_qtver=6.0.4
+_qtver=6.1.0
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=(x86_64)
@@ -13,23 +13,25 @@ pkgdesc='Classes for QML and JavaScript languages'
 depends=(qt6-base)
 makedepends=(cmake python vulkan-headers at-spi2-core)
 groups=(qt6)
-_pkgfn="${pkgname/6-/}-everywhere-src-${_qtver}"
-source=("https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz")
-sha256sums=('7a0ae6ad72e2b828b2ce3b9a4e7ef58c85aa6a9da892a4e09fa09134eee3e976')
+_pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
+source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
+sha256sums=('e6f64314b8d54d7b541f52827b4e795317b17c3b7f39ad5210b8dbf343b75bda')
 
 build() {
-  cmake -B build -S $_pkgfn
+  cmake -B build -S $_pkgfn \
+    -DINSTALL_PUBLICBINDIR=usr/bin
   cmake --build build
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
 
-# Symlinks for backwards compatibility
-  mkdir "$pkgdir"/usr/bin
-  for _b in "${pkgdir}"/usr/lib/qt6/bin/*; do
-    ln -rs "$pkgdir"/usr/lib/qt6/bin/$(basename $_b) "$pkgdir"/usr/bin/$(basename $_b)6
-  done
+# Install symlinks for user-facing tools
+  cd "$pkgdir"
+  mkdir usr/bin
+  while read _line; do
+    ln -s $_line
+  done < "$srcdir"/build/user_facing_tool_links.txt
 
   install -d "$pkgdir"/usr/share/licenses
   ln -s /usr/share/licenses/qt6-base "$pkgdir"/usr/share/licenses/$pkgname
