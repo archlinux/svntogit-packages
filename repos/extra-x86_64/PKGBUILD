@@ -4,7 +4,7 @@
 
 pkgname=mercurial
 pkgver=5.8
-pkgrel=1
+pkgrel=2
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
@@ -33,6 +33,7 @@ sha512sums=('79eec3a468a1826d4910d140797f26f281ff5e5fb9a0e09656d458577e05cf11ac6
 
 build() {
   cd $pkgname-$pkgver
+  export PYTHONHASHSEED=0
   make
   make -C contrib/chg
 }
