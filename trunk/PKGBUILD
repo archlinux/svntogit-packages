@@ -26,13 +26,9 @@ validpgpkeys=(
 	'5B80C5754298F0CB55D8ED6ABCEF7E294B092E28' # Andre Heinecke (Release Signing Key)
 	'6DAA6E64A76D2840571B4902528897B826403ADA' # Werner Koch (dist signing 2020)
 )
-source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
-        'drop-import-clean.patch'
-        'avoid-beta-warning.patch')
+source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig})
 sha256sums=('c498db346a9b9a4b399e514c8f56dfc0a888ce8f327f10376ff984452cd154ec'
-            'SKIP'
-            '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
-            '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
+            'SKIP')
 
 install=install
 
