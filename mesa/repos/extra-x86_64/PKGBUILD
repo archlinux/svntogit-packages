@@ -6,8 +6,8 @@
 pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=21.0.3
-pkgrel=3
+pkgver=21.1.0
+pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -16,13 +16,9 @@ makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence
 url="https://www.mesa3d.org/"
 license=('custom')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
-        0001-amd-common-Add-missing-line-from-backport-for-cohere.patch
-        0001-glx-Assign-unique-serial-number-to-GLXBadFBConfig-er.patch
         LICENSE)
-sha512sums=('4a8aee48a8ea7f32e8aa3bbbd91db26c6053b9a43e62ff88256929e6bc147884f0fef988726b5a3d59d7008663f017c746a0352fd3fcc1c476b8190af4a2531f'
+sha512sums=('9d7617a6d5dd8ec1d93fdda8fe8b2f745695c02bc381d685f1257f7e7f08d5c06f3c57ae71c5f2dfaabb1742b8a88f47294a369bd3ac553f29835f24ce5dd350'
             'SKIP'
-            'f47c227dc888f2030491eaad42d42150539f2c9fc3bbc76d0fd46dc2d85482f520d929b01314cabb963dd36cc3729967f40c7bbfde28fc655024ef52d9fc71b7'
-            '7922e1c444e49f40c36d748f0fc0f76eba11d2d93d9c2f1c1dc4acbc5fe2ebf7c8f954a35265aef6dde3477cc6b5a49502786e1b6f01aa8027f7df215cde816c'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
@@ -30,15 +26,6 @@ validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l
               'A5CC9FEC93F2F837CB044912336909B6B25FADFA'  # Juan A. Suarez Romero <jasuarez@igalia.com>
               '71C4B75620BC75708B4BDB254C95FAAB3EB073EC'  # Dylan Baker <dylan@pnwbakers.com>
               '57551DE15B968F6341C248F68D8E31AFC32428A6') # Eric Engestrom <eric@engestrom.ch>
-
-prepare() {
-  cd mesa-$pkgver
-
-  # fix FS#70554 - https://gitlab.freedesktop.org/mesa/mesa/-/issues/4691
-  patch -Np1 -i ../0001-amd-common-Add-missing-line-from-backport-for-cohere.patch
-  # fix FS#70015
-  patch -Np1 -i ../0001-glx-Assign-unique-serial-number-to-GLXBadFBConfig-er.patch
-}
 
 build() {
   arch-meson mesa-$pkgver build \
@@ -48,8 +35,7 @@ build() {
     -D dri-drivers=i915,i965,r100,r200,nouveau \
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,swr,iris,zink \
     -D vulkan-drivers=amd,intel,swrast \
-    -D vulkan-overlay-layer=true \
-    -D vulkan-device-select-layer=true \
+    -D vulkan-layers=device-select,intel-nullhw,overlay \
     -D swr-arches=avx,avx2 \
     -D dri3=enabled \
     -D egl=enabled \
@@ -102,11 +88,9 @@ package_vulkan-mesa-layers() {
   replaces=('vulkan-mesa-layer')
 
   _install fakeinstall/usr/share/vulkan/explicit_layer.d
-  _install fakeinstall/usr/lib/libVkLayer_MESA_overlay.so
-  _install fakeinstall/usr/bin/mesa-overlay-control.py
-
   _install fakeinstall/usr/share/vulkan/implicit_layer.d
-  _install fakeinstall/usr/lib/libVkLayer_MESA_device_select.so
+  _install fakeinstall/usr/lib/libVkLayer_*.so
+  _install fakeinstall/usr/bin/mesa-overlay-control.py
 
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
 }
@@ -132,7 +116,6 @@ package_vulkan-intel() {
 
   _install fakeinstall/usr/share/vulkan/icd.d/intel_icd*.json
   _install fakeinstall/usr/lib/libvulkan_intel.so
-  _install fakeinstall/usr/include/vulkan/vulkan_intel.h
 
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" LICENSE
 }
@@ -207,9 +190,6 @@ package_mesa() {
   _install fakeinstall/usr/lib/libOSMesa.so*
   _install fakeinstall/usr/lib/libxatracker.so*
   _install fakeinstall/usr/lib/libswrAVX*.so*
-
-  # in vulkan-headers
-  rm -rv fakeinstall/usr/include/vulkan
 
   _install fakeinstall/usr/include
   _install fakeinstall/usr/lib/pkgconfig
