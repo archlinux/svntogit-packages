@@ -1,0 +1,70 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Laurent Carlier <lordheavym@gmail.com>
+# Contributor: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Andrej Gelenberg <andrej.gelenberg@udo.edu>
+
+pkgbase=elfutils
+pkgname=('elfutils' 'libelf')
+pkgver=0.184
+pkgrel=1
+pkgdesc='Handle ELF object files and DWARF debugging information'
+arch=('x86_64')
+url="https://sourceware.org/elfutils/"
+license=('LGPL3' 'GPL3')
+makedepends=('bzip2' 'curl' 'gcc-libs' 'libarchive' 'libmicrohttpd' 'sqlite'
+'xz' 'zlib' 'zstd')
+options=('staticlibs')
+source=("https://sourceware.org/${pkgbase}/ftp/${pkgver}/${pkgbase}-${pkgver}.tar.bz2"{,.sig})
+sha512sums=('5920c354edd6b28bb7e713d674bf6f2221e8ee91b90d582de39b1f45446aea1e7e3d4b6671024c391675b5e7530fe952c1320d730bb625c02d4c647ceb938bc8'
+            'SKIP')
+b2sums=('8e45aa603a039fb128b96a1ffee4a0137fd1808d7087a2ddc8682a9bec1d65a56e6e6ad1419ac5e9f4490cc258c8ac0ee3e49775aab278efb1889bdceaf842bf'
+        'SKIP')
+validpgpkeys=(
+  '47CC0331081B8BC6D0FD4DA08370665B57816A6A'  # Mark J. Wielaard <mark@klomp.org>
+  'EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A'  # Mark Wielaard <mjw@gnu.org>
+)
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+  autoreconf -fiv
+}
+
+build() {
+  cd "$pkgbase-$pkgver"
+  CFLAGS+=" -g"  # required for test-suite success
+  ./configure --prefix=/usr \
+              --sysconfdir=/etc \
+              --program-prefix="eu-" \
+              --enable-deterministic-archives
+  make
+}
+
+check() {
+  cd "$pkgbase-$pkgver"
+  # Some tests fail due to limited capabilities of build chroot
+  make check || echo "Known problem: The build environment might lack enough resources."
+}
+
+package_libelf() {
+  pkgdesc+=" (libraries)"
+  depends=('gcc-libs' 'libbz2.so' 'libcurl.so' 'xz' 'zlib' 'zstd')
+  # NOTE: the shared objects can not be added to provides as they are not versioned
+
+  cd "$pkgbase-$pkgver"
+  make DESTDIR="$pkgdir" install
+  # remove files provided by elfutils
+  rm -rvf "${pkgdir}"{/etc,/usr/{bin,share}}
+}
+
+package_elfutils() {
+  pkgdesc+=" (utilities)"
+  depends=('gcc-libs' 'glibc' 'libarchive.so' "libelf=${pkgver}-${pkgrel}"
+  'libmicrohttpd.so' 'sqlite')
+
+  cd "$pkgbase-$pkgver"
+  make DESTDIR="$pkgdir" install
+  install -vDm 644 {AUTHORS,ChangeLog,NEWS,NOTES,README} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+  # remove files provided by libelf
+  rm -rvf "${pkgdir}/usr/"{include,lib}
+}
