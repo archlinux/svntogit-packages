@@ -33,7 +33,7 @@ source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
-              33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
+              D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
 sha256sums=('4c4a6fb8a8396059241c2e674b85b351c26a5d678274007f076957afa1cc9ddf'
             'SKIP'
             '043105cc544f416b48736fff8caf077fb0663a717d06b1113f16e391ac99ebad'
@@ -65,21 +65,11 @@ prepare() {
   # D hacks
   patch -p1 -i "$srcdir/gdc_phobos_path.patch"
 
-  # Turn off SSP for nostdlib|nodefaultlibs|ffreestanding
-  # https://bugs.archlinux.org/task/64270
-  patch -p1 -i "$srcdir/fs64270.patch"
-
-  # Fix a crash in mpv when mesa 20.2 is compiled with LTO
-  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/3239
-  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96482
-  patch -Np1 -i ../ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
-  patch -Np1 -i ../ipa-fix-ICE-in-get_default_value.patch
-
   # Reproducible gcc-ada
-  patch -p1 -i "$srcdir/gcc-ada-repro.patch"
+  patch -Np0 < "$srcdir/gcc-ada-repro.patch"
 
   # configure.ac: When adding -Wno-format, also add -Wno-format-security
-  patch -p1 -i "$srcdir/gcc11-Wno-format-security.patch"
+  patch -Np0 < "$srcdir/gcc11-Wno-format-security.patch"
 
   mkdir -p "$srcdir/gcc-build"
 }
