@@ -6,10 +6,10 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
-pkgver=10.2.0
+pkgver=11.1.0
 _majorver=${pkgver%%.*}
-_islver=0.21
-pkgrel=6
+_islver=0.24
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
@@ -27,20 +27,24 @@ source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.
         fs64270.patch
         ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
         ipa-fix-ICE-in-get_default_value.patch
+        gcc-ada-repro.patch
+        gcc11-Wno-format-security.patch
 )
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               33C235A34C46AA3FFB293709A328C3A2C3C45C06) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('b8dd4368bb9c7f0b98188317ee0254dd8cc99d1e3a18d0ff146c855fe16c1d8c'
+sha256sums=('4c4a6fb8a8396059241c2e674b85b351c26a5d678274007f076957afa1cc9ddf'
             'SKIP'
-            '777058852a3db9500954361e294881214f6ecd4b594c00da5eee974cd6a54960'
+            '043105cc544f416b48736fff8caf077fb0663a717d06b1113f16e391ac99ebad'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
             '1ef190ed4562c4db8c1196952616cd201cfdd788b65f302ac2cc4dabb4d72cee'
             'fcb11c9bcea320afd202b031b48f8750aeaedaa4b0c5dddcd2c0a16381e927e4'
-            '42865f2af3f48140580c4ae70b6ea03b5bdca0f29654773ef0d42ce00d60ea16')
+            '42865f2af3f48140580c4ae70b6ea03b5bdca0f29654773ef0d42ce00d60ea16'
+            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
+            '504e4b5a08eb25b6c35f19fdbe0c743ae4e9015d0af4759e74150006c283585e')
 
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
@@ -70,6 +74,12 @@ prepare() {
   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96482
   patch -Np1 -i ../ipa-fix-bit-CPP-when-combined-with-IPA-bit-CP.patch
   patch -Np1 -i ../ipa-fix-ICE-in-get_default_value.patch
+
+  # Reproducible gcc-ada
+  patch -p1 -i "$srcdir/gcc-ada-repro.patch"
+
+  # configure.ac: When adding -Wno-format, also add -Wno-format-security
+  patch -p1 -i "$srcdir/gcc11-Wno-format-security.patch"
 
   mkdir -p "$srcdir/gcc-build"
 }
