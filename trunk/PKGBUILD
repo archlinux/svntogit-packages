@@ -4,7 +4,7 @@
 
 pkgname=btrfs-progs
 pkgver=5.12
-pkgrel=1
+pkgrel=2
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs')
@@ -22,7 +22,8 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
         'initcpio-install-btrfs'
         'initcpio-hook-btrfs'
         'btrfs-scrub@.service'
-        'btrfs-scrub@.timer')
+        'btrfs-scrub@.timer'
+        'https://github.com/kdave/btrfs-progs/commit/c674031cae085ca442fb147388a9513431203004.patch')
 install=btrfs-progs.install
 options=(!staticlibs)
 sha256sums=('SKIP'
@@ -30,7 +31,8 @@ sha256sums=('SKIP'
             'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
             '35efeee8590d6d60c711ae9cdc918e4841ab61d10cb02359e65e36ebff95ffc5'
             'eaa7af92d28bfa8940bb551560fd7be777f9f175292eaa72b5f6ef00fb240252'
-            '9a0b6cc23f7bd97b83b6c38dd2b4e4373fead8bd3ccfb82a47c72971e9d6f8ad')
+            '9a0b6cc23f7bd97b83b6c38dd2b4e4373fead8bd3ccfb82a47c72971e9d6f8ad'
+            'e7c38d3626b348859c70ad682c141ef3452be9bb27b842b28b9e0b8601a5ea89')
 
 prepare() {
   cd $pkgname-v$pkgver
