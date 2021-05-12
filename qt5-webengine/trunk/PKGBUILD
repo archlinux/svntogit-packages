@@ -2,11 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.15.3
+_qtver=5.15.4
 pkgver=${_qtver/-/}
-pkgrel=5
-_commit=a059e7404a6db799f4da0ad696e65ae9c854b4b0
-# Upstream won't tag releases, because potatoes https://lists.qt-project.org/pipermail/interest/2021-March/036386.html
+pkgrel=1
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -17,7 +15,7 @@ makedepends=('git' 'python2' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'pop
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn=qtwebengine
-source=(git+https://code.qt.io/qt/qtwebengine.git#commit=$_commit
+source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v$pkgver-lts
         git+https://code.qt.io/qt/qtwebengine-chromium.git
         v8-call-new-ListFormatter-createInstance.patch
         qt5-webengine-glibc-2.33.patch
@@ -37,7 +35,6 @@ prepare() {
   git submodule set-branch --branch 87-based src/3rdparty
   git submodule update
 
-  git cherry-pick -n 199ea00a9eea13315a652c62778738629185b059 # Fix crashes with some locales
   patch -p1 < "$srcdir"/qtbug-91773.patch # Fix load signals 4d4fc9cd120376f30ce0630b1e8c7bf174d44fae
   patch -p1 -d src/3rdparty/chromium/v8 -i "$srcdir"/v8-call-new-ListFormatter-createInstance.patch # Fix build with ICU 69
   patch -p1 -i "$srcdir"/qt5-webengine-glibc-2.33.patch # Fix text rendering when building with glibc 2.33
