@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.68.1
+pkgver=2.68.2
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -56,7 +56,7 @@ package_glib2() {
   optdepends=('python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
               'libelf: gresource inspection tool')
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
   install -D gio-querymodules.script "$pkgdir/usr/share/libalpm/scripts/gio-querymodules"
