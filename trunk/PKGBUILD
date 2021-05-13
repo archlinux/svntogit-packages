@@ -38,8 +38,7 @@ package_plasma-workspace() {
               'kdepim-addons: displaying PIM events in the calendar'
               'appmenu-gtk-module: global menu support for GTK2 and some GTK3 applications'
               'qt5-virtualkeyboard: virtual keyboard support in lock screen'
-              'baloo: Baloo search runner' 'discover: manage applications installation from the launcher'
-              'ksysguard: data sources for the system monitor applets')
+              'baloo: Baloo search runner' 'discover: manage applications installation from the launcher')
   backup=('etc/pam.d/kde')
 
   DESTDIR="$pkgdir" cmake --install build
