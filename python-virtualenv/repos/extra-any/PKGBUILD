@@ -4,7 +4,7 @@
 
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=20.4.5
+pkgver=20.4.6
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
@@ -21,7 +21,7 @@ replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=($pkgbase-$pkgver.tar.gz::https://github.com/pypa/virtualenv/archive/$pkgver.tar.gz)
-sha512sums=('c8b7cf24450a5e42f179d8d429320e896ea5e9f12e1044565f7da202fb06d086ed8c9f47b2ae01aa7b064bd7dc5b3e7701280e436fc00db60f04d41b73681e31')
+sha512sums=('66fb2cc7321fba124de79cada299491ae0448af13fc109b0ca54cd8cea6983e4fa14ee5a6e2ecb7736d229523d5e6ae9b5be5ad07fe7f3c94d9c7b32d2682595')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -56,7 +56,7 @@ package_python-virtualenv() {
 
   cd virtualenv-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir" --skip-build
-  install -Dm 644 docs/_build/man/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv.1"
+  install -Dm 644 docs/_build/man/1/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv.1"
   ln -s virtualenv.1.gz "${pkgdir}/usr/share/man/man1/virtualenv3.1.gz"
 
   # link to a version with 3 suffix as well
@@ -72,7 +72,7 @@ package_python2-virtualenv() {
 
   cd virtualenv-$pkgver-py2
   python2 setup.py install --prefix=/usr --root="$pkgdir" --skip-build
-  install -Dm 644 ../virtualenv-$pkgver/docs/_build/man/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv2.1"
+  install -Dm 644 ../virtualenv-$pkgver/docs/_build/man/1/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv2.1"
 
   # move this "old" version out of the way
   mv "$pkgdir/usr/bin/virtualenv" "$pkgdir/usr/bin/virtualenv2"
