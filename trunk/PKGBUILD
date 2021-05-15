@@ -9,7 +9,7 @@ pkgdesc="Google Noto TTF fonts"
 arch=(any)
 url="https://www.google.com/get/noto/"
 license=(custom:SIL)
-source=("$pkgbase-$_commit.tar.gz::https://github.com/googlei18n/noto-fonts/archive/$_commit.tar.gz"
+source=($pkgbase-$_commit.tar.gz::https://github.com/googlefonts/noto-fonts/archive/$_commit.tar.gz
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
         46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
 sha256sums=('7ef8fc4b10f869de28cfcf3d6cf53345949ed7335d79472810d31787d8aba719'
