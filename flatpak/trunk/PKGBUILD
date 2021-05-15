@@ -1,25 +1,28 @@
-# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
 
 pkgname=flatpak
-pkgver=1.10.2
+pkgver=1.11.1
 pkgrel=1
 pkgdesc="Linux application sandboxing and distribution framework (formerly xdg-app)"
 url="https://flatpak.org"
 arch=(x86_64)
-license=(LGPL2.1)
+license=(LGPL)
 depends=(dbus glib2 libsoup polkit libxau ostree json-glib libseccomp libarchive
          python bubblewrap appstream-glib xdg-dbus-proxy)
 makedepends=(intltool systemd gobject-introspection gtk-doc git docbook-xsl xmlto)
 checkdepends=(valgrind socat)
-_commit=c614eb400ed9f9ec516d74a43e7d63783e3fe1fb
+_commit=bcdc073041e0c93e15aa108b94cb7a39a79dcdf3  # tags/1.11.1^0
 source=("git+https://github.com/flatpak/flatpak#commit=$_commit"
-        "git+https://gitlab.gnome.org/GNOME/libglnx.git"
-        "git+https://github.com/projectatomic/bubblewrap"
-        "git+https://github.com/flatpak/xdg-dbus-proxy"
+        git+https://gitlab.gnome.org/GNOME/libglnx.git
+        git+https://github.com/projectatomic/bubblewrap
+        git+https://github.com/flatpak/xdg-dbus-proxy
+        git+https://gitlab.gnome.org/alexl/variant-schema-compiler.git
         https://dl.flathub.org/repo/flathub.flatpakrepo
         flatpak-bindir.sh)
 sha256sums=('SKIP'
+            'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
@@ -33,6 +36,7 @@ prepare() {
   git config --local submodule.bubblewrap.url "$srcdir/bubblewrap"
   git config --local submodule.libglnx.url "$srcdir/libglnx"
   git config --local submodule.dbus-proxy.url "$srcdir/xdg-dbus-proxy"
+  git config --local submodule.variant-schema-compiler.url "$srcdir/variant-schema-compiler"
   git submodule update
 
   # https://github.com/flatpak/flatpak/issues/267
@@ -68,18 +72,16 @@ build() {
 
 check() {
   cd $pkgname
-  make -k check || :
+  make -k check
 }
 
 package() {
   depends+=(xdg-desktop-portal)
 
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
-  rm -rf "$pkgdir/usr/share/selinux"
+  make -C $pkgname DESTDIR="$pkgdir" install
 
-  install -Dm644 "$srcdir/flatpak-bindir.sh" "$pkgdir/etc/profile.d/flatpak-bindir.sh"
-  install -Dm644 "$srcdir/flathub.flatpakrepo" "$pkgdir/etc/flatpak/remotes.d/flathub.flatpakrepo"
+  install -Dt "$pkgdir/etc/profile.d" -m644 flatpak-bindir.sh
+  install -Dt "$pkgdir/etc/flatpak/remotes.d" flathub.flatpakrepo
 
   # Fixup mode to match polkit
   install -d -o root -g 102 -m 750 "$pkgdir/usr/share/polkit-1/rules.d"
