@@ -56,7 +56,7 @@ package_python-virtualenv() {
 
   cd virtualenv-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir" --skip-build
-  install -Dm 644 docs/_build/man/1/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv.1"
+  install -Dm 644 docs/_build/man/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv.1"
   ln -s virtualenv.1.gz "${pkgdir}/usr/share/man/man1/virtualenv3.1.gz"
 
   # link to a version with 3 suffix as well
@@ -72,7 +72,7 @@ package_python2-virtualenv() {
 
   cd virtualenv-$pkgver-py2
   python2 setup.py install --prefix=/usr --root="$pkgdir" --skip-build
-  install -Dm 644 ../virtualenv-$pkgver/docs/_build/man/1/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv2.1"
+  install -Dm 644 ../virtualenv-$pkgver/docs/_build/man/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv2.1"
 
   # move this "old" version out of the way
   mv "$pkgdir/usr/bin/virtualenv" "$pkgdir/usr/bin/virtualenv2"
