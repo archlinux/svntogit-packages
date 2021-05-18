@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.4
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -38,6 +38,11 @@ prepare() {
   patch -p1 < "$srcdir"/qtbug-91773.patch # Fix load signals 4d4fc9cd120376f30ce0630b1e8c7bf174d44fae
   patch -p1 -d src/3rdparty/chromium/v8 -i "$srcdir"/v8-call-new-ListFormatter-createInstance.patch # Fix build with ICU 69
   patch -p1 -i "$srcdir"/qt5-webengine-glibc-2.33.patch # Fix text rendering when building with glibc 2.33
+
+  cd src/3rdparty
+  git cherry-pick -n b498f4ce3f542882767238ea9f01eb85de6c6fda # Fix build with GCC 11
+  sed -e 's|V8_PATCH_LEVEL 31|V8_PATCH_LEVEL 32|' -i chromium/v8/include/v8-version.h # Bump V8 patch version to prevent crashes
+  
 }
 
 build() {
