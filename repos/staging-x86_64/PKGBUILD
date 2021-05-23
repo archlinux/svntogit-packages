@@ -1,0 +1,78 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Ian Beringer <ian@ianberinger.com>
+
+pkgname=usbguard
+pkgver=1.0.0
+pkgrel=4
+pkgdesc='Software framework for implementing USB device authorization policies'
+url='https://github.com/USBGuard/usbguard'
+arch=('x86_64')
+license=('GPL2')
+depends=('glibc' 'libqb' 'libqb.so' 'libsodium' 'libcap-ng' 'protobuf' 'polkit' 'dbus-glib'
+         'audit' 'libaudit.so' 'libseccomp' 'libseccomp.so' 'libcap-ng.so' 'libgio-2.0.so'
+         'libglib-2.0.so' 'libprotobuf.so')
+makedepends=('catch2' 'pegtl' 'libxslt' 'libxml2' 'asciidoc' 'systemd')
+provides=('libusbguard.so')
+backup=(etc/usbguard/usbguard-daemon.conf
+        etc/usbguard/rules.conf)
+source=(https://github.com/USBGuard/usbguard/releases/download/usbguard-${pkgver}/usbguard-${pkgver}.tar.gz{,.asc}
+        usbguard-1.0.0-run-dir-pidfile.patch::https://github.com/USBGuard/usbguard/commit/6a596441eb91215898542bce4aadabfe396a3875.patch
+        usbguard-1.0.0-increase-C++-version-to-c++17.patch::https://github.com/USBGuard/usbguard/commit/8c86264986685bf646c65228abce2432e08e3c4c.patch
+        usbguard-1.0.0-fix-compilation-errors-with-PEGTL-3.2.0.patch::https://github.com/USBGuard/usbguard/commit/4bf21aedcb260314996f0fa521ef4a3a6ae4a2bb.patch)
+sha512sums=('068a9be8bd5ea05efcdad79e2c4beb5e8b646b4703fbe1f8bb262e37ae9a6284a6eeb811a6bd441250a38bce1e45b7f44ad15726aa5963da2e1b56e85f5e16fd'
+            'SKIP'
+            '19075763f95625f61019764124bed97e300c55b54cf7092aaa64be2d4c431a276c38d57914556134061fe57fc2d01ac6ebeaed5b10659bbb1149c77e5ad93c68'
+            '647f209adf5611a1ca7a52fd30128e3ace85fb3e234d7dbc3755ecbb812c94496275bca27829200be0a3a212fb9ec00e40c9df5ef8820c7352fee6ce9be0e3de'
+            '8cf131ef73417245ed73297d09c2b5b3fa74c50fdccfca4bccc53b85de076b2a84b0a8024f7dfa1f02f7a92fffd34ea826039ad992add64cb45e1be6068041ea')
+validpgpkeys=(
+  'DE78B93EAED8A620F5AA14DF52F7E84653274B59' # Radovan Sroka <rsroka@redhat.com>
+)
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -Np1 < ../usbguard-1.0.0-run-dir-pidfile.patch
+  patch -Np1 < ../usbguard-1.0.0-increase-C++-version-to-c++17.patch
+  # remove last 7 lines of pegtl submodule bump, we use a system package
+  patch -Np1 < <(head -n -7 ../usbguard-1.0.0-fix-compilation-errors-with-PEGTL-3.2.0.patch)
+  sed 's|/usr/include/catch|/usr/include/catch2|g' -i configure.ac
+  autoreconf -fiv
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sys=/etc \
+    --sbindir=/usr/bin \
+    --libdir=/usr/lib \
+    --enable-systemd \
+    --without-bundled-catch \
+    --without-bundled-pegtl \
+    --with-dbus \
+    --with-polkit \
+    --with-crypto-library=sodium
+  make
+  touch rules.conf
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make INSTALL='install -p' DESTDIR="${pkgdir}" install
+
+  chmod 750 "${pkgdir}/etc/usbguard"
+  install -Dpm 600 usbguard-daemon.conf rules.conf -t "${pkgdir}/etc/usbguard"
+
+  install -Dpm 644 scripts/bash_completion/usbguard -t "${pkgdir}/usr/share/bash-completion/completions"
+  install -Dpm 644 scripts/usbguard-zsh-completion "${pkgdir}/usr/share/zsh/site-functions/_usbguard"
+
+  install -Dm 644 CHANGELOG.md README.adoc -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
