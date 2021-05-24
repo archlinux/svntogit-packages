@@ -1,0 +1,44 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgname=perl-dbd-sqlite
+pkgver=1.66
+pkgrel=2
+pkgdesc="Self-contained RDBMS in a DBI driver"
+arch=('x86_64')
+url="https://search.cpan.org/dist/DBD-SQLite"
+license=('GPL' 'PerlArtistic')
+depends=('perl-dbi' 'sqlite')
+source=("https://www.cpan.org/authors/id/I/IS/ISHIGAKI/DBD-SQLite-$pkgver.tar.gz"
+        libsqlite.patch)
+sha512sums=('4d58003e69f29b18d01ed0b5853cdac40ec9ce5d4c75bc8a3743937897a38290a99be30b1b9fae593b0d8d51d05b7e2438d29f7a7c1c755b66de51826397aef9'
+            'cf492402f9127c40130c052a6b3f78e86abc0342385130be386aa12e23b1166f20deac50eee1dcc1e43598ba5785d0a218f2cb0a6bb7f5dd7f7c0fc3220bd2bb')
+
+prepare() {
+  cd DBD-SQLite-$pkgver
+
+  # Ensure that we can never ever build this. If the perl module links against
+  # the system lib this won't matter, if it does not, it will fail during
+  # make test.
+  rm sqlite3.c
+
+  # Makefile asks us to patch this to allow to link with system sqlite...
+  patch -i "$srcdir/libsqlite.patch"
+}
+
+build() {
+  cd DBD-SQLite-$pkgver
+
+  # USE_LOCAL_SQLITE=0 disables use of the bundled sqlite
+  perl Makefile.PL INSTALLDIRS=vendor USE_LOCAL_SQLITE=0
+  make
+}
+
+check() {
+  cd DBD-SQLite-$pkgver
+  make test
+}
+
+package() {
+  cd DBD-SQLite-$pkgver
+  make install DESTDIR="$pkgdir"
+}
