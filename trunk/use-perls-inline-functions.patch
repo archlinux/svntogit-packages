@@ -1,0 +1,84 @@
+diff -upr vim-8.2.2885.orig/src/if_perl.xs vim-8.2.2885/src/if_perl.xs
+--- vim-8.2.2885.orig/src/if_perl.xs	2021-05-24 23:56:15.000000000 +0300
++++ vim-8.2.2885/src/if_perl.xs	2021-05-25 02:49:30.913667666 +0300
+@@ -37,13 +37,6 @@
+ 
+ #include "vim.h"
+ 
+-/* Work around for perl-5.18.
+- * Don't include "perl\lib\CORE\inline.h" for now,
+- * include it after Perl_sv_free2 is defined. */
+-#ifdef DYNAMIC_PERL
+-# define PERL_NO_INLINE_FUNCTIONS
+-#endif
+-
+ #ifdef _MSC_VER
+ // Work around for using MSVC and ActivePerl 5.18.
+ # define __inline__ __inline
+@@ -651,66 +644,6 @@ static struct {
+     {"", NULL},
+ };
+ 
+-/* Work around for perl-5.18.
+- * For now, only the definitions of S_SvREFCNT_dec are needed in
+- * "perl\lib\CORE\inline.h". */
+-# if (PERL_REVISION == 5) && (PERL_VERSION >= 18)
+-static void
+-S_SvREFCNT_dec(pTHX_ SV *sv)
+-{
+-    if (LIKELY(sv != NULL)) {
+-	U32 rc = SvREFCNT(sv);
+-	if (LIKELY(rc > 1))
+-	    SvREFCNT(sv) = rc - 1;
+-	else
+-	    Perl_sv_free2(aTHX_ sv, rc);
+-    }
+-}
+-# endif
+-
+-/* perl-5.32 needs Perl_SvREFCNT_dec */
+-# if (PERL_REVISION == 5) && (PERL_VERSION >= 32)
+-#  define Perl_SvREFCNT_dec S_SvREFCNT_dec
+-# endif
+-
+-/* perl-5.26 also needs S_TOPMARK and S_POPMARK. */
+-# if (PERL_REVISION == 5) && (PERL_VERSION >= 26)
+-PERL_STATIC_INLINE I32
+-S_TOPMARK(pTHX)
+-{
+-    DEBUG_s(DEBUG_v(PerlIO_printf(Perl_debug_log,
+-				 "MARK top  %p %" IVdf "\n",
+-				  PL_markstack_ptr,
+-				  (IV)*PL_markstack_ptr)));
+-    return *PL_markstack_ptr;
+-}
+-
+-PERL_STATIC_INLINE I32
+-S_POPMARK(pTHX)
+-{
+-    DEBUG_s(DEBUG_v(PerlIO_printf(Perl_debug_log,
+-				 "MARK pop  %p %" IVdf "\n",
+-				  (PL_markstack_ptr-1),
+-				  (IV)*(PL_markstack_ptr-1))));
+-    assert((PL_markstack_ptr > PL_markstack) || !"MARK underflow");
+-    return *PL_markstack_ptr--;
+-}
+-# endif
+-
+-/* perl-5.32 needs Perl_POPMARK */
+-# if (PERL_REVISION == 5) && (PERL_VERSION >= 32)
+-#  define Perl_POPMARK S_POPMARK
+-
+-/* perl-5.32 needs Perl_SvTRUE */
+-PERL_STATIC_INLINE bool
+-Perl_SvTRUE(pTHX_ SV *sv) {
+-    if (!LIKELY(sv))
+-        return FALSE;
+-    SvGETMAGIC(sv);
+-    return SvTRUE_nomg_NN(sv);
+-}
+-# endif
+-
+ /*
+  * Make all runtime-links of perl.
+  *
