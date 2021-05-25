@@ -6,7 +6,7 @@
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
 pkgver=1.26.4
-pkgrel=1
+pkgrel=2
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
 url="https://github.com/urllib3/urllib3"
@@ -18,9 +18,9 @@ makedepends=('python-setuptools' 'python2-setuptools' 'python-sphinx' 'python-nd
 checkdepends=('python-pytest-runner' 'python-tornado' 'python-nose' 'python-psutil' 'python-trustme'
               'python-gcp-devrel-py-tools' 'python-flaky' 'python-dateutil')
 source=("https://github.com/urllib3/urllib3/archive/$pkgver/$pkgbase-$pkgver.tar.gz"
-        urllib3-use-brotli-new.patch::https://github.com/urllib3/urllib3/pull/2099.patch)
+        urllib3-use-brotli-or-brotli-cffi.patch::https://github.com/urllib3/urllib3/pull/2099.patch)
 sha512sums=('c770ae93e024af2bd79145d90426ad56f89184a4a02a55551bf54680a1ba369e683080e1899f00d57efcb085145e29a189f502ae6b41e572de111909297fb4e6'
-            '16bc19caf4b0d80ccb7aae7ee0cf4a7b6fef754d6d7b9e3bc0da9197afffa4f587f197c7fdffa56c14d40da806633cd409b5d8136ca4d1acef414afaf42d1e0f')
+            '08b58960410a996b039eb3f46da252703055d79228733c65fbbe8d31fedd5b3956670230602deabf02407cac5f5d425b8d65bf3b16bdecd38f2541c6c9c82934')
 
 prepare() {
   patch -d urllib3-$pkgver -p1 -i ../urllib3-use-brotli-new.patch || :
@@ -48,7 +48,8 @@ package_python-urllib3() {
   depends=('python')
   optdepends=('python-pysocks: SOCKS support'
               'python-brotli: Brotli support'
-              'python-pyopenssl: security support')
+              'python-pyopenssl: security support'
+              'python-idna: security support')
 
   cd urllib3-$pkgver
   python setup.py install --root="$pkgdir"
