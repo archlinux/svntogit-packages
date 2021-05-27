@@ -1,0 +1,74 @@
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+
+pkgname=lld
+pkgver=12.0.0
+pkgrel=1
+pkgdesc="Linker from the LLVM project"
+arch=('x86_64')
+url="https://lld.llvm.org/"
+license=('custom:Apache 2.0 with LLVM Exception')
+depends=('llvm-libs')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx')
+_source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
+        $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
+        $_source_base/libunwind-$pkgver.src.tar.xz{,.sig}
+        dont-set-versionId-on-undefined-weak-lazy-symbols.patch)
+sha256sums=('2cb7d497f3ce33ce8a2c50ad26ec93a8c45f57268d4d96953cd0f25566f753fd'
+            'SKIP'
+            '49dc47c8697a1a0abd4ee51629a696d7bfe803662f2a7252a3b16fc75f3a8b50'
+            'SKIP'
+            '9ed2a5b28853f7f58be9d04836ff43d6e4132df5a2c058b690dc3e9d75bd1cf5'
+            'SKIP'
+            '0a2e30617a5c2a3bead0638d7f77f5915d800b7d11e5962b8ca0e525ca744843')
+validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
+validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+
+prepare() {
+  # https://bugs.llvm.org/show_bug.cgi?id=49228
+  mv libunwind{-$pkgver.src,}
+
+  cd "$srcdir/$pkgname-$pkgver.src"
+  mkdir build
+
+  # https://bugs.llvm.org/show_bug.cgi?id=49915
+  patch -Np2 -i ../dont-set-versionId-on-undefined-weak-lazy-symbols.patch
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  cmake .. -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DLLVM_INCLUDE_TESTS=ON \
+    -DLLVM_BUILD_TESTS=ON \
+    -DLLVM_BUILD_DOCS=ON \
+    -DLLVM_ENABLE_SPHINX=ON \
+    -DSPHINX_WARNINGS_AS_ERRORS=OFF \
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit \
+    -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+  ninja
+}
+
+check() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+  ninja check-lld
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver.src/build"
+
+  DESTDIR="$pkgdir" ninja install
+  install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # https://bugs.llvm.org/show_bug.cgi?id=42455
+  install -Dm644 -t "$pkgdir/usr/share/man/man1" ../docs/ld.lld.1
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
+}
+
+# vim:set ts=2 sw=2 et:
