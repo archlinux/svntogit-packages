@@ -1,0 +1,180 @@
+# Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Alexander F Rødseth <xyproto@archlinux.org>
+# Contributor: Daniel Micay <danielmicay@gmail.com>
+# Contributor: userwithuid <userwithuid@gmail.com>
+
+pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
+epoch=1
+pkgver=1.52.1
+pkgrel=2
+
+_llvm_ver=11.1.0
+
+pkgdesc='Systems programming language focused on safety, speed and concurrency'
+url='https://www.rust-lang.org/'
+arch=('x86_64')
+license=('MIT' 'Apache')
+
+makedepends=('rust' "llvm11=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
+             'curl' 'cmake' 'musl' 'ninja')
+checkdepends=('procps-ng' 'gdb')
+
+options=('!emptydirs' '!strip')
+
+source=(
+  "https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
+  "https://github.com/llvm/llvm-project/releases/download/llvmorg-$_llvm_ver/compiler-rt-$_llvm_ver.src.tar.xz"{,.sig}
+  0001-bootstrap-Change-libexec-dir.patch
+  0001-cargo-Change-libexec-dir.patch
+  0002-compiler-Change-LLVM-targets.patch
+)
+sha256sums=('3a6f23a26d0e8f87abbfbf32c5cd7daa0c0b71d0986abefc56b9a5fbfbd0bf98'
+            'SKIP'
+            'def1fc00c764cd3abbba925c712ac38860a756a43b696b291f46fee09e453274'
+            'SKIP'
+            '9ce4373ca98a3d340807da7e1d3215796926add15ca3344c2f3970de534a5d6a'
+            '2c80a6bbd33b5f7291a6f6b0931c298631944edc18d36e3b9986e8ca25ce9ae1'
+            '12f577cbff80f280c22f116ea682fc961ecb70534e4be454527b091714730a3a')
+validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
+              '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
+              'B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
+
+prepare() {
+  cd "rustc-$pkgver-src"
+
+  # Patch bootstrap and cargo so credential helpers
+  # are in /usr/lib instead of /usr/libexec
+  patch -Np1 -i ../0001-bootstrap-Change-libexec-dir.patch
+  patch -d src/tools/cargo -Np1 < ../0001-cargo-Change-libexec-dir.patch
+
+  # Use our *-pc-linux-gnu targets, making LTO with clang simpler
+  patch -Np1 -i ../0002-compiler-Change-LLVM-targets.patch
+
+  cat >config.toml <<END
+[llvm]
+link-shared = true
+
+[build]
+target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu", "x86_64-unknown-linux-musl"]
+tools = ["cargo", "rls", "clippy", "miri", "rustfmt", "analysis", "src"]
+cargo = "/usr/bin/cargo"
+rustc = "/usr/bin/rustc"
+python = "/usr/bin/python"
+extended = true
+sanitizers = true
+profiler = true
+vendor = true
+
+[install]
+prefix = "/usr"
+
+[rust]
+# LLVM crashes when passing an object through ThinLTO twice.  This is triggered
+# when using rust code in cross-language LTO if libstd was built using ThinLTO.
+# http://blog.llvm.org/2019/09/closing-gap-cross-language-lto-between.html
+# https://github.com/rust-lang/rust/issues/54872
+codegen-units-std = 1
+
+debuginfo-level-std = 2
+
+channel = "stable"
+
+rpath = false
+
+[target.x86_64-unknown-linux-gnu]
+llvm-config = "/usr/bin/llvm-config"
+
+[target.x86_64-unknown-linux-musl]
+musl-root = "/usr/lib/musl"
+END
+}
+
+build() {
+  cd "rustc-$pkgver-src"
+
+  export RUST_BACKTRACE=1
+  export RUST_COMPILER_RT_ROOT="$srcdir/compiler-rt-$_llvm_ver.src"
+
+  python ./x.py dist -j "$(nproc)"
+  DESTDIR="$PWD"/dest-rust python ./x.py install -j "$(nproc)"
+
+  # Remove analysis data for libs that weren't installed
+  # TODO: Find out where these come from
+  local file lib
+  while read -rd '' file; do
+    lib="${file%.json}.rlib"
+    lib="${lib/\/analysis\///lib/}"
+    if [[ ! -e $lib ]]; then
+      echo "missing '$lib'"
+      rm -v "$file"
+    fi
+  done < <(find "dest-rust/usr/lib/rustlib"  -path '*/analysis/*.json' -print0)
+
+  # move docs and cross targets out of the way for splitting
+  mv dest-rust/usr/lib/rustlib/i686-unknown-linux-gnu dest-i686
+  mv dest-rust/usr/lib/rustlib/x86_64-unknown-linux-musl dest-musl
+  mv dest-rust/usr/share/doc dest-doc
+}
+
+package_rust() {
+  depends=('gcc-libs' 'llvm11-libs' 'curl' 'libssh2')
+  optdepends=('lldb: rust-lldb script'
+              'gdb: rust-gdb script')
+  provides=('cargo' 'rustfmt')
+  conflicts=('cargo' 'rustfmt')
+  replaces=('cargo' 'rustfmt' 'cargo-tree')
+
+  cd "rustc-$pkgver-src"
+
+  cp -a dest-rust/* "$pkgdir"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  # delete unnecesary files, e.g. components and manifest files only used for the uninstall script
+  cd "$pkgdir"/usr/lib/rustlib
+  rm components install.log manifest-* rust-installer-version uninstall.sh
+
+  # rustbuild always installs copies of the shared libraries to /usr/lib,
+  # overwrite them with symlinks to the per-architecture versions
+  ln -srft "$pkgdir"/usr/lib x86_64-unknown-linux-gnu/lib/*.so
+
+  install -d "$pkgdir"/usr/share/bash-completion/
+  mv "$pkgdir"/etc/bash_completion.d "$pkgdir"/usr/share/bash-completion/completions
+}
+
+package_lib32-rust-libs() {
+  pkgdesc='32-bit target and libraries for Rust'
+  depends=('lib32-gcc-libs')
+  provides=('lib32-rust')
+  conflicts=('lib32-rust')
+  replaces=('lib32-rust')
+
+  cd "rustc-$pkgver-src"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  install -d "$pkgdir"/usr/lib/rustlib/ "$pkgdir"/usr/lib32/
+  cp -a dest-i686 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu
+  ln -srft "$pkgdir"/usr/lib32 "$pkgdir"/usr/lib/rustlib/i686-unknown-linux-gnu/lib/*.so
+}
+
+package_rust-musl() {
+  pkgdesc='Musl target for Rust'
+
+  cd "rustc-$pkgver-src"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  install -d "$pkgdir"/usr/lib/rustlib/
+  cp -a dest-musl "$pkgdir"/usr/lib/rustlib/x86_64-unknown-linux-musl
+}
+
+package_rust-docs() {
+  pkgdesc='Documentation for the Rust programming language'
+
+  cd "rustc-$pkgver-src"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE*
+
+  install -d "$pkgdir"/usr/share/
+  cp -a dest-doc "$pkgdir"/usr/share/doc
+}
+
+# vim:set ts=2 sw=2 et:
