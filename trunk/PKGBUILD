@@ -7,7 +7,7 @@
 pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
 epoch=1
 pkgver=1.52.1
-pkgrel=1
+pkgrel=2
 
 _llvm_ver=11.1.0
 
@@ -16,7 +16,7 @@ url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
+makedepends=('rust' "llvm11=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
              'curl' 'cmake' 'musl' 'ninja')
 checkdepends=('procps-ng' 'gdb')
 
@@ -118,7 +118,7 @@ build() {
 }
 
 package_rust() {
-  depends=('gcc-libs' 'llvm-libs' 'curl' 'libssh2')
+  depends=('gcc-libs' 'llvm11-libs' 'curl' 'libssh2')
   optdepends=('lldb: rust-lldb script'
               'gdb: rust-gdb script')
   provides=('cargo' 'rustfmt')
