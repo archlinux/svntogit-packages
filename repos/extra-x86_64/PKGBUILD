@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=40.1
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -29,6 +29,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # https://bugs.archlinux.org/task/71027
+  git cherry-pick -n f954ff84b8e98be7017bd0ac0521f568d93f62e2
 }
 
 build() {
