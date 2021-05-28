@@ -5,8 +5,8 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python2-urllib3 python-urllib3-doc)
-pkgver=1.26.4
-pkgrel=2
+pkgver=1.26.5
+pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
 url="https://github.com/urllib3/urllib3"
@@ -19,11 +19,11 @@ checkdepends=('python-pytest-runner' 'python-tornado' 'python-nose' 'python-psut
               'python-gcp-devrel-py-tools' 'python-flaky' 'python-dateutil')
 source=("https://github.com/urllib3/urllib3/archive/$pkgver/$pkgbase-$pkgver.tar.gz"
         urllib3-use-brotli-or-brotli-cffi.patch::https://github.com/urllib3/urllib3/pull/2099.patch)
-sha512sums=('c770ae93e024af2bd79145d90426ad56f89184a4a02a55551bf54680a1ba369e683080e1899f00d57efcb085145e29a189f502ae6b41e572de111909297fb4e6'
+sha512sums=('d4a97aa05f9138cbd2fceadd6268f55f1389a57abccc44f6dfd7755778d417a6648f081ceefd376b27c17e384ccc81caf49f0ea23b4d9ac8e347a06d85cb4639'
             '08b58960410a996b039eb3f46da252703055d79228733c65fbbe8d31fedd5b3956670230602deabf02407cac5f5d425b8d65bf3b16bdecd38f2541c6c9c82934')
 
 prepare() {
-  patch -d urllib3-$pkgver -p1 -i ../urllib3-use-brotli-new.patch || :
+  patch -d urllib3-$pkgver -p1 -i ../urllib3-use-brotli-or-brotli-cffi || :
   cp -a urllib3-$pkgver{,-py2}
 }
 
