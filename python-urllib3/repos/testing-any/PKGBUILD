@@ -23,7 +23,7 @@ sha512sums=('d4a97aa05f9138cbd2fceadd6268f55f1389a57abccc44f6dfd7755778d417a6648
             '08b58960410a996b039eb3f46da252703055d79228733c65fbbe8d31fedd5b3956670230602deabf02407cac5f5d425b8d65bf3b16bdecd38f2541c6c9c82934')
 
 prepare() {
-  patch -d urllib3-$pkgver -p1 -i ../urllib3-use-brotli-or-brotli-cffi || :
+  patch -d urllib3-$pkgver -p1 -i ../urllib3-use-brotli-or-brotli-cffi.patch || :
   cp -a urllib3-$pkgver{,-py2}
 }
 
