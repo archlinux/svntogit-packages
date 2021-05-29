@@ -4,13 +4,14 @@
 
 pkgname=python-setuptools
 pkgver=57.0.0
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
 license=('PSF')
 url="https://pypi.org/project/setuptools/"
-depends=('python-appdirs' 'python-packaging' 'python-ordered-set')
+depends=('python-appdirs' 'python-more-itertools' 'python-ordered-set' 'python-packaging'
+         'python-pyparsing')
 makedepends=('git')
 checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip'
               'python-pytest-fixture-config' 'python-pytest-flake8' 'python-pytest-virtualenv'
