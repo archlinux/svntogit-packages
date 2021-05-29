@@ -1,0 +1,46 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=gnutls
+pkgver=3.7.2
+pkgrel=1
+pkgdesc="A library which provides a secure layer over a reliable transport layer"
+arch=('x86_64')
+license=('GPL3' 'LGPL2.1')
+url="https://www.gnutls.org/"
+options=('!zipman')
+depends=('gcc-libs' 'libtasn1' 'readline' 'zlib' 'nettle' 'p11-kit' 'libidn2'
+         'libidn2.so' 'libunistring')
+checkdepends=('net-tools')
+optdepends=('guile: for use with Guile bindings')
+source=(https://www.gnupg.org/ftp/gcrypt/gnutls/v3.7/${pkgname}-${pkgver}.tar.xz{,.sig})
+sha256sums=('646e6c5a9a185faa4cea796d378a1ba8e1148dbb197ca6605f95986a25af2752'
+            'SKIP')
+validpgpkeys=('462225C3B46F34879FC8496CD605848ED7E69871') # "Daiki Ueno <ueno@unixuser.org>"
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+	--disable-static \
+	--with-idn \
+	--enable-openssl-compatibility \
+	--enable-guile --with-guile-site-dir=no \
+	--with-default-trust-store-pkcs11="pkcs11:model=p11-kit-trust;manufacturer=PKCS%2311%20Kit"
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # lots of .png files are put into infodir and are gzipped by makepkg! this needs to be fixed by using !zipman
+  # gzip -9 all files in infodir and manpages manually
+  find "$pkgdir/usr/share/info" -name '*.info*' -exec gzip -n -9 {} \;
+  find "$pkgdir/usr/share/man" -exec gzip -n -9 {} \;
+}
