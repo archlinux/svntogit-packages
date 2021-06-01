@@ -1,7 +1,7 @@
 # Maintainer : Rémy Oudompheng <remy@archlinux.org>
 
 pkgname=pyalpm
-pkgver=0.10.1
+pkgver=0.10.2
 pkgrel=1
 pkgdesc="Python 3 bindings for libalpm"
 arch=('x86_64')
