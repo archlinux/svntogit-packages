@@ -5,9 +5,9 @@
 pkgbase=util-linux
 pkgname=(util-linux util-linux-libs)
 _pkgmajor=2.37
-_realver=${_pkgmajor}-rc2
+_realver=${_pkgmajor}
 pkgver=${_realver/-/}
-pkgrel=2
+pkgrel=1
 pkgdesc='Miscellaneous system utilities for Linux'
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -21,7 +21,7 @@ source=("https://www.kernel.org/pub/linux/utils/util-linux/v${_pkgmajor}/${pkgba
         '60-rfkill.rules'
         'rfkill-unblock_.service'
         'rfkill-block_.service')
-sha256sums=('253cb944931f57eefea29b8147b7a002b05595da43850e5aceb8045214e667f8'
+sha256sums=('bd07b7e98839e0359842110525a3032fdb8eaf3a90bedde3dd1652d32d15cce5'
             'SKIP'
             '993a3096c2b113e6800f2abbd5d4233ebf1a97eef423990d3187d665d3490b92'
             'fc6807842f92e9d3f792d6b64a0d5aad87995a279153ab228b1b2a64d9f32f20'
