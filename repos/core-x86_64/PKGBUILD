@@ -2,12 +2,12 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2021.01.19
+pkgver=2021.05.31
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
 license=('GPL')
-url='https://www.archlinux.org'
+url='https://archlinux.org'
 depends=('iana-etc')
 backup=('etc/crypttab' 'etc/fstab' 'etc/group' 'etc/gshadow' 'etc/host.conf'
         'etc/hosts' 'etc/issue' 'etc/ld.so.conf' 'etc/motd' 'etc/nsswitch.conf'
@@ -30,7 +30,7 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             '8ca2d8eef6fb5143c9ef7e9174ccfef59ac7ad2deee243574cd10c763156cc10'
             'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
             '39d2f719f095028fa655c246bc8608cf3b00971cb7d8c3dbae5a6d89b93a6ca7'
-            '53395e67cc113b7f73e72a829731f6d30319a841d164af8a1d4d4f829a9c3cd9'
+            'e3505a89fa82ecd831e2753a22d5cb558874abf15af72aafe1fbfa5aec813186'
             '5e06477834f51abf42ea4e8dc199632afc6afbfd8c44354685a271e9a48d2c0a'
             '5e4088ad8d0853d390fa303f6be8c3f69c33834200cba9e90f7849f1993ca8d0'
             '5557d8e601b17a80d1ea7de78a9869be69637cb6a02fbfe334e22fdf64e61d4c'
