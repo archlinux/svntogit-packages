@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.4
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -15,14 +15,16 @@ makedepends=('git' 'python2' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'pop
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn=qtwebengine
-source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v$pkgver-lts
+source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
         git+https://code.qt.io/qt/qtwebengine-chromium.git
         qt5-webengine-glibc-2.33.patch
-        qtbug-91773.patch)
+        qtbug-91773.patch
+        qtbug-93802.patch)
 sha256sums=('SKIP'
             'SKIP'
             '2294e5390c869963fc58f7bf1ee0a254a3f7fce3ed00c04e34a5f03e2b31b624'
-            '02009c7f87a216131ab96418c9ddb21e697e61668a970b972242f0015b36ba4c')
+            '02009c7f87a216131ab96418c9ddb21e697e61668a970b972242f0015b36ba4c'
+            '38a99bb2839e93f17826af53b8a4dc5e845b5d09cbfdf92a4a5d55bb939f01dc')
 
 prepare() {
   mkdir -p build
@@ -33,6 +35,7 @@ prepare() {
   git submodule set-branch --branch 87-based src/3rdparty
   git submodule update
 
+  patch -p1 < "$srcdir"/qtbug-93802.patch # Fix scrolling with touchpad
   patch -p1 < "$srcdir"/qtbug-91773.patch # Fix load signals 4d4fc9cd120376f30ce0630b1e8c7bf174d44fae
   patch -p1 -i "$srcdir"/qt5-webengine-glibc-2.33.patch # Fix text rendering when building with glibc 2.33
 
