@@ -3,7 +3,7 @@
 
 pkgbase=ca-certificates
 pkgname=(ca-certificates-utils ca-certificates)
-pkgver=20210529
+pkgver=20210603
 pkgrel=1
 pkgdesc="Common CA certificates"
 url="https://src.fedoraproject.org/rpms/ca-certificates"
@@ -22,10 +22,11 @@ build() {
 
 package_ca-certificates-utils() {
   pkgdesc+=" (utilities)"
-  depends=(bash coreutils findutils 'p11-kit>=0.23.19')
+  depends=(bash coreutils findutils 'p11-kit>=0.24.0')
   provides=(ca-certificates ca-certificates-java)
   conflicts=(ca-certificates-java)
   replaces=(ca-certificates-java)
+  install=ca-certificates-utils.install
 
   install -Dt "$pkgdir/usr/bin" update-ca-trust
   install -Dt "$pkgdir/usr/share/man/man8" -m644 update-ca-trust.8
@@ -33,7 +34,7 @@ package_ca-certificates-utils() {
 
   # Trust source directories
   # Upstream also adds "blocklist" but that's useless without support in p11-kit
-  install -d "$pkgdir"/{etc,usr/share}/$pkgbase/trust-source/{anchors,blacklist}
+  install -d "$pkgdir"/{etc,usr/share}/$pkgbase/trust-source/{anchors,blocklist}
 
   # Directories used by update-ca-trust (aka "trust extract-compat")
   install -d "$pkgdir"/etc/{ssl/certs/{edk2,java},$pkgbase/extracted}
