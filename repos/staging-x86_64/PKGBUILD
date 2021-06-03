@@ -1,0 +1,39 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+
+pkgname=avogadrolibs
+pkgver=1.94.0
+pkgrel=1
+pkgdesc='Libraries that provide 3D rendering, visualization, analysis and data processing useful in computational chemistry, molecular modeling, bioinformatics, materials science, and related areas'
+arch=(x86_64)
+url='https://www.openchemistry.org/'
+license=(custom)
+depends=(molequeue glew spglib libmsym libarchive hdf5 qt5-svg avogadro-molecules avogadro-crystals)
+makedepends=(cmake eigen boost python mmtf-cpp pybind11 vtk qt5-tools genxrdpattern)
+optdepends=('vtk: For the Qt plugins')
+source=(https://github.com/OpenChemistry/avogadrolibs/archive/$pkgver/$pkgname-$pkgver.tar.gz)
+sha256sums=('5e9efa3dd34a715e66afe33e61776fd87446f6076138b46109c319dea14bacff')
+
+prepare() {
+  mkdir crystals molecules # Dummy dirs to trick cmake, actually provided by avogadro-molecules and avogadro-crystals
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DENABLE_TRANSLATIONS=ON \
+    -DUSE_HDF5=ON \
+    -DUSE_VTK=ON \
+    -DUSE_PYTHON=ON \
+    -DUSE_SYSTEM_GENXRDPATTERN=ON
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+  install -Dm644 $pkgname-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
+
+# Move python module to the correct place
+  local site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  mkdir -p "$pkgdir${site_packages}"
+  mv "$pkgdir"/usr/lib/avogadro "$pkgdir${site_packages}"
+}
