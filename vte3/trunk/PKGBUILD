@@ -3,15 +3,15 @@
 
 pkgbase=vte3
 pkgname=(vte3 vte-common)
-pkgver=0.64.1
+pkgver=0.64.2
 pkgrel=1
 pkgdesc="Virtual Terminal Emulator widget"
 url="https://wiki.gnome.org/Apps/Terminal/VTE"
 arch=(x86_64)
 license=(LGPL)
 depends=(gtk3 pcre2 gnutls fribidi systemd-libs)
-makedepends=(gobject-introspection vala git gtk-doc gperf meson)
-_commit=109a6cf6e05ef55b79f768a30fdf95723ebba0d3  # tags/0.64.1^0
+makedepends=(gobject-introspection vala git gtk-doc gperf meson systemd)
+_commit=a913a6de14047c1939b84617f2dd483d37e89194  # tags/0.64.2^0
 source=("git+https://gitlab.gnome.org/GNOME/vte.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -49,7 +49,7 @@ package_vte3() {
   depends+=(vte-common)
   provides+=(libvte-2.91.so)
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 
 ### Split vte-common
   _pick vte-common "$pkgdir"/etc/profile.d
