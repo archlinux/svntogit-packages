@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=clang
-pkgver=11.1.0
+pkgver=12.0.0
 pkgrel=1
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
@@ -20,14 +20,22 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         $_source_base/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
+        partially-revert-scan-view-remove-Reporter.py.patch
+        opencl-respect-calling-convention-for-builtin.patch
+        clangd-CompletionModel-cmake.patch
+        clang-link-with-Bsymbolic-functions.patch
         enable-SSP-and-PIE-by-default.patch)
-sha256sums=('0a8288f065d1f57cb6d96da4d2965cbea32edc572aa972e466e954d17148558b'
+sha256sums=('e26e452e91d4542da3ebbf404f024d3e1cbf103f4cd110c26bf0a19621cca9ed'
             'SKIP'
-            '76707c249de7a9cde3456b960c9a36ed9bbde8e3642c01f0ef61a43d61e0c1a2'
+            'ad41e0b527a65ade95c1ba690a5434cefaab4a2daa1be307caaa1e8541fe6d5c'
             'SKIP'
-            'ce8508e318a01a63d4e8b3090ab2ded3c598a50258cc49e2625b9120d4c03ea5'
+            '49dc47c8697a1a0abd4ee51629a696d7bfe803662f2a7252a3b16fc75f3a8b50'
             'SKIP'
-            '248a0e8609b00689e82ce5e05e1de58b7c8ae09a35bbb9625e9069e1f13d2fec')
+            '68be2fb78e62f76702a156d4c1759b4c6f0d805e1b492e9c6f490ce40862138d'
+            '859d34dac43999edfc4c33e1cbb6e7458921fa9f16a93514701c1a9706665d24'
+            '6739abedc8870879618414c5358fda4fcfd4a3ac7a22030ac7c409779b68f669'
+            '5bc0b47c70990bb8dd0cf4138a8ab9e15cf6b008b7c0cf2c7aac3736b559e0e6'
+            'a877fa5cf1c1cca3bd55f9a36cf8c1bdd061ff398aeace90fe3cbd9e82550da3')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
@@ -58,6 +66,16 @@ prepare() {
   mkdir build
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
   patch -Np2 -i ../enable-SSP-and-PIE-by-default.patch
+
+  # Some fixes from the release/12.x branch
+  patch -Np2 -i ../partially-revert-scan-view-remove-Reporter.py.patch
+  patch -Np2 -i ../opencl-respect-calling-convention-for-builtin.patch
+
+  # https://bugs.llvm.org/show_bug.cgi?id=49990
+  patch -Np2 -d tools/extra <../clangd-CompletionModel-cmake.patch
+
+  # https://bugs.archlinux.org/task/70697
+  patch -Np2 -i ../clang-link-with-Bsymbolic-functions.patch
 }
 
 build() {
@@ -67,7 +85,6 @@ build() {
     -G Ninja
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
-    -DPYTHON_EXECUTABLE=/usr/bin/python
     -DLLVM_LINK_LLVM_DYLIB=ON
     -DCLANG_LINK_CLANG_DYLIB=ON
     -DLLVM_ENABLE_RTTI=ON
