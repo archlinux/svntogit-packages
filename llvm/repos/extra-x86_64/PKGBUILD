@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=11.1.0
+pkgver=12.0.0
 pkgrel=1
 _ocaml_ver=4.11.1
 arch=('x86_64')
@@ -15,11 +15,15 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
-        amdgpu-avoid-an-illegal-operand-in-si-shrink-instr.patch
+        force-visibility-of-llvm-Any-to-external.patch
+        llvm-link-with-Bsymbolic-functions.patch
+        add-fno-semantic-interposition.patch
         llvm-config.h)
-sha256sums=('ce8508e318a01a63d4e8b3090ab2ded3c598a50258cc49e2625b9120d4c03ea5'
+sha256sums=('49dc47c8697a1a0abd4ee51629a696d7bfe803662f2a7252a3b16fc75f3a8b50'
             'SKIP'
-            '85b6977005899bc76fcc548e0b6501cae5f50a8ad03060b9f58d03d775323327'
+            '98721af5a36af2a8e88c14a81b16d3929b12515d7d2d1ba385eb243dca3c32cb'
+            '560ce1e206c19f4b86f4c583b743db0ad47a610418999350710aafd60ae50fcd'
+            'fc8c64267a5d179e9fc24fb2bc6150edef2598c83f5b2d138d14e05ce9f4e345'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -28,9 +32,13 @@ prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
 
-  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/4107
-  # https://bugs.llvm.org/show_bug.cgi?id=48921#c2
-  patch -Np2 -i ../amdgpu-avoid-an-illegal-operand-in-si-shrink-instr.patch
+  # https://bugs.llvm.org/show_bug.cgi?id=48992
+  patch -Np2 -i ../force-visibility-of-llvm-Any-to-external.patch
+
+  # https://bugs.archlinux.org/task/70697
+  patch -Np2 -i ../llvm-link-with-Bsymbolic-functions.patch
+  # https://reviews.llvm.org/D102453
+  patch -Np2 -i ../add-fno-semantic-interposition.patch
 }
 
 build() {
