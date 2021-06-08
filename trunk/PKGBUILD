@@ -2,7 +2,7 @@
 
 pkgname=pambase
 pkgver=20210605
-pkgrel=1
+pkgrel=2
 pkgdesc="Base PAM configuration for services"
 arch=('any')
 url="https://www.archlinux.org"
