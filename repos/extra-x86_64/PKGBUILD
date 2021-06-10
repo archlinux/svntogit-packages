@@ -3,8 +3,8 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=40.1
-pkgrel=2
+pkgver=40.2
+pkgrel=1
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -18,7 +18,7 @@ checkdepends=(xorg-server-xvfb pipewire-media-session)
 provides=(libmutter-8.so)
 groups=(gnome)
 install=mutter.install
-_commit=faf4240c74024d04f88986f95f65364ca8121ba4  # tags/40.1^0
+_commit=d4269932528e28672a94cd965f8a5ee43481f127  # tags/40.2^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -29,9 +29,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # https://bugs.archlinux.org/task/71027
-  git cherry-pick -n f954ff84b8e98be7017bd0ac0521f568d93f62e2
 }
 
 build() {
