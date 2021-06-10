@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=40.1
-pkgrel=2
+pkgver=40.2
+pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -21,7 +21,7 @@ optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
 install=gnome-shell.install
-_commit=8e644ec39b5ac5b3fd22ceff3a7c0f8d897aa1da  # tags/40.1^0
+_commit=7d35fc1397dba9def16e1d4922630aa5fe66176b  # tags/40.2^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
@@ -34,10 +34,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # https://bugs.archlinux.org/task/70851
-  # https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/1850
-  git cherry-pick -n d9239e2cee27cad582544e769ad794ca571f35fb
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
