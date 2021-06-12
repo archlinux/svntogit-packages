@@ -3,8 +3,8 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=extra-cmake-modules
-pkgver=5.82.0
-pkgrel=2
+pkgver=5.83.0
+pkgrel=1
 pkgdesc='Extra modules and scripts for CMake'
 arch=(any)
 url='https://community.kde.org/Frameworks'
@@ -16,17 +16,14 @@ optdepends=('python-pyxdg: to generate fastlane metadata for Android apps'
             'python-yaml: to generate fastlane metadata for Android apps')
 groups=(kf5)
 source=(https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig}
-        ECM-no-init.py.patch
-        ecm-sphinx4.patch)
-sha256sums=('5972ec6d78c3e95ab9cbecdb0661c158570e868466357c5cec2b63a4251ecce4'
+        ECM-no-init.py.patch)
+sha256sums=('72b7f3b3917f3208fff10f0402b0fa3a65815aca924f0f94a4f96383d8e0f81e'
             'SKIP'
-            '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52'
-            'e50408ef16aecec34c1ca624c2b9d2ddbadbcdf431532a5a765f7e80c4dde726')
+            '5695e45c7621a00c0bca28f058c13b5d524f963a00b53337c8cefcdaf22c4b52')
 validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
 
 prepare() {
   patch -d $pkgname-$pkgver -p1 < ECM-no-init.py.patch # Don't create __init__.py
-  patch -d $pkgname-$pkgver -p1 < ecm-sphinx4.patch # Fix build with sphinx 4
 }
 
 build() {
