@@ -4,7 +4,7 @@
 
 pkgname=('python-pip' 'python2-pip')
 pkgver=20.3.1
-pkgrel=1
+pkgrel=2
 pkgdesc="The PyPA recommended tool for installing Python packages"
 url="https://pip.pypa.io/"
 arch=('any')
@@ -18,12 +18,18 @@ makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'python2-ipaddress
 checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'python-pretend'
               'python-yaml' 'python-mock' 'python-freezegun' 'python-cryptography' 'python-pip'
               'python-wheel' 'python-werkzeug' 'python-csv23' 'git' 'subversion')
-source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz")
-sha512sums=('6061004b51e57e428a7eef02968fbbde02311ee184019c491012758010bffcb49d371c7612bc43cfacf96fe8de37fdcad34e3cadefc46b3b5962b0c716ee5d59')
+source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz"
+        resolvelib-0.5.5.patch)
+sha512sums=('6061004b51e57e428a7eef02968fbbde02311ee184019c491012758010bffcb49d371c7612bc43cfacf96fe8de37fdcad34e3cadefc46b3b5962b0c716ee5d59'
+            'f339a20e965c583c1dc741d9fff90749aab049d591f0ac974e2187d4f41842661802b96266e8e35454b65d61d65c337a770d58b81119af07483fde0eda48001b')
 
 shopt -s extglob
 prepare() {
   cd pip-$pkgver
+
+  # Backported from:
+  # https://github.com/pypa/pip/commit/0d39ae9734d054c25e48e2da7ddb76545e5de330
+  patch -p1 -i ../resolvelib-0.5.5.patch
 
   # Remove certifi usage
   sed -i 's|from pip._vendor.certifi import where|where = lambda: "/etc/ssl/certs/ca-certificates.crt"|' src/pip/_internal/commands/debug.py
@@ -99,8 +105,8 @@ package_python2-pip() {
 
   mv "$pkgdir/usr/bin/pip" "$pkgdir/usr/bin/pip2"
   sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" \
-    ${pkgdir}/usr/lib/python2.7/site-packages/pip/__init__.py
-  python2 -m compileall ${pkgdir}/usr/lib/python2.7/site-packages/pip/__init__.py
+    "${pkgdir}"/usr/lib/python2.7/site-packages/pip/__init__.py
+  python2 -m compileall "${pkgdir}"/usr/lib/python2.7/site-packages/pip/__init__.py
 
   install -D -m644 LICENSE.txt \
 	  "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
