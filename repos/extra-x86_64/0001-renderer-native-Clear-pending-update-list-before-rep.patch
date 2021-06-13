@@ -1,0 +1,33 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Jonas=20=C3=85dahl?= <jadahl@gmail.com>
+Date: Sat, 12 Jun 2021 21:09:55 +0200
+Subject: [PATCH] renderer/native: Clear pending update list before
+ repopulating
+
+Before we did a simple copy, meaning the old list was overriden. Copy
+was too eager, as it meant views without modes to set was waited for,
+resulting in a dead lock. Instead only the relevant views were added to
+the list for view which had pending updates needed. What was missed was
+that the list was never cleared, meaning we just appended the new list
+on top of the old, causing issues.
+
+Closes: https://gitlab.gnome.org/GNOME/mutter/-/issues/1846
+Closes: https://gitlab.gnome.org/GNOME/mutter/-/issues/1843
+Closes: https://gitlab.gnome.org/GNOME/mutter/-/issues/1844
+---
+ src/backends/native/meta-renderer-native.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/backends/native/meta-renderer-native.c b/src/backends/native/meta-renderer-native.c
+index a84f3025f..7e4af8fe0 100644
+--- a/src/backends/native/meta-renderer-native.c
++++ b/src/backends/native/meta-renderer-native.c
+@@ -831,7 +831,7 @@ meta_renderer_native_queue_modes_reset (MetaRendererNative *renderer_native)
+   MetaRenderer *renderer = META_RENDERER (renderer_native);
+   GList *l;
+ 
+-  g_list_free (renderer_native->pending_mode_set_views);
++  g_clear_list (&renderer_native->pending_mode_set_views, NULL);
+   for (l = meta_renderer_get_views (renderer); l; l = l->next)
+     {
+       ClutterStageView *stage_view = l->data;
