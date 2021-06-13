@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=40.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -19,8 +19,10 @@ provides=(libmutter-8.so)
 groups=(gnome)
 install=mutter.install
 _commit=d4269932528e28672a94cd965f8a5ee43481f127  # tags/40.2^0
-source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
-sha256sums=('SKIP')
+source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+        0001-renderer-native-Clear-pending-update-list-before-rep.patch)
+sha256sums=('SKIP'
+            '8a861c2732e030fe2f19161539b0deb126ef0955a45d90fdf1fabd6390ca6f59')
 
 pkgver() {
   cd $pkgname
@@ -29,6 +31,9 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+
+  # https://bugs.archlinux.org/task/71236
+  git apply -3 ../0001-renderer-native-Clear-pending-update-list-before-rep.patch
 }
 
 build() {
