@@ -1,0 +1,48 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=alsa-utils
+pkgver=1.2.5.1
+pkgrel=1
+pkgdesc="Advanced Linux Sound Architecture - Utilities"
+arch=('x86_64')
+url="https://www.alsa-project.org"
+license=('GPL2')
+depends=('glibc' 'pciutils' 'psmisc')
+makedepends=('alsa-lib' 'docbook-xsl' 'fftw' 'libsamplerate' 'ncurses'
+'python-docutils' 'systemd' 'xmlto')
+optdepends=('fftw: for alsabat')
+# we require /var/lib/alsa for state file
+options=(emptydirs)
+source=("https://www.alsa-project.org/files/pub/utils/${pkgname}-${pkgver}.tar.bz2"{,.sig})
+sha512sums=('bbafeb9189ec5802965c4e69cf6e7cd4c132ffb77b57f164d6585649890f96edd052c72697171fd629b39e12f78648fea634468df34c1a80255227ca397907bf'
+            'SKIP')
+b2sums=('79f96fd3ba1d92e72dc634dc01439acd3ccd02555c39cc1714c52bbd1e4bc8b68ec7bf5d219a704533e4a61587c3528504ef9cd7c652924d74daafa90f74e42a'
+        'SKIP')
+validpgpkeys=('F04DF50737AC1A884C4B3D718380596DA6E59C91') # ALSA Release Team (Package Signing Key v1) <release@alsa-project.org>
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  autoreconf -fiv
+}
+
+build() {
+  cd "${pkgname}-${pkgver}"
+  ./configure --prefix=/usr \
+              --disable-alsaconf \
+              --sbindir=/usr/bin \
+              --with-udev-rules-dir=/usr/lib/udev/rules.d \
+              --with-systemdsystemunitdir=/usr/lib/systemd/system
+  make
+}
+
+package() {
+  depends+=('libasound.so' 'libatopology.so' 'libformw.so' 'libmenuw.so'
+  'libncursesw.so' 'libpanelw.so' 'libsamplerate.so')
+  cd "${pkgname}-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+  install -vDm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+  # dir where to save ALSA state
+  install -d "${pkgdir}/var/lib/alsa"
+}
