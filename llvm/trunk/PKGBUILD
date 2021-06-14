@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=12.0.0
-pkgrel=1
+pkgrel=2
 _ocaml_ver=4.11.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -18,12 +18,14 @@ source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         force-visibility-of-llvm-Any-to-external.patch
         llvm-link-with-Bsymbolic-functions.patch
         add-fno-semantic-interposition.patch
+        no-strict-aliasing-DwarfCompileUnit.patch
         llvm-config.h)
 sha256sums=('49dc47c8697a1a0abd4ee51629a696d7bfe803662f2a7252a3b16fc75f3a8b50'
             'SKIP'
             '98721af5a36af2a8e88c14a81b16d3929b12515d7d2d1ba385eb243dca3c32cb'
             '560ce1e206c19f4b86f4c583b743db0ad47a610418999350710aafd60ae50fcd'
             'fc8c64267a5d179e9fc24fb2bc6150edef2598c83f5b2d138d14e05ce9f4e345'
+            'd1eff24508e35aae6c26a943dbaa3ef5acb60a145b008fd1ef9ac6f6c4faa662'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -39,6 +41,10 @@ prepare() {
   patch -Np2 -i ../llvm-link-with-Bsymbolic-functions.patch
   # https://reviews.llvm.org/D102453
   patch -Np2 -i ../add-fno-semantic-interposition.patch
+
+  # Work around intermittent 'clang -O -g' crashes
+  # https://bugs.llvm.org/show_bug.cgi?id=50611#c3
+  patch -Np2 -i ../no-strict-aliasing-DwarfCompileUnit.patch
 }
 
 build() {
