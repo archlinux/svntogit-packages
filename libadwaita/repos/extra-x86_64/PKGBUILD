@@ -1,0 +1,58 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=libadwaita
+pkgname=(libadwaita libadwaita-docs)
+pkgver=1.0.0alpha.1
+pkgrel=1
+pkgdesc="Building blocks for modern GNOME applications"
+url="https://gitlab.gnome.org/GNOME/libadwaita"
+arch=(x86_64)
+license=(LGPL)
+depends=(gtk4)
+makedepends=(git meson gi-docgen sassc gobject-introspection vala)
+_commit=faa9f26a2b8a89923c0b83d42e84078f672c19ec  # tags/1.0.0-alpha.1^0
+source=("git+https://gitlab.gnome.org/GNOME/libadwaita.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed -r 's/-([a-z])/\1/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build -D gtk_doc=true
+  meson compile -C build
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_libadwaita() {
+  depends+=(libgtk-4.so)
+  provides+=(libadwaita-1.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick docs usr/share/doc
+}
+
+package_libadwaita-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+  mv docs/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
