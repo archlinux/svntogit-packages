@@ -7,20 +7,20 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.30.4
-pkgrel=3
+pkgver=1.32.0
+pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://wiki.gnome.org/Projects/NetworkManager"
 arch=(x86_64)
-license=(GPL2 LGPL2.1)
+license=(GPL)
 _pppver=2.4.9
-makedepends=(intltool dhclient dhcpcd iptables gobject-introspection gtk-doc
+makedepends=(intltool dhclient dhcpcd iptables-nft gobject-introspection gtk-doc
              "ppp=$_pppver" modemmanager iproute2 nss polkit wpa_supplicant curl
-             systemd libmm-glib libnewt libndp libteam vala perl-yaml
+             systemd libmm-glib libnewt libndp libteam nftables vala perl-yaml
              python-gobject git vala jansson bluez-libs glib2-docs iwd dnsmasq
              openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=a3e45da9f984d58e3b76d6ca064033541d819eca  # tags/1.30.4^0
+_commit=d9c0d43879e8420dda6482b05341dcfeedf7be43  # tags/1.32.0^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -31,9 +31,6 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
-
-  # https://bugs.archlinux.org/task/70710
-  git cherry-pick -n 8acad5a20cc61081438294efc634c0e245452e35
 }
 
 build() {
@@ -94,6 +91,8 @@ package_networkmanager() {
   depends=(libnm iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
            bluez-libs libpsl audit mobile-broadband-provider-info)
   optdepends=('dnsmasq: connection sharing'
+              'nftables: connection sharing'
+              'iptables: connection sharing'
               'bluez: Bluetooth support'
               'ppp: dialup connection support'
               'modemmanager: cellular network support'
@@ -101,45 +100,47 @@ package_networkmanager() {
               'dhclient: alternative DHCP client'
               'dhcpcd: alternative DHCP client'
               'openresolv: alternative resolv.conf manager'
-              'firewalld: Firewall support')
+              'firewalld: firewall support')
   backup=(etc/NetworkManager/NetworkManager.conf)
-  groups=(gnome)
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
 
   # /etc/NetworkManager
-  install -d "$pkgdir"/etc/NetworkManager/{conf,dnsmasq}.d
-  install -dm700 "$pkgdir/etc/NetworkManager/system-connections"
-  install -m644 /dev/stdin "$pkgdir/etc/NetworkManager/NetworkManager.conf" <<END
+  install -d etc/NetworkManager/{conf,dnsmasq}.d
+  install -dm700 etc/NetworkManager/system-connections
+  install -m644 /dev/stdin etc/NetworkManager/NetworkManager.conf <<END
 # Configuration file for NetworkManager.
 # See "man 5 NetworkManager.conf" for details.
 END
 
   # packaged configuration
-  install -Dm644 /dev/stdin "$pkgdir/usr/lib/NetworkManager/conf.d/20-connectivity.conf" <<END
+  install -Dm644 /dev/stdin usr/lib/NetworkManager/conf.d/20-connectivity.conf <<END
 [connectivity]
 uri=http://ping.archlinux.org/nm-check.txt
 END
 
   shopt -s globstar
 
-  _pick libnm "$pkgdir"/usr/include/libnm
-  _pick libnm "$pkgdir"/usr/lib/girepository-1.0/NM-*
-  _pick libnm "$pkgdir"/usr/lib/libnm.*
-  _pick libnm "$pkgdir"/usr/lib/pkgconfig/libnm.pc
-  _pick libnm "$pkgdir"/usr/share/gir-1.0/NM-*
-  _pick libnm "$pkgdir"/usr/share/gtk-doc/html/libnm
-  _pick libnm "$pkgdir"/usr/share/vala/vapi/libnm.*
+  _pick libnm usr/include/libnm
+  _pick libnm usr/lib/girepository-1.0/NM-*
+  _pick libnm usr/lib/libnm.*
+  _pick libnm usr/lib/pkgconfig/libnm.pc
+  _pick libnm usr/share/gir-1.0/NM-*
+  _pick libnm usr/share/gtk-doc/html/libnm
+  _pick libnm usr/share/vala/vapi/libnm.*
 
-  _pick nm-cloud-setup "$pkgdir"/usr/lib/**/*nm-cloud-setup*
-  _pick nm-cloud-setup "$pkgdir"/usr/share/man/*/nm-cloud-setup*
+  _pick cloud usr/lib/**/*nm-cloud-setup*
+  _pick cloud usr/share/man/*/nm-cloud-setup*
 
   # Restore empty dir
-  mkdir "$pkgdir/usr/lib/NetworkManager/dispatcher.d/no-wait.d"
+  install -d usr/lib/NetworkManager/dispatcher.d/no-wait.d
 }
 
 package_libnm() {
   pkgdesc="NetworkManager client library"
+  license=(LGPL)
   depends=(glib2 nss util-linux-libs jansson systemd-libs)
   provides=(libnm.so)
 
@@ -150,7 +151,7 @@ package_nm-cloud-setup() {
   pkgdesc="Automatically configure NetworkManager in cloud"
   depends=(networkmanager)
 
-  mv nm-cloud-setup/* "$pkgdir"
+  mv cloud/* "$pkgdir"
 }
 
 # vim:set sw=2 et:
