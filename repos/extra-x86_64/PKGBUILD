@@ -3,13 +3,13 @@
 
 pkgname=exiv2
 pkgver=0.27.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Exif, Iptc and XMP metadata manipulation library and tools"
 url="https://exiv2.org"
 arch=('x86_64')
 license=('GPL2')
-depends=('gcc-libs' 'zlib' 'expat' 'gettext' 'curl')
-makedepends=('cmake' 'gtest')
+depends=('gcc-libs' 'zlib' 'expat' 'libexpat.so' 'gettext' 'curl' 'libcurl.so')
+makedepends=('cmake' 'gtest' 'ninja')
 checkdepends=('python')
 provides=('libexiv2.so')
 source=(https://github.com/Exiv2/exiv2/archive/v${pkgver}/${pkgname}-${pkgver}.tar.gz
@@ -26,6 +26,7 @@ prepare() {
 build() {
   cd ${pkgname}-${pkgver}
   cmake -B build \
+    -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_SKIP_RPATH=ON \
@@ -35,20 +36,21 @@ build() {
     -DEXIV2_ENABLE_NLS=ON \
     -DEXIV2_ENABLE_XMP=ON \
     -DEXIV2_ENABLE_CURL=ON \
-    -DEXIV2_ENABLE_WEBREADY=ON
-  make -C build VERBOSE=1
+    -DEXIV2_ENABLE_WEBREADY=ON \
+    -DEXIV2_ENABLE_BMFF=ON
+  ninja -C build
 }
 
 check() {
   cd ${pkgname}-${pkgver}
-  make -C build tests
+  ninja -C build tests
 }
 
 package() {
   cd ${pkgname}-${pkgver}
   # remove samples instal which are only needed for unit tests
   sed '/samples\/cmake_install.cmake/d' -i build/cmake_install.cmake
-  make -C build DESTDIR="${pkgdir}" install
+  DESTDIR="${pkgdir}" ninja -C build install
 }
 
 # vim: ts=2 sw=2 et:
