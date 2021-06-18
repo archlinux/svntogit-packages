@@ -6,8 +6,8 @@
 
 pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
 epoch=1
-pkgver=1.52.1
-pkgrel=3
+pkgver=1.53.0
+pkgrel=1
 
 _llvm_ver=12.0.0
 
@@ -29,13 +29,13 @@ source=(
   0001-cargo-Change-libexec-dir.patch
   0002-compiler-Change-LLVM-targets.patch
 )
-sha256sums=('3a6f23a26d0e8f87abbfbf32c5cd7daa0c0b71d0986abefc56b9a5fbfbd0bf98'
+sha256sums=('5cf7ca39a10f6bf4e0b0bd15e3b9a61ce721f301e12d148262e5ba968ab825b9'
             'SKIP'
             '85a8cd0a62413eaa0457d8d02f8edac38c4dc0c96c00b09dc550260c23268434'
             'SKIP'
-            '9ce4373ca98a3d340807da7e1d3215796926add15ca3344c2f3970de534a5d6a'
-            '2c80a6bbd33b5f7291a6f6b0931c298631944edc18d36e3b9986e8ca25ce9ae1'
-            '12f577cbff80f280c22f116ea682fc961ecb70534e4be454527b091714730a3a')
+            '35c9cd0d2a220c020f949c231d296bf4a1641ad253485e2f64440a6dc7731082'
+            '1833c3b5f8262b598115d13f08e2dcba792536768a2371869870e26244971112'
+            '6786cb5d3831c69659747377f7482b7cd7941a9bddf84c55571f9aef940e1b83')
 validpgpkeys=('108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE'  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               '474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
@@ -52,19 +52,21 @@ prepare() {
   patch -Np1 -i ../0002-compiler-Change-LLVM-targets.patch
 
   cat >config.toml <<END
+changelog-seen = 2
+profile = "user"
+
 [llvm]
 link-shared = true
 
 [build]
 target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu", "x86_64-unknown-linux-musl"]
-tools = ["cargo", "rls", "clippy", "miri", "rustfmt", "analysis", "src"]
 cargo = "/usr/bin/cargo"
 rustc = "/usr/bin/rustc"
-python = "/usr/bin/python"
-extended = true
+rustfmt = "/usr/bin/rustfmt"
+vendor = true
+tools = ["cargo", "rls", "clippy", "rustfmt", "analysis", "src", "rust-demangler"]
 sanitizers = true
 profiler = true
-vendor = true
 
 [install]
 prefix = "/usr"
@@ -77,15 +79,14 @@ prefix = "/usr"
 codegen-units-std = 1
 
 debuginfo-level-std = 2
-
 channel = "stable"
-
 rpath = false
 
 [target.x86_64-unknown-linux-gnu]
 llvm-config = "/usr/bin/llvm-config"
 
 [target.x86_64-unknown-linux-musl]
+sanitizers = false
 musl-root = "/usr/lib/musl"
 END
 }
@@ -95,8 +96,8 @@ build() {
 
   export RUST_BACKTRACE=1
   export RUST_COMPILER_RT_ROOT="$srcdir/compiler-rt-$_llvm_ver.src"
+  [[ -d $RUST_COMPILER_RT_ROOT ]]
 
-  python ./x.py dist -j "$(nproc)"
   DESTDIR="$PWD"/dest-rust python ./x.py install -j "$(nproc)"
 
   # Remove analysis data for libs that weren't installed
