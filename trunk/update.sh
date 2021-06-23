@@ -4,7 +4,8 @@ set -eo pipefail
 
 readonly upstream=https://mailfud.org/geoip-legacy/
 
-version=$(curl -s "$upstream/build.log" | grep -Po 'CSV_\K[0-9]{8}' | sort -u)
+version=$(curl -s "$upstream/build.log" | grep -Po 'CSV_\K[0-9]{8}' |
+	sort -n | tail -1)
 
 if [[ ${#version} != 8 ]]; then
 	echo >&2 'Unable to determine upstream database version'
