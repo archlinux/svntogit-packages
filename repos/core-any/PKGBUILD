@@ -1,43 +1,28 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=man-pages
-pkgver=5.11
+pkgver=5.12
 _posixver=2017-a
 pkgrel=1
 pkgdesc="Linux man pages"
 arch=('any')
 license=('GPL' 'custom')
 url="https://www.kernel.org/doc/man-pages/"
+makedepends=('man2html')
 source=(https://www.kernel.org/pub/linux/docs/man-pages/$pkgname-$pkgver.tar.{xz,sign}
         https://www.kernel.org/pub/linux/docs/man-pages/man-pages-posix/$pkgname-posix-${_posixver}.tar.{xz,sign})
 # https://www.kernel.org/pub/linux/docs/man-pages/sha256sums.asc
-sha256sums=('3eda5dce5184599ec37dae3494cf964c550362e9a41fb724792da610bdb13caa'
+sha256sums=('7af5c960a05a7fac56813fe5bfa564a1c280e934363ae03911b67b0b8e23371e'
             'SKIP'
             'ce67bb25b5048b20dad772e405a83f4bc70faf051afa289361c81f9660318bc3'
             'SKIP')
 validpgpkeys=('E522595B52EDA4E6BFCCCB5E856199113A35CE5E') # Michael Kerrisk (Linux man-pages maintainer) <mtk.manpages@gmail.com>
 
-build() {
+prepare() {
   cd "${srcdir}"/$pkgname-$pkgver
   
-  # move the posix pages
-  mkdir -p "${srcdir}"/$pkgname-$pkgver/man0
-  for sect in 0 1 3; do
-    sed -i "/^\.so /s/man${sect}p/man$sect/" "${srcdir}/$pkgname-posix-${_posixver%-*}/man${sect}p"/*
-    mv -iv "${srcdir}/$pkgname-posix-${_posixver%-*}/man${sect}p"/* "${srcdir}/$pkgname-$pkgver/man$sect/"
-  done
-}
+  sed -i "s|prefix := /usr/local|prefix := /usr|g" Makefile
 
-package() {
-  cd "${srcdir}"/$pkgname-$pkgver
-
-  make prefix="${pkgdir}"/usr install
-  
-  # posix pages have a custom license
-  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -m644 "${srcdir}"/$pkgname-posix-${_posixver%-*}/POSIX-COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/POSIX-COPYRIGHT"
-  
-  cd "${pkgdir}"/usr/share/man
   # included in shadow
   rm man5/passwd.5
   rm man3/getspnam.3
@@ -47,4 +32,20 @@ package() {
   rm man7/bpf-helpers.7
   # included in libxcrypt
   rm man3/crypt*.3
+}
+
+package() {
+  cd "${srcdir}"/$pkgname-$pkgver
+
+  # install man-pages
+  make DESTDIR="${pkgdir}" install 
+
+  # install posix pages
+  pushd "${srcdir}"/$pkgname-posix-${_posixver%-*}
+  make DESTDIR="${pkgdir}" install 
+  popd
+  
+  # posix pages have a custom license
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 "${srcdir}"/$pkgname-posix-${_posixver%-*}/POSIX-COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/POSIX-COPYRIGHT"
 }
