@@ -4,16 +4,16 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='fd9ad7d3bc35a3633b99edac14ff2a4fb10599b7' # git rev-parse v${_tag_name}
-_tag_name=248.3
+_tag='ee5990602194329b0811567437121df9a16c93ac' # git rev-parse v${_tag_name}
+_tag_name=249-rc2
 pkgver="${_tag_name/-/}"
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
              'intltool' 'iptables' 'kmod' 'libcap' 'libidn2' 'libgcrypt'
              'libmicrohttpd' 'libxcrypt' 'libxslt' 'util-linux' 'linux-api-headers'
-             'python-lxml' 'quota-tools' 'shadow' 'gnu-efi-libs' 'git'
+             'python-jinja' 'python-lxml' 'quota-tools' 'shadow' 'gnu-efi-libs' 'git'
              'meson' 'libseccomp' 'pcre2' 'audit' 'kexec-tools' 'libxkbcommon'
              'bash-completion' 'p11-kit' 'systemd' 'libfido2' 'tpm2-tss' 'rsync')
 options=('strip')
@@ -42,7 +42,7 @@ source=("git+https://github.com/systemd/systemd-stable#tag=${_tag}?signed"
         '30-systemd-update.hook')
 sha512sums=('SKIP'
             'SKIP'
-            '882e486b6d88c8bafc50088845e41a49686e98981967f72ca1fb4ef07a01767400632f4b648fd31857d2a2a24a8fd65bcc2a8983284dd4fff2380732741d4c41'
+            '10f3b477527ec263cc6465c84d94416e356435930edc9e26844a0fd4f71e87a27fa0f91ce24b43a22cacdd2ead5e760e9d607369bc537a8da8d34021302a89a1'
             '34541f1967536524329867f9f341f8d9250d9d771c60dc3e6a22ccb82fc01f103cfd3f9903329777591ccbecd2446622a5d6b3804fa0411482b85c70593ee8ad'
             'f0d933e8c6064ed830dec54049b0a01e27be87203208f6ae982f10fb4eddc7258cb2919d594cbfb9a33e74c3510cfd682f3416ba8e804387ab87d1a217eb4b73'
             'f599e1a35cba2c4e83e37c2299fac23ae128d8f68081283e71e1729384975dee1c4b677787f31a17890aeb98c8d2fc90405a202644290708ef9c027315022b17'
