@@ -25,7 +25,7 @@ validpgpkeys=(
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
 sha256sums=('569122a39c6b325befb9ac1c07da0c53e6363b3baacd82081d131b06c1dc1415'
             'SKIP'
-            '4b266a27d9805aa389422312588e1f4d19df6b4ee0232872817a20cb5f440036'
+            'f4c02a78ed4e2150349be53c35b7b6c3cede7a99fbb976d23e801a94ee8abe0e'
             '96a72e1652314215da7140956c3abcf495cafd00811eda3cf4ce03ec5f791f1e')
 
 export KBUILD_BUILD_HOST=archlinux
