@@ -1,0 +1,42 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgname=qt6-webengine
+_qtver=6.2.0-beta1
+pkgver=${_qtver/-/}
+pkgrel=1
+arch=(x86_64)
+url='https://www.qt.io'
+license=(GPL3 LGPL3 FDL custom)
+pkgdesc='Provides support for web applications using the Chromium browser project'
+depends=(qt6-webchannel qt6-location libxcomposite libxrandr pciutils libxss libxkbfile 
+         libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font)
+makedepends=(cmake python2 python gperf jsoncpp ninja qt6-tools libpipewire02 nodejs protobuf)
+optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
+groups=(qt6)
+_pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
+source=(https://download.qt.io/development_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
+        qt6-webengine-destdir.patch)
+sha256sums=('0c69e748d5411ca9329da091e26f27bc7457b4434790f7f151e6756e5d4b4e64'
+            '4055da08726d4172eb54ebd28ccec0c3b272ad9ed07f5153a4cb1b12402eb135')
+
+prepare() {
+  patch -d $_pkgfn -p1 < qt6-webengine-destdir.patch # Don't install externalvprojects to root filesystem
+}
+
+build() {
+  cmake -B build -S $_pkgfn \
+    -DCMAKE_TOOLCHAIN_FILE=/usr/lib/cmake/Qt6/qt.toolchain.cmake \
+    -DQT_FEATURE_webengine_system_ffmpeg=ON \
+    -DQT_FEATURE_webengine_system_icu=ON \
+    -DQT_FEATURE_webengine_proprietary_codecs=ON \
+    -DQT_FEATURE_webengine_kerberos=ON \
+    -DQT_FEATURE_webengine_webrtc_pipewire=ON
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build/src
+
+  install -Dm644 "$srcdir"/${_pkgfn}/src/3rdparty/chromium/LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE.chromium
+}
