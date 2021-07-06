@@ -4,12 +4,12 @@
 
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv)
-pkgver=4.5.2
-pkgrel=5
-pkgdesc="Open Source Computer Vision Library"
+pkgver=4.5.3
+pkgrel=1
+pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
-url="https://opencv.org/"
+url='https://opencv.org/'
 depends=(tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg)
 makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment)
 optdepends=('opencv-samples: samples'
@@ -21,16 +21,13 @@ optdepends=('opencv-samples: samples'
             'java-runtime: Java interface')
 source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
         https://github.com/opencv/opencv_contrib/archive/$pkgver/opencv_contrib-$pkgver.tar.gz
-        opencv-lapack-3.10.patch
-        opencv-openexr3.patch)
-sha256sums=('ae258ed50aa039279c3d36afdea5c6ecf762515836b27871a8957c610d0424f8'
-            '9f52fd3114ac464cb4c9a2a6a485c729a223afb57b9c24848484e55cef0b5c2a'
-            'f83c64f2731a39910d0d4a48898dd04e4aca5c22f746b7b0ead003992ae11199'
-            'dcddc1dd30139ac3ace668e0d530798c5691dfd2ad1e5e717db6010d659229ba')
+        opencv-lapack-3.10.patch)
+sha256sums=('77f616ae4bea416674d8c373984b20c8bd55e7db887fd38c6df73463a0647bab'
+            '73da052fd10e73aaba2560eaff10cc5177e2dcc58b27f8aedf7c649e24c233bc'
+            'f83c64f2731a39910d0d4a48898dd04e4aca5c22f746b7b0ead003992ae11199')
 
 prepare() {
   patch -d $pkgname-$pkgver -p1 < opencv-lapack-3.10.patch # Fix build with LAPACK 3.10
-  patch -d $pkgname-$pkgver -p1 < opencv-openexr3.patch # Fix build with OpenEXR 3
 }
 
 build() {
