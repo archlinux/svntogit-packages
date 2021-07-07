@@ -110,7 +110,9 @@ build() {
   )
 
   local _meson_options=(
-    -Dversion-tag="${pkgver}-${pkgrel}-arch"
+    # internal version comparison is incompatible with pacman:
+    #   249~rc1 < 249 < 249.1 < 249rc
+    -Dversion-tag="${_tag_name/-/\~}-${pkgrel}-arch"
     -Dmode=release
 
     -Dgnu-efi=true
