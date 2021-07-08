@@ -7,7 +7,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='b134c9cc4b02eddca2ea098324369018123fdf15' # git rev-parse v${_tag_name}
 _tag_name=249
 pkgver="${_tag_name/-/}"
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -138,6 +138,12 @@ build() {
     -Drpmmacrosdir=no
     -Dsysvinit-path=
     -Dsysvrcnd-path=
+
+    -Dsbat-distro='arch'
+    -Dsbat-distro-summary='Arch Linux'
+    -Dsbat-distro-pkgname="${pkgname}"
+    -Dsbat-distro-version="${pkgver}"
+    -Dsbat-distro-url="https://archlinux.org/packages/core/x86_64/${pkgname}/"
   )
 
   arch-meson "$pkgbase-stable" build "${_meson_options[@]}"
