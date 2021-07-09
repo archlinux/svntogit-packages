@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=12.0.0
-pkgrel=2
+pkgver=12.0.1
+pkgrel=1
 _ocaml_ver=4.11.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -15,14 +15,12 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
-        force-visibility-of-llvm-Any-to-external.patch
         llvm-link-with-Bsymbolic-functions.patch
         add-fno-semantic-interposition.patch
         no-strict-aliasing-DwarfCompileUnit.patch
         llvm-config.h)
-sha256sums=('49dc47c8697a1a0abd4ee51629a696d7bfe803662f2a7252a3b16fc75f3a8b50'
+sha256sums=('7d9a8405f557cefc5a21bf5672af73903b64749d9bc3a50322239f56f34ffddf'
             'SKIP'
-            '98721af5a36af2a8e88c14a81b16d3929b12515d7d2d1ba385eb243dca3c32cb'
             '560ce1e206c19f4b86f4c583b743db0ad47a610418999350710aafd60ae50fcd'
             'fc8c64267a5d179e9fc24fb2bc6150edef2598c83f5b2d138d14e05ce9f4e345'
             'd1eff24508e35aae6c26a943dbaa3ef5acb60a145b008fd1ef9ac6f6c4faa662'
@@ -33,9 +31,6 @@ validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstel
 prepare() {
   cd "$srcdir/llvm-$pkgver.src"
   mkdir build
-
-  # https://bugs.llvm.org/show_bug.cgi?id=48992
-  patch -Np2 -i ../force-visibility-of-llvm-Any-to-external.patch
 
   # https://bugs.archlinux.org/task/70697
   patch -Np2 -i ../llvm-link-with-Bsymbolic-functions.patch
