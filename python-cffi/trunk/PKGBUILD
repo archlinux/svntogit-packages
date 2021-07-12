@@ -3,7 +3,7 @@
 
 pkgbase=python-cffi
 pkgname=(python-cffi python2-cffi)
-pkgver=1.14.5
+pkgver=1.14.6
 pkgrel=1
 pkgdesc="Foreign Function Interface for Python calling C code"
 arch=('x86_64')
@@ -12,7 +12,7 @@ license=('MIT')
 makedepends=('python-setuptools' 'python2-setuptools' 'python-pycparser' 'python2-pycparser')
 checkdepends=('python-pytest-runner' 'python2-pytest-runner')
 source=("https://foss.heptapod.net/pypy/cffi/-/archive/v$pkgver/cffi-v$pkgver.tar.bz2")
-sha512sums=('0e2e739e44507898d713c0e2c20f2e2eee3c468fd14b3adc9d7acf69d8bc0172993790d5178e637bcc454d1e62cc680b9c3cade05965eb25dc6cd22ffef924ce')
+sha512sums=('3845375c3ad44b3e50b0cd484c445c3e26e91bafab47beeeedcd4be8ffa67b23f758e18a73a3867f221502d6fb6566603de880d75d9b6a95799e4272488848cd')
 
 prepare() {
   cp -a cffi-v$pkgver{,-py2}
