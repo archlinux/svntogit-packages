@@ -5,92 +5,48 @@
 # Contributor: Brice Carpentier <brice@dlfp.org>
 
 pkgname=scons
-pkgver=3.1.2
-pkgrel=4
+pkgver=4.1.0
+pkgrel=1
 pkgdesc="Extensible Python-based build utility"
 arch=('any')
 url="https://scons.org"
 license=('MIT')
 depends=('python')
-makedepends=('docbook2x' 'epydoc' 'fop' 'texlive-bin' 'graphviz' 'ghostscript'
-'lynx' 'python-lxml' 'python-setuptools' 'texlive-latexextra')
-# potential additions include ipkg, rpm
-checkdepends=('clang' 'gdc' 'dmd' 'ldc' 'lib32-glibc' 'nasm' 'python-pytest'
-'python-virtualenv' 'rpm-tools' 'swig' 'zip')
+makedepends=('python-setuptools' 'python-sphinx' 'python-sphinx_rtd_theme'
+'rst2pdf')
+checkdepends=('python-pytest')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/${pkgver}.tar.gz")
-sha512sums=('b096501ea37e62f596f16b46b4022ad7979f359b10849d4c5fa17731a6c3ec34e0890374de175a8aa7539ae677777142ccf5dfae39a74696efcdbcc00e89bccf')
+sha512sums=('f79b86bb09783767b3872cfb8efb665372714a604af2aaf3adc66eee63d3afe27bc6b2aab83813743c83f71c81c800d42842e916501787ba402ce2726dda9b44')
+b2sums=('ede3d47a1ec652b9248681e26738073e9d01daab7ffeccc58f0fcadb79661e30edb9a35a511518e4a58459243acb027afd8fa5849b0f9e4bae451055f7b1a062')
 
 prepare() {
   cd "${pkgname}-${pkgver}"
-  # emulate a release
-  local _copyright='Copyright (c) 2001 - 2019 The SCons Foundation'
-  local _date_of_release="$(grep "RELEASE ${pkgver}" src/CHANGES.txt | cut -d ',' -f2)"
-  local _date="$(date -d "${_date_of_release}" +'%Y-%m-%d %H:%M:%S')"
-  # change globals in all scripts
-  for _script in $(find src/ -type f -iname "*.py"); do
-    sed -e "s|__COPYRIGHT__|${_copyright}|g" \
-        -e "s|__FILE__|/src/script/${_script}|g" \
-        -e 's/__REVISION__/none/g' \
-        -e "s|__DATE__|${_date}|g" \
-        -e 's/__BUILDSYS__/none/g' \
-        -e 's/__DEVELOPER__/none/g' \
-        -e "s/__VERSION__/${pkgver}/g" \
-        -i "${_script}"
-  done
-  # copy scripts to correct locations
-  for _script in scons{,ign,-time,-configure-cache}; do
-    cp -v "src/script/${_script}.py" "src/script/${_script}"
-  done
-  # disabling postscript creation, because it's broken
-  sed -e '614,619d' \
-      -e '/api_ps =/d' \
-      -e 's/api_ps,//' \
-      -i doc/SConscript
-  # fixing refentrytitle, so man pages are rendered with correct file names
-  sed -e 's/refentrytitle>SCONS-TIME/refentrytitle>scons-time/' \
-      -e 's/refentrytitle>SCONSIGN/refentrytitle>sconsign/' \
-      -e 's/refentrytitle>SCONS/refentrytitle>scons/' \
-      -i doc/man/*.xml
+  # fixing ancient target in SConstruct
+  sed -e 's/bdist_wheel/bdist/g' -i SConstruct
 }
 
 build() {
   cd "${pkgname}-${pkgver}"
-  # build documentation
-  (
-    python bootstrap.py SConstruct doc
-    cd src
-    for _xml in {scons,sconsign,scons-time}; do
-      docbook2man "../build/doc/man/${_xml}_db.xml"
-    done
-  )
-  (
-    cd src
-    python setup.py build
-  )
+  python scripts/scons.py --include-dir= -j1
 }
 
 check() {
   cd "${pkgname}-${pkgver}"
-  python runtest.py -a -t || echo "Tests passing with 'NO RESULT' count as failed."
+  python runtest.py --all --unit-only
 }
 
 package() {
-  local py_ver=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-  cd "${pkgname}-${pkgver}/src"
+  cd "${pkgname}-${pkgver}"
   python setup.py install --prefix=/usr \
                           --skip-build \
                           --optimize=1 \
-                          --standard-lib \
                           --install-data=/usr/share \
                           --root="$pkgdir"
-  # strip $pkgdir from embedded paths:
-  python -m compileall -d "/usr/lib/python${py_ver}" \
-    "${pkgdir}/usr/lib/python${py_ver}"
-  python -O -m compileall -d "/usr/lib/python${py_ver}" \
-    "${pkgdir}/usr/lib/python${py_ver}"
-  install -vDm 644 LICENSE.txt -t "${pkgdir}/usr/share/licenses/${pkgname}/"
-  install -vDm 644 {CHANGES,README,RELEASE}.txt \
+  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}/"
+  install -vDm 644 {{CHANGES,RELEASE}.txt,README.rst} \
     -t "${pkgdir}/usr/share/doc/${pkgname}/"
-  # removing Windows only script
-  rm -vf "${pkgdir}/usr/bin/scons"*.bat
+
+  #move man pages to correct location from /usr/share/
+  install -vdm 755 "${pkgdir}/usr/share/man/man1"
+  mv -v "${pkgdir}/usr/share/"*.1 "${pkgdir}/usr/share/man/man1"
 }
