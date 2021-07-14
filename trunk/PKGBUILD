@@ -3,11 +3,11 @@
 
 pkgname=devtools
 pkgver=20210202
-pkgrel=1
+pkgrel=2
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
 license=('GPL')
-url='https://git.archlinux.org/devtools.git/'
+url='https://github.com/archlinux/devtools'
 depends=('bash' 'openssh' 'subversion' 'rsync' 'arch-install-scripts'
          'git' 'bzr' 'mercurial' 'diffutils' 'util-linux' 'awk')
 makedepends=('asciidoc')
