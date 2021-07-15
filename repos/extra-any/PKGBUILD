@@ -3,10 +3,10 @@
 
 pkgname=namcap
 pkgver=3.2.10
-pkgrel=2
+pkgrel=3
 pkgdesc="A Pacman package analyzer"
 arch=('any')
-url="https://projects.archlinux.org/namcap.git/"
+url='https://gitlab.archlinux.org/pacman/namcap'
 license=('GPL')
 depends=('python' 'pyalpm' 'licenses' 'binutils' 'elfutils' 'python-pyelftools')
 checkdepends=('systemd')
