@@ -3,7 +3,7 @@
 
 pkgname=pacman
 pkgver=6.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -21,8 +21,8 @@ options=('strip' 'debug')
 validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
               'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 source=(https://sources.archlinux.org/other/pacman/$pkgname-$pkgver.tar.xz{,.sig}
-        pacman-6.0.0-fix-404-download.patch::https://git.archlinux.org/pacman.git/patch/?id=3401f9e142ac4c701cd98c52618cb13164f2146b
-        pacman-6.0.0-fix-key-import-double-free.patch::https://git.archlinux.org/pacman.git/patch/?id=542910d684191eb7f25ddc5d3d8fe3060028a267
+        pacman-6.0.0-fix-404-download.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/3401f9e142ac4c701cd98c52618cb13164f2146b
+        pacman-6.0.0-fix-key-import-double-free.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/542910d684191eb7f25ddc5d3d8fe3060028a267
         pacman.conf
         makepkg.conf)
 sha256sums=('004448085a7747bdc7a0a4dd5d1fb7556c6b890111a06e029ab088f9905d4808'
