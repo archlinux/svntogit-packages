@@ -4,24 +4,26 @@
 
 pkgbase=python-virtualenv
 pkgname=('python-virtualenv' 'python2-virtualenv')
-pkgver=20.4.7
+pkgver=20.5.0
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
 license=('MIT')
-makedepends=('python-setuptools' 'python-appdirs' 'python-distlib' 'python-filelock' 'python-six'
-             'python2-setuptools' 'python2-appdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
-             'python2-importlib-metadata' 'python2-importlib_resources' 'python2-pathlib2'
-             'python-setuptools-scm' 'python2-setuptools-scm' 'python-sphinx'
-             'python-sphinx_rtd_theme' 'python-sphinx-argparse' 'towncrier')
+makedepends=('python-setuptools' 'python-platformdirs' 'python-distlib' 'python-filelock'
+             'python-six' 'python2-setuptools' 'python2-platformdirs' 'python2-distlib'
+             'python2-filelock' 'python2-six' 'python2-importlib-metadata'
+             'python2-importlib_resources' 'python2-pathlib2' 'python-setuptools-scm'
+             'python2-setuptools-scm' 'python-sphinx' 'python-sphinx_rtd_theme'
+             'python-sphinx-argparse' 'towncrier' 'python-importlib-metadata'
+             'python2-backports.entry-points-selectable')
 checkdepends=('python-pytest-freezegun' 'python-pytest-mock' 'python-pip' 'python-coverage' 'fish'
               'xonsh' 'python-flaky')  # 'tcsh' removed: randomly hangs tests
 replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
-source=($pkgbase-$pkgver.tar.gz::https://github.com/pypa/virtualenv/archive/$pkgver.tar.gz)
-sha512sums=('d2868e83a7add60e3d3f85dbdb3c61655f7461e6a46e4b7433c1dd3fbe0df17ee1fd09d1a2f4fe727eabeb8ddecee2484e1c770b78b7fafd019a330af07098d7')
+source=(https://github.com/pypa/virtualenv/archive/$pkgver/$pkgbase-$pkgver.tar.gz)
+sha512sums=('fb8d5d3357c3b3b09d8fcb4bb28f8812ee821d2d9753037bdb746fb21bc76f1650e90d213cf7dd5b6cf18d6a6d466d3b2434a8c83dcfbaeffe59752dc9210714')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -33,6 +35,10 @@ prepare() {
   sed -i "s|pkgutil.get_data(\"pip._vendor.certifi\", \"cacert.pem\")|open(os.path.join('/etc/ssl/certs/ca-certificates.crt'), 'rb').read()|" virtualenv-$pkgver/tests/conftest.py
 
   cp -a virtualenv-$pkgver{,-py2}
+
+  # Use importlib-metadata directly for Python 3.9
+  sed -i 's/from backports.entry_points_selectable import entry_points/from importlib_metadata import entry_points/' virtualenv-$pkgver/src/virtualenv/run/plugin/base.py
+  sed -i '/backports.entry_points_selectable/d' virtualenv-$pkgver/setup.cfg
 }
 
 build() {
@@ -52,7 +58,8 @@ check() {
 }
 
 package_python-virtualenv() {
-  depends=('python-appdirs' 'python-distlib' 'python-filelock' 'python-six')
+  depends=('python-platformdirs' 'python-distlib' 'python-filelock' 'python-six'
+           'python-importlib-metadata')
 
   cd virtualenv-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir" --skip-build
@@ -67,8 +74,9 @@ package_python-virtualenv() {
 }
 
 package_python2-virtualenv() {
-  depends=('python2-appdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
-           'python2-importlib-metadata' 'python2-importlib_resources' 'python2-pathlib2')
+  depends=('python2-platformdirs' 'python2-distlib' 'python2-filelock' 'python2-six'
+           'python2-importlib-metadata' 'python2-importlib_resources' 'python2-pathlib2'
+           'python2-backports.entry-points-selectable')
 
   cd virtualenv-$pkgver-py2
   python2 setup.py install --prefix=/usr --root="$pkgdir" --skip-build
