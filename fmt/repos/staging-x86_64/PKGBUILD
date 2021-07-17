@@ -1,0 +1,60 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mihai Bişog <mihai.bisog@gmail.com>
+
+pkgname=fmt
+pkgver=8.0.1
+pkgrel=1
+pkgdesc='Open-source formatting library for C++'
+arch=(x86_64)
+url=https://fmt.dev
+license=(BSD)
+depends=(gcc-libs)
+makedepends=(
+  cmake
+  doxygen
+  git
+  ninja
+  npm
+  python-pip
+  python-virtualenv
+)
+provides=(libfmt.so)
+_commit=d141cdbeb0fb422a3fb7173b285fd38e0d1772dc
+source=(git+https://github.com/fmtlib/fmt.git#commit=${_commit})
+b2sums=('SKIP')
+
+prepare() {
+  pushd fmt
+  # https://github.com/fmtlib/fmt/pull/2376
+  git cherry-pick -n c9a10631cb3a656b0a0a3ba3cf0ef7ea541df30f
+  popd
+
+  npm install less less-plugin-clean-css
+  sed "s/'lessc',/'npx', 'lessc',/" -i fmt/doc/build.py
+}
+
+pkgver() {
+  cd fmt
+  git describe --tags
+}
+
+build() {
+  cmake -S fmt -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=/usr/lib \
+    -DBUILD_SHARED_LIBS=1
+  cmake --build build
+  cmake --build build --target doc
+}
+
+check() {
+  cmake --build build --target test
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --build build --target install
+  install -Dm 644 fmt/LICENSE.rst -t "${pkgdir}"/usr/share/licenses/fmt
+}
+
+# vim: ts=2 sw=2 et:
