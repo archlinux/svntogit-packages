@@ -6,8 +6,8 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.28
-pkgrel=2
+pkgver=2.2.29
+pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
 license=('GPL')
@@ -28,13 +28,11 @@ validpgpkeys=(
 )
 source=("https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
         'drop-import-clean.patch'
-        'avoid-beta-warning.patch'
-			  'scd-Error-code-map-fix-for-older-Yubikey.patch::https://git.gnupg.org/cgi-bin/gitweb.cgi?p=gnupg.git;a=patch;h=01a413d5235f1bbd00f83fb86d0e183d8f0b1a57')
-sha256sums=('6ff891fc7583a9c3fb9f097ee0d1de0a12469d4b53997e7ba5064950637dfaec'
+				'avoid-beta-warning.patch')
+sha256sums=('39d07cdb4524818f9ebce49294931974af504519e6a7476c52e9d38fc0bd0cc9'
             'SKIP'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
-            '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d'
-            '3d01999fcde60851898a06ef4a0b7497f44f65fe0655522bc7aef52c83960b3c')
+            '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
 
 install=install
 
@@ -42,7 +40,6 @@ prepare() {
 	cd "${srcdir}/${pkgname}-${pkgver}"
 	patch -p1 -i ../avoid-beta-warning.patch
 	patch -p1 -i ../drop-import-clean.patch
-	patch -p1 -i ../scd-Error-code-map-fix-for-older-Yubikey.patch
 
 	# improve reproducibility
 	rm doc/gnupg.info*
