@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.58.1
+pkgver=0.59.0
 pkgrel=1
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
@@ -19,7 +19,7 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver/rc/.rc}/meson-${pkgver}.tar.gz{,.asc}
         skip-test.diff
         arch-meson)
-sha512sums=('64ac1a9bcc642fb6d37c4b677d8b7db16d821f852f927a980d3fb1c149d680b7ff2c8d03676c6772666d46a33b6ce8674220433d302fcd92d13d9818558d6453'
+sha512sums=('a620f4dd192bd31da867d3deb162592425c0bdb4a6169d43f81ba8d3c10296d746e739c294a7908a350c383a90beedef03f3c75b549bddc67c0ee7093fa27d92'
             'SKIP'
             'a40e3be7a4ea7048cbbab59d28fb355debdfcdc5e45244aad65ab57fa222f4a2cf3165f28cc7e1dba893a162de9c7563ef0e155fa6a77960c4d02ef622313ace'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
