@@ -3,7 +3,7 @@
 
 pkgbase=python-requests
 pkgname=('python-requests' 'python2-requests')
-pkgver=2.25.1
+pkgver=2.26.0
 pkgrel=1
 pkgdesc="Python HTTP for Humans"
 arch=('any')
@@ -11,16 +11,18 @@ url="http://python-requests.org"
 license=('Apache')
 makedepends=('python-setuptools' 'python2-setuptools' 'python-chardet' 'python2-chardet'
              'python-urllib3' 'python2-urllib3' 'python-idna' 'python2-idna')
-checkdepends=('python-pytest-httpbin' 'python-pytest-mock' 'python-pysocks' 'python-pyopenssl')
+checkdepends=('python-pytest-httpbin' 'python-pytest-mock' 'python-pysocks' 'python-trustme')
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/psf/requests/archive/v$pkgver.tar.gz"
         certs.patch)
-sha512sums=('e4fc90b229925a2b580e5cd85c39e8b0fe8006e1e49d247efc38616120ffdab319fc200424eeb4fb7175114daf1b6f98ba5c2f4baa00ce17fdc79e880df60ad8'
+sha512sums=('df7b3fbef42e600434764b2ae3906546a778f8caab0111d818adef7c747d4d58e9977ac9ae25092e1170a2cde78234e64b779ba4afd84bb2bf7dbce6efb380e9'
             '424a3bb01b23409284f6c9cd2bc22d92df31b85cfd96e1d1b16b5d68adeca670dfed4fff7977d8b10980102b0f780eacc465431021fcd661f3a17168a02a39a3')
 
 prepare() {
   cd "$srcdir"/requests-$pkgver
+  # Stay with chardet for now: https://github.com/psf/requests/issues/5871
   sed -e '/certifi/d' \
       -e "s/,<.*'/'/" \
+      -e '/charset_normalizer/d' \
       -i setup.py
   patch -p1 -i "$srcdir"/certs.patch
 
@@ -38,10 +40,12 @@ build() {
 }
 
 check() {
-  # Seems to be a problem about pytest-httpbin
+  # Seems to be a problem about pytest-httpbin:
+  # pytest-httpbin server hit an exception serving request: [SSL: HTTP_REQUEST] http request (_ssl.c:1129)
+  # pytest-httpbin server hit an exception serving request: [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:1129)
 
   cd requests-$pkgver
-  pytest tests --deselect tests/test_requests.py::TestRequests::test_https_warnings
+  pytest tests --deselect tests/test_requests.py::TestRequests::test_pyopenssl_redirect
 }
 
 package_python-requests() {
