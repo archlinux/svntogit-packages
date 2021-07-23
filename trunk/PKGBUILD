@@ -62,7 +62,7 @@ package_gdm() {
   groups=(gnome)
   install=gdm.install
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 
   install -d "$pkgdir/var/lib"
   install -d "$pkgdir/var/lib/gdm"                           -o120 -g120 -m1770
