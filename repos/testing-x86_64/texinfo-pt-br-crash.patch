@@ -1,0 +1,58 @@
+From 04f7ed5ce647050f28106b589217fb2509626d38 Mon Sep 17 00:00:00 2001
+From: Gavin Smith <gavinsmith0123@gmail.com>
+Date: Sat, 24 Jul 2021 16:13:44 +0100
+Subject: Avoid info crash for Brazillian Portuguese
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+* info/infodoc.c (replace_in_documentation): Do not abort
+if command name is not found in documentation.  As the string
+may have come from a translated message, such a problem may
+not be found for some time.  Report from
+René Neumann <lists@necoro.eu>.
+---
+ ChangeLog      | 10 ++++++++++
+ info/infodoc.c | 22 ++++++++++++++--------
+ 2 files changed, 24 insertions(+), 8 deletions(-)
+
+diff --git a/info/infodoc.c b/info/infodoc.c
+index b9cb00d1d5..640fd0622b 100644
+--- a/info/infodoc.c
++++ b/info/infodoc.c
+@@ -713,18 +713,24 @@ replace_in_documentation (const char *string, int help_is_only_window_p)
+ 
+               /* Find a key which invokes this function in the info_keymap. */
+               command = named_function (fun_name);
+-              free (rep_name);
+ 
+               /* If the internal documentation string fails, there is a
+-                 serious problem with the associated command's documentation.
+-                 We croak so that it can be fixed immediately. */
++                 problem with the associated command's documentation (probably
++                 in the translation). */
+               if (!command)
+-                abort ();
+-
+-              rep = where_is (info_keymap, command);
+-              if (!rep)
+-                rep = "N/A";
++                {
++                  info_error ("bug: no command <%s>\n", rep_name);
++                  sleep (1);
++                  rep = "BUG";
++                }
++              else
++                {
++                  rep = where_is (info_keymap, command);
++                  if (!rep)
++                    rep = "N/A";
++                }
+               replen = strlen (rep);
++              free (rep_name);
+ 
+               if (fmt)
+                 text_buffer_printf (&txtresult, fmt, rep);
+-- 
+cgit v1.2.1
+
