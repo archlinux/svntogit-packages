@@ -3,16 +3,16 @@
 pkgbase=pulseaudio
 pkgname=(pulseaudio libpulse pulseaudio-{zeroconf,lirc,jack,bluetooth,equalizer,rtp})
 pkgdesc="A featureful, general-purpose sound server"
-pkgver=14.2
-pkgrel=3
+pkgver=15.0
+pkgrel=1
 arch=(x86_64)
 url="https://www.freedesktop.org/wiki/Software/PulseAudio/"
 license=(GPL)
 makedepends=(libasyncns libcap attr libxtst libsm libsndfile rtkit libsoxr
              speexdsp tdb systemd dbus avahi bluez bluez-libs jack2 sbc
              lirc openssl fftw orc gtk3 webrtc-audio-processing check git meson
-             xmltoman)
-_commit=6a487c5244563f49a025088de3510c80824fc99e  # tags/v14.2^0
+             xmltoman valgrind doxygen)
+_commit=6329a2498eb038f8a9537888280a62b00a93f68e  # tags/v15.0^0
 source=("git+https://gitlab.freedesktop.org/pulseaudio/pulseaudio.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -29,10 +29,16 @@ prepare() {
 }
 
 build() {
-  arch-meson pulseaudio build \
-    -D pulsedsp-location='/usr/\$LIB/pulseaudio' \
-    -D stream-restore-clear-old-devices=true \
+  local meson_options=(
+    -D stream-restore-clear-old-devices=true
+    -D pulsedsp-location='/usr/\$LIB/pulseaudio'
     -D udevrulesdir=/usr/lib/udev/rules.d
+    -D bluez5-gstreamer=disabled
+    -D elogind=disabled
+    -D tcpwrap=disabled
+  )
+
+  arch-meson pulseaudio build "${meson_options[@]}"
   meson compile -C build
 }
 
@@ -71,7 +77,7 @@ package_pulseaudio() {
   done
   pulsever=${pulsever%%-*}
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 
   cd "$pkgdir"
 
