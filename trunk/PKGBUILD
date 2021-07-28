@@ -2,7 +2,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=e2fsprogs
-pkgver=1.46.2
+pkgver=1.46.3
 pkgrel=1
 pkgdesc="Ext2/3/4 filesystem utilities"
 arch=('x86_64')
@@ -19,7 +19,7 @@ options=('staticlibs')
 validpgpkeys=('3AB057B7E78D945C8C5591FBD36F769BC11804F0') # Theodore Ts'o <tytso@mit.edu>
 source=("https://www.kernel.org/pub/linux/kernel/people/tytso/${pkgname}/v${pkgver}/${pkgname}-${pkgver}.tar."{xz,sign}
         'MIT-LICENSE')
-sha256sums=('23aa093295c94e71ef1be490c4004871c5b01d216a8cb4d111fa6c0aac354168'
+sha256sums=('86d1580facdd49f2e0e6b027e26b1e6c48af538762dc40aeed2a87153c1f11b7'
             'SKIP'
             'cc45386c1d71f438ad648fd7971e49e3074ad9dbacf9dd3a5b4cb61fd294ecbb')
 
