@@ -1,7 +1,7 @@
 # Maintainer: Sébastien Luttringer
 
 pkgname=ipset
-pkgver=7.12
+pkgver=7.13
 pkgrel=1
 pkgdesc='Administration tool for IP sets'
 arch=('x86_64')
