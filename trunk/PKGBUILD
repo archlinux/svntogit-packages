@@ -3,7 +3,7 @@
 pkgname=rsync
 _tag='1a2d16c0bd161481cbf0acc06dceb1ce788f0d09' # git rev-parse v${pkgver}
 pkgver=3.2.3
-pkgrel=3
+pkgrel=4
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
 url='https://rsync.samba.org/'
@@ -30,6 +30,9 @@ prepare() {
 	git cherry-pick -n \
 		85b8dc8abaca96fc3ea7421e09101b6ac41b6718 \
 		9dd62525f3b98d692e031f22c02be8f775966503
+
+	# Add test and fix regression for --delay-updates (#192) (#204)
+	git cherry-pick -n efc81c93a9fca45ba08119145a2d282f477f01b4
 }
 
 build() {
