@@ -2,7 +2,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.2.0-beta1
+_qtver=6.2.0-beta2
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=(x86_64)
@@ -11,17 +11,20 @@ license=(GPL3 LGPL3 FDL custom)
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=(qt6-webchannel qt6-location libxcomposite libxrandr pciutils libxss libxkbfile 
          libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font)
-makedepends=(cmake python2 python gperf jsoncpp ninja qt6-tools libpipewire02 nodejs protobuf)
-optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
+makedepends=(cmake python2 python gperf jsoncpp ninja qt6-tools pipewire nodejs protobuf)
+optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/development_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
-        qt6-webengine-destdir.patch)
-sha256sums=('0c69e748d5411ca9329da091e26f27bc7457b4434790f7f151e6756e5d4b4e64'
-            '4055da08726d4172eb54ebd28ccec0c3b272ad9ed07f5153a4cb1b12402eb135')
+        qt6-webengine-destdir.patch
+        chromium-freetype-2.11.patch)
+sha256sums=('0c7def833a33b8dfa28cf64a7b9169b5dc6c2b28089997dd90d77523bafd11dc'
+            '1611f5c4c6913837fa692b9612302f0abcdd7954b0d6cff236cb13f1ca3ec235'
+            'd7b5b4ae37b3ec8a416942e02f60aeda0e8ff3d9769699029f3af3465b1b892b')
 
 prepare() {
   patch -d $_pkgfn -p1 < qt6-webengine-destdir.patch # Don't install externalvprojects to root filesystem
+  patch -d $_pkgfn/src/3rdparty/chromium -p1 < chromium-freetype-2.11.patch # Fix build with freetype 2.11
 }
 
 build() {
@@ -37,6 +40,10 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build/src
+
+# Fix broken install
+  rm -r "$pkgdir"/build
+  mv "$pkgdir"/usr/{translations,resources} "$pkgdir"/usr/share/qt6
 
   install -Dm644 "$srcdir"/${_pkgfn}/src/3rdparty/chromium/LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE.chromium
 }
