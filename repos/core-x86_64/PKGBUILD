@@ -3,41 +3,61 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
 
-pkgname=libcap-ng
+pkgbase=libcap-ng
+pkgname=(libcap-ng python-capng)
 pkgver=0.8.2
-pkgrel=1
-pkgdesc='Library making programming with POSIX capabilities easier than traditional libcap'
+pkgrel=3
+pkgdesc='A library for Linux that makes using posix capabilities easy'
 url='https://people.redhat.com/sgrubb/libcap-ng/'
 arch=('x86_64')
 license=('LGPL2.1')
 depends=('glibc')
-provides=('libcap-ng.so' 'libdrop_ambient.so')
+makedepends=('python' 'swig')
 source=(https://github.com/stevegrubb/libcap-ng/archive/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
 sha512sums=('33832ee16972050a7c5cb20de21d766d5e88f5357db28166b83b05369f7ceea0b1aded39bae2d746d582ad4ee7703c131876fc4bcbc5d4b4eadd7dd429e8cf10')
 b2sums=('6bb07503421f88803ce2597289c18762f6ad06a3535ad7c6ffc28d2519adf2a130189332e56df174aa9be768340983ea6f7a6046b2209916815a19a0c6fa3693')
 
 prepare() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   autoreconf -fiv
 }
 
 build() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   ./configure \
     --prefix=/usr \
     --enable-static=no \
-    --without-python
+    --without-python \
+    --with-python3
   make
 }
 
 check() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   make check
 }
 
-package() {
-  cd ${pkgname}-${pkgver}
+package_libcap-ng() {
+  provides=('libcap-ng.so' 'libdrop_ambient.so')
+
+  cd ${pkgbase}-${pkgver}
   make DESTDIR="${pkgdir}" install
+
+  # remove files provided by python-capng
+  rm -frv "${pkgdir}/usr/lib/python"*
+}
+
+package_python-capng() {
+  pkgdesc+=' (Python bindings)'
+  depends+=('libcap-ng.so')
+  provides=('python-libcap-ng')
+
+  cd ${pkgbase}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # remove files provided by libcap-ng
+  rm -frv "${pkgdir}/usr/lib/"{lib*,pkgconfig}
+  rm -frv "${pkgdir}/usr/"{bin,include,share}
 }
 
 # vim: ts=2 sw=2 et:
