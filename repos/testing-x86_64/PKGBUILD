@@ -7,7 +7,7 @@ pkgname=(util-linux util-linux-libs)
 _pkgmajor=2.37
 _realver=${_pkgmajor}.1
 pkgver=${_realver/-/}
-pkgrel=2
+pkgrel=3
 pkgdesc='Miscellaneous system utilities for Linux'
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -17,6 +17,7 @@ options=('strip')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
 source=("https://www.kernel.org/pub/linux/utils/util-linux/v${_pkgmajor}/${pkgbase}-${_realver}.tar."{xz,sign}
         '0001-sulogin-fix-getpasswd.patch'
+        '0002-libmount-fix-setgroups-use.patch'
         pam-{login,common,runuser,su}
         'util-linux.sysusers'
         '60-rfkill.rules'
@@ -25,6 +26,7 @@ source=("https://www.kernel.org/pub/linux/utils/util-linux/v${_pkgmajor}/${pkgba
 sha256sums=('8e4bd42053b726cf86eb4d13a73bc1d9225a2c2e1a2e0d2a891f1020f83e6b76'
             'SKIP'
             '00d526cfaca8979e433c7379c634cf14e700322f0ed0c5a7996af1c900147268'
+            '56fbc491b999aa18113237f28d399045a6d66678353b3619ab8da2f8518d2a4d'
             '99cd77f21ee44a0c5e57b0f3670f711a00496f198fc5704d7e44f5d817c81a0f'
             '57e057758944f4557762c6def939410c04ca5803cbdd2bfa2153ce47ffe7a4af'
             '48d6fba767631e3dd3620cf02a71a74c5d65a525d4c4ce4b5a0b7d9f41ebfea1'
@@ -38,6 +40,7 @@ prepare() {
   cd "${pkgbase}-${_realver}"
 
   patch -Np1 < ../0001-sulogin-fix-getpasswd.patch
+  patch -Np1 < ../0002-libmount-fix-setgroups-use.patch
 }
 
 build() {
