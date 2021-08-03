@@ -1,8 +1,8 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-tomli
-pkgver=1.1.0
-pkgrel=2
+pkgver=1.2.0
+pkgrel=1
 pkgdesc="A lil' TOML parser"
 url="https://github.com/hukkin/tomli"
 license=('MIT')
@@ -11,7 +11,7 @@ depends=('python')
 makedepends=('python-dephell' 'python-setuptools')
 checkdepends=('python-pytest' 'python-dateutil')
 source=("https://github.com/hukkin/tomli/archive/$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('bd452d7a2ded403f3028ef66eb3dfa710f638e40a5737a23572538c1e3f6c6e17f74be4a41fa1b62b117e6d16f123a7f34eae9f221725fbd94eb7c8a5821838c')
+sha512sums=('87b6069d026aa597774cbc87f3a7ad712905290e3c72cf123733abb1a6dc0ab5dc84f6b0eabc54b9f6de94091f7d2763bb4a56203f5ca2e292e202218e4fae37')
 
 prepare() {
   cd tomli-$pkgver
