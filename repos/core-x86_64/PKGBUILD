@@ -3,7 +3,7 @@
 
 pkgname=e2fsprogs
 pkgver=1.46.3
-pkgrel=2
+pkgrel=3
 pkgdesc="Ext2/3/4 filesystem utilities"
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
@@ -18,19 +18,19 @@ backup=('etc/mke2fs.conf')
 options=('staticlibs')
 validpgpkeys=('3AB057B7E78D945C8C5591FBD36F769BC11804F0') # Theodore Ts'o <tytso@mit.edu>
 source=("https://www.kernel.org/pub/linux/kernel/people/tytso/${pkgname}/v${pkgver}/${pkgname}-${pkgver}.tar."{xz,sign}
-        '0001-mke2fs-do-not-warn-about-a-pre-existing-partition-table-when-using-a-non-zero-offset.patch'
+        '0001-mke2fs-fix-creating-a-file-system-image-w-o-a-pre-existing-file.patch'
         'MIT-LICENSE')
 sha256sums=('86d1580facdd49f2e0e6b027e26b1e6c48af538762dc40aeed2a87153c1f11b7'
             'SKIP'
-            '48ac4367d729aede1ba84974a237e5c3421ea9b4371b17a83842b54b62931a80'
+            '1e0eb9e1f809aa6b09131d9153bf683c152358a09a6770cbf6268d563ef3481a'
             'cc45386c1d71f438ad648fd7971e49e3074ad9dbacf9dd3a5b4cb61fd294ecbb')
 
 
 prepare() {
   cd "${srcdir}/${pkgname}-${pkgver}"
 
-  # revert: mke2fs: do not warn about a pre-existing partition table when using a non-zero offset
-  patch -Np1 -R < ../0001-mke2fs-do-not-warn-about-a-pre-existing-partition-table-when-using-a-non-zero-offset.patch
+  # mke2fs: fix creating a file system image w/o a pre-existing file
+  patch -Np1 < ../0001-mke2fs-fix-creating-a-file-system-image-w-o-a-pre-existing-file.patch
 
   # Remove unnecessary init.d directory
   sed -i '/init\.d/s|^|#|' misc/Makefile.in
