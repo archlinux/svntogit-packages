@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=4.15.2
 _clangver=12.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -39,12 +39,16 @@ build() {
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DWITH_DOCS=ON \
+    -DBUILD_DEVELOPER_DOCS=ON \
     -DBUILD_QBS=OFF
   cmake --build build
+  cmake --build build --target docs
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
+# Install docs
+  cp -r build/share/doc "$pkgdir"/usr/share
 
   install -Dm644 qt-creator-opensource-src-$pkgver/LICENSE.GPL3-EXCEPT "$pkgdir"/usr/share/licenses/qtcreator/LICENSE.GPL3-EXCEPT
 }
