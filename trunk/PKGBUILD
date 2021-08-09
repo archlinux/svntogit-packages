@@ -2,8 +2,8 @@
 
 pkgname=libxcrypt
 # Neither tarballs nor tags are signed, but commits are.
-_commit='e120e553ebeabf01ffc5a2d6d9fa0dd58dfe0803' # git rev-parse v${pkgver}
-pkgver=4.4.24
+_commit='b9116ef2245abb128a22a975d187b1272312a80c' # git rev-parse v${pkgver}
+pkgver=4.4.25
 pkgrel=1
 pkgdesc='Modern library for one-way hashing of passwords'
 arch=('x86_64')
