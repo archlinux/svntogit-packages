@@ -1,8 +1,8 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 pkgname=apparmor
-pkgver=3.0.1
-pkgrel=3
+pkgver=3.0.3
+pkgrel=1
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=('x86_64')
 url="https://gitlab.com/apparmor/apparmor"
@@ -20,25 +20,18 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/notify.conf'
         'etc/apparmor/parser.conf'
         'etc/apparmor/severity.db')
-source=("https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
-        "${pkgname}-3.0.1-python_ldflags.patch"
+source=(
+  "https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
 )
-sha512sums=('e1073e7b2cde7cc4cefcfddce8fa5069845b5873c260b9fbd4bea2ff801708101d813ff30e23a64da36f3c6394cd9339e01a170e9add69deef2d70ecd9ed9687'
-            'SKIP'
-            '04d313c5fd95e975e1df9313869166d7318560fc83218d8b0ae7c17fed31883d4a5f3334b3ad28d22864a1ac41a3ac846a38fbc6c59fec3bc6b111ddb0015890')
-b2sums=('c530d159a4139de8e59d9d975af866259b56d555e3abe2d1e2a6bfd2db57d8371d643bb93f1cd6ca96172960c09a74cc05c82d34a2e253c4c1f6ecce747f4129'
-        'SKIP'
-        '0ba81da585d4aca8cf88c08e8350e35d84b2675d53d0f435bb309fc875ddcfd3245740494da24502d5ef77be13e63863d35c04461c4e6dd8ce3ef48e69b4536b')
+sha512sums=('bbf26377e60da60dab56473ee5af15aa0f3fdf2f2a61dbfcdeba12a925afda3bc6a0f6cc31e07927400425b8c3b3649833f448d8674044c7274ef06923ab48b5'
+            'SKIP')
+b2sums=('aada9c32c2cde4a110cbd1d626ec00b08e29e76182185752e5c23e2ec0c2668a732ffdf1eb1660bd8bc294188ccf0da42b4282939f5969a6aed39084be00769c'
+        'SKIP')
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB') # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 _core_perl="/usr/bin/core_perl"
 
 prepare() {
   cd "${pkgname}-${pkgver}"
-
-  # add missing LDFLAGS for python library
-  # https://gitlab.com/apparmor/apparmor/-/issues/129
-  patch -Np1 -i ../"${pkgname}-3.0.1-python_ldflags.patch"
-
   # fix PYTHONPATH and add LD_LIBRARY_PATH for aa-logprof based check:
   # https://gitlab.com/apparmor/apparmor/issues/39
   local _py3_ver=$(python --version | cut -d " " -f2)
@@ -54,6 +47,11 @@ prepare() {
 
 build() {
   cd "${pkgname}-${pkgver}"
+
+  # make some python bytecode reproducible
+  # https://gitlab.com/apparmor/apparmor/-/issues/185
+  export PYTHONHASHSEED=0
+
   # export required perl executable locations
   export MAKEFLAGS+=" POD2MAN=${_core_perl}/pod2man"
   export MAKEFLAGS+=" POD2HTML=${_core_perl}/pod2html"
@@ -75,10 +73,16 @@ build() {
   make -C changehat/pam_apparmor
   make -C changehat/mod_apparmor
   make -C utils/vim
+
+  # copy to test location as some tests render the resulting python bytecode
+  # unreproducible even when exporting PYTHONHASHSEED=0:
+  # https://gitlab.com/apparmor/apparmor/-/issues/184
+  cd ..
+  cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-test"
 }
 
 check() {
-  cd "$pkgname-$pkgver"
+  cd "$pkgname-$pkgver-test"
   echo "INFO: Running check: libraries/libapparmor"
   make -C libraries/libapparmor check
   echo "INFO: Running check binutils"
@@ -140,5 +144,5 @@ package() {
   cd "${pkgdir}"
   # trick extract_function_variable() in makepkg into not detecting the
   # backup array modification and adding remaining configuration files
-  [[ /usr/bin/true ]] && backup=( ${backup[@]} $(find "etc/${pkgname}.d/" -type f) )
+  [[ /usr/bin/true ]] && backup=( ${backup[@]} $(find "etc/${pkgname}.d/" -type f | LC_ALL=C sort) )
 }
