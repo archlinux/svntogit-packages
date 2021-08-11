@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=90.0.2
+pkgver=91.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -22,11 +22,12 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
-        $pkgname.desktop)
-sha256sums=('35c45dbc21a7bd59e5daa6b3fef7a08c51ff0a1333f47a355bb1cbc840c3ff59'
+        $pkgname.desktop identity-icons-brand.svg)
+sha256sums=('2a4d1f788ab77f68380d4e6ab0b36bd1efd1a4ac9e9c6d10e39377894c077901'
             'SKIP'
-            '7e7435e8171426e87a84cecf9eb017cb969c9c85d973feb78c1e05771972b6e9'
-            '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf')
+            '138b972a40a74104791783167770c4a01e62cce00bb9cc75119e152f9ea9f14d'
+            '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
+            'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
@@ -179,7 +180,9 @@ END
     "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
   install -Dvm644 browser/branding/$theme/content/about-logo@2x.png \
     "$pkgdir/usr/share/icons/hicolor/384x384/apps/$pkgname.png"
-  install -Dvm644 browser/branding/$theme/content/identity-icons-brand.svg \
+  install -Dvm644 browser/branding/$theme/content/about-logo.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/$pkgname.svg"
+  install -Dvm644 ../identity-icons-brand.svg \
     "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.svg"
 
   install -Dvm644 ../$pkgname.desktop \
