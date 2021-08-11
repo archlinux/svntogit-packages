@@ -5,13 +5,14 @@
 
 pkgname=python-twisted
 pkgver=21.2.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Asynchronous networking framework written in Python"
 arch=('any')
 url="https://twistedmatrix.com/"
 license=('MIT')
 depends=('python-zope-interface' 'python-constantly' 'python-incremental' 'python-automat'
          'python-hyperlink' 'python-attrs')
+makedepends=('python-setuptools')
 optdepends=('python-pyopenssl: for TLS client hostname verification'
             'python-service-identity: for TLS client hostname verification'
             'python-idna: for TLS client hostname verification'
@@ -35,7 +36,7 @@ sha512sums=('fa743dcf22f3c17dfd17f39b7df0cc31fb8ce3e989478ada9a026424ec2de35e6a4
 prepare() {
   cd twisted-twisted-$pkgver
   # Remove upper bounds
-  sed -i 's/, < 4.0//' setup.cfg
+  sed -i 's/, < 4.0//;s/, < 2.0//' setup.cfg
 }
 
 build() {
