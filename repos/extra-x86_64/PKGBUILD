@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=12.0.1
-pkgrel=2
+pkgrel=3
 _ocaml_ver=4.12.0
 arch=('x86_64')
 url="https://llvm.org/"
@@ -17,12 +17,14 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         llvm-link-with-Bsymbolic-functions.patch
         add-fno-semantic-interposition.patch
+        x86-twist-shuffle-mask.patch
         no-strict-aliasing-DwarfCompileUnit.patch
         llvm-config.h)
 sha256sums=('7d9a8405f557cefc5a21bf5672af73903b64749d9bc3a50322239f56f34ffddf'
             'SKIP'
             '560ce1e206c19f4b86f4c583b743db0ad47a610418999350710aafd60ae50fcd'
             'fc8c64267a5d179e9fc24fb2bc6150edef2598c83f5b2d138d14e05ce9f4e345'
+            'c51b8754f76eb3774f46d530409f6d89f5bb47d90f0d718dbfa861f716b29693'
             'd1eff24508e35aae6c26a943dbaa3ef5acb60a145b008fd1ef9ac6f6c4faa662'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
@@ -36,6 +38,9 @@ prepare() {
   patch -Np2 -i ../llvm-link-with-Bsymbolic-functions.patch
   # https://reviews.llvm.org/D102453
   patch -Np2 -i ../add-fno-semantic-interposition.patch
+
+  # https://bugs.llvm.org/show_bug.cgi?id=50823
+  patch -Np2 -i ../x86-twist-shuffle-mask.patch
 
   # Work around intermittent 'clang -O -g' crashes
   # https://bugs.llvm.org/show_bug.cgi?id=50611#c3
