@@ -3,8 +3,8 @@
 
 pkgbase=gtk3
 pkgname=(gtk3 gtk3-docs gtk3-demos)
-pkgver=3.24.30
-pkgrel=2
+pkgver=3.24.30+29+gfe19b20492
+pkgrel=1
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -13,11 +13,11 @@ depends=(atk cairo libxcursor libxinerama libxrandr libxi libepoxy gdk-pixbuf2
          dconf libxcomposite libxdamage pango shared-mime-info at-spi2-atk
          wayland libxkbcommon adwaita-icon-theme json-glib librsvg
          wayland-protocols desktop-file-utils mesa cantarell-fonts libcolord
-         rest libcups libcanberra fribidi iso-codes libcloudproviders
+         rest libcups libcanberra fribidi iso-codes libcloudproviders tracker3
          gtk-update-icon-cache)
 makedepends=(gobject-introspection gtk-doc git glib2-docs sassc meson)
 license=(LGPL)
-_commit=d4e2d05cd9518ba04d6fbe1cbcec27142788ac95  # tags/3.24.30^0
+_commit=fe19b204923763c09cc1619b4d81203c18c32d20  # gtk-3-24
 source=("git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"
         gtk-query-immodules-3.0.hook)
 sha256sums=('SKIP'
@@ -37,7 +37,7 @@ build() {
   local meson_options=(
     -D broadway_backend=true
     -D cloudproviders=true
-    -D tracker3=false
+    -D tracker3=true
     -D colord=yes
     -D gtk_doc=true
     -D man=true
