@@ -1,39 +1,55 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
-pkgname=json-glib
-pkgver=1.6.2
+pkgbase=json-glib
+pkgname=(json-glib json-glib-docs)
+pkgver=1.6.4
 pkgrel=1
 pkgdesc="JSON library built on GLib"
 url="https://wiki.gnome.org/Projects/JsonGlib"
 arch=(x86_64)
 license=(GPL)
 depends=(glib2)
-makedepends=(gobject-introspection git gtk-doc meson)
-provides=(libjson-glib-1.0.so)
-_commit=667e2f35bd161fc74832b2a69d6294f583de361d  # tags/1.6.2^0
+makedepends=(gobject-introspection git meson gi-docgen docbook-xsl)
+_commit=f33b07cc409531a6892acae492616f60467ca24e  # tags/1.6.4^0
 source=("git+https://gitlab.gnome.org/GNOME/json-glib.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
+  cd json-glib
   git describe --tags | sed 's/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd json-glib
 }
 
 build() {
-  arch-meson $pkgname build -D man=true
+  arch-meson json-glib build -D man=true
   meson compile -C build
 }
 
 check() {
-  meson test -C build
+  meson test -C build --print-errorlogs
 }
 
-package() {
-  DESTDIR="$pkgdir" meson install -C build
+package_json-glib() {
+  depends+=(libg{lib,object,io}-2.0.so)
+  provides+=(libjson-glib-1.0.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+  
   rm -r "$pkgdir"/usr/{lib,share}/installed-tests
 }
+
+package_json-glib-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
