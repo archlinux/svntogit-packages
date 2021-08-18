@@ -3,8 +3,8 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.59.0
-pkgrel=2
+pkgver=0.59.1
+pkgrel=1
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
 arch=('any')
@@ -17,21 +17,16 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
               'libwmf' 'valgrind' 'cmake' 'netcdf-fortran' 'openmpi' 'nasm' 'gnustep-base' 'libelf'
               'python-pytest-xdist' 'python2-setuptools' 'ldc' 'rust-bindgen' 'cuda' 'hotdoc')
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver/rc/.rc}/meson-${pkgver}.tar.gz{,.asc}
-        0001-gnome-Always-pass-absolute-L-paths-to-g-ir-scanner.patch
         skip-test.diff
         arch-meson)
-sha512sums=('a620f4dd192bd31da867d3deb162592425c0bdb4a6169d43f81ba8d3c10296d746e739c294a7908a350c383a90beedef03f3c75b549bddc67c0ee7093fa27d92'
+sha512sums=('c45e29869dc681675b2643c37c892e7fff365c051edce4f2ec278fc6cee25bac6818add819e4db69d2fe3c1ba9572fc55bb8f67fe791cdc9c187627c71b01963'
             'SKIP'
-            '82b7d3866d327ec05efea2e16097b04a3fd99e0f7de522e4911df3d44f0e6f36c8293d2366fcab2b7a0107eed58ec61c808a87688d2b7d28902f2a355f5c5a91'
             'a40e3be7a4ea7048cbbab59d28fb355debdfcdc5e45244aad65ab57fa222f4a2cf3165f28cc7e1dba893a162de9c7563ef0e155fa6a77960c4d02ef622313ace'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('19E2D6D9B46D8DAA6288F877C24E631BABB1FE70') # Jussi Pakkanen <jpakkane@gmail.com>
 
 prepare() {
   cd ${pkgname}-${pkgver}
-
-  # Fix introspecting libraries that are also installed
-  patch -Np1 -i ../0001-gnome-Always-pass-absolute-L-paths-to-g-ir-scanner.patch
 
   # Our containers do not allow sanitizers to run
   patch -Np1 -i ../skip-test.diff
