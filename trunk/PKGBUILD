@@ -2,7 +2,7 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libsoup
-pkgver=2.72.0+10+gfe1e295d
+pkgver=2.74.0
 pkgrel=1
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
@@ -12,8 +12,7 @@ depends=(glib2 libxml2 glib-networking sqlite krb5 libpsl brotli)
 makedepends=(gobject-introspection python vala git gtk-doc meson samba)
 checkdepends=(apache php-apache)
 optdepends=('samba: Windows Domain SSO')
-provides=(libsoup-2.4.so libsoup-gnome-2.4.so)
-_commit=fe1e295d86924ba291dbd3d24904ec47fd945eb6  # gnome-3-38
+_commit=63b1d319c6a0d4fde69f074c2fe04ff9767e7684  # tags/2.74.0^0
 source=("git+https://gitlab.gnome.org/GNOME/libsoup.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -40,5 +39,11 @@ check() {
 }
 
 package() {
-  DESTDIR="$pkgdir" meson install -C build
+  depends+=(libg{lib,object,io}-2.0.so libgssapi_krb5.so libpsl.so
+            libbrotlidec.so)
+  provides+=(libsoup{,-gnome}-2.4.so)
+
+  meson install -C build --destdir "$pkgdir"
 }
+
+# vim:set sw=2 et:
