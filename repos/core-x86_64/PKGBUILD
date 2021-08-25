@@ -4,7 +4,7 @@
 # Contributor: Hugo Doria <hugo@archlinux.org>
 
 pkgname=libcap
-pkgver=2.51
+pkgver=2.53
 pkgrel=1
 pkgdesc='POSIX 1003.1e capabilities'
 arch=('x86_64')
@@ -14,36 +14,41 @@ depends=('glibc' 'pam')
 makedepends=('linux-api-headers')
 provides=('libcap.so' 'libpsx.so')
 source=("https://kernel.org/pub/linux/libs/security/linux-privs/${pkgname}2/${pkgname}-$pkgver.tar."{xz,sign}
-        "${pkgname}-2.45-makefile.patch"
+        "${pkgname}-2.53-makefile.patch"
+        "${pkgname}-2.53-progs_ldflags.patch"
 )
-sha512sums=('3b4a97ef864a2ce2f87056ebc282223b0c71ca71c539744dc629ffe7905ca5fdde937ca70c34ec84406fe54863d39abf32775818a5e5a6fdf3069706b1723a88'
+sha512sums=('d83ed9460658fa75a5c118d831534388ba92ddad59944088b0d81a64c86b67ed562c7be4c5a499065ec26b1baab34298da80c8d034b61759c7dd295c2455417c'
             'SKIP'
-            '4f613f83198dfccb8b79e1b2c8764657a85300cb166d633d86b87f46567d51fa9395387caf33e82a8718f19e9a1fc65c11e7b6f63c3c4cde1b2a27f70671ec07')
-b2sums=('9f004e28891fbbb3552016e2e9250eab38935b6b40ad9e808a64ab07eecb52c5fa9032caed0baab719df8afe9aeec98403d10b05336bebe15a50b64020e5afc2'
+            '0df64fd6dcd50fbbb13fea962b169e7946079e58a8f5adf61cf664b08d29832a2d0b39f50441e4cf4adbb5f4f2925df7364eefff16dcb35b71726fb8324413e7'
+            'eee1fa58b85f1a33b85dfcd6d6d3c56b5a1978d10d0af665a34163bfdefc448857d7eeaf41b06aa36d3dc9d1ef124edc653c0a55b477a820c274b96a890a19d2')
+b2sums=('10ebecc930d8491c65c7fcaa3f9ee6a45b6722d1d5be327a891e8bf4532ee8aa0ae664672c15e88bf0f328b4cd8f2e7ea685da44e903781ca7048dbe88c388c6'
         'SKIP'
-        '6f50d5a03c3532e6e50506cd878b1c9ca5cee5f1758f9318d4cb5d1e319cbe5f31210ba46a81b1af30730e2329aed7921c11f1a468a596a3f210972ca0da9d64')
+        '3105cd035b6b76727e6a634515b8cfa12051f9a78c9d9eba57203928cd52bafd29fd86f7a2234b686c21967952357ba54699e868fb8c1ad8dd4c489b914359d8'
+        '6383899d6fac08e00ce6a4234e3a35eb4adc3c64b64070785397c228c01201eec10dd5ad96d8c12e5a5ceeadab9e65ae516d60f9652a10894894848a5e70b7d7')
 validpgpkeys=(38A644698C69787344E954CE29EE848AE2CCF3F4) # Andrew G. Morgan <morgan@kernel.org>
 
 prepare() {
   cd "$pkgname-$pkgver"
   # SBINDIR is hardcoded to sbin. set to bin
   # add CPPFLAGS
-  patch -Np1 -i ../"${pkgname}-2.45-makefile.patch"
+  patch -Np1 -i ../"${pkgname}-2.53-makefile.patch"
+  # add back LDFLAGS, so that executables are built with them
+  patch -Np1 -i ../"${pkgname}-2.53-progs_ldflags.patch"
 }
 
 build() {
   cd "$pkgname-$pkgver"
-  make KERNEL_HEADERS='/usr/include' lib='lib' prefix='/usr'
+  make KERNEL_HEADERS='/usr/include' lib='lib' prefix='/usr' sbindir='bin'
 }
 
 check() {
   cd "$pkgname-$pkgver"
-  make test
+  make -k test
 }
 
 package() {
   cd "$pkgname-$pkgver"
-  make DESTDIR="$pkgdir" RAISE_SETFCAP='no' lib='lib' prefix='/usr' install
+  make DESTDIR="$pkgdir" RAISE_SETFCAP='no' lib='lib' prefix='/usr' sbindir='bin' install
   # docs
   install -vDm 644 {CHANGELOG,README} -t "${pkgdir}/usr/share/doc/${pkgname}/"
   install -vDm 644 pam_cap/capability.conf \
