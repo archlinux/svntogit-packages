@@ -4,14 +4,14 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=python-twisted
-pkgver=21.2.0
-pkgrel=4
+pkgver=21.7.0
+pkgrel=1
 pkgdesc="Asynchronous networking framework written in Python"
 arch=('any')
 url="https://twistedmatrix.com/"
 license=('MIT')
 depends=('python-zope-interface' 'python-constantly' 'python-incremental' 'python-automat'
-         'python-hyperlink' 'python-attrs')
+         'python-hyperlink' 'python-attrs' 'python-typing_extensions')
 makedepends=('python-setuptools')
 optdepends=('python-pyopenssl: for TLS client hostname verification'
             'python-service-identity: for TLS client hostname verification'
@@ -27,11 +27,11 @@ optdepends=('python-pyopenssl: for TLS client hostname verification'
 checkdepends=('python-pyhamcrest' 'subversion' 'xorg-server-xvfb' 'tk' 'openssh' 'git' 'gtk3'
               'python-gobject' 'python-subunit' 'python-h2' 'python-priority' 'python-cryptography'
               'python-idna' 'python-pyasn1' 'python-pyserial' 'python-bcrypt'
-              'python-cython-test-exception-raiser')
+              'python-cython-test-exception-raiser' 'python-pyopenssl')
 # Conflicts with the command line tools used to be provided by the python2 package.
 conflicts=("python2-twisted<=20.3.0-3")
 source=("https://github.com/twisted/twisted/archive/twisted-$pkgver.tar.gz")
-sha512sums=('fa743dcf22f3c17dfd17f39b7df0cc31fb8ce3e989478ada9a026424ec2de35e6a403ef35acdef5905eed008d42e3c2fee6b7ccdda433e6c250f1feaa83ea8a4')
+sha512sums=('a946769a6bc6c72af26e7763b9e0675788f134b4d005ea89d935da1b1d5f60d92c84fdb2615e442e7da2b98291ee8a63d5236ec7ba72ef04ad3f847b092feecb')
 
 prepare() {
   cd twisted-twisted-$pkgver
