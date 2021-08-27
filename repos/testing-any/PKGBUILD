@@ -1,0 +1,49 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=man-pages
+pkgver=5.13
+_posixver=2017-a
+pkgrel=1
+pkgdesc="Linux man pages"
+arch=('any')
+license=('GPL' 'custom')
+url="https://www.kernel.org/doc/man-pages/"
+makedepends=('man2html')
+source=(https://www.kernel.org/pub/linux/docs/man-pages/$pkgname-$pkgver.tar.{xz,sign}
+        https://www.kernel.org/pub/linux/docs/man-pages/man-pages-posix/$pkgname-posix-${_posixver}.tar.{xz,sign})
+# https://www.kernel.org/pub/linux/docs/man-pages/sha256sums.asc
+sha256sums=('614dae3efe7dfd480986763a2a2a8179215032a5a4526c0be5e899a25f096b8b'
+            'SKIP'
+            'ce67bb25b5048b20dad772e405a83f4bc70faf051afa289361c81f9660318bc3'
+            'SKIP')
+validpgpkeys=('E522595B52EDA4E6BFCCCB5E856199113A35CE5E') # Michael Kerrisk (Linux man-pages maintainer) <mtk.manpages@gmail.com>
+
+prepare() {
+  cd "${srcdir}"/$pkgname-$pkgver
+  
+  sed -i "s|prefix := /usr/local|prefix := /usr|g" Makefile
+
+  # included in shadow
+  rm man5/passwd.5
+  rm man3/getspnam.3
+  # included in tzdata
+  rm man5/tzfile.5 man8/{tzselect,zdump,zic}.8
+  # included in libxcrypt
+  rm man3/crypt*.3
+}
+
+package() {
+  cd "${srcdir}"/$pkgname-$pkgver
+
+  # install man-pages
+  make DESTDIR="${pkgdir}" install 
+
+  # install posix pages
+  pushd "${srcdir}"/$pkgname-posix-${_posixver%-*}
+  make DESTDIR="${pkgdir}" install 
+  popd
+  
+  # posix pages have a custom license
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 "${srcdir}"/$pkgname-posix-${_posixver%-*}/POSIX-COPYRIGHT "${pkgdir}/usr/share/licenses/${pkgname}/POSIX-COPYRIGHT"
+}
