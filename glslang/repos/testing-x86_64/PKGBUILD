@@ -1,0 +1,67 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@gmail.com>
+
+# Careful when upgrading this package! It usually breaks ABI without bumping soname.
+pkgname=glslang
+pkgver=11.6.0
+pkgrel=1
+pkgdesc='OpenGL and OpenGL ES shader front end and validator'
+arch=('x86_64')
+url='https://github.com/KhronosGroup/glslang'
+license=('BSD')
+depends=('gcc-libs' 'python')
+makedepends=('cmake' 'ninja' 'git')
+options=('staticlibs')
+# Get the commits from known_good.json for every release
+source=(${pkgname}-${pkgver}.tar.gz::https://github.com/KhronosGroup/glslang/archive/${pkgver}.tar.gz
+        git+https://github.com/KhronosGroup/SPIRV-Tools#commit=1fbed83c8aab8517d821fcb4164c08567951938f
+        git+https://github.com/KhronosGroup/SPIRV-Headers#commit=449bc986ba6f4c5e10e32828783f9daef2a77644)
+sha256sums=('99ecd3a0c2c2219293d76723846f762a9f3e7dd0dc2a4f346d0fc3a05a0ce000'
+            'SKIP'
+            'SKIP')
+
+prepare() {
+  # Sadly, glslang requires super specific versions of SPIRV headers and
+  # spirv-tools and so I'm afraid that for the time being we'll have to use
+  # their vendored version until we figure out a good way to use system
+  # libraries.
+  cp -r SPIRV-Tools ${pkgname}-${pkgver}/External/spirv-tools
+  cp -r SPIRV-Headers ${pkgname}-${pkgver}/External/spirv-tools/external/spirv-headers
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  cmake \
+    -Bbuild-shared \
+    -GNinja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=ON
+  ninja -Cbuild-shared
+  cmake \
+    -Bbuild-static \
+    -GNinja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=OFF
+  ninja -Cbuild-static
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  DESTDIR="${pkgdir}" ninja -C build-shared install
+  DESTDIR="${pkgdir}" ninja -C build-static install
+
+  install -Dm644 LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+
+  cd "${pkgdir}"/usr/lib
+  for lib in *.so; do
+    ln -sf "${lib}" "${lib}.0"
+  done
+
+  # Delete the stuff that's been vendored in. It's not ideal but that's we'll deal with for now.
+  mv "${pkgdir}"/usr/bin/spirv-remap .
+  rm -r "${pkgdir}"/usr/{bin/spirv*,include/spirv-tools,lib/cmake/SPIRV-Tools*,lib/libSPIRV-*,lib/pkgconfig}
+  mv spirv-remap "${pkgdir}"/usr/bin/spirv-remap
+}
+
+# vim: ts=2 sw=2 et:
