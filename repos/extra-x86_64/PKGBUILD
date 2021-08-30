@@ -7,20 +7,20 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=4.15.2
+pkgver=5.0.0
 _clangver=12.0.1
-pkgrel=2
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3)
-depends=(qt5-tools qt5-quickcontrols qt5-quickcontrols2 qt5-webengine qt5-svg qt5-quick3d qt5-serialport
-         clang=$_clangver clazy syntax-highlighting yaml-cpp)
+depends=(qt6-tools qt6-quickcontrols2 qt6-svg qt6-quick3d qt6-shadertools qt6-5compat # qt6-webengine qt6-serialport
+         clang=$_clangver clazy yaml-cpp)
 makedepends=(cmake llvm python)
 options=(docs)
-optdepends=('qt5-doc: integrated Qt documentation'
-            'qt5-examples: welcome page examples'
-            'qt5-translations: for other languages'
+optdepends=('qt6-doc: integrated Qt documentation'
+            'qt6-examples: welcome page examples'
+            'qt6-translations: for other languages'
             'gdb: debugger'
             'cmake: cmake project support'
             'qbs: QBS project support'
@@ -32,7 +32,7 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'perf: performer analyzer'
             'mlocate: locator filter')
 source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz)
-sha256sums=('9edb911d910665891a8e1488d72d080fb9a6002b24eb9034aa031a67a5496f7f')
+sha256sums=('b24b194a2e96f07baf55815264cd898fa0399673bfedd500575098fdf8d70475')
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
