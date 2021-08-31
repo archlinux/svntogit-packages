@@ -9,18 +9,19 @@
 pkgname=qtcreator
 pkgver=5.0.0
 _clangver=12.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3)
-depends=(qt6-tools qt6-quickcontrols2 qt6-svg qt6-quick3d qt6-shadertools qt6-5compat # qt6-webengine qt6-serialport
+# Note: built against Qt5 because of https://bugreports.qt.io/browse/QTCREATORBUG-26134
+depends=(qt5-tools qt5-quickcontrols2 qt5-svg qt5-quick3d qt5-webengine qt5-serialport syntax-highlighting # qt6-shadertools qt6-5compat
          clang=$_clangver clazy yaml-cpp)
 makedepends=(cmake llvm python)
 options=(docs)
-optdepends=('qt6-doc: integrated Qt documentation'
-            'qt6-examples: welcome page examples'
-            'qt6-translations: for other languages'
+optdepends=('qt5-doc: integrated Qt documentation'
+            'qt5-examples: welcome page examples'
+            'qt5-translations: for other languages'
             'gdb: debugger'
             'cmake: cmake project support'
             'qbs: QBS project support'
