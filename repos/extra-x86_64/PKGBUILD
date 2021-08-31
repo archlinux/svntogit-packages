@@ -9,7 +9,7 @@
 pkgname=qtcreator
 pkgver=5.0.0
 _clangver=12.0.1
-pkgrel=2
+pkgrel=3
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -41,7 +41,9 @@ build() {
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DWITH_DOCS=ON \
     -DBUILD_DEVELOPER_DOCS=ON \
-    -DBUILD_QBS=OFF
+    -DBUILD_QBS=OFF \
+    -DQTC_CLANG_BUILDMODE_MATCH=ON \
+    -DBUILD_HELVIEWERBACKEND_QTWEBENGINE=ON
   cmake --build build
   cmake --build build --target docs
 }
