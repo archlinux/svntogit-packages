@@ -1,7 +1,7 @@
 # Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
 pkgname=dracut
 pkgver=055
-pkgrel=1
+pkgrel=2
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
@@ -11,7 +11,6 @@ depends=('bash' 'coreutils' 'cpio' 'filesystem' 'findutils' 'grep' 'gzip'
 makedepends=('asciidoc' 'bash-completion' 'git')
 optdepends=('binutils: --uefi option support'
             'elfutils: strip binaries to reduce initramfs size'
-            'hardlink: --hardlink option support'
             'multipath-tools: dmraid dracut module support'
             'pigz: faster gzip compression'
             'sbsigntools: uefi_secureboot_cert/key configuration option support')
