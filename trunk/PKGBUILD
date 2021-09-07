@@ -33,7 +33,6 @@ sha512sums=('2fe734ff707a73d2537af0b0c98e1142fa52b41f7ec4d5572cc5a8479f2d081e69d
 
 build() {
   cd $pkgname-$pkgver
-  export PYTHONHASHSEED=0
   make
   make -C contrib/chg
 }
