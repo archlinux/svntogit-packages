@@ -48,10 +48,6 @@ prepare() {
 build() {
   cd "${pkgname}-${pkgver}"
 
-  # make some python bytecode reproducible
-  # https://gitlab.com/apparmor/apparmor/-/issues/185
-  export PYTHONHASHSEED=0
-
   # export required perl executable locations
   export MAKEFLAGS+=" POD2MAN=${_core_perl}/pod2man"
   export MAKEFLAGS+=" POD2HTML=${_core_perl}/pod2html"
@@ -75,8 +71,7 @@ build() {
   make -C utils/vim
 
   # copy to test location as some tests render the resulting python bytecode
-  # unreproducible even when exporting PYTHONHASHSEED=0:
-  # https://gitlab.com/apparmor/apparmor/-/issues/184
+  # unreproducible: https://gitlab.com/apparmor/apparmor/-/issues/184
   cd ..
   cp -av "${pkgname}-${pkgver}" "${pkgname}-${pkgver}-test"
 }
