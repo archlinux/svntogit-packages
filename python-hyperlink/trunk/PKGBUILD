@@ -29,9 +29,6 @@ check() {
 package() {
   cd hyperlink-$pkgver
 
-  # reproducible .pyc files
-  export PYTHONHASHSEED=0
-
   python setup.py install --root="$pkgdir" --optimize=1
   install -D -m644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }

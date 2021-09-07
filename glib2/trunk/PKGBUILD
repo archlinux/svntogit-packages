@@ -61,7 +61,6 @@ package_glib2() {
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
   install -D gio-querymodules.script "$pkgdir/usr/share/libalpm/scripts/gio-querymodules"
 
-  export PYTHONHASHSEED=0
   python -m compileall -d /usr/share/glib-2.0/codegen \
     "$pkgdir/usr/share/glib-2.0/codegen"
   python -O -m compileall -d /usr/share/glib-2.0/codegen \
