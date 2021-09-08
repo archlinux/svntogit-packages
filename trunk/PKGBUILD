@@ -40,7 +40,7 @@ build() {
 }
 
 package_audit() {
-  depends=('glibc' 'krb5' 'libcap-ng')
+  depends=('glibc' 'krb5' libkrb5.so libgssapi_krb5.so 'libcap-ng' libcap-ng.so)
   provides=('libaudit.so' 'libauparse.so')
   backup=(
     etc/libaudit.conf
