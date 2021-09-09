@@ -2,7 +2,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.2.0-beta3
+_qtver=6.2.0-beta4
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=(x86_64)
@@ -11,24 +11,15 @@ license=(GPL3 LGPL3 FDL custom)
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=(qt6-webchannel qt6-location libxcomposite libxrandr pciutils libxss libxkbfile 
          libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font)
-makedepends=(cmake python2 python gperf jsoncpp ninja qt6-tools pipewire nodejs protobuf)
+makedepends=(cmake ninja python2 python gperf jsoncpp qt6-tools pipewire nodejs protobuf)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
-source=(https://download.qt.io/development_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
-        qt6-webengine-destdir.patch
-        chromium-freetype-2.11.patch)
-sha256sums=('e7bdb1b44251826442a92c6e91ef1f1bc462964e1e89c41c9e5b7969f27c6024'
-            '1611f5c4c6913837fa692b9612302f0abcdd7954b0d6cff236cb13f1ca3ec235'
-            'd7b5b4ae37b3ec8a416942e02f60aeda0e8ff3d9769699029f3af3465b1b892b')
-
-prepare() {
-  patch -d $_pkgfn -p1 < qt6-webengine-destdir.patch # Don't attempt to install external projects to root filesystem
-  patch -d $_pkgfn/src/3rdparty/chromium -p1 < chromium-freetype-2.11.patch # Fix build with freetype 2.11
-}
+source=(https://download.qt.io/development_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
+sha256sums=('0fc904e6c9b36096382ec340b5b3989e08b33dca6530052c7611c76bb75e6e1e')
 
 build() {
-  cmake -B build -S $_pkgfn \
+  cmake -B build -S $_pkgfn -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE=/usr/lib/cmake/Qt6/qt.toolchain.cmake \
     -DQT_FEATURE_webengine_system_ffmpeg=ON \
     -DQT_FEATURE_webengine_system_icu=ON \
@@ -39,11 +30,7 @@ build() {
 }
 
 package() {
-  DESTDIR="$pkgdir" cmake --install build/src
-
-# Fix broken install
-  rm -r "$pkgdir"/build
-  mv "$pkgdir"/usr/{translations,resources} "$pkgdir"/usr/share/qt6
+  DESTDIR="$pkgdir" cmake --install build
 
   install -Dm644 "$srcdir"/${_pkgfn}/src/3rdparty/chromium/LICENSE "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE.chromium
 }
