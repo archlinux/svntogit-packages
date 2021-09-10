@@ -1,0 +1,120 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+pkgbase=ghostscript
+pkgname=(ghostscript ghostxps ghostpcl)
+pkgver=9.54.0
+pkgrel=3
+pkgdesc="An interpreter for the PostScript language"
+url="https://www.ghostscript.com/"
+arch=('x86_64')
+license=('AGPL3' 'custom')
+depends=('libxt' 'libcups' 'fontconfig' 'zlib' 'libpng' 'libjpeg' 'jbig2dec'
+         'libtiff' 'lcms2' 'dbus' 'libpaper' 'ijs' 'openjpeg2' 'libidn')
+makedepends=('gtk3' 'gnutls' 'glu' 'freeglut')
+# https://github.com/ArtifexSoftware/ghostpdl-downloads/releases
+source=(https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${pkgver//./}/ghostpdl-${pkgver}.tar.xz
+        CVE-2021-3781.patch)
+sha512sums=('fed500f5f267f0eeecc4ab44c2785ddaa9ad6965b689e9792021e2348296ee19150f10decb264a4689464088449be44fe8e6c30566a26e6e4e978c8b2d4654ec'
+            '26a625518b18433309ccf404cbe90e2240a75091ae8c38d197d5dce5e1ac7e3df73be83683b64de2d38f429ffa45cb3eda9ecf9388e40094a1ca84328457a8f4')
+
+### update jbig2dec first! ###
+
+### make sure to rebuild core/groff on version updates - https://bugs.archlinux.org/task/67751 ###
+
+prepare() {
+  cd ghostpdl-${pkgver}
+
+  # *** remove after final decision ***
+  # new in 9.54.0: 
+  # https://www.ghostscript.com/doc/9.54.0/News.htm
+
+  # 1) inclusion of the tesseract/leptonica sources for OCR capabilities
+  # at the moment we do not support linking with tesseract/leptonica shared libraries. 
+  # As is normal with such included libraries, deleting those directories and (re)running
+  # configure (on Unix like systems) will automatically build without the OCR functionality.
+  # increases package size ghostpcl 2.7->4.9MB | ghostscript 18->23MB | ghostxps 2,7->4.9MB
+  # https://www.ghostscript.com/doc/9.54.0/VectorDevices.htm#UseOCR - 
+  # this doesn't seem to be worth to keep enabled until linking with shared libs is supported
+  rm -r tesseract leptonica
+
+  # 2) new directory addition in the source tree: "extract/". 
+  # It contains the implementation for the writing of docx format files used by the
+  # new "docxwrite" device. This is *not* a "thirdparty library". 
+  # For distribution package maintainers, if you want your packaged Ghostscript to include
+  # the "docxwrite" device, do not delete this directory.
+  # ^ this one doesn't affect package size - so let's keep it
+
+  # force it to use system-libs
+  rm -r cups/libs expat ijs jbig2dec jpeg lcms2mt libpng openjpeg tiff zlib
+  # using tree freetype because of https://bugs.archlinux.org/task/56849
+  # lcms2mt is the new lcms2 fork aimed to replace lcms2 in a thread safe way
+  
+  # http://git.ghostscript.com/?p=ghostpdl.git;a=commit;h=40dc5b409c6262b18b4bf5386b5482ead4c511e3
+  # libs link unwanted to libgpdl that isn't installed
+  rm -rf gpdl
+
+
+  # CVE-2021-3781 / CVE-2021-3781.patch
+  patch -Np1 -i ../CVE-2021-3781.patch
+}
+
+build() {
+  cd ghostpdl-${pkgver}
+  ./configure --prefix=/usr \
+              --enable-dynamic \
+              --with-ijs \
+              --with-jbig2dec \
+              --with-x \
+              --with-drivers=ALL \
+              --with-openprinting \
+              --with-fontpath=/usr/share/fonts/gsfonts \
+              --enable-fontconfig \
+              --enable-freetype \
+              --enable-openjpeg \
+              --without-luratech \
+              --with-system-libtiff \
+              --with-libpaper \
+              --disable-compile-inits #--help # needed for linking with system-zlib
+  make
+}
+
+package_ghostscript() {
+  optdepends=('texlive-core:      needed for dvipdf'
+              'gtk3:              needed for gsx')
+
+  cd ghostpdl-${pkgver}
+  make DESTDIR="${pkgdir}"  install-gs install-so-gs
+  # replace statically linked gs binary with symlink to dynamically linked gsc
+  rm -v "${pkgdir}"/usr/bin/gs
+  ln -s gsc "${pkgdir}"/usr/bin/gs
+
+  # remove unwanted localized manpages
+  rm -rv "${pkgdir}"/usr/share/man/de
+
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
+}
+
+package_ghostxps() {
+  pkgdesc="${pkgdesc/PostScript/XPS document}"
+  depends=("ghostscript=${pkgver}-${pkgrel}")
+
+  cd ghostpdl-${pkgver}
+  make DESTDIR="${pkgdir}" install-gxps install-so-gxps
+  rm -r "${pkgdir}"/usr/include
+  
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
+
+  # fix file conflict - FS#70238
+  rm -r "${pkgdir}"/usr/lib/libgxps.so
+}
+
+package_ghostpcl() {
+  pkgdesc="${pkgdesc/PostScript/PCL 6}"
+  depends=("ghostscript=${pkgver}-${pkgrel}")
+
+  cd ghostpdl-${pkgver}
+  make DESTDIR="${pkgdir}" install-gpcl6 install-so-gpcl6
+  rm -r "${pkgdir}"/usr/include
+
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
+}
