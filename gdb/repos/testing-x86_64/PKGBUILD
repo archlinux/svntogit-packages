@@ -1,0 +1,73 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Anatol Pomozov <anatol.pomozov@gmail.com>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gdb
+# gdb-common is a package that contains files common for all cross compiled versions
+# of gdb (for arm/avr/...)
+pkgname=(gdb gdb-common)
+pkgver=11.1
+pkgrel=1
+pkgdesc='The GNU Debugger'
+arch=(x86_64)
+url='https://www.gnu.org/software/gdb/'
+license=(GPL3)
+makedepends=(glibc gcc-libs texinfo python guile ncurses expat xz mpfr source-highlight
+             readline)
+source=(https://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig})
+
+sha1sums=('6cb3361c7f2b22d6d2c25ab4992264aa41bc2471'
+          'SKIP')
+b2sums=('6a639f6533f4008bfb469c23a26c4fcd039f1bc5dd33745f4876344451beb595d7a8843caeb5db70214924624c5b999f8831237d459bebf1cb2d2866f8b41ee2'
+        'SKIP')
+validpgpkeys=('F40ADB902B24264AA42E50BF92EDB04BFF325CF3') # Joel Brobecker
+
+prepare() {
+  cd gdb-$pkgver
+
+  # hack! - libiberty configure tests for header files using "$CPP $CPPFLAGS"
+  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" libiberty/configure
+}
+
+build() {
+  cd gdb-$pkgver
+
+  mkdir -p build && cd build
+  ../configure \
+    --prefix=/usr \
+    --disable-nls \
+    --enable-source-highlight \
+    --enable-tui \
+    --with-system-readline \
+    --with-python=/usr/bin/python \
+    --with-guile=guile-2.2 \
+    --with-system-gdbinit=/etc/gdb/gdbinit
+  make
+}
+
+package_gdb-common() {
+  depends=(python guile)
+
+  cd gdb-$pkgver/build
+  make -C gdb/data-directory DESTDIR="$pkgdir" install
+}
+
+package_gdb() {
+  depends=(glibc ncurses libncursesw.so gcc-libs expat xz mpfr source-highlight gdb-common=$pkgver
+           readline libreadline.so guile python libelf)
+  backup=(etc/gdb/gdbinit)
+
+  cd gdb-$pkgver/build
+  make -C gdb DESTDIR="$pkgdir" install
+  make -C gdbserver DESTDIR="$pkgdir" install
+
+  # install "custom" system gdbinit
+  install -dm 755 "$pkgdir/etc/gdb"
+  touch "$pkgdir/etc/gdb/gdbinit"
+
+  # comes from gdb-common
+  rm -r "$pkgdir/usr/share/gdb/"
+}
+
+# vim: ts=2 sw=2 et:
