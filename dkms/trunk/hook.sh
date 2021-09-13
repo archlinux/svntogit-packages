@@ -36,7 +36,7 @@ check_dependency() { (
   for mod in "${BUILD_DEPENDS[@]}"; do
     mapfile lines < <(dkms status -m "$mod" -k "$3")
     for line in "${lines[@]}"; do
-      [[ "$line" =~ "$mod, "[^,]+", $3, "[^:]+': installed' ]] && break 2
+      [[ "$line" =~ "$mod/"[^,]+", $3, "[^:]+': installed' ]] && break 2
     done
     exit 1
   done
@@ -145,7 +145,7 @@ dkms_remove() {
       continue
     fi
     state=$(dkms status -m "$mod" -v "$mver" -k "$kver")
-    if [[ "$state" =~ "$mod, $mver, $kver, "[^:]+": "(added|built|installed) ]]; then
+    if [[ "$state" =~ "$mod/$mver, $kver, "[^:]+": "(added|built|installed) ]]; then
       dmods[$kver]=''
       run dkms remove --no-depmod -m "$mod" -v "$mver" -k "$kver"
       if (( $? == 0 )); then
