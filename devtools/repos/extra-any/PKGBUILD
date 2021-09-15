@@ -3,7 +3,7 @@
 
 pkgname=devtools
 pkgver=20210202
-pkgrel=2
+pkgrel=3
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
 license=('GPL')
@@ -12,7 +12,8 @@ depends=('bash' 'openssh' 'subversion' 'rsync' 'arch-install-scripts'
          'git' 'bzr' 'mercurial' 'diffutils' 'util-linux' 'awk')
 makedepends=('asciidoc')
 optdepends=('btrfs-progs: btrfs support')
-source=(https://sources.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig})
+source=(https://sources.archlinux.org/other/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig}
+        fix-curlrc-disabling.patch)
 validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'
               '4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'
               '86CFFCA918CF3AF47147588051E8B148A9999C34'
@@ -23,9 +24,16 @@ validpgpkeys=('487EACC08557AD082088DABA1EB2638FF56C0C53'
               '6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'
               'E240B57E2C4630BA768E2F26FC1B547C8D8172C8')
 sha256sums=('ad1a65f0f349093b557bd6f45fd5f84ba2be246702908193ae7351457a218d6e'
-            'SKIP')
+            'SKIP'
+            'cfb48e2aec7b4b811e878bf918ca719b7e956556ba20cf71295617a67ed31338')
 b2sums=('b3f388b928f91a230e0fbc406cdeccd81d3688d5f5a6e9c7928994c680f22b4162e0cce07bb7d84e0c5bb2850cd92b35a531ca5bc8ca9b7d97a278e9f3787f45'
-        'SKIP')
+        'SKIP'
+        'f2c771da57ae9f4ddada031c881345a6aced684bab7435a074b96be5000cdae0ed042740ab845aa612d17860e6c1ebd9d351979f62061f62477588446c302ae8')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  patch -Np1 -i ../fix-curlrc-disabling.patch
+}
 
 build() {
   cd ${pkgname}-${pkgver}
