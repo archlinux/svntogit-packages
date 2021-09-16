@@ -4,7 +4,7 @@
 
 pkgname=sudo
 _sudover=1.9.8
-pkgrel=1
+pkgrel=2
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
@@ -18,16 +18,20 @@ backup=('etc/pam.d/sudo'
         'etc/sudoers')
 install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
+        append_defaults-boolean-flags.patch
         sudo_logsrvd.service
         sudo.pam)
 sha256sums=('f1735de999804ea1af068fba6a82cb6674ea64c789813b29266fd3b16cb294e6'
             'SKIP'
+            '36648e052a834275636bef75a00197e43cd1baaa07006cd3b426e99cc109b4b9'
             '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
 prepare() {
   cd "$srcdir/$pkgname-$_sudover"
+  # https://bugs.archlinux.org/task/72146
+  patch -Np1 -i ../append_defaults-boolean-flags.patch
 }
 
 build() {
