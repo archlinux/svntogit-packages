@@ -1,7 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=5.10.65
+pkgver=5.10.66
 pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
@@ -24,9 +24,9 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
-sha256sums=('edd3dedbce5bcaa5ba7cde62f8f3fd58b2ab21e2ec427b9d200685da5ec03e66'
+sha256sums=('5dfa06bbbbd164b9ea669ec637b1e6d05fb5fea8ef3aeb6729f2cbcd0dfcc8a7'
             'SKIP'
-            '29102701ea56a1350095319f70f8e0e4258b5ebc65fe352c1ca27ab7b832e382'
+            '524992f2a80f0ec349fccb1a883c2b218a0f2409d3ff064dd9c0e559135fb8d7'
             '96a72e1652314215da7140956c3abcf495cafd00811eda3cf4ce03ec5f791f1e'
             'bb935ad2467637966185b88d18a3f9be2f37d3acdc71ed361eae326ca898d6fc')
 
@@ -54,7 +54,7 @@ prepare() {
   echo "Setting config..."
   cp ../config .config
   make olddefconfig
-
+#return 1
   make -s kernelrelease > version
   echo "Prepared $pkgbase version $(<version)"
 }
