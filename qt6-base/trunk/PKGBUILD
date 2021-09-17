@@ -5,7 +5,7 @@
 pkgname=qt6-base
 _qtver=6.1.3
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -51,7 +51,7 @@ build() {
     -DQT_FEATURE_journald=ON \
     -DQT_FEATURE_openssl_linked=ON \
     -DQT_FEATURE_system_sqlite=ON \
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DUSE_X11=ON" # https://bugreports.qt.io/browse/QTBUG-96392
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DUSE_X11" # https://bugreports.qt.io/browse/QTBUG-96392
   cmake --build build
 }
 
