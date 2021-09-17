@@ -50,7 +50,8 @@ build() {
     -DINSTALL_EXAMPLESDIR=share/doc/qt6/examples \
     -DQT_FEATURE_journald=ON \
     -DQT_FEATURE_openssl_linked=ON \
-    -DQT_FEATURE_system_sqlite=ON
+    -DQT_FEATURE_system_sqlite=ON \
+    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DUSE_X11=ON" # https://bugreports.qt.io/browse/QTBUG-96392
   cmake --build build
 }
 
