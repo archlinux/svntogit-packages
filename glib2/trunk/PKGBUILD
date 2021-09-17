@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.68.4
+pkgver=2.70.0
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -22,11 +22,6 @@ sha256sums=('SKIP'
             '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
             '92d08db5aa30bda276bc3d718e7ff9dd01dc40dcab45b359182dcc290054e24e')
 validpgpkeys=('923B7025EE03C1C59F42684CF0942E894B2EAFA0') # Philip Withnall (https://endlessos.org/) <pwithnall@endlessos.org>
-
-pkgver() {
-  cd glib
-  git describe --tags | sed 's/-/+/g'
-}
 
 prepare() {
   cd glib
@@ -50,7 +45,7 @@ check() {
 }
 
 package_glib2() {
-  depends+=(libmount.so)
+  depends+=(libmount.so libffi.so)
   provides+=(libgio-2.0.so libglib-2.0.so libgmodule-2.0.so libgobject-2.0.so
              libgthread-2.0.so)
   optdepends=('python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
