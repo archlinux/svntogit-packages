@@ -5,26 +5,36 @@
 # Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
 
 pkgname=curl
-pkgver=7.78.0
-pkgrel=1
-pkgdesc="An URL retrieval utility and library"
+pkgver=7.79.0
+pkgrel=3
+pkgdesc='An URL retrieval utility and library'
 arch=('x86_64')
-url="https://curl.haxx.se"
+url='https://curl.haxx.se'
 license=('MIT')
-depends=('ca-certificates' 'krb5' 'libssh2' 'libssh2.so' 'openssl' 'zlib'
-         'libpsl' 'libpsl.so' 'libnghttp2' 'libidn2' 'libidn2.so' 'zstd')
+depends=('ca-certificates' 'brotli' 'libbrotlidec.so' 'krb5' 'libgssapi_krb5.so'
+         'libidn2' 'libidn2.so' 'libnghttp2' 'libpsl' 'libpsl.so' 'libssh2' 'libssh2.so'
+         'openssl' 'zlib' 'zstd' 'libzstd.so')
 provides=('libcurl.so')
-source=("https://curl.haxx.se/download/$pkgname-$pkgver.tar.gz"{,.asc})
-sha512sums=('3d74343e06dd3d699f4c883758775554956f7f27de470b71f4af0d7f56ff5e4d7c534ab958c8926fae69cd0ded90c173ac3d5a6ad5518d88c2f39f31f8bba2f3'
-            'SKIP')
+source=("https://curl.haxx.se/download/${pkgname}-${pkgver}.tar.gz"{,.asc}
+        '0001-Curl_http2_setup-do-not-change-connection-data-on-repeat-invokes.patch')
+sha512sums=('6529645774bd2687535cfaec5949281f305c2910da3bd4de22713ab370fde0d05c416579b46aef7eaaf5f73d882e96b8268b80b6802b978f9c54b0a837420dad'
+            'SKIP'
+            'f83ba83073a90ab369c7c0e06d440d6d8be87c72800095c35d803bca246ea5ee73b811b210ce9d8a7ee137583ca3e839afd8eb9accf699f655e9db82a7bdef71')
 validpgpkeys=('27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2') # Daniel Stenberg
 
-build() {
-  cd "$pkgname-$pkgver"
+prepare() {
+  cd "${pkgname}-${pkgver}"
 
-  ./configure \
-    --prefix=/usr \
-    --mandir=/usr/share/man \
+  patch -Np1 < ../0001-Curl_http2_setup-do-not-change-connection-data-on-repeat-invokes.patch
+}
+
+build() {
+  mkdir build
+  cd build
+
+  "${srcdir}/${pkgname}-${pkgver}"/configure \
+    --prefix='/usr' \
+    --mandir='/usr/share/man' \
     --disable-ldap \
     --disable-ldaps \
     --disable-manual \
@@ -34,19 +44,21 @@ build() {
     --with-gssapi \
     --with-libssh2 \
     --with-openssl \
-    --with-random=/dev/urandom \
-    --with-ca-bundle=/etc/ssl/certs/ca-certificates.crt
+    --with-random='/dev/urandom' \
+    --with-ca-bundle='/etc/ssl/certs/ca-certificates.crt'
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 package() {
-  cd "$pkgname-$pkgver"
+  cd build
 
-  make DESTDIR="$pkgdir" install
-  make DESTDIR="$pkgdir" install -C scripts
+  make DESTDIR="${pkgdir}" install
+  make DESTDIR="${pkgdir}" install -C scripts
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
 
   # license
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
+  install -Dt "${pkgdir}/usr/share/licenses/$pkgname" -m0644 COPYING
 }
