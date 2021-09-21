@@ -22,7 +22,7 @@ fi
 ssh -T sources.archlinux.org <<-EOF
 	mkdir -p /srv/sources/other/packages/geoip-database/$version &&
 	cd       /srv/sources/other/packages/geoip-database/$version &&
-	wget -nc $upstream/GeoIP{,City,ASNum}{,v6}.dat.gz
+	curl --remote-name-all $upstream/GeoIP{,City,ASNum}{,v6}.dat.gz
 EOF
 
 sed -i -e "/^pkgver=/c pkgver=$version" -e "/^pkgrel=/c pkgrel=1" PKGBUILD
