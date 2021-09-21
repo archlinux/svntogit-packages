@@ -3,17 +3,17 @@
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.68.0
+pkgver=1.70.0
 pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
 depends=(python-mako python-markdown)
-_glibver=2.68.0
+_glibver=2.70.0
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
 options=(!emptydirs)
-_commit=342dc78977eef2f444b988a46e435fbafbdcb165  # tags/1.68.0^0
+_commit=4502dd33da995e5e9e6d73aa996cf42e92c9e217  # tags/1.70.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver")
 sha512sums=('SKIP'
@@ -43,7 +43,7 @@ check() {
 package_gobject-introspection() {
   depends+=("gobject-introspection-runtime=$pkgver-$pkgrel")
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 
   python -m compileall -d /usr/lib/$pkgbase "$pkgdir/usr/lib/$pkgbase"
   python -O -m compileall -d /usr/lib/$pkgbase "$pkgdir/usr/lib/$pkgbase"
