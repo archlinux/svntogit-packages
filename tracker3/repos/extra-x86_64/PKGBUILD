@@ -2,8 +2,9 @@
 # Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
 # Contributor: Alexander Fehr <pizzapunk gmail com>
 
-pkgname=tracker3
-pkgver=3.1.2
+pkgbase=tracker3
+pkgname=(tracker3 tracker3-docs)
+pkgver=3.2.0
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
@@ -11,12 +12,10 @@ arch=(x86_64)
 license=(GPL)
 depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp libsoup
          json-glib)
-makedepends=(gobject-introspection vala git gtk-doc bash-completion meson
+makedepends=(gobject-introspection vala git hotdoc bash-completion meson
              asciidoc systemd)
 checkdepends=(python-gobject python-dbus python-tappy)
-provides=(libtracker-sparql-3.0.so)
-groups=(gnome)
-_commit=91ca7285ceaa531ef79b83cbeb467bae53257dae  # tags/3.1.2^0
+_commit=14bad8081141ca58237ea3894ed3bb3a5ce31de9  # tags/3.2.0^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -38,6 +37,29 @@ check() {
   dbus-run-session meson test -C build --print-errorlogs -t 3
 }
 
-package() {
-  meson install -C build --destdir "$pkgdir"
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
 }
+
+package_tracker3() {
+  provides=(libtracker-sparql-3.0.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+  _pick docs usr/share/{devhelp,doc}
+}
+
+package_tracker3-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+  mv docs/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
