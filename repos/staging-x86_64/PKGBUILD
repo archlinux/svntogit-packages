@@ -1,0 +1,77 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=nautilus
+pkgname=(nautilus libnautilus-extension)
+pkgver=40.2+7+g67c7bdbf8
+pkgrel=1
+pkgdesc="Default file manager for GNOME"
+url="https://wiki.gnome.org/Apps/Files"
+arch=(x86_64)
+license=(GPL)
+depends=(libgexiv2 gnome-desktop gvfs dconf tracker3 tracker3-miners
+         gnome-autoar gst-plugins-base-libs libhandy libportal)
+makedepends=(gobject-introspection git gtk-doc meson appstream-glib)
+checkdepends=(python-gobject)
+_commit=67c7bdbf8757c51d3b1bc1f5c40eaeddef9e3a89  # gnome-40
+source=("git+https://gitlab.gnome.org/GNOME/nautilus.git#commit=$_commit"
+        "git+https://gitlab.gnome.org/GNOME/libgd.git")
+sha256sums=('SKIP'
+            'SKIP')
+
+prepare() {
+  cd $pkgbase
+
+  git submodule init
+  git submodule set-url subprojects/libgd "$srcdir/libgd"
+  git submodule update
+}
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+build() {
+  arch-meson $pkgbase build \
+    -D docs=true \
+    -D packagekit=false
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_nautilus() {
+  depends+=(libnautilus-extension)
+  optdepends=('nautilus-sendto: Send files via mail extension')
+  groups=(gnome)
+
+  meson install -C build --destdir "$pkgdir"
+
+### Split libnautilus-extension
+
+  _pick libne "$pkgdir"/usr/include
+  _pick libne "$pkgdir"/usr/lib/{girepository-1.0,libnautilus-extension*,pkgconfig}
+  _pick libne "$pkgdir"/usr/share/{gir-1.0,gtk-doc}
+}
+
+package_libnautilus-extension() {
+  pkgdesc="Library for extending the $pkgdesc"
+  depends=(gtk3)
+  provides=(libnautilus-extension.so)
+  mv libne/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
