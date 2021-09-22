@@ -3,8 +3,8 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=sudo
-_sudover=1.9.8p1
-pkgrel=2
+_sudover=1.9.8p2
+pkgrel=1
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
@@ -18,21 +18,16 @@ backup=('etc/pam.d/sudo'
         'etc/sudoers')
 install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
-        fix-sudo-login-missing-NULL-terminator.patch
         sudo_logsrvd.service
         sudo.pam)
-sha256sums=('0939ee24df7095a92e0ca4aa3bd53b2a10965a7b921d51a26ab70cdd24388d69'
+sha256sums=('9e3b8b8da7def43b6e60c257abe80467205670fd0f7c081de1423c414b680f2d'
             'SKIP'
-            '9b9a304d6d2b1116a5733128f7258e58243607225d829bfe53c710b7bddcfcae'
             '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
 prepare() {
   cd "$srcdir/$pkgname-$_sudover"
-
-  # https://bugzilla.sudo.ws/show_bug.cgi?id=998
-  patch -Np1 -i ../fix-sudo-login-missing-NULL-terminator.patch
 }
 
 build() {
