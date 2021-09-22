@@ -3,7 +3,7 @@
 
 pkgname=libsoup
 pkgver=2.74.0
-pkgrel=1
+pkgrel=2
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
 arch=(x86_64)
@@ -33,9 +33,7 @@ build() {
 }
 
 check() {
-  # SSL test flaky
-  # https://gitlab.gnome.org/GNOME/libsoup/-/issues/188
-  meson test -C build --print-errorlogs || :
+  meson test -C build --print-errorlogs
 }
 
 package() {
