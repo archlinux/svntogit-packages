@@ -1,17 +1,17 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: György Balló <ballogy@freestart.hu>
 
-pkgname=gssdp
-pkgver=1.2.3
+pkgbase=gssdp
+pkgname=(gssdp gssdp-docs)
+pkgver=1.4.0.1
 pkgrel=1
 pkgdesc="A GObject-based API for handling resource discovery and announcement over SSDP"
 url="https://wiki.gnome.org/Projects/GUPnP"
 arch=(x86_64)
 license=(LGPL)
 depends=(glib2 libsoup)
-makedepends=(gobject-introspection gtk-doc vala meson git gtk3)
-optdepends=('gtk3: gssdp-device-sniffer')
-_commit=a4eb74313a3df17c3ac5b99f3131522e6e8bccf4  # tags/gssdp-1.2.3^0
+makedepends=(gobject-introspection gi-docgen vala meson git gtk4)
+_commit=4e742a15cde4c330828d17c14185080cd7a6e9a0  # tags/gssdp-1.4.0.1^0
 source=("git+https://gitlab.gnome.org/GNOME/gssdp.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -33,9 +33,29 @@ check() {
   meson test -C build --print-errorlogs
 }
 
-package() {
-  depends+=(libg{lib,object,io}-2.0.so libsoup-2.4.so)
-  provides+=(libgssdp-1.2.so)
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
 
-  DESTDIR="$pkgdir" meson install -C build
+package_gssdp() {
+  depends+=(libg{lib,object,io}-2.0.so libsoup-2.4.so)
+  optdepends=('gtk4: gssdp-device-sniffer')
+  provides=(libgssdp-1.2.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+  _pick docs usr/share/doc
+}
+
+package_gssdp-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+  mv docs/* "$pkgdir"
 }
