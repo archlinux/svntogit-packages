@@ -40,7 +40,6 @@ prepare() {
     src="${src%%::*}"
     src="${src##*/}"
     [[ $src = *.patch ]] || continue
-    msg2 "Applying patch $src..."
     patch -Np1 < "../$src"
   done
 }
