@@ -3,8 +3,8 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=92.0
-pkgrel=2
+pkgver=92.0.1
+pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -24,7 +24,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         0001-Use-remoting-name-for-GDK-application-names.patch
         0002-Bug-1731495-Don-t-typecheck-the-pipewire-session_han.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('299a472373021cc9194449c9f4bb962d5f74ef05e8af0448c589761ea34fbc84'
+sha256sums=('9096b22e162cd299080d5eef8f3627a71a594ceba2b89e3000f2c3e8ea603eb1'
             'SKIP'
             'd7c7a65c4b7ec9ea40df129724ffb369d3f775b0514e3c267c52eec6d284b5e6'
             '8f313d96c845723f54996d660a201d747dfa8da791f19a827aba55cb81261e38'
