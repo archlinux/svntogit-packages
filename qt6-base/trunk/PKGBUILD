@@ -26,14 +26,16 @@ groups=(qt6)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
         qt6-base-cflags.patch
-        qt6-base-nostrip.patch)
+        qt6-base-nostrip.patch
+        qtbug-96392.patch::https://code.qt.io/cgit/qt/qtbase.git/patch/?id=5c7b3db32bf383afa00050370222f39e0f3083ca)
 sha256sums=('1e9abb2ea4daa0fd11f46fc871d9e896b916e1b7130fed74c83d66221bb4fe78'
             'cf707cd970650f8b60f8897692b36708ded9ba116723ec8fcd885576783fe85c'
             '4b93f6a79039e676a56f9d6990a324a64a36f143916065973ded89adc621e094')
 
 prepare() {
-  patch -d $_pkgfn -p1 -i ../qt6-base-cflags.patch # Use system CFLAGS
-  patch -d $_pkgfn -p1 -i ../qt6-base-nostrip.patch # Don't strip binaries with qmake
+  patch -d $_pkgfn -p1 < qt6-base-cflags.patch # Use system CFLAGS
+  patch -d $_pkgfn -p1 < qt6-base-nostrip.patch # Don't strip binaries with qmake
+  patch -d $_pkgfn -p1 < qtbug-96392.patch # https://bugreports.qt.io/browse/QTBUG-96392
 }
 
 build() {
@@ -50,8 +52,7 @@ build() {
     -DINSTALL_EXAMPLESDIR=share/doc/qt6/examples \
     -DQT_FEATURE_journald=ON \
     -DQT_FEATURE_openssl_linked=ON \
-    -DQT_FEATURE_system_sqlite=ON \
-    -DCMAKE_CXX_FLAGS="${CXXFLAGS} -DUSE_X11" # https://bugreports.qt.io/browse/QTBUG-96392
+    -DQT_FEATURE_system_sqlite=ON
   cmake --build build
 }
 
