@@ -4,7 +4,7 @@
 
 pkgname=mercurial
 pkgver=5.9.1
-pkgrel=1
+pkgrel=2
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
@@ -63,7 +63,7 @@ package() {
 
   # set some variables
   install -m755 -d "$pkgdir/etc/profile.d"
-  install -m755 "$srcdir/mercurial.profile" "$pkgdir/etc/profile.d/mercurial.sh"
+  install -m644 "$srcdir/mercurial.profile" "$pkgdir/etc/profile.d/mercurial.sh"
 
   # FS#38825 - Add certs config to package
   install -m755 -d "$pkgdir/etc/mercurial"
