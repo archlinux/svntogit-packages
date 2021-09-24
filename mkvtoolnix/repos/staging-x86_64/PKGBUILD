@@ -1,0 +1,94 @@
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: xduugu <xduugu@gmx.com>
+
+pkgbase=mkvtoolnix
+pkgname=(
+  mkvtoolnix-cli
+  mkvtoolnix-gui
+)
+pkgver=61.0.0
+pkgrel=2
+pkgdesc='Set of tools to create, edit and inspect Matroska files'
+arch=(x86_64)
+url=https://mkvtoolnix.download/
+license=(GPL2)
+depends=(
+  gcc-libs
+  glibc
+  libebml.so
+  libfmt.so
+  libmatroska.so
+  pugixml
+  qt5-base
+)
+makedepends=(
+  boost
+  cmark
+  docbook-xsl
+  flac
+  git
+  libdvdread
+  libvorbis
+  po4a
+  qt5-multimedia
+  qt5-tools
+  ruby-rake
+  zlib
+)
+_tag=d596c62bfd7d7dd854e5fdabbbc23b0e35c2e2b3
+#source=(git+https://gitlab.com/mbunkus/mkvtoolnix.git?signed#tag=${_tag})
+source=(git+https://gitlab.com/mbunkus/mkvtoolnix.git#tag=${_tag})
+validpgpkeys=(D9199745B0545F2E8197062B0F92290A445B9007) # Moritz Bunkus <moritz@bunkus.org>
+sha256sums=(SKIP)
+
+prepare() {
+  cd mkvtoolnix
+  ./autogen.sh
+}
+
+pkgver() {
+  cd mkvtoolnix
+  git describe --tags | sed 's/release-//'
+}
+
+build() {
+  cd mkvtoolnix
+  ./configure \
+    --prefix=/usr \
+    --disable-update-check
+  rake $MAKEFLAGS
+}
+
+package_mkvtoolnix-cli() {
+  depends+=(
+    libdvdread
+    libFLAC.so
+    libogg.so
+    libvorbis.so
+    zlib
+  )
+
+  cd mkvtoolnix
+  rake DESTDIR="${pkgdir}" install
+  rm -rf "${pkgdir}"/usr/share/{applications,icons,metainfo,mime,mkvtoolnix}
+  find "${pkgdir}" -name mkvtoolnix-gui* -delete
+}
+
+package_mkvtoolnix-gui() {
+  depends=(
+    cmark
+    hicolor-icon-theme
+    mkvtoolnix-cli
+    qt5-multimedia
+  )
+
+  cd mkvtoolnix
+  rake DESTDIR="${pkgdir}" install
+  rm -rf "${pkgdir}"/usr/share/locale
+  for t in mkv{extract,info,merge,propedit}; do
+    find "${pkgdir}" -name $t* -delete
+  done
+}
+
+# vim: ts=2 sw=2 et:
