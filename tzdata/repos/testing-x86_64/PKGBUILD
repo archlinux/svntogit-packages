@@ -1,0 +1,51 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=tzdata
+pkgver=2021b
+_tzcode=2021b
+_tzdata=2021b
+pkgrel=1
+pkgdesc="Sources for time zone and daylight saving time data"
+arch=('x86_64')
+url="https://www.iana.org/time-zones"
+license=('custom: public domain')
+options=('!emptydirs')
+source=(https://www.iana.org/time-zones/repository/releases/tzcode${_tzcode}.tar.gz{,.asc}
+        https://www.iana.org/time-zones/repository/releases/${pkgname}${_tzdata}.tar.gz{,.asc})
+sha512sums=('00fca7508cfbc42123065fe8087397c9dd2acbdda96f3bb0936187825348cf13538f1893f2d02bd8bfa3465427ca7a9a65451baffe39889bc58ba0a77a047806'
+            'SKIP'
+            'ca61d64af5ae791f337533c09d2b4f7caa645ecab7b9d13e9bcafc47c7c68535abe7c103c56bbd41d6bd913a8607f9c5187c8ce8a91b4891a750a643f89c8b51'
+            'SKIP')
+validpgpkeys=('7E3792A9D8ACF7D633BC1588ED97E90E62AA7E34') # Paul Eggert <eggert@cs.ucla.edu>
+
+timezones=('africa' 'antarctica' 'asia' 'australasia'
+           'europe' 'northamerica' 'southamerica'
+           'etcetera' 'backward' 'factory')
+
+prepare() {
+  sed -i "s:sbin:bin:g" Makefile
+}
+
+build() {
+  make LFLAGS=${LDFLAGS}
+}
+
+package() {
+  cd "${srcdir}"
+  # install tzcode stuff
+  make DESTDIR="${pkgdir}" install
+
+  # install tzdata stuff
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo ${timezones[@]}
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo/posix ${timezones[@]}
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo/right -L leapseconds ${timezones[@]}
+  # This creates the posixrules file. We use New York because POSIX requires the daylight savings time rules to be in accordance with US rules.   
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo -p America/New_York
+  install -m444 -t "${pkgdir}"/usr/share/zoneinfo iso3166.tab leap-seconds.list zone1970.tab zone.tab # zone.tab is depricated and will go soon
+  
+  # cleanup
+  rm "${pkgdir}/etc/localtime"
+
+  # install license
+  install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
