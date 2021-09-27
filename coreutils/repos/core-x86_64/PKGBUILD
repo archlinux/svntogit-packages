@@ -4,7 +4,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=coreutils
-pkgver=8.32
+pkgver=9.0
 pkgrel=1
 pkgdesc='The basic file, shell and text manipulation utilities of the GNU operating system'
 arch=('x86_64')
@@ -13,7 +13,7 @@ url='https://www.gnu.org/software/coreutils/'
 depends=('glibc' 'acl' 'attr' 'gmp' 'libcap' 'openssl')
 source=("https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig})
 validpgpkeys=('6C37DC12121A5006BC1DB804DF6FD971306037D9') # Pádraig Brady
-sha256sums=('4458d8de7849df44ccab15e16b1548b285224dbba5f08fac070c1c0e0bcc4cfa'
+sha256sums=('ce30acdf4a41bc5bb30dd955e9eaa75fa216b4e3deb08889ed32433c7b3b97ce'
             'SKIP')
 
 prepare() {
@@ -22,7 +22,7 @@ prepare() {
   local filename
   for filename in "${source[@]}"; do
     if [[ "$filename" =~ \.patch$ ]]; then
-      msg2 "Applying patch ${filename##*/}"
+      echo "Applying patch ${filename##*/}"
       patch -p1 -N -i "$srcdir/${filename##*/}"
     fi
   done
