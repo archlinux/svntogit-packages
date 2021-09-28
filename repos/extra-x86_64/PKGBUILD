@@ -2,8 +2,8 @@
 
 pkgbase=ghostscript
 pkgname=(ghostscript ghostxps ghostpcl)
-pkgver=9.54.0
-pkgrel=3
+pkgver=9.55.0
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 url="https://www.ghostscript.com/"
 arch=('x86_64')
@@ -12,10 +12,11 @@ depends=('libxt' 'libcups' 'fontconfig' 'zlib' 'libpng' 'libjpeg' 'jbig2dec'
          'libtiff' 'lcms2' 'dbus' 'libpaper' 'ijs' 'openjpeg2' 'libidn')
 makedepends=('gtk3' 'gnutls' 'glu' 'freeglut')
 # https://github.com/ArtifexSoftware/ghostpdl-downloads/releases
-source=(https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${pkgver//./}/ghostpdl-${pkgver}.tar.xz
-        CVE-2021-3781.patch)
-sha512sums=('fed500f5f267f0eeecc4ab44c2785ddaa9ad6965b689e9792021e2348296ee19150f10decb264a4689464088449be44fe8e6c30566a26e6e4e978c8b2d4654ec'
-            '26a625518b18433309ccf404cbe90e2240a75091ae8c38d197d5dce5e1ac7e3df73be83683b64de2d38f429ffa45cb3eda9ecf9388e40094a1ca84328457a8f4')
+source=(#https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${pkgver//./}/ghostpdl-${pkgver}.tar.xz
+        https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/ghostpdl-${pkgver/.0//}/ghostpdl-${pkgver}.tar.xz
+        2010_add_build_timestamp_setting.patch)
+sha512sums=('d23864be1548ce7c7ae61398f52c34c5485dfe74e78bf7ef16c8fa5690e2ea857cc9795409a70feda5ff78c27b3c2bbc0e0710d190763fca77137ee9c56a0fed'
+            'cd7794ee4f28b11177021b950196385200b610127ed6cb94a45e3202b690b721a0dfcc0276ff39448d4dab64c1b31a76e6c323696a8315aad9edc22077f18a3d')
 
 ### update jbig2dec first! ###
 
@@ -53,9 +54,11 @@ prepare() {
   # libs link unwanted to libgpdl that isn't installed
   rm -rf gpdl
 
+  # https://bugs.ghostscript.com/show_bug.cgi?id=704405
+  sed -i "s/gscms_transformm_color_const/gscms_transform_color_const/" base/gsicc_lcms2.c
 
-  # CVE-2021-3781 / CVE-2021-3781.patch
-  patch -Np1 -i ../CVE-2021-3781.patch
+  # Debian: # allow the build timestamp to be externally set
+  patch -Np1 -i ../2010_add_build_timestamp_setting.patch
 }
 
 build() {
@@ -66,12 +69,10 @@ build() {
               --with-jbig2dec \
               --with-x \
               --with-drivers=ALL \
-              --with-openprinting \
               --with-fontpath=/usr/share/fonts/gsfonts \
               --enable-fontconfig \
               --enable-freetype \
               --enable-openjpeg \
-              --without-luratech \
               --with-system-libtiff \
               --with-libpaper \
               --disable-compile-inits #--help # needed for linking with system-zlib
