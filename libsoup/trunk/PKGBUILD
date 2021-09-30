@@ -3,7 +3,7 @@
 
 pkgname=libsoup
 pkgver=2.74.0
-pkgrel=2
+pkgrel=3
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
 arch=(x86_64)
@@ -23,6 +23,7 @@ pkgver() {
 
 prepare() {
   cd $pkgname
+  git cherry-pick -n 80a7e4fb1cdfdb6f460e6fea076d8d5102b1d6e4
 }
 
 build() {
