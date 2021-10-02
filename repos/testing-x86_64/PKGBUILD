@@ -1,0 +1,51 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=tzdata
+pkgver=2021c
+_tzcode=2021c
+_tzdata=2021c
+pkgrel=1
+pkgdesc="Sources for time zone and daylight saving time data"
+arch=('x86_64')
+url="https://www.iana.org/time-zones"
+license=('custom: public domain')
+options=('!emptydirs')
+source=(https://www.iana.org/time-zones/repository/releases/tzcode${_tzcode}.tar.gz{,.asc}
+        https://www.iana.org/time-zones/repository/releases/${pkgname}${_tzdata}.tar.gz{,.asc})
+sha512sums=('9ed7677744058c58656b47d77d464bad6ef503f2892b53c6abe694e68e73fa123dfc5c11bbcbbb7798f0a6bf1da72b81f8f1c63670839b967e15e58d6d36adad'
+            'SKIP'
+            'e8de3a17c38f530b2ec39605699742dd32da5ee92ecf64accaaa5b012a1dac51d1f594adc52660602c3425016520346ab6ad614fa475eb310e17ccdcae93e6ca'
+            'SKIP')
+validpgpkeys=('7E3792A9D8ACF7D633BC1588ED97E90E62AA7E34') # Paul Eggert <eggert@cs.ucla.edu>
+
+_timezones=('africa' 'antarctica' 'asia' 'australasia'
+           'europe' 'northamerica' 'southamerica'
+           'etcetera' 'backward' 'factory')
+
+prepare() {
+  sed -i "s:sbin:bin:g" Makefile
+}
+
+build() {
+  make LFLAGS=${LDFLAGS}
+}
+
+package() {
+  cd "${srcdir}"
+  # install tzcode stuff
+  make DESTDIR="${pkgdir}" install
+
+  # install tzdata stuff
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo ${_timezones[@]}
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo/posix ${_timezones[@]}
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo/right -L leapseconds ${_timezones[@]}
+  # This creates the posixrules file. We use New York because POSIX requires the daylight savings time rules to be in accordance with US rules.   
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo -p America/New_York
+  install -m644 -t "${pkgdir}"/usr/share/zoneinfo iso3166.tab leap-seconds.list zone1970.tab zone.tab SECURITY # zone.tab is depricated and will go soon
+  
+  # cleanup
+  rm "${pkgdir}/etc/localtime"
+
+  # install license
+  install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
