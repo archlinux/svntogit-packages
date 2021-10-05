@@ -2,8 +2,8 @@
 # Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xkeyboard-config
-pkgver=2.33
-pkgrel=2
+pkgver=2.34
+pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
 license=('custom')
@@ -15,7 +15,7 @@ conflicts=('xkbdata')
 source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2{,.sig})
 validpgpkeys=('FFB4CCD275AAA422F5F9808E0661D98FC933A145')
 validpgpkeys+=('15CFA5C595041D2CCBEA155F1732AA424A0E86B4') # "Sergey Udaltsov (For GNOME-related tasks) <svu@gnome.org>"
-sha512sums=('084f79350d5dc7f9ebd5b5333d386459b0ab587f6cec27ee2d8d5c3a56b08993f9fafb9d893307f4d43cfeaf2e225c5295ad6297ae8287c68efc48a82638feb1'
+sha512sums=('cf3bdb658349b2db9db44ea1a0f7060b890b95520319101d83ba5aefeb0b1e2fd578b6f72a90758438f04bffbe7536cf112b76297fd47c95e02029fd203c51fb'
             'SKIP')
 
 build() {
