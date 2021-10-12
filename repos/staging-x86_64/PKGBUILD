@@ -1,0 +1,73 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gst-plugins-good
+pkgname=(gst-plugins-good gst-plugin-gtk gst-plugin-qmlgl)
+pkgver=1.18.5
+pkgrel=2
+pkgdesc="Multimedia graph framework - good plugins"
+url="https://gstreamer.freedesktop.org/"
+arch=(x86_64)
+license=(LGPL)
+depends=(libpulse libsoup gst-plugins-base-libs wavpack aalib taglib libdv libshout libvpx
+         gdk-pixbuf2 libcaca libavc1394 libiec61883 libxdamage v4l-utils cairo libgudev speex flac
+         libraw1394 lame mpg123 twolame)
+makedepends=(python git meson jack2 gtk3 qt5-{tools,declarative,x11extras,wayland} nasm)
+checkdepends=(gst-plugins-base xorg-server-xvfb)
+options=(!emptydirs)
+_commit=56dec037a80266add6853e4b06e2dc379de757d1  # tags/1.18.5^0
+source=("git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-good.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build \
+    -D doc=disabled \
+    -D rpicamsrc=disabled \
+    -D gobject-cast-checks=disabled \
+    -D package-name="GStreamer Good Plugins (Arch Linux)" \
+    -D package-origin="https://www.archlinux.org/"
+  meson compile -C build
+}
+
+check() (
+  mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
+  export XDG_RUNTIME_DIR
+
+  xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
+)
+
+package_gst-plugins-good() {
+  depends+=(libjack.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  for _x in gtk qmlgl; do
+    mkdir -p "$_x/lib/gstreamer-1.0"
+    _f="lib/gstreamer-1.0/libgst${_x}.so"
+    mv "$pkgdir/usr/$_f" "$_x/$_f"
+  done
+}
+
+package_gst-plugin-gtk() {
+  pkgdesc="${pkgdesc%-*}- gtk plugin"
+  depends=(gst-plugins-base-libs gtk3)
+
+  mv gtk "$pkgdir/usr"
+}
+
+package_gst-plugin-qmlgl() {
+  pkgdesc="${pkgdesc%-*}- qmlgl plugin"
+  depends=(gst-plugins-base-libs qt5-{declarative,x11extras,wayland})
+
+  mv qmlgl "$pkgdir/usr"
+}
