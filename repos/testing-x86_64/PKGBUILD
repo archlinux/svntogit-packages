@@ -13,7 +13,7 @@ pkgname=(
 )
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=6.1.0
-pkgrel=3
+pkgrel=4
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
@@ -181,7 +181,7 @@ package_qemu() {
     usbredir
     virglrenderer
     vde2
-    vte2 libvte-2.91.so
+    vte3 libvte-2.91.so
     zlib
     zstd libzstd.so
   )
