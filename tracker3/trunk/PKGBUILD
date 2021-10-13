@@ -13,8 +13,7 @@ license=(GPL)
 depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp json-glib
          libsoup3)
 makedepends=(gobject-introspection vala git hotdoc bash-completion meson
-             asciidoc systemd libsoup)
-checkdepends=(python-gobject python-dbus python-tappy)
+             asciidoc systemd libsoup python-gobject python-dbus python-tappy)
 _commit=14bad8081141ca58237ea3894ed3bb3a5ce31de9  # tags/3.2.0^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
 sha256sums=('SKIP')
