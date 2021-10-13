@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Wed, 13 Oct 2021 17:33:05 +0000
+Subject: [PATCH] tracker3: Don't create connection in static constructor
+
+bus_new will wait for work in the GDBus thread to be completed. However,
+further type initialization in the GDBus thread will block on the GType
+class_init_rec_mutex we're already holding and we end up in a deadlock.
+---
+ .../tracker3/rygel-tracker-root-container.vala   | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/src/plugins/tracker3/rygel-tracker-root-container.vala b/src/plugins/tracker3/rygel-tracker-root-container.vala
+index c5d3b25a55d6..c7f722a81ce8 100644
+--- a/src/plugins/tracker3/rygel-tracker-root-container.vala
++++ b/src/plugins/tracker3/rygel-tracker-root-container.vala
+@@ -34,15 +34,15 @@ public class Rygel.Tracker.RootContainer : Rygel.SimpleContainer {
+ 
+     public static Sparql.Connection connection;
+ 
+-    static construct {
+-        try {
+-            RootContainer.connection = Sparql.Connection.bus_new (TRACKER_SERVICE, null);
+-        } catch (Error err) {
+-            error ("Failed to connect to tracker: %s", err.message);
+-        }
+-    }
+-
+     public RootContainer (string title) {
++        if (RootContainer.connection == null) {
++            try {
++                RootContainer.connection = Sparql.Connection.bus_new (TRACKER_SERVICE, null);
++            } catch (Error err) {
++                error ("Failed to connect to tracker: %s", err.message);
++            }
++        }
++
+         base.root (title);
+ 
+         if (this.get_bool_config_without_error ("share-music")) {
