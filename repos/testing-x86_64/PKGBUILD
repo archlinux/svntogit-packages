@@ -13,7 +13,7 @@ pkgname=(
 )
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=6.1.0
-pkgrel=4
+pkgrel=5
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
@@ -138,7 +138,7 @@ package_qemu() {
   depends=(
     alsa-lib libasound.so
     bzip2 libbz2.so
-    cairo libcairo.so
+    cairo
     curl libcurl.so
     dtc
     fuse3
