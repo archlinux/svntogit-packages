@@ -4,27 +4,33 @@
 pkgname=qt5-webengine
 _qtver=5.15.6
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 'libxkbfile' 
          'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx' 'libxtst' 'ttf-font')
-makedepends=('git' 'python2' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs')
+makedepends=('git' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs')
 optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn=qtwebengine
 source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
         git+https://code.qt.io/qt/qtwebengine-chromium.git
+        git+https://chromium.googlesource.com/catapult#commit=5eedfe23148a234211ba477f76fc2ea2e8529189
         chromium-harfbuzz-3.0.0.patch
         skia-harfbuzz-3.0.0.patch
-        qt5-webengine-glibc-2.33.patch)
+        qt5-webengine-glibc-2.33.patch
+        qt5-webengine-python3.patch
+        qt5-webengine-chromium-python3.patch)
 sha256sums=('SKIP'
+            'SKIP'
             'SKIP'
             '7ce947944a139e66774dfc7249bf7c3069f07f83a0f1b2c1a1b14287a7e15928'
             'dae11dec5088eb1b14045d8c9862801a342609c15701d7c371e1caccf46e1ffd'
-            '2294e5390c869963fc58f7bf1ee0a254a3f7fce3ed00c04e34a5f03e2b31b624')
+            '2294e5390c869963fc58f7bf1ee0a254a3f7fce3ed00c04e34a5f03e2b31b624'
+            '45ccf4ff981a26656e5105259f71a3ce386d4a7112cbf09e41cb61615b355435'
+            'c15954ab938ec6235c5d9756753773896691a77ff6a5bf7ef183122f5d04f022')
 
 prepare() {
   mkdir -p build
@@ -40,6 +46,12 @@ prepare() {
   patch -p1 -d src/3rdparty/chromium/third_party/skia -i "$srcdir"/skia-harfbuzz-3.0.0.patch
 
   patch -p1 -i "$srcdir"/qt5-webengine-glibc-2.33.patch # Fix text rendering when building with glibc 2.33
+  patch -p1 -i "$srcdir"/qt5-webengine-python3.patch # Fix build with Python 3
+  patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-chromium-python3.patch
+
+# Update catapult for python3 compatibility
+  rm -r src/3rdparty/chromium/third_party/catapult
+  mv "$srcdir"/catapult src/3rdparty/chromium/third_party
 }
 
 build() {
