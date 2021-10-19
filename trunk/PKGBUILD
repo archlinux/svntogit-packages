@@ -5,13 +5,13 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv)
 pkgver=4.5.4
-pkgrel=1
+pkgrel=2
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
 url='https://opencv.org/'
 depends=(tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment)
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment pugixml openmpi)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
             'glew: for the viz module'
@@ -22,14 +22,17 @@ optdepends=('opencv-samples: samples'
 source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
         https://github.com/opencv/opencv_contrib/archive/$pkgver/opencv_contrib-$pkgver.tar.gz
         opencv-lapack-3.10.patch
-        fix-cvv-build.patch::https://github.com/opencv/opencv_contrib/commit/2a4348e0.patch)
+        fix-cvv-build.patch::https://github.com/opencv/opencv_contrib/commit/2a4348e0.patch
+        vtk9.patch)
 sha256sums=('c20bb83dd790fc69df9f105477e24267706715a9d3c705ca1e7f613c7b3bad3d'
             'ad74b440b4539619dc9b587995a16b691246023d45e34097c73e259f72de9f81'
             'f83c64f2731a39910d0d4a48898dd04e4aca5c22f746b7b0ead003992ae11199'
-            'a992cbdfe40730c584df41b9d18ab6c799bf060a67cf4332e5e3301b95720369')
+            'a992cbdfe40730c584df41b9d18ab6c799bf060a67cf4332e5e3301b95720369'
+            'f35a2d4ea0d6212c7798659e59eda2cb0b5bc858360f7ce9c696c77d3029668e')
 
 prepare() {
   patch -d $pkgname-$pkgver -p1 < opencv-lapack-3.10.patch # Fix build with LAPACK 3.10
+  patch -d $pkgname-$pkgver -p1 < vtk9.patch # Don't require all vtk optdepends
   patch -d opencv_contrib-$pkgver -p1 < fix-cvv-build.patch # Fix build of cvv module
 }
 
