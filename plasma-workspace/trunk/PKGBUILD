@@ -5,8 +5,8 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.23.0
-pkgrel=2
+pkgver=5.23.1
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -16,20 +16,14 @@ depends=(knotifyconfig ksystemstats ktexteditor libqalculate kde-cli-tools appst
          plasma-integration kpeople kactivities-stats libkscreen kquickcharts kuserfeedback kio-extras kio-fuse)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt plasma-wayland-protocols kunitconversion kinit)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam
-        https://invent.kde.org/plasma/plasma-workspace/-/commit/d5a3e749.patch)
-sha256sums=('49abcb19639a72eb5ffa916d5eca0a925d32a36e4a02658cc73ab479dea39965'
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
+sha256sums=('fbf979f857b3cdcc8fe6dc45c3a1d9dfe297e1120aa551a02faa339abb81efad'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
-            'e6ecddf47b689c12349dc4e4fd108fa9dac7fb969e73c40a82e8a6e3a6dd18d5')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
-
-prepare() {
-  patch -d $pkgname-$pkgver -p1 < d5a3e749.patch # Fix password field in SDDM theme
-}
 
 build() {
   cmake -B build -S $pkgbase-$pkgver \
