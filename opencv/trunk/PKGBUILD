@@ -3,15 +3,15 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgbase=opencv
-pkgname=(opencv opencv-samples python-opencv)
+pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.5.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
 url='https://opencv.org/'
 depends=(tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment pugixml openmpi)
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment pugixml openmpi cudnn)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
             'glew: for the viz module'
@@ -39,34 +39,38 @@ prepare() {
 build() {
   export JAVA_HOME="/usr/lib/jvm/default"
   # cmake's FindLAPACK doesn't add cblas to LAPACK_LIBRARIES, so we need to specify them manually
-  _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
-  cmake -B build -S $pkgname-$pkgver \
-    -DWITH_OPENCL=ON \
-    -DWITH_OPENGL=ON \
-    -DWITH_TBB=ON \
-    -DWITH_VULKAN=ON \
-    -DWITH_QT=ON \
-    -DBUILD_WITH_DEBUG_INFO=OFF \
-    -DBUILD_TESTS=OFF \
-    -DBUILD_PERF_TESTS=OFF \
-    -DBUILD_EXAMPLES=ON \
-    -DINSTALL_C_EXAMPLES=ON \
-    -DINSTALL_PYTHON_EXAMPLES=ON \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCPU_BASELINE_DISABLE=SSE3 \
-    -DCPU_BASELINE_REQUIRE=SSE2 \
-    -DOPENCV_EXTRA_MODULES_PATH="$srcdir/opencv_contrib-$pkgver/modules" \
-    -DOPENCV_SKIP_PYTHON_LOADER=ON \
-    -DOPENCV_PYTHON3_INSTALL_PATH=$_pythonpath \
-    -DLAPACK_LIBRARIES="/usr/lib/liblapack.so;/usr/lib/libblas.so;/usr/lib/libcblas.so" \
-    -DLAPACK_CBLAS_H="/usr/include/cblas.h" \
-    -DLAPACK_LAPACKE_H="/usr/include/lapacke.h" \
-    -DOPENCV_GENERATE_PKGCONFIG=ON \
-    -DOPENCV_ENABLE_NONFREE=ON \
-    -DOPENCV_JNI_INSTALL_PATH=lib \
-    -DOPENCV_GENERATE_SETUPVARS=OFF \
-    -DEIGEN_INCLUDE_PATH=/usr/include/eigen3
+  _opts="-DWITH_OPENCL=ON \
+         -DWITH_OPENGL=ON \
+         -DWITH_TBB=ON \
+         -DWITH_VULKAN=ON \
+         -DWITH_QT=ON \
+         -DBUILD_WITH_DEBUG_INFO=OFF \
+         -DBUILD_TESTS=OFF \
+         -DBUILD_PERF_TESTS=OFF \
+         -DBUILD_EXAMPLES=ON \
+         -DINSTALL_C_EXAMPLES=ON \
+         -DINSTALL_PYTHON_EXAMPLES=ON \
+         -DCMAKE_INSTALL_PREFIX=/usr \
+         -DCPU_BASELINE_DISABLE=SSE3 \
+         -DCPU_BASELINE_REQUIRE=SSE2 \
+         -DOPENCV_EXTRA_MODULES_PATH=$srcdir/opencv_contrib-$pkgver/modules \
+         -DOPENCV_SKIP_PYTHON_LOADER=ON \
+         -DLAPACK_LIBRARIES=/usr/lib/liblapack.so;/usr/lib/libblas.so;/usr/lib/libcblas.so \
+         -DLAPACK_CBLAS_H=/usr/include/cblas.h \
+         -DLAPACK_LAPACKE_H=/usr/include/lapacke.h \
+         -DOPENCV_GENERATE_PKGCONFIG=ON \
+         -DOPENCV_ENABLE_NONFREE=ON \
+         -DOPENCV_JNI_INSTALL_PATH=lib \
+         -DOPENCV_GENERATE_SETUPVARS=OFF \
+         -DEIGEN_INCLUDE_PATH=/usr/include/eigen3"
+ 
+  cmake -B build -S $pkgname-$pkgver $_opts
   cmake --build build
+
+  cmake -B build-cuda -S $pkgname-$pkgver $_opts \
+    -DWITH_CUDA=ON \
+    -DWITH_CUDNN=ON
+  cmake --build build-cuda
 }
 
 package_opencv() {
@@ -107,4 +111,26 @@ package_python-opencv() {
 
   # install license file
   install -Dm644 $pkgbase-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
+}
+
+package_opencv-cuda() {
+  pkgdesc+=" (with CUDA support)"
+  depends+=(cudnn)
+  conflicts=(opencv)
+  provides=(opencv)
+
+  DESTDIR="$pkgdir" cmake --install build-cuda
+
+  # install license file
+  install -Dm644 $pkgbase-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
+
+  # Split samples
+  rm -r "$pkgdir"/usr/share/opencv4/samples
+
+  # Add java symlinks expected by some binary blobs
+  ln -sr "$pkgdir"/usr/share/java/{opencv4/opencv-${pkgver//./},opencv}.jar
+  ln -sr "$pkgdir"/usr/lib/{libopencv_java${pkgver//./},libopencv_java}.so
+
+  # Split Python bindings
+  rm -r "$pkgdir"/usr/lib/python3*
 }
