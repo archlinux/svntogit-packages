@@ -7,16 +7,16 @@
 pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
 epoch=1
 pkgver=1.56.0
-pkgrel=2
+pkgrel=3
 
-_llvm_ver=12.0.1
+_llvm_ver=13.0.0
 
 pkgdesc='Systems programming language focused on safety, speed and concurrency'
 url='https://www.rust-lang.org/'
 arch=('x86_64')
 license=('MIT' 'Apache')
 
-makedepends=('rust' "llvm12=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
+makedepends=('rust' "llvm=$_llvm_ver" 'libffi' 'lib32-gcc-libs' 'perl' 'python'
              'curl' 'cmake' 'musl' 'ninja')
 checkdepends=('procps-ng' 'gdb')
 
@@ -31,7 +31,7 @@ source=(
 )
 sha256sums=('cd0fd72d698deb3001c18e0f4bf8261d8f86420097eef94ca3a1fe047f2df43f'
             'SKIP'
-            'b4c8d5f2a802332987c1c0a95b5afb35b1a66a96fe44add4e4ed4792c4cba0a4'
+            '4c3602d76c7868a96b30c36165c4b7643e2a20173fced7e071b4baeb2d74db3f'
             'SKIP'
             'a2a8a7c6a5732f79cc92f81d3c8380589c4e2b9a996fb565bbefe42f66b62597'
             '0f8cfbe0387dd62909fe9cb9523223ae1c2319494e2caf5fa4d0592198631b3e'
@@ -119,7 +119,7 @@ build() {
 }
 
 package_rust() {
-  depends=('gcc-libs' 'llvm12-libs' 'curl' 'libssh2')
+  depends=('gcc-libs' 'llvm-libs' 'curl' 'libssh2')
   optdepends=('lldb: rust-lldb script'
               'gdb: rust-gdb script')
   provides=('cargo' 'rustfmt')
