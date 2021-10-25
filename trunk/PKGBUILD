@@ -3,8 +3,8 @@
 
 pkgbase=lvm2
 pkgname=('lvm2' 'device-mapper')
-_tag='91a82455813bebce0949cb681369f370ce3105d5' # git rev-parse v${pkgver//./_}
-pkgver=2.03.13
+_tag='1d0d96a8fe7f7268d1a22e33237f6ff55f96f5cb' # git rev-parse v${pkgver//./_}
+pkgver=2.03.14
 pkgrel=1
 arch=('x86_64')
 url='https://sourceware.org/lvm2/'
@@ -13,27 +13,31 @@ makedepends=('git' 'systemd' 'thin-provisioning-tools')
 validpgpkeys=('88437EF5C077BD113D3B7224228191C1567E2C17'  # Alasdair G Kergon <agk@redhat.com>
               'D501A478440AE2FD130A1BE8B9112431E509039F') # Marian Csontos <marian.csontos@gmail.com>
 source=("git+https://sourceware.org/git/lvm2.git#tag=${_tag}?signed"
-        '0001-pvscan-wait-for-udevd.patch'
+        '0001-udev-initcpio.patch'
         'lvm2_install'
         '11-dm-initramfs.rules')
 sha256sums=('SKIP'
-            '69976608c4e8217f504c4ce964ab21cea722134cd9b3d0109283b3e2f3a33fbe'
-            '1c06b4f9ea244b6d0824ab1ad8cc0336047238e33b6d14b61b8447e6f2243615'
+            'db540799e8810c0976b354792074b4956693df985564aa1ae37bc60414b22cf1'
+            '00228d69679d5db15860bdf6b92746a146d0952f0d1bd27c74886ce6f22bf216'
             'e10f24b57582d6e2da71f7c80732a62e0ee2e3b867fe84591ccdb53e80fa92e0')
 
 _backports=(
+  # The path is known anyway and should be the bullet proof option.
+  '221e75316f472fbf5eb2ad206b861ea255c099ed'
 )
 
 prepare() {
   cd lvm2/
-
-  patch -Np1 < ../0001-pvscan-wait-for-udevd.patch
 
   local _c
   for _c in "${_backports[@]}"; do
     git log --oneline -1 "${_c}"
     git show "${_c}" -- ':(exclude)WHATS_NEW' | git apply
   done
+
+  # prepare for non-systemd initcpio
+  cp udev/69-dm-lvm.rules.in udev/69-dm-lvm-initcpio.rules.in
+  patch -Np1 < ../0001-udev-initcpio.patch
 
   # remove install section from systemd units that are enabled by default
   sed -i -e '/^\[Install\]$/,$d' \
@@ -43,50 +47,37 @@ prepare() {
 }
 
 build() {
-  local _CONFIGUREOPTS=(
-    CONFIG_SHELL=/bin/bash
-    --prefix=/usr
-    --sbindir=/usr/bin
-    --sysconfdir=/etc
-    --localstatedir=/var
-    --enable-cmdlib
-    --enable-dmeventd
-    --enable-lvmpolld
-    --enable-pkgconfig
-    --enable-readline
-    --enable-udev_rules
-    --enable-udev_sync
-    --with-cache=internal
-    --with-default-dm-run-dir=/run
-    --with-default-locking-dir=/run/lock/lvm
-    --with-default-pid-dir=/run
-    --with-default-run-dir=/run/lvm
-    --with-systemdsystemunitdir=/usr/lib/systemd/system
-    --with-thin=internal
-    --with-udev-prefix=/usr
-  )
-
   # build system requires bash:
   # https://www.redhat.com/archives/linux-lvm/2020-January/msg00004.html
   # https://www.gnu.org/software/autoconf/manual/autoconf-2.69/html_node/Defining-Variables.html
   export CONFIG_SHELL=/bin/bash
 
-  cp -a lvm2/ lvm2-initramfs/
-
   cd lvm2/
 
   ./configure \
-    "${_CONFIGUREOPTS[@]}" \
-    --enable-udev-systemd-background-jobs
+    CONFIG_SHELL=/bin/bash \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --enable-cmdlib \
+    --enable-dmeventd \
+    --enable-lvmpolld \
+    --enable-pkgconfig \
+    --enable-readline \
+    --enable-udev_rules \
+    --enable-udev_sync \
+    --with-cache=internal \
+    --with-default-dm-run-dir=/run \
+    --with-default-locking-dir=/run/lock/lvm \
+    --with-default-pid-dir=/run \
+    --with-default-run-dir=/run/lvm \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-thin=internal \
+    --with-udev-prefix=/usr
   make
 
-  # Build legacy udev rule for initramfs
-  cd ../lvm2-initramfs
-  ./configure \
-    "${_CONFIGUREOPTS[@]}" \
-    --enable-udev-systemd-background-jobs=no
-  cd udev
-  make 69-dm-lvm-metad.rules
+  make -C udev/ 69-dm-lvm-initcpio.rules
 }
 
 package_device-mapper() {
@@ -127,7 +118,7 @@ package_lvm2() {
   install -D -m0644 "${srcdir}/lvm2_install" "${pkgdir}/usr/lib/initcpio/install/lvm2"
   ln -s /usr/lib/initcpio/install/lvm2 "${pkgdir}/usr/lib/initcpio/install/sd-lvm2"
   # extra udev rule for non-systemd initramfs
-  install -D -m0644 "${srcdir}/lvm2-initramfs/udev/69-dm-lvm-metad.rules" "${pkgdir}/usr/lib/initcpio/udev/69-dm-lvm-metad.rules"
+  install -D -m0644 udev/69-dm-lvm-initcpio.rules "${pkgdir}/usr/lib/initcpio/udev/69-dm-lvm.rules"
   # systemd support
   make DESTDIR="${pkgdir}" install_systemd_units
   rm -f "${pkgdir}/usr/lib/systemd/system/"dm-*
