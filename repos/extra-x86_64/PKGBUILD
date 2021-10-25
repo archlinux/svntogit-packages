@@ -2,7 +2,7 @@
 # Contributor: Eric Bélanger <eric@archlinux.org>
 
 pkgname=webkit2gtk
-pkgver=2.32.4
+pkgver=2.34.1
 pkgrel=1
 pkgdesc="Web content engine for GTK"
 url="https://webkitgtk.org"
@@ -21,7 +21,7 @@ optdepends=('geoclue: Geolocation support'
             'gst-plugins-bad: media decoding'
             'gst-libav: nonfree media decoding')
 source=($url/releases/webkitgtk-$pkgver.tar.xz{,.asc})
-sha256sums=('00ce2d3f798d7bc5e9039d9059f0c3c974d51de38c8b716f00e94452a177d3fd'
+sha256sums=('443c1316705de024741748e85fe32324d299d9ee68e6feb340b89e4a04073dee'
             'SKIP')
 validpgpkeys=('D7FCF61CF9A2DEAB31D81BD3F3D322D0EC4582C3'  # Carlos Garcia Campos <cgarcia@igalia.com>
               '5AA3BC334FD7E3369E7C77B291C559DBE4C9123B') # Adrián Pérez de Castro <aperez@igalia.com>
@@ -38,6 +38,7 @@ build() {
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DCMAKE_SKIP_RPATH=ON \
+    -DUSE_SOUP2=ON \
     -DENABLE_GTKDOC=ON \
     -DENABLE_MINIBROWSER=ON
   cmake --build build
