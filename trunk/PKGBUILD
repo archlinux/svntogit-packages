@@ -4,7 +4,7 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
-pkgver=470.74
+pkgver=495.44
 pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -16,7 +16,7 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
-            '21e4290d98bbbf09eed7be32df8743f0adf728f9e88869afb02fc1d0f0be87cf42af2d4f04322a76d68a1704ef044e83cd403377e60af917ff3ec0a04985801a')
+            'bc9054e6028ba172906e6eb9a0b8f5cfc3ae74d57f3e95e0f9057879e3af07a4b19479e80d81e948872bc47bbd674f77f5f81d4debd2e2c3ce45058cd9211802')
 
 
 create_links() {
@@ -100,8 +100,19 @@ package_nvidia-utils() {
 
     cd "${_pkg}"
 
+    # Check http://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/README/installedcomponents.html
+    # for hints on what needs to be installed where.
+
     # X driver
     install -D -m755 nvidia_drv.so "${pkgdir}/usr/lib/xorg/modules/drivers/nvidia_drv.so"
+
+    # Wayland/GBM
+    install -D -m755 libnvidia-egl-gbm.so.1* -t "${pkgdir}/usr/lib/"
+    install -D -m644 15_nvidia_gbm.json "${pkgdir}/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"
+    install -D -m755 libnvidia-egl-wayland.so.1* -t "${pkgdir}/usr/lib/"
+    install -D -m644 10_nvidia_wayland.json "${pkgdir}/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"
+    mkdir -p "${pkgdir}/usr/lib/gbm"
+    ln -sr "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/gbm/nvidia-drm_gbm.so"
 
     # firmware
     install -D -m644 firmware/gsp.bin "${pkgdir}/usr/lib/firmware/nvidia/${pkgver}/gsp.bin"
@@ -126,12 +137,12 @@ package_nvidia-utils() {
     install -D -m755 "libnvidia-glsi.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glsi.so.${pkgver}"
 
     # misc
-    install -D -m755 "libnvidia-ifr.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ifr.so.${pkgver}"
     install -D -m755 "libnvidia-fbc.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-fbc.so.${pkgver}"
     install -D -m755 "libnvidia-encode.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-encode.so.${pkgver}"
     install -D -m755 "libnvidia-cfg.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-cfg.so.${pkgver}"
     install -D -m755 "libnvidia-ml.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ml.so.${pkgver}"
     install -D -m755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glvkspirv.so.${pkgver}"
+    install -D -m755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}"
 
     # Vulkan ICD
     install -D -m644 "nvidia_icd.json" "${pkgdir}/usr/share/vulkan/icd.d/nvidia_icd.json"
@@ -153,7 +164,6 @@ package_nvidia-utils() {
     # raytracing
     install -D -m755 "libnvoptix.so.${pkgver}" "${pkgdir}/usr/lib/libnvoptix.so.${pkgver}"
     install -D -m755 "libnvidia-rtcore.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-rtcore.so.${pkgver}"
-    install -D -m755 "libnvidia-cbl.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-cbl.so.${pkgver}"
 
     # NGX
     install -D -m755 nvidia-ngx-updater "${pkgdir}/usr/bin/nvidia-ngx-updater"
