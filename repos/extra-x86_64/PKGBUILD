@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.5.4
-pkgrel=3
+pkgrel=4
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
@@ -91,8 +91,8 @@ package_opencv() {
 }
 
 package_opencv-samples() {
-  pkgdesc+=" (samples)"
-  depends=("opencv=$pkgver")
+  pkgdesc+=' (samples)'
+  depends=(opencv)
   unset optdepends
 
   mkdir -p "$pkgdir"/usr/share/opencv4
@@ -103,7 +103,7 @@ package_opencv-samples() {
 }
 
 package_python-opencv() {
-  pkgdesc="Python bindings for OpenCV"
+  pkgdesc='Python bindings for OpenCV'
   depends=(python-numpy opencv vtk glew qt5-base hdf5)
   unset optdepends
 
@@ -114,10 +114,10 @@ package_python-opencv() {
 }
 
 package_opencv-cuda() {
-  pkgdesc+=" (with CUDA support)"
+  pkgdesc+=' (with CUDA support)'
   depends+=(cudnn)
   conflicts=(opencv)
-  provides=(opencv)
+  provides=(opencv=$pkgver)
 
   DESTDIR="$pkgdir" cmake --install build-cuda
 
