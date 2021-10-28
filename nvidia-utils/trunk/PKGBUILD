@@ -5,7 +5,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=495.44
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -109,8 +109,6 @@ package_nvidia-utils() {
     # Wayland/GBM
     install -D -m755 libnvidia-egl-gbm.so.1* -t "${pkgdir}/usr/lib/"
     install -D -m644 15_nvidia_gbm.json "${pkgdir}/usr/share/egl/egl_external_platform.d/15_nvidia_gbm.json"
-    install -D -m755 libnvidia-egl-wayland.so.1* -t "${pkgdir}/usr/lib/"
-    install -D -m644 10_nvidia_wayland.json "${pkgdir}/usr/share/egl/egl_external_platform.d/10_nvidia_wayland.json"
     mkdir -p "${pkgdir}/usr/lib/gbm"
     ln -sr "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/gbm/nvidia-drm_gbm.so"
 
@@ -143,6 +141,7 @@ package_nvidia-utils() {
     install -D -m755 "libnvidia-ml.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ml.so.${pkgver}"
     install -D -m755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glvkspirv.so.${pkgver}"
     install -D -m755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}"
+    install -D -m755 "libnvidia-vulkan-producer.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-vulkan-producer.so.${pkgver}"
 
     # Vulkan ICD
     install -D -m644 "nvidia_icd.json" "${pkgdir}/usr/share/vulkan/icd.d/nvidia_icd.json"
