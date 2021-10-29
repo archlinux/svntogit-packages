@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.5.4
-pkgrel=4
+pkgrel=5
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
@@ -104,7 +104,7 @@ package_opencv-samples() {
 
 package_python-opencv() {
   pkgdesc='Python bindings for OpenCV'
-  depends=(python-numpy opencv vtk glew qt5-base hdf5)
+  depends=(python-numpy opencv vtk glew qt5-base hdf5 jsoncpp openmpi pugixml)
   unset optdepends
 
   DESTDIR="$pkgdir" cmake --install build/modules/python3
