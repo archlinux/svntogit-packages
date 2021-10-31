@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=4.4
-pkgrel=5
+pkgrel=1
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -99,10 +99,8 @@ source=(
   git+https://git.ffmpeg.org/ffmpeg.git#tag=${_tag}
   vmaf-model-path.patch
 )
-sha256sums=(
-  SKIP
-  8dff51f84a5f7460f8893f0514812f5d2bd668c3276ef7ab7713c99b71d7bd8d
-)
+sha256sums=('SKIP'
+            '8dff51f84a5f7460f8893f0514812f5d2bd668c3276ef7ab7713c99b71d7bd8d')
 
 pkgver() {
   cd ffmpeg
