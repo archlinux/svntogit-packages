@@ -15,8 +15,7 @@ makedepends=('xorgproto' 'pixman' 'libx11' 'mesa' 'mesa-libgl' 'xtrans'
              'libxmu' 'libxrender' 'libxi' 'libxaw' 'libxtst' 'libxres'
              'xorg-xkbcomp' 'xorg-util-macros' 'xorg-font-util' 'libepoxy'
              'xcb-util' 'xcb-util-image' 'xcb-util-renderutil' 'xcb-util-wm' 'xcb-util-keysyms'
-             'libxshmfence' 'libunwind' 'systemd' 'meson' 'git'
-             'wayland-protocols' 'egl-wayland')
+             'libxshmfence' 'libunwind' 'systemd' 'meson' 'git')
 source=(https://xorg.freedesktop.org/releases/individual/xserver/${pkgbase}-${pkgver}.tar.xz{,.sig}
         xserver-autobind-hotplug.patch
         0001-v2-FS-58644.patch
@@ -65,8 +64,6 @@ build() {
     -D xcsecurity=true \
     -D xorg=true \
     -D xephyr=true \
-    -D xwayland=true \
-    -D xwayland_eglstream=true \
     -D glamor=true \
     -D udev=true \
     -D systemd_logind=true \
@@ -188,7 +185,6 @@ package_xorg-server-devel() {
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" "${pkgbase}-${pkgver}"/COPYING
 
   # make sure there are no files left to install
-  rm fakeinstall/usr/bin/Xwayland
   rm -rf fakeinstall/usr/bin/cvt fakeinstall/usr/share/man/man1/cvt.1
   find fakeinstall -depth -print0 | xargs -0 rmdir
 }
