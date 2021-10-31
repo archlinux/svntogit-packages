@@ -5,7 +5,7 @@ pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xvfb' 'xorg-server-xnest'
          'xorg-server-common' 'xorg-server-devel')
 pkgver=1.20.13
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
@@ -110,7 +110,7 @@ package_xorg-server() {
   pkgdesc="Xorg X server"
   depends=(libepoxy libxfont2 pixman xorg-server-common libunwind
            dbus libgl xf86-input-libinput nettle
-           libpciaccess libdrm libxshmfence) # FS#52949
+           libpciaccess libdrm libxshmfence libxcvt) # FS#52949
 
   # see xorg-server-*/hw/xfree86/common/xf86Module.h for ABI versions - we provide major numbers that drivers can depend on
   # and /usr/lib/pkgconfig/xorg-server.pc in xorg-server-devel pkg
@@ -119,12 +119,12 @@ package_xorg-server() {
   replaces=('glamor-egl' 'xf86-video-modesetting')
   install=xorg-server.install
 
-  _install fakeinstall/usr/bin/{Xorg,cvt,gtf}
+  _install fakeinstall/usr/bin/{Xorg,gtf}
   ln -s /usr/bin/Xorg "${pkgdir}/usr/bin/X"
   _install fakeinstall/usr/lib/Xorg{,.wrap}
   _install fakeinstall/usr/lib/xorg/modules/*
   _install fakeinstall/usr/share/X11/xorg.conf.d/10-quirks.conf
-  _install fakeinstall/usr/share/man/man1/{Xorg,Xorg.wrap,cvt,gtf}.1
+  _install fakeinstall/usr/share/man/man1/{Xorg,Xorg.wrap,gtf}.1
   _install fakeinstall/usr/share/man/man4/{exa,fbdevhw,modesetting}.4
   _install fakeinstall/usr/share/man/man5/{Xwrapper.config,xorg.conf,xorg.conf.d}.5
 
@@ -189,5 +189,6 @@ package_xorg-server-devel() {
 
   # make sure there are no files left to install
   rm fakeinstall/usr/bin/Xwayland
+  rm -rf fakeinstall/usr/bin/cvt fakeinstall/usr/share/man/man1/cvt.1
   find fakeinstall -depth -print0 | xargs -0 rmdir
 }
