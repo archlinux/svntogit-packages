@@ -6,8 +6,8 @@
 
 pkgname=('rust' 'lib32-rust-libs' 'rust-musl' 'rust-docs')
 epoch=1
-pkgver=1.56.0
-pkgrel=3
+pkgver=1.56.1
+pkgrel=1
 
 _llvm_ver=13.0.0
 
@@ -29,7 +29,7 @@ source=(
   0001-cargo-Change-libexec-dir.patch
   0002-compiler-Change-LLVM-targets.patch
 )
-sha256sums=('cd0fd72d698deb3001c18e0f4bf8261d8f86420097eef94ca3a1fe047f2df43f'
+sha256sums=('c3898dfaadaa193dc88ddbc5345946a163211b58621df1cfff70186b4fc79511'
             'SKIP'
             '4c3602d76c7868a96b30c36165c4b7643e2a20173fced7e071b4baeb2d74db3f'
             'SKIP'
