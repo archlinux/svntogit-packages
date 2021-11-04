@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.10.77
-pkgrel=2
+pkgrel=3
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -18,7 +18,7 @@ source=(
   config         # the main kernel config file
   0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
   0002-gcc-plugins-modern-gcc-plugin-infrastructure-requres.patch
-  fix-gpu-hang.patch
+  fix-gpu-hang.diff
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -41,7 +41,7 @@ prepare() {
 
   # fix amd gpu hang - https://bugs.archlinux.org/task/72620
   # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit/?h=v5.10.77&id=c21b4002214c1c7e7b627b9b53375612f7aab6db
-  patch -Rp1 -i ../fix-gpu-hang.patch
+  patch -Rp1 -i ../fix-gpu-hang.diff
 
   echo "Setting version..."
   scripts/setlocalversion --save-scmversion
