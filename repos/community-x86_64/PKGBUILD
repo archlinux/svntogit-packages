@@ -1,0 +1,72 @@
+# Maintainer: Jelle van der Waa <jelle@archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
+# Contributor: Jingbei Li <i@jingbei.li>
+
+pkgname=libwebsockets
+pkgver=4.3.0
+pkgrel=1
+pkgdesc="C library for websocket clients and servers"
+arch=('x86_64')
+url="https://libwebsockets.org"
+license=('MIT')
+depends=('glibc' 'openssl' 'libuv' 'libev' 'zlib')
+makedepends=('cmake' 'glib2' 'libcap')
+provides=('libwebsockets.so')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/warmcat/libwebsockets/archive/v$pkgver.tar.gz")
+sha512sums=('7f183cb0417a902cb18e76431a8580d87db09c973483f3a129e138e4644b9d0e78e0539e985dc6286d9fe429edea7f63147864dc0413cf8e40fca3d67f9c3c42')
+b2sums=('6ea48fedf3755f55885f32bc289513182cf735472c161f15d720a76ddfa54e5e2c2d93a343f98d941d14b88f8ca8a13039922f8669b85562c5c0c4312f878b98')
+
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # -Werror, not even once
+  sed '/Werror/d' -i CMakeLists.txt
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  # NOTE: set LWS_BUILD_HASH explicitely as it can otherwise only be set using
+  # git
+  cmake -D CMAKE_INSTALL_PREFIX=/usr \
+        -D CMAKE_BUILD_TYPE='None' \
+        -D LWS_BUILD_HASH="no_hash" \
+        -D LWS_IPV6=ON \
+        -D LWS_LINK_TESTAPPS_DYNAMIC=ON \
+        -D LWS_WITH_ACME=ON \
+        -D LWS_WITH_DISKCACHE=ON \
+        -D LWS_WITH_EXTERNAL_POLL=ON \
+        -D LWS_WITH_FTS=ON \
+        -D LWS_WITH_GLIB=ON \
+        -D LWS_WITH_HTTP2=ON \
+        -D LWS_WITH_HTTP_PROXY=ON \
+        -D LWS_WITH_LIBEV=ON \
+        -D LWS_WITH_LIBEVENT=OFF \
+        -D LWS_WITH_LIBUV=ON \
+        -D LWS_WITH_LWSAC=ON \
+        -D LWS_WITH_RANGES=ON \
+        -D LWS_WITH_SOCKS5=ON \
+        -D LWS_WITH_STATIC=OFF \
+        -D LWS_WITH_THREADPOOL=ON \
+        -D LWS_WITH_ZIP_FOPS=ON \
+        -D LWS_WITHOUT_BUILTIN_GETIFADDRS=ON \
+        -D LWS_WITHOUT_BUILTIN_SHA1=ON \
+        -D LWS_WITHOUT_CLIENT=OFF \
+        -D LWS_WITHOUT_SERVER=OFF \
+        -D LWS_WITHOUT_TESTAPPS=ON \
+        -D LWS_WITHOUT_TEST_CLIENT=ON \
+        -D LWS_WITHOUT_TEST_PING=ON \
+        -D LWS_WITHOUT_TEST_SERVER=OFF \
+        -D LWS_WITHOUT_TEST_SERVER_EXTPOLL=ON \
+        -D LWS_UNIX_SOCK=ON \
+        -Wno-dev \
+        -B build \
+        -S .
+  make VERBOSE=1 -C build
+}
+
+package() {
+  depends+=('libcap.so' 'libglib-2.0.so')
+  cd "$pkgname-$pkgver"
+  make DESTDIR="${pkgdir}" install -C build
+  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
