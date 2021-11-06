@@ -1,0 +1,242 @@
+diff --git a/avogadro/qtplugins/coloropacitymap/coloropacitymap.cpp b/avogadro/qtplugins/coloropacitymap/coloropacitymap.cpp
+index 2ec4ea3a..ff412948 100644
+--- a/avogadro/qtplugins/coloropacitymap/coloropacitymap.cpp
++++ b/avogadro/qtplugins/coloropacitymap/coloropacitymap.cpp
+@@ -180,7 +180,7 @@ void ColorOpacityMap::render()
+   auto widget = ActiveObjects::instance().activeWidget();
+   auto vtkWidget = qobject_cast<VTK::vtkGLWidget*>(widget);
+   if (vtkWidget) {
+-    vtkWidget->GetRenderWindow()->Render();
++    vtkWidget->renderWindow()->Render();
+     vtkWidget->update();
+   }
+ }
+diff --git a/avogadro/qtplugins/coloropacitymap/histogramwidget.cpp b/avogadro/qtplugins/coloropacitymap/histogramwidget.cpp
+index de4c36ad..dc647145 100644
+--- a/avogadro/qtplugins/coloropacitymap/histogramwidget.cpp
++++ b/avogadro/qtplugins/coloropacitymap/histogramwidget.cpp
+@@ -42,8 +42,8 @@ HistogramWidget::HistogramWidget(QWidget* parent)
+   : QWidget(parent), m_qvtk(new QVTKGLWidget(this))
+ {
+   // Set up our little chart.
+-  m_histogramView->SetRenderWindow(m_qvtk->GetRenderWindow());
+-  m_histogramView->SetInteractor(m_qvtk->GetInteractor());
++  m_histogramView->SetRenderWindow(m_qvtk->renderWindow());
++  m_histogramView->SetInteractor(m_qvtk->interactor());
+   m_histogramView->GetScene()->AddItem(m_histogramColorOpacityEditor);
+ 
+   // Connect events from the histogram color/opacity editor.
+diff --git a/avogadro/qtplugins/coloropacitymap/qvtkwidget.cpp b/avogadro/qtplugins/coloropacitymap/qvtkwidget.cpp
+index 95afd55c..a8936112 100644
+--- a/avogadro/qtplugins/coloropacitymap/qvtkwidget.cpp
++++ b/avogadro/qtplugins/coloropacitymap/qvtkwidget.cpp
+@@ -12,12 +12,12 @@
+ namespace Avogadro {
+ 
+ QVTKGLWidget::QVTKGLWidget(QWidget* parent, Qt::WindowFlags f)
+-  : QVTKOpenGLWidget(parent, f)
++  : QVTKOpenGLStereoWidget(parent, f)
+ {
+   // Set some defaults for our render window.
+   vtkNew<vtkGenericOpenGLRenderWindow> window;
+-  SetRenderWindow(window);
+-  auto glFormat = QVTKOpenGLWidget::defaultFormat();
++  setRenderWindow(window);
++  auto glFormat = QVTKOpenGLStereoWidget::defaultFormat();
+   glFormat.setSamples(8);
+   setFormat(glFormat);
+ }
+diff --git a/avogadro/qtplugins/coloropacitymap/qvtkwidget.h b/avogadro/qtplugins/coloropacitymap/qvtkwidget.h
+index a3a6ca42..32d43d4a 100644
+--- a/avogadro/qtplugins/coloropacitymap/qvtkwidget.h
++++ b/avogadro/qtplugins/coloropacitymap/qvtkwidget.h
+@@ -4,11 +4,11 @@
+ #ifndef AVOGADRO_QTPLUGINS_QVTKGLWidget_H
+ #define AVOGADRO_QTPLUGINS_QVTKGLWidget_H
+ 
+-#include <QVTKOpenGLWidget.h>
++#include <QVTKOpenGLStereoWidget.h>
+ 
+ namespace Avogadro {
+ 
+-class QVTKGLWidget : public QVTKOpenGLWidget
++class QVTKGLWidget : public QVTKOpenGLStereoWidget
+ {
+   Q_OBJECT
+ 
+@@ -17,7 +17,7 @@ class QVTKGLWidget : public QVTKOpenGLWidget
+                Qt::WindowFlags f = Qt::WindowFlags());
+   ~QVTKGLWidget() override;
+ 
+-  void setEnableHiDPI(bool enable) override;
++  void setEnableHiDPI(bool enable);
+ };
+ } // namespace Avogadro
+ 
+diff --git a/avogadro/vtk/CMakeLists.txt b/avogadro/vtk/CMakeLists.txt
+index 3c567d489..afcf59375 100644
+--- a/avogadro/vtk/CMakeLists.txt
++++ b/avogadro/vtk/CMakeLists.txt
+@@ -11,13 +11,21 @@ endif()
+ 
+ find_package(Qt5 COMPONENTS Widgets REQUIRED)
+ 
++find_package(VTK QUIET COMPONENTS CommonCore)
++if(VTK_MAJOR_VERSION GREATER 8)
++  set(VCP "") # shorthand for VTK_COMPONENT_PREFIX
++  set(VMP "VTK::") # shorthand for VTK_MODULE_PREFIX
++else()
++  set(VCP "vtk")
++  set(VMP "vtk")
++  include_directories(SYSTEM ${VTK_INCLUDE_DIRS})
++endif()
++
+ find_package(VTK
+-  COMPONENTS
+-    vtkRenderingOpenGL2 vtkGUISupportQt vtkDomainsChemistry
+-    vtkRenderingVolumeOpenGL2 vtkViewsCore vtkRenderingFreeType
+-    vtkChartsCore vtkViewsContext2D vtkRenderingContextOpenGL2
+-  REQUIRED)
+-include_directories(SYSTEM ${VTK_INCLUDE_DIRS})
++  REQUIRED COMPONENTS
++    ${VCP}RenderingOpenGL2 ${VCP}GUISupportQt ${VCP}DomainsChemistry
++    ${VCP}RenderingVolumeOpenGL2 ${VCP}ViewsCore ${VCP}RenderingFreeType
++    ${VCP}ChartsCore ${VCP}ViewsContext2D ${VCP}RenderingContextOpenGL2)
+ set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS ${VTK_DEFINITIONS})
+ 
+ set(HEADERS
+@@ -35,6 +43,6 @@ set(SOURCES
+ avogadro_add_library(AvogadroVtk ${HEADERS} ${SOURCES})
+ set_target_properties(AvogadroVtk PROPERTIES AUTOMOC TRUE)
+ target_link_libraries(AvogadroVtk AvogadroRendering AvogadroQtGui
+-  vtkRenderingOpenGL2 vtkGUISupportQt vtkRenderingVolumeOpenGL2
+-  vtkRenderingFreeType vtkInteractionStyle vtkChartsCore vtkViewsContext2D
+-  vtkRenderingContextOpenGL2 vtkDomainsChemistryOpenGL2 Qt5::Widgets)
++  ${VMP}RenderingOpenGL2 ${VMP}GUISupportQt ${VMP}RenderingVolumeOpenGL2
++  ${VMP}RenderingFreeType ${VMP}InteractionStyle ${VMP}ChartsCore ${VMP}ViewsContext2D
++  ${VMP}RenderingContextOpenGL2 ${VMP}DomainsChemistryOpenGL2 Qt5::Widgets)
+diff --git a/avogadro/vtk/vtkglwidget.cpp b/avogadro/vtk/vtkglwidget.cpp
+index 7ce08991..0192a2cf 100644
+--- a/avogadro/vtk/vtkglwidget.cpp
++++ b/avogadro/vtk/vtkglwidget.cpp
+@@ -123,7 +123,7 @@ void vtkGLWidget::cubeVolume(Core::Cube* cube)
+ }
+ 
+ vtkGLWidget::vtkGLWidget(QWidget* p, Qt::WindowFlags f)
+-  : QVTKOpenGLWidget(p, f), m_activeTool(nullptr), m_defaultTool(nullptr)
++  : QVTKOpenGLStereoWidget(p, f), m_activeTool(nullptr), m_defaultTool(nullptr)
+ {
+   setFocusPolicy(Qt::ClickFocus);
+   connect(&m_scenePlugins,
+@@ -131,13 +131,13 @@ vtkGLWidget::vtkGLWidget(QWidget* p, Qt::WindowFlags f)
+           SLOT(updateScene()));
+ 
+   // Set up our renderer, window, scene, etc.
+-  vtkNew<vtkGenericOpenGLRenderWindow> renderWindow;
+-  SetRenderWindow(renderWindow);
+-  GetRenderWindow()->AddRenderer(m_vtkRenderer);
+-  setFormat(QVTKOpenGLWidget::defaultFormat());
+-  vtkNew<vtkInteractorStyleTrackballCamera> interactor;
+-  GetInteractor()->SetInteractorStyle(interactor);
+-  GetInteractor()->Initialize();
++  vtkNew<vtkGenericOpenGLRenderWindow> renderWindow_;
++  setRenderWindow(renderWindow_);
++  renderWindow()->AddRenderer(m_vtkRenderer);
++  setFormat(QVTKOpenGLStereoWidget::defaultFormat());
++  vtkNew<vtkInteractorStyleTrackballCamera> interactor_;
++  interactor()->SetInteractorStyle(interactor_);
++  interactor()->Initialize();
+   m_vtkRenderer->SetBackground(1.0, 1.0, 1.0);
+ 
+   // m_actor->setScene(&this->renderer().scene());
+@@ -175,7 +175,7 @@ void vtkGLWidget::setMolecule(QtGui::Molecule* mol)
+   updateCube();
+   // Reset the camera, re-render.
+   m_vtkRenderer->ResetCamera();
+-  GetRenderWindow()->Render();
++  renderWindow()->Render();
+ }
+ 
+ void vtkGLWidget::updateCube()
+@@ -205,7 +205,7 @@ void vtkGLWidget::moleculeChanged(unsigned int c)
+   auto changes = static_cast<Molecule::MoleculeChanges>(c);
+   if (changes & Molecule::Added || changes & Molecule::Removed) {
+     updateCube();
+-    GetRenderWindow()->Render();
++    renderWindow()->Render();
+   }
+ }
+ 
+diff --git a/avogadro/vtk/vtkglwidget.h b/avogadro/vtk/vtkglwidget.h
+index 3c3e6046f..93e2e00e8 100644
+--- a/avogadro/vtk/vtkglwidget.h
++++ b/avogadro/vtk/vtkglwidget.h
+@@ -19,7 +19,7 @@
+ 
+ #include "avogadrovtkexport.h"
+ 
+-#include <QVTKOpenGLWidget.h>
++#include <QVTKOpenGLStereoWidget.h>
+ #include <vtkNew.h>
+ #include <vtkSmartPointer.h>
+ 
+@@ -50,7 +50,7 @@ class ToolPlugin;
+ 
+ namespace VTK {
+ 
+-class AVOGADROVTK_EXPORT vtkGLWidget : public QVTKOpenGLWidget
++class AVOGADROVTK_EXPORT vtkGLWidget : public QVTKOpenGLStereoWidget
+ {
+   Q_OBJECT
+ 
+diff --git a/avogadro/vtk/vtkplot.cpp b/avogadro/vtk/vtkplot.cpp
+index c76a5bf6..a0ec8f75 100644
+--- a/avogadro/vtk/vtkplot.cpp
++++ b/avogadro/vtk/vtkplot.cpp
+@@ -34,7 +34,7 @@
+ #include <vtkTextProperty.h>
+ 
+ #include <QSurfaceFormat>
+-#include <QVTKOpenGLWidget.h>
++#include <QVTKOpenGLStereoWidget.h>
+ 
+ #include "vtkplot.h"
+ 
+@@ -45,12 +45,12 @@ using std::vector;
+ namespace Avogadro {
+ namespace VTK {
+ 
+-VtkPlot::VtkPlot() : m_widget(new QVTKOpenGLWidget)
++VtkPlot::VtkPlot() : m_widget(new QVTKOpenGLStereoWidget)
+ {
+-  m_widget->SetRenderWindow(m_renderWindow);
++  m_widget->setRenderWindow(m_renderWindow);
+ 
+   // Set up the view
+-  m_widget->setFormat(QVTKOpenGLWidget::defaultFormat());
++  m_widget->setFormat(QVTKOpenGLStereoWidget::defaultFormat());
+   m_view->SetRenderWindow(m_renderWindow);
+   m_view->GetRenderer()->SetBackground(1.0, 1.0, 1.0);
+   m_view->GetRenderWindow()->SetSize(600, 600);
+diff --git a/avogadro/vtk/vtkplot.h b/avogadro/vtk/vtkplot.h
+index ef2150ac4..a39508376 100644
+--- a/avogadro/vtk/vtkplot.h
++++ b/avogadro/vtk/vtkplot.h
+@@ -26,7 +26,7 @@
+ #include <string>
+ #include <vector>
+ 
+-class QVTKOpenGLWidget;
++class QVTKOpenGLStereoWidget;
+ class vtkAxis;
+ class vtkChartXY;
+ class vtkContextView;
+@@ -99,7 +99,7 @@ private:
+   // Get a pointer to a particular axis. Returns nullptr if invalid.
+   vtkAxis* getAxis(Axis axis);
+ 
+-  std::unique_ptr<QVTKOpenGLWidget> m_widget;
++  std::unique_ptr<QVTKOpenGLStereoWidget> m_widget;
+   vtkNew<vtkTable> m_table;
+   vtkNew<vtkGenericOpenGLRenderWindow> m_renderWindow;
+   vtkNew<vtkContextView> m_view;
