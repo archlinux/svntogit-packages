@@ -4,16 +4,8 @@
 pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xvfb' 'xorg-server-xnest'
          'xorg-server-common' 'xorg-server-devel')
-<<<<<<< .mine
 pkgver=21.1.0
 pkgrel=1
-||||||| .r426734
-pkgver=1.20.13
-pkgrel=2
-=======
-pkgver=1.20.13
-pkgrel=3
->>>>>>> .r427393
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
@@ -97,15 +89,7 @@ package_xorg-server() {
   pkgdesc="Xorg X server"
   depends=(libepoxy libxfont2 pixman xorg-server-common libunwind
            dbus libgl xf86-input-libinput nettle
-<<<<<<< .mine
            libpciaccess libdrm libxshmfence libxcvt) # FS#52949
-||||||| .r426734
-           libpciaccess libdrm libxshmfence) # FS#52949
-
-=======
-           libpciaccess libdrm libxshmfence libxcvt) # FS#52949
-
->>>>>>> .r427393
   # see xorg-server-*/hw/xfree86/common/xf86Module.h for ABI versions - we provide major numbers that drivers can depend on
   # and /usr/lib/pkgconfig/xorg-server.pc in xorg-server-devel pkg
   provides=('X-ABI-VIDEODRV_VERSION=25.2' 'X-ABI-XINPUT_VERSION=24.4' 'X-ABI-EXTENSION_VERSION=10.0' 'x-server')
@@ -113,28 +97,12 @@ package_xorg-server() {
   replaces=('glamor-egl' 'xf86-video-modesetting')
   install=xorg-server.install
 
-<<<<<<< .mine
   _install fakeinstall/usr/bin/{X,Xorg,gtf}
-||||||| .r426734
-  _install fakeinstall/usr/bin/{Xorg,cvt,gtf}
-  ln -s /usr/bin/Xorg "${pkgdir}/usr/bin/X"
-=======
-  _install fakeinstall/usr/bin/{Xorg,gtf}
-  ln -s /usr/bin/Xorg "${pkgdir}/usr/bin/X"
->>>>>>> .r427393
   _install fakeinstall/usr/lib/Xorg{,.wrap}
   _install fakeinstall/usr/lib/xorg/modules/*
   _install fakeinstall/usr/share/X11/xorg.conf.d/10-quirks.conf
-<<<<<<< .mine
   _install fakeinstall/usr/share/man/man1/{Xorg,Xorg.wrap,gtf}.1
   _install fakeinstall/usr/share/man/man4/{exa,fbdevhw,inputtestdrv,modesetting}.4
-||||||| .r426734
-  _install fakeinstall/usr/share/man/man1/{Xorg,Xorg.wrap,cvt,gtf}.1
-  _install fakeinstall/usr/share/man/man4/{exa,fbdevhw,modesetting}.4
-=======
-  _install fakeinstall/usr/share/man/man1/{Xorg,Xorg.wrap,gtf}.1
-  _install fakeinstall/usr/share/man/man4/{exa,fbdevhw,modesetting}.4
->>>>>>> .r427393
   _install fakeinstall/usr/share/man/man5/{Xwrapper.config,xorg.conf,xorg.conf.d}.5
 
   # distro specific files must be installed in /usr/share/X11/xorg.conf.d
@@ -197,11 +165,5 @@ package_xorg-server-devel() {
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" "${pkgbase}-${pkgver}"/COPYING
 
   # make sure there are no files left to install
-<<<<<<< .mine
-||||||| .r426734
-  rm fakeinstall/usr/bin/Xwayland
-=======
-  rm -rf fakeinstall/usr/bin/cvt fakeinstall/usr/share/man/man1/cvt.1
->>>>>>> .r427393
   find fakeinstall -depth -print0 | xargs -0 rmdir
 }
