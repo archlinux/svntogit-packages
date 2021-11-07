@@ -1,0 +1,35 @@
+#Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=xf86-video-sisusb
+pkgver=0.9.7
+pkgrel=4
+pkgdesc="X.org SiS USB video driver"
+arch=(x86_64)
+url="https://xorg.freedesktop.org/"
+license=('custom')
+depends=('glibc')
+makedepends=('xorg-server-devel' 'X-ABI-VIDEODRV_VERSION=25.2')
+conflicts=('xorg-server<21.1.1' 'X-ABI-VIDEODRV_VERSION<25' 'X-ABI-VIDEODRV_VERSION>=26')
+source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2)
+sha256sums=('f4400416b920cd1136d60d36b99d33f245cdeaf2ad6c1340936c7c0987761424')
+
+build() {
+  cd ${pkgname}-${pkgver}
+
+  # Since pacman 5.0.2-2, hardened flags are now enabled in makepkg.conf
+  # With them, module fail to load with undefined symbol.
+  # See https://bugs.archlinux.org/task/55102 / https://bugs.archlinux.org/task/54845
+  export CFLAGS=${CFLAGS/-fno-plt}
+  export CXXFLAGS=${CXXFLAGS/-fno-plt}
+  export LDFLAGS=${LDFLAGS/,-z,now}
+
+  ./configure --prefix=/usr
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
