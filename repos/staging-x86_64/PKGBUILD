@@ -1,0 +1,83 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+
+pkgname=xf86-video-intel
+# https://cgit.freedesktop.org/xorg/driver/xf86-video-intel/log/
+# https://gitlab.freedesktop.org/xorg/driver/xf86-video-intel/commits/master
+_commit=31486f40f8e8f8923ca0799aea84b58799754564 # master 2021-01-15
+pkgver=2.99.917+916+g31486f40
+pkgrel=2
+epoch=1
+arch=(x86_64)
+url="https://01.org/linuxgraphics"
+license=('custom')
+install=$pkgname.install
+pkgdesc="X.org Intel i810/i830/i915/945G/G965+ video drivers"
+depends=('mesa' 'libxvmc' 'pixman' 'xcb-util>=0.3.9' 'systemd-libs')
+makedepends=('xorg-server-devel' 'X-ABI-VIDEODRV_VERSION=25.2' 'libx11' 'libxrender' 'libxv'
+             # additional deps for intel-virtual-output
+             'libxrandr' 'libxinerama' 'libxcursor' 'libxtst' 'libxss'
+             # additional for git snapshot
+             'git') # 'meson' 'valgrind')
+optdepends=('libxrandr: for intel-virtual-output'
+            'libxinerama: for intel-virtual-output'
+            'libxcursor: for intel-virtual-output'
+            'libxtst: for intel-virtual-output'
+            'libxss: for intel-virtual-output')
+replaces=('xf86-video-intel-uxa' 'xf86-video-intel-sna')
+provides=('xf86-video-intel-uxa' 'xf86-video-intel-sna')
+conflicts=('xorg-server<21.1.1' 'X-ABI-VIDEODRV_VERSION<25' 'X-ABI-VIDEODRV_VERSION>=26'
+           'xf86-video-intel-sna' 'xf86-video-intel-uxa' 'xf86-video-i810' 'xf86-video-intel-legacy')
+groups=('xorg-drivers')
+source=("git+https://anongit.freedesktop.org/git/xorg/driver/xf86-video-intel#commit=$_commit")
+sha256sums=('SKIP')
+#options=('!makeflags')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+
+#  mkdir build
+}
+
+build() {
+  cd $pkgname
+
+  # Since pacman 5.0.2-2, hardened flags are now enabled in makepkg.conf
+  # With them, module fail to load with undefined symbol.
+  # See https://bugs.archlinux.org/task/55102 / https://bugs.archlinux.org/task/54845
+  export CFLAGS=${CFLAGS/-fno-plt}
+  export CXXFLAGS=${CXXFLAGS/-fno-plt}
+  export LDFLAGS=${LDFLAGS/,-z,now}
+
+  ./configure --prefix=/usr \
+    --libexecdir=/usr/lib \
+    --with-default-dri=3
+  make
+#  cd build
+#  arch-meson $pkgname build \
+#   -Dwith-default-dri=3
+#  ninja -C build
+}
+
+check() {
+  cd $pkgname
+  make check
+#  meson test -C build
+}
+
+package() {
+  cd $pkgname
+
+  make DESTDIR="${pkgdir}" install
+
+#  DESTDIR="$pkgdir" ninja -C build install
+
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
