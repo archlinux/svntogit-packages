@@ -8,7 +8,7 @@ pkgbase=rust
 pkgname=(rust lib32-rust-libs rust-musl rust-wasm rust-src)
 epoch=1
 pkgver=1.56.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Systems programming language focused on safety, speed and concurrency"
 url=https://www.rust-lang.org/
 arch=(x86_64)
@@ -166,8 +166,8 @@ package_rust() {
   optdepends=('lldb: rust-lldb script'
               'gdb: rust-gdb script')
   provides=(cargo rustfmt)
-  conflicts=(cargo rustfmt 'rust-docs<1.56.1-2')
-  replaces=(cargo rustfmt cargo-tree 'rust-docs<1.56.1-2')
+  conflicts=(cargo rustfmt 'rust-docs<1:1.56.1-3')
+  replaces=(cargo rustfmt cargo-tree 'rust-docs<1:1.56.1-3')
 
   cp -a dest-rust/* "$pkgdir"
 }
