@@ -2,8 +2,8 @@
 # Contributor: Michael Pusterhofer <pusterhofer(at)student(dot)tugraz(dot)at>
 
 pkgname=itstool
-pkgver=2.0.6
-pkgrel=2
+pkgver=2.0.7
+pkgrel=1
 epoch=1
 pkgdesc="XML to PO and back again"
 arch=(any)
@@ -11,11 +11,11 @@ url="http://itstool.org/"
 license=(GPL3)
 depends=(python libxml2 docbook-xml)
 makedepends=(git)
-_commit=60f3a955ca047b1d62a1d952beec74afaff7cbbf  # tags/2.0.6^0
+_commit=f1c6544dcd83a73a5ccea9e0c48cf9a47e006190  # tags/2.0.7^0
 source=("git+https://github.com/itstool/itstool#commit=$_commit"
-        itstool-2.0.5-fix-crash-wrong-encoding.patch)
+        0001-Fix-the-crash-from-912099.patch)
 sha256sums=('SKIP'
-            'cb57e3694ab3d7c62b063629b2e9edc6327260c0797d0f33c8dc97fe37c40ebb')
+            'b43cea38118aaefa6724136d142dcc7099cd6de04cf2e226f53d4310dfe207cc')
 
 pkgver() {
   cd $pkgname
@@ -25,8 +25,8 @@ pkgver() {
 prepare() {
   cd $pkgname
 
-  # From https://src.fedoraproject.org/rpms/libxml2/tree/master
-  patch -Np1 -i ../itstool-2.0.5-fix-crash-wrong-encoding.patch
+  # https://src.fedoraproject.org/rpms/itstool/blob/rawhide/f/itstool-2.0.5-fix-crash-wrong-encoding.patch
+  git apply -3 ../0001-Fix-the-crash-from-912099.patch
 
   autoreconf -fvi
 }
