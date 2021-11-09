@@ -3,7 +3,7 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.40.4
+pkgver=3.42.1
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -14,7 +14,7 @@ depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
 options=(!emptydirs)
-_commit=3ab34e95b5faf3a548a2d4964c744f1f6dd89dbc  # tags/3.40.4^0
+_commit=5d813604683fed734d93e7738a9bb4408f56df07  # tags/3.42.1^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -37,6 +37,16 @@ build() {
   cmake --build build
 }
 
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
 package_evolution() {
   depends+=(libcamel-1.2.so libebook-1.2.so libebook-contacts-1.2.so
             libecal-2.0.so libedataserver-1.2.so libedataserverui-1.2.so)
@@ -47,12 +57,10 @@ package_evolution() {
 
   DESTDIR="$pkgdir" cmake --install build
 
-### Split
-  local x
+  cd "$pkgdir"
   for x in bogofilter spamassassin; do
-    mkdir -p $x/usr/{lib/evolution/modules,share/metainfo}
-    mv {"$pkgdir",$x}/usr/lib/evolution/modules/module-$x.so
-    mv {"$pkgdir",$x}/usr/share/metainfo/org.gnome.Evolution-$x.metainfo.xml
+    _pick $x usr/lib/evolution/modules/module-$x.so
+    _pick $x usr/share/metainfo/org.gnome.Evolution-$x.metainfo.xml
   done
 }
 
@@ -60,13 +68,11 @@ package_evolution() {
 package_evolution-bogofilter() {
   pkgdesc="Spam filtering for Evolution, using Bogofilter"
   depends=("evolution=$pkgver" bogofilter)
-
-  mv bogofilter/usr "$pkgdir"
+  mv bogofilter/* "$pkgdir"
 }
 
 package_evolution-spamassassin() {
   pkgdesc="Spam filtering for Evolution, using SpamAssassin"
   depends=("evolution=$pkgver" spamassassin)
-
-  mv spamassassin/usr "$pkgdir"
+  mv spamassassin/* "$pkgdir"
 }
