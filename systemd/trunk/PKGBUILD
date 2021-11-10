@@ -4,10 +4,10 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='f1d37a5c491d85255e9996960dc2889a15022b78' # git rev-parse v${_tag_name}
-_tag_name=249.5
+_tag='620928e8026166a00d31142f0b38ba8b8e498cc4' # git rev-parse v${_tag_name}
+_tag_name=249.6
 pkgver="${_tag_name/-/}"
-pkgrel=3
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -64,11 +64,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # coredumpctl: stop truncating information about coredump
-  '473627e1c9fcdf8f819ced2bb79cb7e9ff598b0c'
-
-  # Revert "core: Check unit start rate limiting earlier"
-  '4fa9d8f14523982482386d398d2b2669902f2098'
 )
 
 _reverts=(
