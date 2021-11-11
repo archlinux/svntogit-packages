@@ -1,57 +1,76 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgbase=wireplumber
-pkgname=('wireplumber' 'wireplumber-docs')
+pkgname=(wireplumber wireplumber-docs)
 pkgver=0.4.5
-pkgrel=1
+pkgrel=2
 pkgdesc="Session / policy manager implementation for PipeWire"
-arch=('x86_64')
 url="https://gitlab.freedesktop.org/pipewire/wireplumber"
-license=('MIT')
-makedepends=('cmake' 'cpptoml' 'doxygen' 'glib2' 'gobject-introspection'
-'hotdoc' 'lua' 'meson' 'pipewire' 'python-breathe' 'python-sphinx_rtd_theme'
-'python-sphinx' 'systemd')
-checkdepends=('pipewire-alsa' 'pipewire-jack' 'pipewire-pulse')
-source=("$pkgname-$pkgver.tar.gz::https://gitlab.freedesktop.org/pipewire/${pkgname}/-/archive/${pkgver}/${pkgname}-${pkgver}.tar.gz")
-sha512sums=('b0d5962e7a83709cc3115fbf0a04b63660085aeea2ebda6d78d692065ccb193cea8b44bb506fa440cf0b88bfae71a4f69a192cd6cba885ebf3c9270bea50c67a')
-b2sums=('177984901790228d8ddeb8ee2a548eb53db07c8077734590c3f964df36cfa47a4099e049ae9a19a136f4147c75b7122359a73b8387a641768f71484b9c4ab119')
+license=(MIT)
+arch=(x86_64)
+makedepends=(git meson doxygen graphviz 'pipewire>=0.3.37' systemd glib2 lua
+             gobject-introspection python-sphinx python-sphinx_rtd_theme
+             python-breathe python-lxml)
+_commit=3946457a7942a179c0f61c60de8cb8fc643391dd  # tags/0.4.5
+source=("$pkgbase::git+https://gitlab.freedesktop.org/pipewire/wireplumber.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+}
 
 build() {
-  cd "$pkgname-$pkgver"
-  arch-meson \
-    -Dsystem-lua=true \
-    -Delogind=disabled \
-    build
-  ninja -C build
+  local meson_options=(
+    -D system-lua=true
+    -D elogind=disabled
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
 }
 
 check() {
-  cd "$pkgname-$pkgver"
-  ninja -C build test || echo "Known to fail: https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/18"
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
 }
 
 package_wireplumber() {
-  depends=('gcc-libs' 'glibc' 'lua' 'libgio-2.0.so' 'libglib-2.0.so'
-  'libgmodule-2.0.so' 'libgobject-2.0.so' 'libpipewire-0.3.so')
-  optdepends=('wireplumber-docs: for documentation')
-  provides=('libwireplumber-0.4.so' 'pipewire-session-manager')
-  conflicts=('pipewire-media-session')
-  install="${pkgname}.install"
+  depends=('pipewire>=0.3.37' lua libpipewire-0.3.so libsystemd.so
+           libg{lib,module,object,io}-2.0.so)
+  optdepends=('wireplumber-docs: Documentation')
+  provides=(pipewire-session-manager libwireplumber-0.4.so)
+  conflicts=(pipewire-media-session)
+  install=wireplumber.install
 
-  cd "$pkgbase-$pkgver"
-  DESTDIR="${pkgdir}" meson install -C build
-  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -vDm 644 {NEWS,README}.rst -t "${pkgdir}/usr/share/doc/${pkgname}"
-  # remove files provided by wireplumber-docs
-  rm -frv "${pkgdir}/usr/share/doc/${pkgname}/html"
+  meson install -C build --destdir "$pkgdir"
+
+  _pick docs "$pkgdir"/usr/share/doc
+
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 $pkgbase/{NEWS,README}*
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
 }
 
 package_wireplumber-docs() {
-  pkgdesc+=" (documentation)"
+  pkgdesc+=" - documentation"
 
-  cd "$pkgbase-$pkgver"
-  DESTDIR="${pkgdir}" meson install -C build
-  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
-  # remove files provided by wireplumber
-  rm -frv "${pkgdir}/usr/"{bin,include,lib,share/{gir*,wireplumber}} "${pkgdir}/etc/"
+  mv docs/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
 }
+
+# vim:set sw=2 et:
