@@ -5,7 +5,7 @@
 
 pkgbase=elfutils
 pkgname=('debuginfod' 'elfutils' 'libelf')
-pkgver=0.185
+pkgver=0.186
 pkgrel=1
 pkgdesc='Handle ELF object files and DWARF debugging information'
 arch=('x86_64')
@@ -15,9 +15,9 @@ makedepends=('bzip2' 'curl' 'gcc-libs' 'libarchive' 'libmicrohttpd' 'sqlite'
 'xz' 'zlib' 'zstd')
 options=('staticlibs')
 source=("https://sourceware.org/${pkgbase}/ftp/${pkgver}/${pkgbase}-${pkgver}.tar.bz2"{,.sig})
-sha512sums=('34de0de1355b11740e036e0fc64f2fc063587c8eb121b19216ee5548d3f0f268d8fc3995176c47190466b9d881007cfa11a9d01e9a50e38af6119492bf8bb47f'
+sha512sums=('c9180b27ec62935f18b9431268d176f6023d1bb938731d2af6e7626ae460af6608a70ba68483aa1ec7e6cb0fa0528b661ca8b68bc4f58ea8e18af527c5950c78'
             'SKIP')
-b2sums=('57cfa7e4060975c4bf6170dbd354687a19a92f7069c060db1ac2fa4da5a9d34e8bddd07c7ce376b5c28b5670ad5b8c1df795164cbcfb600a44cf1db60c20c4af'
+b2sums=('49573d0a1f3519eab81d1ba3e94354cbc0935a36a94a3fdb22fe223a47b78cca8fd6e322870b0e335a809529fa6f54180b13c67936dec0242123c54ba20c9fc9'
         'SKIP')
 validpgpkeys=(
   '47CC0331081B8BC6D0FD4DA08370665B57816A6A'  # Mark J. Wielaard <mark@klomp.org>
@@ -25,24 +25,38 @@ validpgpkeys=(
 )
 
 prepare() {
+  (
   cd "$pkgbase-$pkgver"
   autoreconf -fiv
+  )
+
+  cp -av "$pkgbase-$pkgver" "$pkgbase-test-$pkgver"
+
 }
 
 build() {
+  (
   cd "$pkgbase-$pkgver"
+  ./configure --prefix=/usr \
+              --sysconfdir=/etc \
+              --program-prefix="eu-" \
+              --enable-deterministic-archives
+  make
+  )
+  (
+  cd "$pkgbase-test-$pkgver"
   CFLAGS+=" -g"  # required for test-suite success
   ./configure --prefix=/usr \
               --sysconfdir=/etc \
               --program-prefix="eu-" \
               --enable-deterministic-archives
   make
+  )
 }
 
 check() {
-  cd "$pkgbase-$pkgver"
-  # Some tests fail due to limited capabilities of build chroot
-  make check || echo "Known problem: The build environment might lack enough resources."
+  cd "$pkgbase-test-$pkgver"
+  make check
 }
 
 package_libelf() {
@@ -72,6 +86,7 @@ package_elfutils() {
   rm -rvf "${pkgdir}/usr/bin/debuginfod"* \
     "${pkgdir}/usr/share/man/man1/debuginfod"* \
     "${pkgdir}/usr/share/man/man3/debuginfod"* \
+    "${pkgdir}/usr/share/man/man7/" \
     "${pkgdir}/usr/share/man/man8/" \
     "${pkgdir}/etc"
 }
