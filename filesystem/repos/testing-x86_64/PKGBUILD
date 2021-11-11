@@ -2,7 +2,7 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2021.11.10
+pkgver=2021.11.11
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
@@ -17,8 +17,7 @@ source=('crypttab' 'env-generator' 'fstab' 'group' 'gshadow' 'host.conf' 'hosts'
         'issue' 'ld.so.conf' 'locale.sh' 'motd' 'nsswitch.conf' 'os-release'
         'passwd' 'profile' 'resolv.conf' 'securetty' 'shadow' 'shells' 'sysctl'
         'sysusers' 'tmpfiles' 'archlinux-logo.svg' 'archlinux-logo.png'
-        'archlinux-logo-text.svg' 'archlinux-logo-text.png'
-        'archlinux-logo-text-dark.svg' 'archlinux-logo-text-dark.png')
+        'archlinux-logo-text.svg' 'archlinux-logo-text-dark.svg')
 sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             'ed0cb4f1db4021f8c3b5ce78fdf91d2c0624708f58f36c9cf867f4d93c3bc6da'
             'e54626e74ed8fee4173b62a545ab1c3a3a069e4217a0ee8fc398d9933e9c1696'
@@ -43,10 +42,8 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             '618ac097441c1f2daffc9967e5c3cd18ea8866f776db62d04bf401c53907b1c9'
             '3ffe8ea4e98db43a3ec4dcca55fd4009cd8b8d220f0996aef7a5b427fdf65234'
             '3f48779141b68a81e07fee710a42025d4f67b16240295aa4cf148a7ba99cab3c'
-            '97a5ab8507975a77a2bf60e77dc4564cbaf346b8287c0f502242b84f3650e298'
-            'da99db955c8a62dad3466828c9c7882d81596662d6de38f375ea8ed7749e76cf'
-            'b38a57e9c1cd2db1c40559f37f480bb4b3432c000286686c7fce65d0a62f95f7'
-            '6b35aac215309aee9f097d4225035b2aa69e366671c6ba76d30727523ba25a34')
+            '601069e6e8920309178c397fd8cebe43410827d01899d31777d13212f0dfacf8'
+            '96e3cc81623c0537a19799f9eefa966fe46ff5f28a9dc7af1187990973baa127')
 
 package() {
   cd "$pkgdir"
@@ -130,9 +127,7 @@ package() {
   install -D -m755 "$srcdir"/env-generator usr/lib/systemd/system-environment-generators/10-arch
 
   # add logo
-  install -D -m644 "$srcdir"/archlinux-logo{,-text,-text-dark}.{svg,png} usr/share/pixmaps
-  ln -s archlinux-logo.png usr/share/pixmaps/archlinux-logo-dark.png
-  ln -s archlinux-logo.svg usr/share/pixmaps/archlinux-logo-dark.svg
+  install -D -m644 "$srcdir"/archlinux-logo{.png,.svg,-text.svg,-text-dark.svg} usr/share/pixmaps
 }
 
 # vim:set ts=2 sw=2 et:
