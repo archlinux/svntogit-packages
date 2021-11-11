@@ -7,7 +7,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='620928e8026166a00d31142f0b38ba8b8e498cc4' # git rev-parse v${_tag_name}
 _tag_name=249.6
 pkgver="${_tag_name/-/}"
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -67,6 +67,9 @@ _backports=(
 )
 
 _reverts=(
+  # scope: refuse activation of scopes if no PIDs to add are left
+  # https://github.com/systemd/systemd/issues/21297
+  '7ecb1b82d9b55a081d81b2802695fd21293ce029'
 )
 
 prepare() {
