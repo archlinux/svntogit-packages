@@ -4,7 +4,7 @@
 
 pkgname=sudo
 _sudover=1.9.8p2
-pkgrel=2
+pkgrel=3
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
@@ -43,7 +43,7 @@ build() {
     --enable-tmpfiles.d \
     --with-pam \
     --with-sssd \
-    --without-ldap \
+    --with-ldap \
     --with-ldap-conf-file=/etc/openldap/ldap.conf \
     --with-env-editor \
     --with-passprompt="[sudo] password for %p: " \
