@@ -2,14 +2,14 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=clang
-pkgver=12.0.1
-pkgrel=1
+pkgver=13.0.0
+pkgrel=2
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
 url="https://clang.llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 depends=('llvm-libs' 'gcc' 'compiler-rt')
-makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'python2')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx')
 optdepends=('openmp: OpenMP support in clang with -fopenmp'
             'python: for scan-view and git-clang-format'
             'llvm: referenced by some clang headers')
@@ -20,16 +20,16 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         $_source_base/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
-        clang-link-with-Bsymbolic-functions.patch
+        fix-scan-build-py-executable-lookup-path.patch
         enable-SSP-and-PIE-by-default.patch)
-sha256sums=('6e912133bcf56e9cfe6a346fa7e5c52c2cde3e4e48b7a6cc6fcc7c75047da45f'
+sha256sums=('5d611cbb06cfb6626be46eb2f23d003b2b80f40182898daa54b1c4e8b5b9e17e'
             'SKIP'
-            '65659efdf97dbed70ae0caee989936b731f249dddc46f1cb4225b2f49b232ae5'
+            '428b6060a28b22adf0cdf5d827abbc2ba81809f4661ede3d02b1d3fedaa3ead5'
             'SKIP'
-            '7d9a8405f557cefc5a21bf5672af73903b64749d9bc3a50322239f56f34ffddf'
+            '408d11708643ea826f519ff79761fcdfc12d641a2510229eec459e72f8163020'
             'SKIP'
-            '5bc0b47c70990bb8dd0cf4138a8ab9e15cf6b008b7c0cf2c7aac3736b559e0e6'
-            'a877fa5cf1c1cca3bd55f9a36cf8c1bdd061ff398aeace90fe3cbd9e82550da3')
+            '578b960121c42b8db80566dcb51558409d04455b618cdd608e41b35ded36c13e'
+            '67706047fc93a2e79185d344bdac48219ce042c55ddb9b9397bc98db2153ba58')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
@@ -61,8 +61,11 @@ prepare() {
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
   patch -Np2 -i ../enable-SSP-and-PIE-by-default.patch
 
-  # https://bugs.archlinux.org/task/70697
-  patch -Np2 -i ../clang-link-with-Bsymbolic-functions.patch
+  patch -Np2 -i ../fix-scan-build-py-executable-lookup-path.patch
+
+  # Attempt to convert script to Python 3
+  2to3 -wn --no-diffs \
+    tools/extra/clang-include-fixer/find-all-symbols/tool/run-find-all-symbols.py
 }
 
 build() {
@@ -98,15 +101,10 @@ check() {
   ninja check-clang{,-tools}
 }
 
-_python2_optimize() {
-  python2 -m compileall "$@"
-  python2 -O -m compileall "$@"
-}
-
-_python3_optimize() {
-  python3 -m compileall "$@"
-  python3 -O -m compileall "$@"
-  python3 -OO -m compileall "$@"
+_python_optimize() {
+  python -m compileall "$@"
+  python -O -m compileall "$@"
+  python -OO -m compileall "$@"
 }
 
 package() {
@@ -118,26 +116,21 @@ package() {
   # Remove documentation sources
   rm -r "$pkgdir"/usr/share/doc/clang{,-tools}/html/{_sources,.buildinfo}
 
+  # Move scanbuild-py into site-packages and install Python bindings
+  local site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  install -d "$pkgdir/$site_packages"
+  mv "$pkgdir"/usr/lib/{libear,libscanbuild} "$pkgdir/$site_packages/"
+  cp -a ../bindings/python/clang "$pkgdir/$site_packages/"
+
   # Move analyzer scripts out of /usr/libexec
-  mv "$pkgdir"/usr/libexec/{ccc,c++}-analyzer "$pkgdir/usr/lib/clang/"
+  mv "$pkgdir"/usr/libexec/* "$pkgdir/usr/lib/clang/"
   rmdir "$pkgdir/usr/libexec"
-  sed -i 's|libexec|lib/clang|' "$pkgdir/usr/bin/scan-build"
-
-  # Install Python bindings
-  for _py in 2.7 3.9; do
-    install -d "$pkgdir/usr/lib/python$_py/site-packages"
-    cp -a ../bindings/python/clang "$pkgdir/usr/lib/python$_py/site-packages/"
-    _python${_py%%.*}_optimize "$pkgdir/usr/lib/python$_py"
-  done
-
-  # Fix shebang in Python 2 script
-  sed -i '1s|/usr/bin/env python$|&2|' \
-    "$pkgdir"/usr/share/$pkgname/run-find-all-symbols.py
-  touch -d @$SOURCE_DATE_EPOCH "$pkgdir"/usr/share/$pkgname/run-find-all-symbols.py
+  sed -i 's|libexec|lib/clang|' \
+    "$pkgdir/usr/bin/scan-build" \
+    "$pkgdir/$site_packages/libscanbuild/analyze.py"
 
   # Compile Python scripts
-  _python2_optimize "$pkgdir/usr/share/clang"
-  _python3_optimize "$pkgdir/usr/share" -x 'clang-include-fixer|run-find-all-symbols'
+  _python_optimize "$pkgdir/usr/share" "$pkgdir/$site_packages"
 }
 
 # vim:set ts=2 sw=2 et:
