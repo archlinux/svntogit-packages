@@ -2,13 +2,13 @@
 # Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
 
 pkgname=dkms
-pkgver=2.8.6
+pkgver=3.0.0
 pkgrel=2
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
 url='https://github.com/dell/dkms'
 license=('GPL2')
-depends=('bash' 'kmod' 'gcc' 'make' 'patch')
+depends=('coreutils' 'bash' 'gawk' 'sed' 'kmod' 'gcc' 'make' 'patch')
 makedepends=('git')
 optdepends=('linux-headers: build modules against the Arch kernel'
             'linux-lts-headers: build modules against the LTS kernel'
@@ -17,17 +17,17 @@ optdepends=('linux-headers: build modules against the Arch kernel'
 backup=('etc/dkms/framework.conf')
 install=$pkgname.install
 source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
+        '0001-Fix-creation-of-temp-build-dir.patch'
         'hook.install'
         'hook.remove'
         'hook.upgrade'
-        'hook.sh'
-        '0001-Revert-Make-newly-installed-modules-available-immedi.patch')
+        'hook.sh')
 sha256sums=('SKIP'
-            '047e0e46967e98fbf3ff8860a80f259c28693d5989373d5a5395714495b59844'
-            'ae5483980db914d52bff981ed83356c85679dd7e6e8f73bdd94265f065014c73'
-            'd61d94532789928085a8494ba039c59244cfb3bfd47deaf21bcbe54a2243dc45'
-            '55209947f6266dc7f29b82f3d2635a6b92f6e175d59571dca4d2fd435dffab4a'
-            '124b821b1b44ba365d915945825bcf32c1077655c3a98eb1644de56b6abfcd09')
+            'dfc112922e19ed1ea053132727a8431295365a2372666b44788a69b035459c15'
+            'acdc5b45cc018cea04ee1aec56fd8fc3a2de62cf7bc41acf53b3790872120998'
+            '326515cc7d00f93760beb844434ca7442caf7a9424614aa95a8f6d1ab79e15df'
+            '4f8dff7716e73a8bba885638f12e3cdc9e87daec1896f75e700b981527e43870'
+            'c1b4a4e2e4e0e0e59ee0887403e79d60b209f3878dbbec6612573f13b90cce01')
 
 prepare() {
   cd dkms
@@ -43,7 +43,7 @@ prepare() {
 
   # /usr move
   msg2 '/usr move patching'
-  for i in dkms{,_framework.conf,.bash-completion,.8,_common.postinst}; do
+  for i in dkms{.in,.8.in,_framework.conf,.bash-completion,_common.postinst} sign_helper.sh; do
     sed -ri 's,/lib/modules,/usr/lib/modules,g' "$i"
   done
 }
@@ -58,15 +58,17 @@ package() {
   install -D -m 644 hook.upgrade "$pkgdir/usr/share/libalpm/hooks/70-dkms-upgrade.hook"
   install -D -m 644 hook.remove "$pkgdir/usr/share/libalpm/hooks/71-dkms-remove.hook"
   # hook helper
-  install -D -m 755 hook.sh "$pkgdir/usr/lib/dkms/alpm-hook"
+  install -D -m 755 hook.sh "$pkgdir/usr/share/libalpm/scripts/dkms"
   # upstream installer
   cd dkms
-  # we don't need kconf files, so we install them outside $pkgdir
+  # we don't need kconf files and libdir is only for debian stuff, so
+  # we install them outside of $pkgdir
   make \
     DESTDIR="$pkgdir" \
     SBIN="$pkgdir/usr/bin" \
     BASHDIR="$pkgdir/usr/share/bash-completion/completions" \
-    KCONF="$srcdir"/kconf \
+    KCONF="$srcdir"/trash \
+    LIBDIR="$srcdir"/trash \
     install
 }
 
