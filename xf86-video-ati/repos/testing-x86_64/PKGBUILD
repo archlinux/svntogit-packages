@@ -1,0 +1,72 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Contributor: Alexander Baldeck <alexander@archlinux.org>
+
+pkgname=xf86-video-ati
+_commit=5eba006e4129e8015b822f9e1d2f1e613e252cda
+pkgver=19.1.0.r9.g5eba006e
+pkgrel=2
+epoch=1
+pkgdesc="X.org ati video driver"
+arch=('x86_64')
+url="https://xorg.freedesktop.org/"
+license=('custom')
+depends=('systemd-libs' 'mesa')
+makedepends=('xorg-server-devel' 'systemd' 'X-ABI-VIDEODRV_VERSION=25.2' 'git')
+conflicts=('xorg-server<21.1.1' 'X-ABI-VIDEODRV_VERSION<25' 'X-ABI-VIDEODRV_VERSION>=26')
+groups=('xorg-drivers')
+#source=(${url}/releases/individual/driver/${pkgname}-${pkgver}.tar.bz2{,.sig})
+#sha512sums=('73a81f6c492daf2e89067fb52b3033dc0fe6841f109627ddca1aee54a45a738c8c134443753a2a2aaa2c131e1d560057ebc76351ff2304c16407df3ff568fcd6'
+#            'SKIP')
+source=("${pkgname}-${pkgver}::git+https://gitlab.freedesktop.org/xorg/driver/xf86-video-ati#commit=${_commit}"
+        0001_dont_set_sourcevalidate_pointer_to_null.diff)
+sha512sums=('SKIP'
+            'ca7c769a20e0682ca0122a8248fa79a54d2181d9554c93174a3c49638b6810951787ed5e5e7f7e0f6d091ce2a111aee4bd03108ef74af95ebea340bc0300480f')
+validpgpkeys=('B09FAF35BE914521980951145A81AF8E6ADBB200') # Michel Daenzer <michel@daenzer.net>
+
+pkgver() {
+  cd ${pkgname}*
+  # from ati-git AUR pkg
+  git describe --long | sed 's/^xf86-video-ati-//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+
+prepare() {
+  cd ${pkgname}*
+
+  # fix a crash under Xorg-server 21.1.1
+  # https://bugs.archlinux.org/task/72759
+  # https://gitlab.freedesktop.org/xorg/driver/xf86-video-ati/-/merge_requests/9
+  patch -Np1 -i ../0001_dont_set_sourcevalidate_pointer_to_null.diff
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd ${pkgname}* #-${pkgver}
+
+#  CFLAGS+=' -fcommon' # https://wiki.gentoo.org/wiki/Gcc_10_porting_notes/fno_common
+
+  # Since pacman 5.0.2-2, hardened flags are now enabled in makepkg.conf
+  # With them, module fail to load with undefined symbol.
+  # See https://bugs.archlinux.org/task/55102 / https://bugs.archlinux.org/task/54845
+  export CFLAGS=${CFLAGS/-fno-plt}
+  export CXXFLAGS=${CXXFLAGS/-fno-plt}
+  export LDFLAGS=${LDFLAGS/,-z,now}
+
+  ./configure --prefix=/usr
+  make
+}
+
+check() {
+  cd ${pkgname}* #-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}* #-${pkgver}
+
+  make "DESTDIR=${pkgdir}" install
+  install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
