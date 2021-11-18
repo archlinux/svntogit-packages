@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=94.0.1
+pkgver=94.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -24,7 +24,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         0001-Use-remoting-name-for-GDK-application-names.patch
         0002-Bug-1735905-Upgrade-cubeb-pulse-to-fix-a-race-condit.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('6c09ef337a83a413d5929557043e127598c5c1e02ece3044370e55a3e2eeef70'
+sha256sums=('8d2169122892161e26fe4cc45d61781513181dee1f1981be42427f88092c8d06'
             'SKIP'
             '51cca2cab0fa9798f96b81ed24c238b2a7c98524f589ec500224bac9797b66fb'
             '744d3956ba60c63fed81903700a4cf66c13d2898944e4e86ac0d3b1e3f222fff'
