@@ -1,0 +1,45 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Ray Rashif <schiv@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+# Contributor: Lukas Sabota <punkrockguy318@comcast.net>
+# Contributor: Brice Carpentier <brice@dlfp.org>
+
+pkgname=scons
+pkgver=4.3.0
+pkgrel=1
+pkgdesc="Extensible Python-based build utility"
+arch=(any)
+url="https://scons.org"
+license=(MIT)
+depends=(python)
+makedepends=(python-setuptools python-sphinx python-sphinx_rtd_theme
+rst2pdf)
+checkdepends=(python-pytest)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/${pkgver}.tar.gz")
+sha512sums=('2d91cf3045797c888d24db38d5b44576e56b271a2c4e9d28d7e16026451865f713990ff9e57fa3e0a1c19603c2d6adbbd1ba36d297c9dcce4db4139fcc51cd62')
+b2sums=('a43b509b358d47ee73f7eb714d1239b4fdc33f38483c1a3e72c3a8082242d7bb1a4925958a2648782aa28f4c22a6e018aea8fec1139cf44c59e859f6f902d1d3')
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+  # fix wrong build target
+  sed -e 's/bdist_wheel/bdist/g' -i SConstruct
+}
+
+build() {
+  cd "${pkgname}-${pkgver}"
+  python scripts/scons.py --include-dir= -j1
+  # copy man pages into place, so that install-data may pick them up
+  cp -av build/doc/man/* .
+}
+
+check() {
+  cd "${pkgname}-${pkgver}"
+  python runtest.py --all --unit-only
+}
+
+package() {
+  cd "${pkgname}-${pkgver}"
+  python setup.py install --optimize=1 --install-data=/usr/share/man/man1/ --root="$pkgdir"
+  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}/"
+  install -vDm 644 {{CHANGES,RELEASE}.txt,README.rst} -t "${pkgdir}/usr/share/doc/${pkgname}/"
+}
