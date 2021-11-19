@@ -64,8 +64,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # scope: count successful cgroup additions when delegating via D-Bus
-  'c65417a01121301fdf7f8514ee7663d287af3a72'
 )
 
 _reverts=(
