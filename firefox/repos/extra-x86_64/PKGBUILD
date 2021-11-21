@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=94.0.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -24,7 +24,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         0001-Use-remoting-name-for-GDK-application-names.patch
         0002-Bug-1735905-Upgrade-cubeb-pulse-to-fix-a-race-condit.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('8d2169122892161e26fe4cc45d61781513181dee1f1981be42427f88092c8d06'
+sha256sums=('899ba1c806549034793d7e8ca53f4c845d783c810338f314f3d653d39649e575'
             'SKIP'
             '51cca2cab0fa9798f96b81ed24c238b2a7c98524f589ec500224bac9797b66fb'
             '744d3956ba60c63fed81903700a4cf66c13d2898944e4e86ac0d3b1e3f222fff'
