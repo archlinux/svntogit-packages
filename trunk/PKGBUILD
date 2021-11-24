@@ -2,7 +2,7 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libsoup
-pkgver=2.74.1
+pkgver=2.74.2
 pkgrel=1
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
@@ -12,21 +12,21 @@ depends=(glib2 libxml2 glib-networking sqlite krb5 libpsl brotli)
 makedepends=(gobject-introspection python vala git gtk-doc meson samba)
 checkdepends=(apache php-apache)
 optdepends=('samba: Windows Domain SSO')
-_commit=0e1d3eee74cc568aa077b3472e7fcd3f13d42007  # tags/2.74.1^0
+_commit=2add3502a7de754f4aed61571f6cb45094e8f443  # tags/2.74.2^0
 source=("git+https://gitlab.gnome.org/GNOME/libsoup.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  cd libsoup
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd libsoup
 }
 
 build() {
-  arch-meson $pkgname build \
+  arch-meson libsoup build \
     -D gtk_doc=true \
     -D sysprof=disabled
   meson compile -C build
