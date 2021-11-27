@@ -1,0 +1,126 @@
+From 22e9c7c538a2d2cfe2a81cb4fee6a710798b8f11 Mon Sep 17 00:00:00 2001
+From: Charles Giessen <charles@lunarg.com>
+Date: Wed, 17 Nov 2021 14:44:11 -0700
+Subject: [PATCH] Dont call ToolProps on drivers without support
+
+The loader recently added support for calling into drivers in
+vkGetPhysicalDeviceToolPropertieesEXT. However, it only used the value of
+the function pointer to determine if it was safe. It was found that Mesa
+drivers will return a non-null function pointer, even though they do not
+support the extension, and so the loader called this function pointer which
+would then segfault.
+
+The loader prevents this by first checking if the extension is supported by
+the physical device. This necessitates calling
+vkEnumerateDeviceExtensionProperties and allocating some memory on each call
+but since the number of times this function is called should be low, it is
+not an undue performance burden. In the future, the loader should cache the
+list of extensions when calling vkEnumeratePhysicalDevices so that checking if
+a extension function is supported is fast and easy.
+
+Signed-off-by: Laurent Carlier <lordheavym@gmail.com>
+---
+ loader/extension_manual.c         | 46 ++++++++++++++++++++++++++++---
+ tests/loader_regression_tests.cpp | 21 ++++++++++++--
+ 2 files changed, 61 insertions(+), 6 deletions(-)
+
+diff --git a/loader/extension_manual.c b/loader/extension_manual.c
+index 415b64b74..65c573d91 100644
+--- a/loader/extension_manual.c
++++ b/loader/extension_manual.c
+@@ -305,11 +305,49 @@ VKAPI_ATTR VkResult VKAPI_CALL terminator_GetPhysicalDeviceToolPropertiesEXT(VkP
+     struct loader_physical_device_term *phys_dev_term = (struct loader_physical_device_term *)physicalDevice;
+     struct loader_icd_term *icd_term = phys_dev_term->this_icd_term;
+ 
+-    if (icd_term->dispatch.GetPhysicalDeviceToolPropertiesEXT) {
+-        return icd_term->dispatch.GetPhysicalDeviceToolPropertiesEXT(phys_dev_term->phys_dev, pToolCount, pToolProperties);
++    bool tooling_info_supported = false;
++    uint32_t ext_count = 0;
++    VkExtensionProperties *ext_props = NULL;
++    VkResult res = VK_SUCCESS;
++    VkResult enumerate_res = VK_SUCCESS;
++
++    enumerate_res = icd_term->dispatch.EnumerateDeviceExtensionProperties(phys_dev_term->phys_dev, NULL, &ext_count, NULL);
++    if (enumerate_res != VK_SUCCESS) {
++        goto out;
+     }
+ 
++    ext_props = loader_instance_heap_alloc(icd_term->this_instance, sizeof(VkExtensionProperties) * ext_count,
++                                           VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
++    if (!ext_props) {
++        res = VK_ERROR_OUT_OF_HOST_MEMORY;
++        goto out;
++    }
++
++    enumerate_res = icd_term->dispatch.EnumerateDeviceExtensionProperties(phys_dev_term->phys_dev, NULL, &ext_count, ext_props);
++    if (enumerate_res != VK_SUCCESS) {
++        goto out;
++    }
++
++    for (uint32_t i = 0; i < ext_count; i++) {
++        if (strncmp(ext_props[i].extensionName, VK_EXT_TOOLING_INFO_EXTENSION_NAME, VK_MAX_EXTENSION_NAME_SIZE) == 0) {
++            tooling_info_supported = true;
++            break;
++        }
++    }
++
++    if (tooling_info_supported && icd_term->dispatch.GetPhysicalDeviceToolPropertiesEXT) {
++        res = icd_term->dispatch.GetPhysicalDeviceToolPropertiesEXT(phys_dev_term->phys_dev, pToolCount, pToolProperties);
++    }
++
++out:
+     // In the case the driver didn't support the extension, make sure that the first layer doesn't find the count uninitialized
+-    *pToolCount = 0;
+-    return VK_SUCCESS;
++    if (!tooling_info_supported || !icd_term->dispatch.GetPhysicalDeviceToolPropertiesEXT) {
++        *pToolCount = 0;
++    }
++
++    if (ext_props) {
++        loader_instance_heap_free(icd_term->this_instance, ext_props);
++    }
++
++    return res;
+ }
+diff --git a/tests/loader_regression_tests.cpp b/tests/loader_regression_tests.cpp
+index d1687a4f5..469aa8925 100644
+--- a/tests/loader_regression_tests.cpp
++++ b/tests/loader_regression_tests.cpp
+@@ -849,7 +849,24 @@ TEST(ExtensionManual, ToolingProperties) {
+                                                      VK_TOOL_PURPOSE_VALIDATION_BIT_EXT,
+                                                      "This tool does not exist",
+                                                      "No-Layer"};
+-    {  // extension
++    {  // No support in driver
++        SingleICDShim env{TestICDDetails{TEST_ICD_PATH_VERSION_6}};
++        env.get_test_icd().physical_devices.push_back({});
++
++        InstWrapper inst{env.vulkan_functions};
++        inst.CheckCreate();
++
++        auto phys_dev = inst.GetPhysDev();
++
++        auto getToolProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceToolPropertiesEXT>(
++            inst.functions->vkGetInstanceProcAddr(inst, "vkGetPhysicalDeviceToolPropertiesEXT"));
++        handle_assert_has_value(getToolProperties);
++
++        uint32_t tool_count = 0;
++        ASSERT_EQ(VK_SUCCESS, getToolProperties(phys_dev, &tool_count, nullptr));
++        ASSERT_EQ(tool_count, 0);
++    }
++    {  // extension is supported in driver
+         SingleICDShim env{TestICDDetails{TEST_ICD_PATH_VERSION_6}};
+         env.get_test_icd().physical_devices.push_back({});
+         env.get_test_icd().supports_tooling_info_ext = true;
+@@ -864,7 +881,7 @@ TEST(ExtensionManual, ToolingProperties) {
+         auto getToolProperties = reinterpret_cast<PFN_vkGetPhysicalDeviceToolPropertiesEXT>(
+             inst.functions->vkGetInstanceProcAddr(inst, "vkGetPhysicalDeviceToolPropertiesEXT"));
+         handle_assert_has_value(getToolProperties);
+-        uint32_t tool_count = 1;
++        uint32_t tool_count = 0;
+         ASSERT_EQ(VK_SUCCESS, getToolProperties(phys_dev, &tool_count, nullptr));
+         ASSERT_EQ(tool_count, 1);
+         VkPhysicalDeviceToolPropertiesEXT props{};
+-- 
+2.34.1
+
