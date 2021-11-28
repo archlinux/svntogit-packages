@@ -1,15 +1,14 @@
-# Maintainer: Jan de Groot <jgc@archlinux.org>
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
-pkgname='mesa-demos'
+pkgbase=mesa-demos
+pkgname=('mesa-demos' 'mesa-utils')
 pkgver=8.4.0
-pkgrel=4
+pkgrel=6
 arch=('x86_64')
-pkgdesc="Mesa demos and tools incl. glxinfo + glxgears"
 url="https://www.mesa3d.org/"
 license=('custom')
-depends=('libgl' 'glew' 'freeglut')
-makedepends=('mesa' 'freetype2' 'git')
+makedepends=('mesa' 'freetype2' 'git'
+             'glew' 'freeglut')
 source=(https://mesa.freedesktop.org/archive/demos/mesa-demos-$pkgver.tar.bz2{,.sig}
         'LICENSE')
 sha512sums=('b72d03cad36e0535ff18dcfb222ec4200064b9264f6da51a6e5f03b0dd912abe188bc1d600b6698de3ce6f63b28d2ce01565886ca8e7079edc4967fbf2fb0957'
@@ -22,16 +21,40 @@ build() {
   ./configure --prefix=/usr \
     --disable-gles1 \
     --with-system-data-files=/usr/share/mesa-demos
+
   make
 }
 
-package() {
+package_mesa-demos() {
+
+  pkgdesc="Mesa demos"
+  install=mesa-demos.install
+  depends=('glew' 'freeglut')
+  
   cd mesa-demos-$pkgver
   make DESTDIR="${pkgdir}" install
   
   # add missing egl files
-  install -m 0755 src/egl/opengl/{eglgears_x11,eglinfo,eglkms,egltri_x11,peglgears,xeglgears,xeglthreads} "${pkgdir}/usr/bin/"
+  install -m 0755 src/egl/opengl/{eglgears_x11,eglkms,egltri_x11,peglgears,xeglgears,xeglthreads} "${pkgdir}/usr/bin/"
   
   install -m755 -d "${pkgdir}/usr/share/licenses/mesa-demos"
   install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/mesa-demos/"
+
+  # remove utils
+  rm ${pkgdir}/usr/bin/{glxinfo,glxgears,eglinfo}
+}
+
+package_mesa-utils() {
+
+  pkgdesc="essential Mesa utilities"
+  depends=('libgl')
+  provides=('glxinfo' 'glxgears' 'eglinfo')
+
+  cd mesa-demos-$pkgver
+  install -Dm 0755 src/egl/opengl/eglinfo -t "${pkgdir}/usr/bin/"
+  install -Dm 0755 src/xdemos/{glxinfo,glxgears} -t "${pkgdir}/usr/bin/"
+
+  
+  install -m755 -d "${pkgdir}/usr/share/licenses/$pkgname"
+  install -m644 "${srcdir}/LICENSE" "${pkgdir}/usr/share/licenses/$pkgname/"
 }
