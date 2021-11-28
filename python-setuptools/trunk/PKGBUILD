@@ -4,42 +4,46 @@
 
 pkgname=python-setuptools
 pkgver=57.4.0
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
 license=('PSF')
 url="https://pypi.org/project/setuptools/"
-depends=('python-appdirs' 'python-more-itertools' 'python-ordered-set' 'python-packaging'
-         'python-pyparsing')
+# depends=('python-appdirs' 'python-more-itertools' 'python-ordered-set' 'python-packaging'
+#          'python-pyparsing')
+depends=('python')
 makedepends=('git')
 checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip'
               'python-pytest-fixture-config' 'python-pytest-flake8' 'python-pytest-virtualenv'
               'python-wheel' 'python-paver' 'python-pytest-cov' 'python-sphinx')
 provides=('python-distribute')
 replaces=('python-distribute')
-source=("https://github.com/pypa/setuptools/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
 sha512sums=('3fa09841118c8e554ee5db141188d4ab19853b12e11c35891600dd0159afff35bfcdf00e51d8897c1d68879c8248c9e67dae5909028a967a63d24c0248a1f2ef')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+  # Workaround "error: cannot copy tree 'build/scripts-3.10': not a directory"
+  mkdir -p setuptools-$pkgver/build/scripts-3.10
 
-  # Upstream devendoring logic is badly broken, see:
-  # https://bugs.archlinux.org/task/58670
-  # https://github.com/pypa/pip/issues/5429
-  # https://github.com/pypa/setuptools/issues/1383
-  # The simplest fix is to simply rewrite import paths to use the canonical
-  # location in the first place
-  for _module in setuptools pkg_resources '' ; do
-      find setuptools-$pkgver -name \*.py -exec sed -i \
-          -e 's/from '$_module.extern' import/import/' \
-          -e 's/from '$_module.extern'./from /' \
-          -e 's/import '$_module.extern'./import /' \
-          -e "s/__import__('$_module.extern./__import__('/" \
-          {} +
-  done
+  # rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+
+  # # Upstream devendoring logic is badly broken, see:
+  # # https://bugs.archlinux.org/task/58670
+  # # https://github.com/pypa/pip/issues/5429
+  # # https://github.com/pypa/setuptools/issues/1383
+  # # The simplest fix is to simply rewrite import paths to use the canonical
+  # # location in the first place
+  # for _module in setuptools pkg_resources '' ; do
+  #     find setuptools-$pkgver -name \*.py -exec sed -i \
+  #         -e 's/from '$_module.extern' import/import/' \
+  #         -e 's/from '$_module.extern'./from /' \
+  #         -e 's/import '$_module.extern'./import /' \
+  #         -e "s/__import__('$_module.extern./__import__('/" \
+  #         {} +
+  # done
 
   # https://github.com/pypa/setuptools/issues/2466
   sed -i '/ignore:lib2to3 package is deprecated:DeprecationWarning/a \    ignore:Creating a LegacyVersion has been deprecated and will be removed in the next major release:DeprecationWarning' \
