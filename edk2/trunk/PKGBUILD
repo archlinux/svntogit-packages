@@ -5,7 +5,7 @@ _openssl_ver=1.1.1l
 pkgbase=edk2
 pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
 pkgver=202111
-pkgrel=1
+pkgrel=2
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -91,7 +91,7 @@ build() {
                                           -t "${_build_plugin}"
     # ovmf
     if [[ "${_arch}" == 'IA32' ]]; then
-      echo "Building ovmf (${_arch}) with secure boot"
+      echo "Building ovmf (${_arch}) with secure boot support"
       OvmfPkg/build.sh -p OvmfPkg/OvmfPkgIa32.dsc \
                        -a "${_arch}" \
                        -b "${_build_type}" \
@@ -105,10 +105,9 @@ build() {
                        -D FD_SIZE_2MB \
                        -D SECURE_BOOT_ENABLE \
                        -D SMM_REQUIRE \
-                       -D CSM_ENABLE \
                        -D EXCLUDE_SHELL_FROM_FD
       mv -v Build/Ovmf{Ia32,IA32-secure}
-      echo "Building ovmf (${_arch}) without secure boot"
+      echo "Building ovmf (${_arch}) with CSM16 support"
       OvmfPkg/build.sh -p OvmfPkg/OvmfPkgIa32.dsc \
                        -a "${_arch}" \
                        -b "${_build_type}" \
@@ -121,10 +120,23 @@ build() {
                        -D TLS_ENABLE \
                        -D CSM_ENABLE \
                        -D FD_SIZE_2MB
+      mv -v Build/Ovmf{Ia32,IA32-csm}
+      echo "Building ovmf (${_arch}) default"
+      OvmfPkg/build.sh -p OvmfPkg/OvmfPkgIa32.dsc \
+                       -a "${_arch}" \
+                       -b "${_build_type}" \
+                       -n "$(nproc)" \
+                       -t "${_build_plugin}" \
+                       -D LOAD_X64_ON_IA32_ENABLE \
+                       -D NETWORK_IP6_ENABLE \
+                       -D TPM_ENABLE \
+                       -D HTTP_BOOT_ENABLE \
+                       -D TLS_ENABLE \
+                       -D FD_SIZE_2MB
       mv -v Build/Ovmf{Ia32,IA32}
     fi
     if [[ "${_arch}" == 'X64' ]]; then
-      echo "Building ovmf (${_arch}) with secure boot"
+      echo "Building ovmf (${_arch}) with secure boot support"
       OvmfPkg/build.sh -p "OvmfPkg/OvmfPkg${_arch}.dsc" \
                        -a "${_arch}" \
                        -b "${_build_type}" \
@@ -137,10 +149,9 @@ build() {
                        -D HTTP_BOOT_ENABLE \
                        -D SECURE_BOOT_ENABLE \
                        -D SMM_REQUIRE \
-                       -D CSM_ENABLE \
                        -D EXCLUDE_SHELL_FROM_FD
       mv -v Build/OvmfX64{,-secure}
-      echo "Building ovmf (${_arch}) without secure boot"
+      echo "Building ovmf (${_arch}) with CSM16 support"
       OvmfPkg/build.sh -p "OvmfPkg/OvmfPkg${_arch}.dsc" \
                        -a "${_arch}" \
                        -b "${_build_type}" \
@@ -151,6 +162,18 @@ build() {
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
                        -D CSM_ENABLE \
+                       -D HTTP_BOOT_ENABLE
+      mv -v Build/OvmfX64{,-csm}
+      echo "Building ovmf (${_arch}) without secure boot"
+      OvmfPkg/build.sh -p "OvmfPkg/OvmfPkg${_arch}.dsc" \
+                       -a "${_arch}" \
+                       -b "${_build_type}" \
+                       -n "$(nproc)" \
+                       -t "${_build_plugin}" \
+                       -D NETWORK_IP6_ENABLE \
+                       -D TPM_ENABLE \
+                       -D FD_SIZE_2MB \
+                       -D TLS_ENABLE \
                        -D HTTP_BOOT_ENABLE
     fi
     if [[ "${_arch}" == 'AARCH64' ]]; then
@@ -251,6 +274,8 @@ package_edk2-ovmf() {
         -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
       install -vDm 644 "Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
         "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
+      install -vDm 644 "Build/Ovmf${_arch}-csm/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
+        "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.csm.fd"
     fi
   done
   # installing qemu descriptors in accordance with qemu:
