@@ -18,7 +18,7 @@ source=("git+https://git.kernel.org/pub/scm/utils/mdadm/mdadm.git#tag=${pkgname}
         'mdadm_udev_install')
 sha256sums=('SKIP'
             '4ce1e90690282f98e4828e11576fbd61be65e97a2cdae6c7eac7035ea5ee53e5'
-            '170b0e5d548416c0adb9df4e6941bea6bc33d843419c997e45ecaf9e36a58f38')
+            'b6782029bdae2d7f87ea0e332bb90f72a7792e933580e37602e81e2f1bb82a9c')
 
 prepare() {
   cd mdadm
