@@ -2,9 +2,9 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 # Contributor: Sebastien Binet <binet@lblbox>
 
-pkgname=('python-pip' 'python2-pip')
+pkgname=python-pip
 pkgver=20.3.4
-pkgrel=1
+pkgrel=2
 pkgdesc="The PyPA recommended tool for installing Python packages"
 url="https://pip.pypa.io/"
 arch=('any')
@@ -13,7 +13,8 @@ _deps=('appdirs' 'cachecontrol' 'colorama' 'contextlib2' 'distlib' 'distro' 'htm
        'packaging' 'pep517' 'progress' 'requests' 'retrying' 'resolvelib' 'setuptools' 'six' 'toml'
        # add these until https://github.com/pypa/pip/issues/5354#issuecomment-672678167 is resolved
        'pyopenssl')
-makedepends=("${_deps[@]/#/python-}" "${_deps[@]/#/python2-}" 'python2-ipaddress' 'python-sphinx'
+depends=("${_deps[@]/#/python-}")
+makedepends=("${_deps[@]/#/python-}" 'python-sphinx'
              'python-sphinx-inline-tabs')
 checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'python-pretend'
               'python-yaml' 'python-mock' 'python-freezegun' 'python-cryptography' 'python-pip'
@@ -43,7 +44,6 @@ build() {
   cd pip-$pkgver
 
   python setup.py build
-  python2 setup.py build
 
   cd docs/
   PYTHONPATH="$srcdir/pip-$pkgver/src/" python pip_sphinxext.py
@@ -78,9 +78,7 @@ check() {
                                                              --deselect tests/unit/resolution_resolvelib/test_requirement.py::test_new_resolver_full_resolve
 }
 
-package_python-pip() {
-  depends=("${_deps[@]/#/python-}")
-
+package() {
   cd pip-$pkgver
   python setup.py install --prefix=/usr --root="$pkgdir"
 
@@ -93,28 +91,4 @@ package_python-pip() {
     | install -Dm644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip
   PYTHONPATH="$pkgdir"/usr/lib/python3.9/site-packages "$pkgdir"/usr/bin/pip completion --fish \
     | install -Dm644 /dev/stdin "$pkgdir"/usr/share/fish/vendor_completions.d/pip.fish
-}
-
-package_python2-pip() {
-  depends=("${_deps[@]/#/python2-}" 'python2-ipaddress')
-  conflicts=('python-pyinstall')
-  replaces=('python-pyinstall')
-
-  cd pip-$pkgver
-  python2 setup.py install --prefix=/usr --root="$pkgdir"
-
-  mv "$pkgdir/usr/bin/pip" "$pkgdir/usr/bin/pip2"
-  sed -i "s|#!/usr/bin/env python$|#!/usr/bin/env python2|" \
-    "${pkgdir}"/usr/lib/python2.7/site-packages/pip/__init__.py
-  python2 -m compileall "${pkgdir}"/usr/lib/python2.7/site-packages/pip/__init__.py
-
-  install -D -m644 LICENSE.txt \
-	  "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-
-  install -Dm644 -t "$pkgdir"/usr/share/man/man1 docs/build/man-pip2/*
-
-  PYTHONPATH="$pkgdir"/usr/lib/python2.7/site-packages "$pkgdir"/usr/bin/pip2 completion --bash \
-    | install -Dm644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip2
-  PYTHONPATH="$pkgdir"/usr/lib/python2.7/site-packages "$pkgdir"/usr/bin/pip2 completion --fish \
-    | install -Dm644 /dev/stdin "$pkgdir"/usr/share/fish/vendor_completions.d/pip2.fish
 }
