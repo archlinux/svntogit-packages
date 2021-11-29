@@ -23,7 +23,7 @@ build() {
 
 check() {
   cd "$srcdir"/zope.interface-$pkgver
-  PYTHONPATH="$PWD/build/lib.linux-x86_64-3.9" python setup.py test
+  PYTHONPATH="$PWD/build/lib.linux-x86_64-3.10" python setup.py test
 }
 
 package() {
