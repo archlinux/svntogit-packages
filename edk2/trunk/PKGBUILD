@@ -1,16 +1,16 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 _brotli_ver=1.0.9
-_openssl_ver=1.1.1k
+_openssl_ver=1.1.1l
 pkgbase=edk2
-pkgname=('edk2-armvirt' 'edk2-shell' 'edk2-ovmf')
-pkgver=202108
+pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
+pkgver=202111
 pkgrel=1
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
-arch=('any')
+arch=(any)
 url="https://github.com/tianocore/edk2"
-license=('BSD')
-makedepends=('aarch64-linux-gnu-gcc' 'acpica' 'git' 'iasl' 'util-linux-libs' 'nasm' 'python')
+license=(BSD)
+makedepends=(aarch64-linux-gnu-gcc acpica git iasl util-linux-libs nasm python seabios)
 options=(!makeflags)
 source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archive/${pkgbase}-stable${pkgver}.tar.gz"
         "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
@@ -21,8 +21,8 @@ source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archiv
         "60-edk2-ovmf-i386.json"
         "60-edk2-ovmf-x86_64.json"
         "70-edk2-armvirt-aarch64.json")
-sha512sums=('325f3aecf796d61bec0d4d48699a347caca58292e76345ac81b716669d4308a7c777d142dc03482a041bc268e8897f11112a9d5e4e827e5146eaba6d4c1e7ff9'
-            '73cd042d4056585e5a9dd7ab68e7c7310a3a4c783eafa07ab0b560e7462b924e4376436a6d38a155c687f6942a881cfc0c1b9394afcde1d8c46bf396e7d51121'
+sha512sums=('212a178b2e79ab42bcf0d2d12e8769da28bc3ed3f2d4c905a85c0d23d2675500c1c05b5b645eac9c4de97df974dcfc809efd06385016331ca02944e58558954a'
+            'd9611f393e37577cca05004531388d3e0ebbf714894cab9f95f4903909cd4f45c214faab664c0cbc3ad3cca309d500b9e6d0ecbf9a0a0588d1677dc6b047f9e0'
             'SKIP'
             'b8e2df955e8796ac1f022eb4ebad29532cb7e3aa6a4b6aee91dbd2c7d637eee84d9a144d3e878895bb5e62800875c2c01c8f737a1261020c54feacf9f676b5f5'
             'fe0fd592d4b436a35a49a74ad5dd989311b297b9abacb13ed8d4da0986169c91ffbc34cef0f2d52bf40c833d252f6e65311ab0e4e4ca6798390febfb9a787a4a'
@@ -31,8 +31,8 @@ sha512sums=('325f3aecf796d61bec0d4d48699a347caca58292e76345ac81b716669d4308a7c77
             'c81e072aabfb01d29cf5194111524e2c4c8684979de6b6793db10299c95bb94f7b1d0a98b057df0664d7a894a2b40e9b4c3576112fae400a95eaf5fe5fc9369b'
             '2030dc1d49d56fce8af56c5777fd40f04041e39ff806dd8c021e161227bdd646982024db6758230b8332dc68f16bc6918e1d54ad3c022e21e148d6b65ea778b3'
             'fa6d36a3c0225e4a5df532e77b18a035d65b0856d6a48875def5007de3f83d8d1d202d5b91e887d424112a3fa377dc9a09bdf44e5fcdccc36854675f95a211a4')
-b2sums=('55e8b00618ac3ee8d05087ec21cb5cc4eb2ee3a332553e551ed2972d93e2ecce9c3e95a66d71180bbac8506866e08fc17a24877385ed5ce4bc9ae9daffd83bc9'
-        'e9bd90f17bc819c4960d07bbee04346e8a7adb87a764a09d033ef76f1d638c67b180c4f2beb84ec25fbff54ccc9c14c13b9b16a27cac231a5dd22b02635d5cec'
+b2sums=('9eed28ae063982b7c44311caf414ab967355d0a1ab09201678bed96e45a71215a0f8dde3d29710d2634f05c8c359cc07ac82045c5f4bd6824300b6e6d24ca005'
+        '9e8739015db63a013c05587e3d164d67c3f65f1f6c5fc75e4592bcd038c036cde88a7bc95fbc1f1b4ed876f6124ca4dabcd4f5dbb45d1b84299f2efe1a59431a'
         'SKIP'
         '8b9939d5224396ef33b43e019250ba4bc8949903583615e8dc02c85340fc0a1e2d1632161e00b0ee7355d77f05529ac772f482e05d2089afd71a0bf71e803904'
         'eb549f711aa31b0a46f3e9b74076e52e0e1734045c227f410016c6de46a3b7b2959287d49b5ef853236c57fa3b3143b1da31fd9ef6fd592ba22ba9af15941a76'
@@ -42,9 +42,9 @@ b2sums=('55e8b00618ac3ee8d05087ec21cb5cc4eb2ee3a332553e551ed2972d93e2ecce9c3e95a
         '1b935f3ad0bd3f10a90430a2873bf592950e9c49c828b50bb1ae48634cee01cc571aeff1c5b4695e0b4faa6274afc0a92fdcc88e283029298bba5e11b2bd2904'
         '2fd510c533913bbd13fa31b3fdc8c4435bb3dee4ae8d34a516344da7a31ee036b23ac21e09b59b11f507520abeea89271601228f485ee80866bade0140c81742')
 validpgpkeys=('8657ABB260F056B1E5190839D9C4D26D0E604491') # Matt Caswell <matt@openssl.org>
-_arch_list=('AARCH64' 'IA32' 'X64')
-_build_type='RELEASE'
-_build_plugin='GCC5'
+_arch_list=(AARCH64 IA32 X64)
+_build_type=RELEASE
+_build_plugin=GCC5
 
 prepare() {
   mv -v "$pkgbase-$pkgbase-stable$pkgver" "$pkgbase-$pkgver"
@@ -65,6 +65,9 @@ prepare() {
   # -Werror, not even once
   sed -e 's/ -Werror//g' \
       -i BaseTools/Conf/*.template BaseTools/Source/C/Makefiles/*.makefile
+
+  # copy seabios's CSM16 binary into place, so that it can be included in the binaries:
+  cp -v /usr/share/qemu/bios-csm.bin OvmfPkg/Csm/Csm16/Csm16.bin
 }
 
 build() {
@@ -102,6 +105,7 @@ build() {
                        -D FD_SIZE_2MB \
                        -D SECURE_BOOT_ENABLE \
                        -D SMM_REQUIRE \
+                       -D CSM_ENABLE \
                        -D EXCLUDE_SHELL_FROM_FD
       mv -v Build/Ovmf{Ia32,IA32-secure}
       echo "Building ovmf (${_arch}) without secure boot"
@@ -115,6 +119,7 @@ build() {
                        -D TPM_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D TLS_ENABLE \
+                       -D CSM_ENABLE \
                        -D FD_SIZE_2MB
       mv -v Build/Ovmf{Ia32,IA32}
     fi
@@ -132,6 +137,7 @@ build() {
                        -D HTTP_BOOT_ENABLE \
                        -D SECURE_BOOT_ENABLE \
                        -D SMM_REQUIRE \
+                       -D CSM_ENABLE \
                        -D EXCLUDE_SHELL_FROM_FD
       mv -v Build/OvmfX64{,-secure}
       echo "Building ovmf (${_arch}) without secure boot"
@@ -144,6 +150,7 @@ build() {
                        -D TPM_ENABLE \
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
+                       -D CSM_ENABLE \
                        -D HTTP_BOOT_ENABLE
     fi
     if [[ "${_arch}" == 'AARCH64' ]]; then
@@ -194,7 +201,7 @@ package_edk2-armvirt() {
 
 package_edk2-shell() {
   pkgdesc="EDK2 UEFI Shell"
-  provides=('uefi-shell')
+  provides=(uefi-shell)
 
   cd "$pkgbase-$pkgver"
   local _arch
@@ -222,10 +229,10 @@ package_edk2-shell() {
 
 package_edk2-ovmf() {
   pkgdesc="Firmware for Virtual Machines (x86_64, i686)"
-  provides=('ovmf')
-  conflicts=('ovmf')
-  replaces=('ovmf')
-  license+=('MIT')
+  provides=(ovmf)
+  conflicts=(ovmf)
+  replaces=(ovmf)
+  license+=(MIT)
   install="${pkgname}.install"
 
   cd "$pkgbase-$pkgver"
