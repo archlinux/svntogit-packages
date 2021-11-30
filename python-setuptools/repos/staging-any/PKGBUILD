@@ -4,7 +4,7 @@
 
 pkgname=python-setuptools
 pkgver=57.4.0
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
@@ -25,8 +25,8 @@ sha512sums=('3fa09841118c8e554ee5db141188d4ab19853b12e11c35891600dd0159afff35bfc
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  # Workaround "error: cannot copy tree 'build/scripts-3.10': not a directory"
-  mkdir -p setuptools-$pkgver/build/scripts-3.10
+  # Bootstrap for proper metadata
+  python -m ensurepip
 
   # rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
 
