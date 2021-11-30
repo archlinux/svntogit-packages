@@ -9,7 +9,7 @@
 pkgbase=audit
 pkgname=('audit' 'python-audit')
 pkgver=3.0.6
-pkgrel=3
+pkgrel=4
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
 arch=('x86_64')
