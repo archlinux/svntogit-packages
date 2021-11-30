@@ -1,0 +1,181 @@
+diff --git a/sources/pyside2/tests/QtCore/qenum_test.py b/sources/pyside2/tests/QtCore/qenum_test.py
+index f99a893..45e8efa 100644
+--- a/sources/pyside2/tests/QtCore/qenum_test.py
++++ b/sources/pyside2/tests/QtCore/qenum_test.py
+@@ -195,16 +195,18 @@ class SomeClass(QObject):
+     QEnum(SomeEnum)     # works even without the decorator assignment
+ 
+ 
++ENUM_META = "EnumMeta" if sys.version_info < (3, 10) else "EnumType"
++
+ @unittest.skipUnless(HAVE_ENUM, "requires 'enum' module (use 'pip install enum34' for Python 2)")
+ class TestQEnumMacro(unittest.TestCase):
+     def testTopLevel(self):
+         self.assertEqual(type(OuterEnum).__module__, "enum")
+-        self.assertEqual(type(OuterEnum).__name__, "EnumMeta")
++        self.assertEqual(type(OuterEnum).__name__, ENUM_META)
+         self.assertEqual(len(OuterEnum.__members__), 2)
+ 
+     def testSomeClass(self):
+         self.assertEqual(type(SomeClass.SomeEnum).__module__, "enum")
+-        self.assertEqual(type(SomeClass.SomeEnum).__name__, "EnumMeta")
++        self.assertEqual(type(SomeClass.SomeEnum).__name__, ENUM_META)
+         self.assertEqual(len(SomeClass.SomeEnum.__members__), 3)
+         with self.assertRaises(TypeError):
+             int(SomeClass.SomeEnum.C) == 6
+diff --git a/sources/shiboken2/libshiboken/pep384impl.cpp b/sources/shiboken2/libshiboken/pep384impl.cpp
+index cb80425..c4e7301 100644
+--- a/sources/shiboken2/libshiboken/pep384impl.cpp
++++ b/sources/shiboken2/libshiboken/pep384impl.cpp
+@@ -707,6 +707,76 @@ PyObject *PepMapping_Items(PyObject *o)
+  *
+  */
+ 
++#if PY_VERSION_HEX >= 0x03000000
++PyObject *
++_Py_Mangle(PyObject *privateobj, PyObject *ident)
++{
++    /* Name mangling: __private becomes _classname__private.
++       This is independent from how the name is used. */
++    PyObject *result;
++    size_t nlen, plen, ipriv;
++    Py_UCS4 maxchar;
++    if (privateobj == NULL || !PyUnicode_Check(privateobj) ||
++        PyUnicode_READ_CHAR(ident, 0) != '_' ||
++        PyUnicode_READ_CHAR(ident, 1) != '_') {
++        Py_INCREF(ident);
++        return ident;
++    }
++    nlen = PyUnicode_GET_LENGTH(ident);
++    plen = PyUnicode_GET_LENGTH(privateobj);
++    /* Don't mangle __id__ or names with dots.
++
++       The only time a name with a dot can occur is when
++       we are compiling an import statement that has a
++       package name.
++
++       TODO(jhylton): Decide whether we want to support
++       mangling of the module name, e.g. __M.X.
++    */
++    if ((PyUnicode_READ_CHAR(ident, nlen-1) == '_' &&
++         PyUnicode_READ_CHAR(ident, nlen-2) == '_') ||
++        PyUnicode_FindChar(ident, '.', 0, nlen, 1) != -1) {
++        Py_INCREF(ident);
++        return ident; /* Don't mangle __whatever__ */
++    }
++    /* Strip leading underscores from class name */
++    ipriv = 0;
++    while (PyUnicode_READ_CHAR(privateobj, ipriv) == '_')
++        ipriv++;
++    if (ipriv == plen) {
++        Py_INCREF(ident);
++        return ident; /* Don't mangle if class is just underscores */
++    }
++    plen -= ipriv;
++
++    if (plen + nlen >= PY_SSIZE_T_MAX - 1) {
++        PyErr_SetString(PyExc_OverflowError,
++                        "private identifier too large to be mangled");
++        return NULL;
++    }
++
++    maxchar = PyUnicode_MAX_CHAR_VALUE(ident);
++    if (PyUnicode_MAX_CHAR_VALUE(privateobj) > maxchar)
++        maxchar = PyUnicode_MAX_CHAR_VALUE(privateobj);
++
++    result = PyUnicode_New(1 + nlen + plen, maxchar);
++    if (!result)
++        return 0;
++    /* ident = "_" + priv[ipriv:] + ident # i.e. 1+plen+nlen bytes */
++    PyUnicode_WRITE(PyUnicode_KIND(result), PyUnicode_DATA(result), 0, '_');
++    if (PyUnicode_CopyCharacters(result, 1, privateobj, ipriv, plen) < 0) {
++        Py_DECREF(result);
++        return NULL;
++    }
++    if (PyUnicode_CopyCharacters(result, plen+1, ident, 0, nlen) < 0) {
++        Py_DECREF(result);
++        return NULL;
++    }
++    assert(_PyUnicode_CheckConsistency(result, 1));
++    return result;
++}
++#endif
++
+ #ifdef Py_LIMITED_API
+ // We keep these definitions local, because they don't work in Python 2.
+ # define PyUnicode_GET_LENGTH(op)    PyUnicode_GetLength((PyObject *)(op))
+diff --git a/sources/shiboken2/libshiboken/pep384impl.h b/sources/shiboken2/libshiboken/pep384impl.h
+index 7a6f57f..eb65596 100644
+--- a/sources/shiboken2/libshiboken/pep384impl.h
++++ b/sources/shiboken2/libshiboken/pep384impl.h
+@@ -40,6 +40,11 @@
+ #ifndef PEP384IMPL_H
+ #define PEP384IMPL_H
+ 
++// PYSIDE-1436: Adapt to Python 3.10
++#if PY_VERSION_HEX < 0x030900A4
++#  define Py_SET_REFCNT(obj, refcnt) ((Py_REFCNT(obj) = (refcnt)), (void)0)
++#endif
++
+ extern "C"
+ {
+ 
+@@ -327,7 +332,7 @@ LIBSHIBOKEN_API PyObject *PyRun_String(const char *, int, PyObject *, PyObject *
+ // But this is no problem as we check it's validity for every version.
+ 
+ #define PYTHON_BUFFER_VERSION_COMPATIBLE    (PY_VERSION_HEX >= 0x03030000 && \
+-                                             PY_VERSION_HEX <  0x0309FFFF)
++                                             PY_VERSION_HEX <  0x030AFFFF)
+ #if !PYTHON_BUFFER_VERSION_COMPATIBLE
+ # error Please check the buffer compatibility for this python version!
+ #endif
+diff --git a/sources/shiboken2/libshiboken/sbkstring.cpp b/sources/shiboken2/libshiboken/sbkstring.cpp
+index 918aae7..2ac3f5c 100644
+--- a/sources/shiboken2/libshiboken/sbkstring.cpp
++++ b/sources/shiboken2/libshiboken/sbkstring.cpp
+@@ -233,6 +233,8 @@ Py_ssize_t len(PyObject *str)
+ //     PyObject *attr = PyObject_GetAttr(obj, name());
+ //
+ 
++#if PY_VERSION_HEX < 0x030A0000
++
+ using StaticStrings = std::unordered_set<PyObject *>;
+ 
+ static void finalizeStaticStrings();    // forward
+@@ -247,19 +249,23 @@ static void finalizeStaticStrings()
+ {
+     auto &set = staticStrings();
+     for (PyObject *ob : set) {
+-        Py_REFCNT(ob) = 1;
++        Py_SET_REFCNT(ob, 1);
+         Py_DECREF(ob);
+     }
+     set.clear();
+ }
+ 
++#endif // PY_VERSION_HEX < 0x030A0000
++
+ PyObject *createStaticString(const char *str)
+ {
++#if PY_VERSION_HEX < 0x030A0000
+     static bool initialized = false;
+     if (!initialized) {
+         Py_AtExit(finalizeStaticStrings);
+         initialized = true;
+     }
++#endif // PY_VERSION_HEX < 0x030A0000
+ #if PY_VERSION_HEX >= 0x03000000
+     PyObject *result = PyUnicode_InternFromString(str);
+ #else
+@@ -270,9 +276,11 @@ PyObject *createStaticString(const char *str)
+         PyErr_Print();
+         Py_FatalError("unexpected error in createStaticString()");
+     }
++#if PY_VERSION_HEX < 0x030A0000
+     auto it = staticStrings().find(result);
+     if (it == staticStrings().end())
+         staticStrings().insert(result);
++#endif // PY_VERSION_HEX < 0x030A0000
+     /*
+      * Note: We always add one reference even if we have a new string.
+      *       This makes the strings immortal, and we are safe if someone
