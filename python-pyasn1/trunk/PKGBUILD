@@ -2,7 +2,7 @@
 
 pkgname=python-pyasn1
 pkgver=0.4.8
-pkgrel=5
+pkgrel=6
 arch=('any')
 url="https://github.com/etingof/pyasn1"
 license=('BSD')
