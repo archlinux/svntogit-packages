@@ -32,7 +32,7 @@ build() {
   python setup.py build
 
   cd "$srcdir"/urllib3-$pkgver/docs
-  make html
+  #make html
 }
 
 check() {
@@ -58,6 +58,6 @@ package_python-urllib3-doc() {
 
   cd urllib3-$pkgver/docs
   install -d "$pkgdir"/usr/share/doc
-  cp -r _build/html "$pkgdir"/usr/share/doc/python-urllib3
+  #cp -r _build/html "$pkgdir"/usr/share/doc/python-urllib3
   install -Dm644 ../LICENSE.txt "$pkgdir"/usr/share/licenses/$pkgname/LICENSE.txt
 }
