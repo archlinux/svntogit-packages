@@ -10,7 +10,7 @@ url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
 depends=(python-mako python-markdown)
-_glibver=2.70.0
+_glibver=2.70.1
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
 options=(!emptydirs)
 _commit=4502dd33da995e5e9e6d73aa996cf42e92c9e217  # tags/1.70.0^0
