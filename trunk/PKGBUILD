@@ -4,7 +4,7 @@
 
 pkgname=python-zope-interface
 pkgver=5.4.0
-pkgrel=2
+pkgrel=3
 license=('ZPL')
 arch=('x86_64')
 url="https://pypi.python.org/pypi/zope.interface"
