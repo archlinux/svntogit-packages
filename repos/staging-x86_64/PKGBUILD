@@ -1,0 +1,52 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=pahole
+pkgver=1.22
+pkgrel=3
+pkgdesc="Pahole and other DWARF utils"
+url="https://git.kernel.org/pub/scm/devel/pahole/pahole.git"
+arch=(x86_64)
+license=(GPL2)
+depends=(libelf python)
+makedepends=(git cmake ninja)
+provides=(libdwarves{,_emit,_reorganize}.so)
+_commit=f02af2553ea58ae1186226af0d0ec835a248358f  # tags/v1.22^0
+source=("git+https://git.kernel.org/pub/scm/devel/pahole/pahole.git#commit=$_commit"
+        "git+https://github.com/libbpf/libbpf"
+        python.diff)
+sha256sums=('SKIP'
+            'SKIP'
+            '61f232298d59cbcd5e3c863e3f6866b45b7224d5c649dfb7737196233df034f1')
+
+pkgver() {
+  cd pahole
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd pahole
+
+  # https://bugs.archlinux.org/task/70013
+  git apply -3 ../python.diff
+
+  git submodule init
+  git submodule set-url lib/bpf "$srcdir/libbpf"
+  git submodule update
+}
+
+build() {
+  cmake -S pahole -B build -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=None \
+    -D__LIB=lib
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  python -m compileall -d / "$pkgdir"
+  python -O -m compileall -d / "$pkgdir"
+}
+
+# vim:set sw=2 et:
