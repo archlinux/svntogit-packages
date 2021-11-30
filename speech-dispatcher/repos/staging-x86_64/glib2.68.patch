@@ -1,0 +1,102 @@
+From a2faab416e42cbdf3d73f98578a89eb7a235e25a Mon Sep 17 00:00:00 2001
+From: Michael Catanzaro <mcatanzaro@gnome.org>
+Date: Tue, 2 Feb 2021 14:50:23 -0600
+Subject: [PATCH] Fix build after glib e38982df
+
+glib.h now includes <type_traits> when building as C++. But kali.cpp
+includes it (via module_utils.h) inside an extern "C" block. This is
+illegal.
+
+Best practice is to use extern "C" in project header files, not around
+include statements. So let's do that. module_utils.h already includes
+glib.h, so we can use G_BEGIN_DECLS/G_END_DECLS there. spd_audio.h does
+not, so I decided to write out the usual boilerplate, as including all
+of glib.h just for G_BEGIN_DECLS/G_END_DECLS seemed like overkill.
+Finally, I'll move config.h at the very top of kali.cpp, since I'm
+touching this code anyway and that is the usual place to put it.
+
+This is the minimum viable change required for speech-dispatcher to
+build with glib master. As long as speech-dispatcher is combining C and
+C++, it would be advisible to use extern "C" in all headers that declare
+C functions and might be included from C++.
+---
+ src/modules/kali.cpp       | 10 +++++-----
+ src/modules/module_utils.h |  4 ++++
+ src/modules/spd_audio.h    |  8 ++++++++
+ 3 files changed, 17 insertions(+), 5 deletions(-)
+
+diff --git a/src/modules/kali.cpp b/src/modules/kali.cpp
+index 193975d8..7b497626 100644
+--- a/src/modules/kali.cpp
++++ b/src/modules/kali.cpp
+@@ -21,21 +21,21 @@
+  * $Id: kali.c,v 1.59 2008-06-09 10:38:02 hanke Exp $
+  */
+ 
++#ifdef HAVE_CONFIG_H
++#include <config.h>
++#endif
++
+ #include <stdio.h>
+ #include <string.h>
+ #include <unistd.h>
+ #include <kali/Kali/kali.h>
+-extern "C" {
+-#ifdef HAVE_CONFIG_H
+-#include <config.h>
+-#endif
++
+ #include <semaphore.h>
+ #include "spd_audio.h"
+ 
+ #include <speechd_types.h>
+ 
+ #include "module_utils.h"
+-}
+ #define MODULE_NAME     "kali"
+ #define MODULE_VERSION  "0.0"
+ #define DEBUG_MODULE 1
+diff --git a/src/modules/module_utils.h b/src/modules/module_utils.h
+index 6081e7e1..e82850b2 100644
+--- a/src/modules/module_utils.h
++++ b/src/modules/module_utils.h
+@@ -41,6 +41,8 @@
+ #include <speechd_types.h>
+ #include "spd_audio.h"
+ 
++G_BEGIN_DECLS
++
+ typedef struct SPDMarks {
+ 	unsigned num;
+ 	unsigned allocated;
+@@ -420,4 +422,6 @@ char *module_getvoice(char *language, SPDVoiceType voice);
+ gboolean module_existsvoice(char *voicename);
+ char *module_getdefaultvoice(void);
+ 
++G_END_DECLS
++
+ #endif /* #ifndef __MODULE_UTILS_H */
+diff --git a/src/modules/spd_audio.h b/src/modules/spd_audio.h
+index 25045e2f..b9de3cd5 100644
+--- a/src/modules/spd_audio.h
++++ b/src/modules/spd_audio.h
+@@ -28,6 +28,10 @@
+ 
+ #define SPD_AUDIO_LIB_PREFIX "spd_"
+ 
++#ifdef  __cplusplus
++extern "C" {
++#endif
++
+ AudioID *spd_audio_open(char *name, void **pars, char **error);
+ 
+ int spd_audio_play(AudioID * id, AudioTrack track, AudioFormat format);
+@@ -47,4 +51,8 @@ void spd_audio_set_loglevel(AudioID * id, int level);
+ 
+ char const *spd_audio_get_playcmd(AudioID * id);
+ 
++#ifdef __cplusplus
++}
++#endif
++
+ #endif /* ifndef #__SPD_AUDIO_H */
