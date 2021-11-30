@@ -1,11 +1,12 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Alexander Epaneshnikov <alex19ep@archlinux.org>
 
 _brotli_ver=1.0.9
 _openssl_ver=1.1.1l
 pkgbase=edk2
 pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
 pkgver=202111
-pkgrel=2
+pkgrel=3
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -16,7 +17,9 @@ source=("$pkgbase-$pkgver.tar.gz::https://github.com/tianocore/${pkgbase}/archiv
         "https://www.openssl.org/source/openssl-${_openssl_ver}.tar.gz"{,.asc}
         "brotli-${_brotli_ver}.tar.gz::https://github.com/google/brotli/archive/v${_brotli_ver}.tar.gz"
         "${pkgbase}-202102-brotli-1.0.9.patch"
+        "50-edk2-ovmf-i386-csm.json"
         "50-edk2-ovmf-i386-secure.json"
+        "50-edk2-ovmf-x86_64-csm.json"
         "50-edk2-ovmf-x86_64-secure.json"
         "60-edk2-ovmf-i386.json"
         "60-edk2-ovmf-x86_64.json"
@@ -26,7 +29,9 @@ sha512sums=('212a178b2e79ab42bcf0d2d12e8769da28bc3ed3f2d4c905a85c0d23d2675500c1c
             'SKIP'
             'b8e2df955e8796ac1f022eb4ebad29532cb7e3aa6a4b6aee91dbd2c7d637eee84d9a144d3e878895bb5e62800875c2c01c8f737a1261020c54feacf9f676b5f5'
             'fe0fd592d4b436a35a49a74ad5dd989311b297b9abacb13ed8d4da0986169c91ffbc34cef0f2d52bf40c833d252f6e65311ab0e4e4ca6798390febfb9a787a4a'
+            '919121116542511d0c283473e160ba09afd6807cb0203be69109dc00ed052e90b4b4d1a0603e30c52d35bfb715d8cb3e2087f3a5b22083009a984d4076d4e73d'
             '55e4187b11b27737f61e528c02ff43b9381c0cb09140e803531616766f9cb9401115d88d946b56171784cc028f9571279640eb39b6a9fa8e02ec0c8d1b036a3e'
+            '4b6ad05e38fb661cb71693d640ed5b5e12701e6ae7a9074259493f6126992af4319bb99bb854cf7effd470010ddf532a8add07010f2becaae4f950651943598d'
             'a1236585b30d720540de2e9527d8c90ff2d428e800b3da545b23461dc698dc91fe441b62bb8cbca76e08f4ec1eb485619e9ab26157deb06e7fb33e7f5f9dd8b6'
             'c81e072aabfb01d29cf5194111524e2c4c8684979de6b6793db10299c95bb94f7b1d0a98b057df0664d7a894a2b40e9b4c3576112fae400a95eaf5fe5fc9369b'
             '2030dc1d49d56fce8af56c5777fd40f04041e39ff806dd8c021e161227bdd646982024db6758230b8332dc68f16bc6918e1d54ad3c022e21e148d6b65ea778b3'
@@ -36,7 +41,9 @@ b2sums=('9eed28ae063982b7c44311caf414ab967355d0a1ab09201678bed96e45a71215a0f8dde
         'SKIP'
         '8b9939d5224396ef33b43e019250ba4bc8949903583615e8dc02c85340fc0a1e2d1632161e00b0ee7355d77f05529ac772f482e05d2089afd71a0bf71e803904'
         'eb549f711aa31b0a46f3e9b74076e52e0e1734045c227f410016c6de46a3b7b2959287d49b5ef853236c57fa3b3143b1da31fd9ef6fd592ba22ba9af15941a76'
+        '66d21917c6fc2f9d1f35c986296ad40bdac52707f44becf2c8b11b21f873110d81700ff933fcb48812be0ebb11259faf38b1d7293ebd6ccd5f34f1dff187675c'
         '96502e0c8b748d6db0fcd4e767264f778319b4517fe4bf2e6e4f92e35bf09f388fb7f39c349e66444368820c31a6ff76e952053ac9f9696a59f7f0a929a650d1'
+        'c539f053bfc1623b1b195a1ec25cb6be30745149ad4bbf4e3438f3f7793fbfe814583f3410c4ff5d8a33f087a9fc425065f22355c4453cb0cc126ab60a52ffb2'
         '4a438a2f7726c6a9ff1a40506ddb5f724d5c220b57997784fefe4a180e249b4f1e9adc8e353e7dbc492a1bde0165442d873409656ce2fbbc9fd35c690b7692e4'
         '5da17cfe08368542f04b47121b296c56a6702233207b1cdb822eea42c8fb43d8856e86d19122621caf97e4332814c839204d7ce191041128ee3921b23f137bb6'
         '1b935f3ad0bd3f10a90430a2873bf592950e9c49c828b50bb1ae48634cee01cc571aeff1c5b4695e0b4faa6274afc0a92fdcc88e283029298bba5e11b2bd2904'
@@ -66,10 +73,11 @@ prepare() {
   sed -e 's/ -Werror//g' \
       -i BaseTools/Conf/*.template BaseTools/Source/C/Makefiles/*.makefile
 
-  # copy seabios's CSM16 binary into place, so that it can be included in the binaries:
+  # copy seabios's CSM binary into place, so that it can be included in the binaries:
   cp -v /usr/share/qemu/bios-csm.bin OvmfPkg/Csm/Csm16/Csm16.bin
 }
 
+# TODO: check TPM_ENABLE/TPM2_ENABLE
 build() {
   cd "$pkgbase-$pkgver"
   export GCC5_IA32_PREFIX="x86_64-linux-gnu-"
@@ -100,6 +108,7 @@ build() {
                        -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM_ENABLE \
+                       -D TPM_CONFIG_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D TLS_ENABLE \
                        -D FD_SIZE_2MB \
@@ -107,7 +116,7 @@ build() {
                        -D SMM_REQUIRE \
                        -D EXCLUDE_SHELL_FROM_FD
       mv -v Build/Ovmf{Ia32,IA32-secure}
-      echo "Building ovmf (${_arch}) with CSM16 support"
+      echo "Building ovmf (${_arch}) with CSM support"
       OvmfPkg/build.sh -p OvmfPkg/OvmfPkgIa32.dsc \
                        -a "${_arch}" \
                        -b "${_build_type}" \
@@ -116,6 +125,7 @@ build() {
                        -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM_ENABLE \
+                       -D TPM_CONFIG_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D TLS_ENABLE \
                        -D CSM_ENABLE \
@@ -130,6 +140,7 @@ build() {
                        -D LOAD_X64_ON_IA32_ENABLE \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM_ENABLE \
+                       -D TPM_CONFIG_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D TLS_ENABLE \
                        -D FD_SIZE_2MB
@@ -137,21 +148,22 @@ build() {
     fi
     if [[ "${_arch}" == 'X64' ]]; then
       echo "Building ovmf (${_arch}) with secure boot support"
-      OvmfPkg/build.sh -p "OvmfPkg/OvmfPkg${_arch}.dsc" \
-                       -a "${_arch}" \
+      OvmfPkg/build.sh -p "OvmfPkg/OvmfPkgIa32X64.dsc" \
+                       -a IA32 -a "${_arch}" \
                        -b "${_build_type}" \
                        -n "$(nproc)" \
                        -t "${_build_plugin}" \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM_ENABLE \
+                       -D TPM_CONFIG_ENABLE \
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
                        -D HTTP_BOOT_ENABLE \
                        -D SECURE_BOOT_ENABLE \
                        -D SMM_REQUIRE \
                        -D EXCLUDE_SHELL_FROM_FD
-      mv -v Build/OvmfX64{,-secure}
-      echo "Building ovmf (${_arch}) with CSM16 support"
+      mv -v Build/Ovmf3264{,-secure}
+      echo "Building ovmf (${_arch}) with CSM support"
       OvmfPkg/build.sh -p "OvmfPkg/OvmfPkg${_arch}.dsc" \
                        -a "${_arch}" \
                        -b "${_build_type}" \
@@ -159,6 +171,7 @@ build() {
                        -t "${_build_plugin}" \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM_ENABLE \
+                       -D TPM_CONFIG_ENABLE \
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
                        -D CSM_ENABLE \
@@ -172,6 +185,7 @@ build() {
                        -t "${_build_plugin}" \
                        -D NETWORK_IP6_ENABLE \
                        -D TPM_ENABLE \
+                       -D TPM_CONFIG_ENABLE \
                        -D FD_SIZE_2MB \
                        -D TLS_ENABLE \
                        -D HTTP_BOOT_ENABLE
@@ -204,6 +218,7 @@ build() {
 
 package_edk2-armvirt() {
   pkgdesc="Firmware for Virtual Machines (aarch64)"
+  url="https://github.com/tianocore/tianocore.github.io/wiki/ArmVirtPkg"
   local _arch=AARCH64
 
   cd "$pkgbase-$pkgver"
@@ -252,10 +267,11 @@ package_edk2-shell() {
 
 package_edk2-ovmf() {
   pkgdesc="Firmware for Virtual Machines (x86_64, i686)"
+  url="https://github.com/tianocore/tianocore.github.io/wiki/OVMF"
+  license+=(MIT)
   provides=(ovmf)
   conflicts=(ovmf)
   replaces=(ovmf)
-  license+=(MIT)
   install="${pkgname}.install"
 
   cd "$pkgbase-$pkgver"
@@ -272,10 +288,15 @@ package_edk2-ovmf() {
         -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
       install -vDm 644 "Build/Ovmf${_arch}/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd" \
         -t "${pkgdir}/usr/share/${pkgname}/${_arch,,}"
-      install -vDm 644 "Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
-        "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
       install -vDm 644 "Build/Ovmf${_arch}-csm/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
         "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.csm.fd"
+      if [[ "${_arch}" == 'X64' ]]; then
+        install -vDm 644 "Build/Ovmf3264-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
+          "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
+      else
+        install -vDm 644 "Build/Ovmf${_arch}-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd" \
+          "${pkgdir}/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.fd"
+        fi
     fi
   done
   # installing qemu descriptors in accordance with qemu:
