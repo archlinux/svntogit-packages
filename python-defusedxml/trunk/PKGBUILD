@@ -2,7 +2,7 @@
 
 pkgname=python-defusedxml
 pkgver=0.7.1
-pkgrel=2
+pkgrel=3
 pkgdesc="XML bomb protection for Python stdlib modules"
 arch=('any')
 url='https://bitbucket.org/tiran/defusedxml'
