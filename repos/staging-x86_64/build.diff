@@ -1,0 +1,245 @@
+diff --git i/examples/clone.c w/examples/clone.c
+index 8f6fc87..89622f9 100644
+--- i/examples/clone.c
++++ w/examples/clone.c
+@@ -16,30 +16,29 @@ typedef struct
+ 	GgitRemoteCallbacks parent;
+ } Cloner;
+ 
+-static void cloner_class_init (ClonerClass *klass);
++GType cloner_get_type (void);
+ 
+ G_DEFINE_TYPE (Cloner, cloner, GGIT_TYPE_REMOTE_CALLBACKS)
+ 
+ static void
+ cloner_init (Cloner *cloner)
+ {
+ }
+ 
+ static void
+ cloner_transfer_progress (GgitRemoteCallbacks   *callbacks,
+                           GgitTransferProgress  *stats)
+ {
+-	guint recvobjs;
+-	guint totobjs;
+-	guint indexobjs;
++	guint recvobjs, totobjs, indexobjs;
++	guint network_percent, index_percent, kbytes;
+ 
+ 	recvobjs = ggit_transfer_progress_get_received_objects (stats);
+ 	totobjs = ggit_transfer_progress_get_total_objects (stats);
+ 	indexobjs = ggit_transfer_progress_get_indexed_objects (stats);
+ 
+-	guint network_percent = totobjs > 0 ? recvobjs * 100 / totobjs : 0;
+-	guint index_percent = totobjs > 0 ? indexobjs * 100 / totobjs : 0;
+-	guint kbytes = ggit_transfer_progress_get_received_bytes (stats) / 1024;
++	network_percent = totobjs > 0 ? recvobjs * 100 / totobjs : 0;
++	index_percent = totobjs > 0 ? indexobjs * 100 / totobjs : 0;
++	kbytes = ggit_transfer_progress_get_received_bytes (stats) / 1024;
+ 
+ 	g_printf ("\rnet %3d%% (%4d kb, %5d/%5d)  /  idx %3d%% (%5d/%5d)",
+ 	          network_percent, kbytes,
+diff --git i/libgit2-glib/ggit-object-factory.c w/libgit2-glib/ggit-object-factory.c
+index 59db627..5b032cf 100644
+--- i/libgit2-glib/ggit-object-factory.c
++++ w/libgit2-glib/ggit-object-factory.c
+@@ -81,7 +81,7 @@ ggit_object_factory_constructor (GType                  type,
+ 
+ 	if (the_instance)
+ 	{
+-		return g_object_ref (the_instance);
++		return G_OBJECT (g_object_ref (the_instance));
+ 	}
+ 
+ 	ret = G_OBJECT_CLASS (ggit_object_factory_parent_class)->constructor (type,
+@@ -185,26 +185,6 @@ ggit_object_factory_unregister (GgitObjectFactory *factory,
+ 	}
+ }
+ 
+-static GParameter *
+-convert_to_gparameter (GObjectConstructParam *params,
+-                       guint                  num)
+-{
+-	GParameter *ret;
+-	guint i;
+-
+-	ret = g_new0 (GParameter, num);
+-
+-	for (i = 0; i < num; ++i)
+-	{
+-		ret[i].name = params[i].pspec->name;
+-
+-		g_value_init (&ret[i].value, G_VALUE_TYPE (params[i].value));
+-		g_value_copy (params[i].value, &ret[i].value);
+-	}
+-
+-	return ret;
+-}
+-
+ /**
+  * ggit_object_factory_construct:
+  * @factory: a #GgitObjectFactory.
+@@ -235,21 +215,36 @@ ggit_object_factory_construct (GgitObjectFactory     *factory,
+ 
+ 	if (val)
+ 	{
+-		/* convert construct properties to gparameter and call newv */
+-		GParameter *params;
++		/* convert construct properties and call new_with_properties */
++		const char **names;
++		GValue *values;
+ 		guint i;
+ 
+-		params = convert_to_gparameter (construct_properties,
+-		                                n_construct_properties);
+-
+-		ret = g_object_newv (val->type, n_construct_properties, params);
++		names = g_new (const char *, n_construct_properties);
++		values = g_new0 (GValue, n_construct_properties);
+ 
+ 		for (i = 0; i < n_construct_properties; ++i)
+ 		{
+-			g_value_unset (&params[i].value);
++			const GValue *value;
++
++			names[i] = construct_properties[i].pspec->name;
++			value = construct_properties[i].value;
++
++			g_value_init (&values[i], G_VALUE_TYPE (value));
++			g_value_copy (value, &values[i]);
+ 		}
+ 
+-		g_free (params);
++		ret = g_object_new_with_properties (val->type,
++		                                    n_construct_properties,
++		                                    names, values);
++
++		for (i = 0; i < n_construct_properties; ++i)
++		{
++			g_value_unset (&values[i]);
++		}
++
++		g_free (names);
++		g_free (values);
+ 	}
+ 	else
+ 	{
+diff --git i/libgit2-glib/ggit-repository.c w/libgit2-glib/ggit-repository.c
+index 68fdb31..a2a4301 100644
+--- i/libgit2-glib/ggit-repository.c
++++ w/libgit2-glib/ggit-repository.c
+@@ -4030,16 +4030,17 @@ ggit_repository_merge (GgitRepository       *repository,
+                        GgitCheckoutOptions  *checkout_opts,
+                        GError              **error)
+ {
+-	gint ret, i;
+-	git_annotated_commit **their_heads_native;
++	gint ret;
++	gsize i;
++	const git_annotated_commit **their_heads_native;
+ 
+ 	g_return_if_fail (GGIT_IS_REPOSITORY (repository));
+ 	g_return_if_fail (their_heads != NULL);
+ 	g_return_if_fail (their_heads_length > 0);
+ 	g_return_if_fail (GGIT_IS_CHECKOUT_OPTIONS (checkout_opts));
+ 	g_return_if_fail (error == NULL || *error == NULL);
+ 
+-	their_heads_native = g_new0 (git_annotated_commit *, their_heads_length);
++	their_heads_native = g_new0 (const git_annotated_commit *, their_heads_length);
+ 
+ 	for (i = 0; i < their_heads_length; ++i)
+ 	{
+diff --git i/libgit2-glib/ggit-submodule-update-options.c w/libgit2-glib/ggit-submodule-update-options.c
+index 3a1cd3e..47b9d90 100644
+--- i/libgit2-glib/ggit-submodule-update-options.c
++++ w/libgit2-glib/ggit-submodule-update-options.c
+@@ -161,7 +161,7 @@ ggit_submodule_update_options_new (void)
+ 	return g_object_new (GGIT_TYPE_SUBMODULE_UPDATE_OPTIONS, NULL);
+ }
+ 
+-const git_submodule_update_options *
++git_submodule_update_options *
+ _ggit_submodule_update_options_get_submodule_update_options (GgitSubmoduleUpdateOptions *options)
+ {
+ 	if (options != NULL)
+diff --git i/libgit2-glib/ggit-submodule-update-options.h w/libgit2-glib/ggit-submodule-update-options.h
+index d26290b..8310e90 100644
+--- i/libgit2-glib/ggit-submodule-update-options.h
++++ w/libgit2-glib/ggit-submodule-update-options.h
+@@ -37,7 +37,7 @@ struct _GgitSubmoduleUpdateOptionsClass
+ 	GObjectClass parent_class;
+ };
+ 
+-const git_submodule_update_options *
++git_submodule_update_options *
+                       _ggit_submodule_update_options_get_submodule_update_options (GgitSubmoduleUpdateOptions  *options);
+ 
+ GgitSubmoduleUpdateOptions  *ggit_submodule_update_options_new             (void);
+diff --git i/meson_vapi_link.py w/meson_vapi_link.py
+index eb64fd6..cb43f34 100644
+--- i/meson_vapi_link.py
++++ w/meson_vapi_link.py
+@@ -1,22 +1,23 @@
+ #!/usr/bin/env python3
+ 
+ import os
+-import subprocess
++import shutil
+ import sys
+ 
+-vapidir = os.path.join(os.environ['MESON_INSTALL_DESTDIR_PREFIX'], sys.argv[1], 'vala', 'vapi')
++destdir = os.environ.get('DESTDIR', os.path.sep)
++libdir = sys.argv[1].lstrip(os.path.sep)
++vapidir = os.path.join(destdir, libdir, 'vala', 'vapi')
++os.chdir(vapidir)
+ 
+ # FIXME: meson will not track the creation of these files
+ #        https://github.com/mesonbuild/meson/blob/master/mesonbuild/scripts/uninstall.py#L39
+ old = 'ggit-1.0'
+ new = 'libgit2-glib-1.0'
+ 
+-wd = os.getcwd()
+-os.chdir(vapidir)
+-
+ for ext in ['vapi', 'deps']:
+-  src = os.path.join('{}.{}'.format(new, ext))
+-  dest = os.path.join('{}.{}'.format(old, ext))
+-  subprocess.call(['ln', '-s', '-f', src, dest])
+-
+-os.chdir(wd)
++  src = '{}.{}'.format(new, ext)
++  dest = '{}.{}'.format(old, ext)
++  try:
++      os.symlink(src, dest)
++  except OSError:
++      shutil.copy(src, dest)
+diff --git i/tests/repository.c w/tests/repository.c
+index 7396ef7..c1d9a43 100644
+--- i/tests/repository.c
++++ w/tests/repository.c
+@@ -73,22 +73,22 @@ _g_mkdtemp (gchar *tmpl)
+ 	static const int NLETTERS = sizeof (letters) - 1;
+ 	static int counter = 0;
+ 	char *XXXXXX;
+-	GTimeVal tv;
++	gint64 time;
+ 	glong value;
+ 	int count;
+ 
+ 	/* find the last occurrence of "XXXXXX" */
+ 	XXXXXX = g_strrstr (tmpl, "XXXXXX");
+ 
+ 	if (!XXXXXX || strncmp (XXXXXX, "XXXXXX", 6))
+ 	{
+ 		errno = EINVAL;
+ 		return NULL;
+ 	}
+ 
+ 	/* Get some more or less random data.  */
+-	g_get_current_time (&tv);
+-	value = (tv.tv_usec ^ tv.tv_sec) + counter++;
++	time = g_get_real_time ();
++	value = ((time % G_USEC_PER_SEC) ^ (time / G_USEC_PER_SEC)) + counter++;
+ 
+ 	for (count = 0; count < 100; value += 7777, ++count)
+ 	{
