@@ -3,7 +3,7 @@
 
 pkgname=python-platformdirs
 pkgver=2.0.2
-pkgrel=3
+pkgrel=4
 pkgdesc='A small Python module for determining appropriate platform-specific dirs, e.g. a "user data dir"'
 arch=('any')
 url="https://github.com/platformdirs/platformdirs"
