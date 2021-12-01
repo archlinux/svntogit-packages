@@ -2,21 +2,21 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.2.1
+_qtver=6.2.2
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
 pkgdesc='Provides support for web applications using the Chromium browser project'
-depends=(qt6-webchannel qt6-location libxcomposite libxrandr pciutils libxss libxkbfile 
+depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr pciutils libxss libxkbfile 
          libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font)
-makedepends=(cmake ninja python2 python gperf jsoncpp qt6-tools pipewire nodejs)
+makedepends=(cmake ninja python2 python gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
-sha256sums=('1f933cffb8671c1e71b6b2a4924cb6b3f9878388ae6298ac8d31a76c1ecffbb7')
+sha256sums=('2d2dcde6e4678ea96e4203a6e585b73e23fb61f83b47330f1f00c25e481cd3b4')
 
 build() {
   cmake -B build -S $_pkgfn -G Ninja \
