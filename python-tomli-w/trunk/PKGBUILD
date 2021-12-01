@@ -10,7 +10,9 @@ arch=(any)
 depends=(python)
 makedepends=(
   git
-  python-dephell
+  python-flit
+  python-pip
+  python-poetry
 )
 checkdepends=(
   python-pytest
@@ -25,14 +27,9 @@ pkgver() {
   git describe --tags
 }
 
-prepare() {
-  cd tomli-w
-  dephell deps convert --from pyproject.toml --to setup.py
-}
-
 build() {
   cd tomli-w
-  python setup.py build
+  python -m flit build --format wheel
 }
 
 check() {
@@ -41,9 +38,8 @@ check() {
 }
 
 package() {
-  cd tomli-w
-  python setup.py install --root="${pkgdir}" -O1
-  install -Dm 644 LICENSE -t "${pkgdir}"/usr/share/licenses/python-tomli-w/
+  PIP_CONFIG_FILE=/dev/null pip install --isolated --root="${pkgdir}" --ignore-installed --no-deps tomli-w/dist/*.whl
+  install -Dm 644 tomli-w/LICENSE -t "${pkgdir}"/usr/share/licenses/python-tomli-w/
 }
 
 # vim: ts=2 sw=2 et:
