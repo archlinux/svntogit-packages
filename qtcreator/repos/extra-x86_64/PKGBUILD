@@ -7,24 +7,22 @@
 # Contributor: delor <bartekpiech gmail com>
 
 pkgname=qtcreator
-pkgver=5.0.3
+pkgver=6.0.0
 _clangver=13.0.0
-pkgrel=2
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3)
-# Note: built against Qt5 because of https://bugreports.qt.io/browse/QTCREATORBUG-26134
-depends=(qt5-tools qt5-quickcontrols2 qt5-svg qt5-quick3d qt5-webengine qt5-serialport syntax-highlighting # qt6-shadertools qt6-5compat
-         clang=$_clangver clazy yaml-cpp)
+depends=(qt6-tools qt6-svg qt6-quick3d qt6-webengine qt6-serialport qt6-shadertools qt6-5compat
+         clang=$_clangver clazy yaml-cpp) # syntax-highlighting
 makedepends=(cmake llvm python)
 options=(docs)
-optdepends=('qt5-doc: integrated Qt documentation'
-            'qt5-examples: welcome page examples'
-            'qt5-translations: for other languages'
+optdepends=('qt6-doc: integrated Qt documentation'
+            'qt6-examples: welcome page examples'
+            'qt6-translations: for other languages'
             'gdb: debugger'
             'cmake: cmake project support'
-            'qbs: QBS project support'
             'x11-ssh-askpass: ssh support'
             'git: git support'
             'mercurial: mercurial support'
@@ -33,7 +31,7 @@ optdepends=('qt5-doc: integrated Qt documentation'
             'perf: performer analyzer'
             'mlocate: locator filter')
 source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz)
-sha256sums=('7fd3b14310bcecee6b134f8cb7f4c0ed2385d7f4cecd48d756c5c1fd650ce2eb')
+sha256sums=('6beb7802f6ab339f0ea947530e6902245057ec161b2b6d2ed9053e1bee1be0bf')
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
@@ -42,8 +40,7 @@ build() {
     -DWITH_DOCS=ON \
     -DBUILD_DEVELOPER_DOCS=ON \
     -DBUILD_QBS=OFF \
-    -DQTC_CLANG_BUILDMODE_MATCH=ON \
-    -DBUILD_HELVIEWERBACKEND_QTWEBENGINE=ON
+    -DQTC_CLANG_BUILDMODE_MATCH=ON
   cmake --build build
   cmake --build build --target docs
 }
