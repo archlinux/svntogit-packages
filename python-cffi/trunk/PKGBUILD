@@ -3,7 +3,7 @@
 
 pkgname=python-cffi
 pkgver=1.15.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Foreign Function Interface for Python calling C code"
 arch=('x86_64')
 url="https://cffi.readthedocs.org/"
