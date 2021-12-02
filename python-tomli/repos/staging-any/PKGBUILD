@@ -2,7 +2,7 @@
 
 pkgname=python-tomli
 pkgver=1.2.2
-pkgrel=3
+pkgrel=4
 pkgdesc="A lil' TOML parser"
 url="https://github.com/hukkin/tomli"
 license=('MIT')
