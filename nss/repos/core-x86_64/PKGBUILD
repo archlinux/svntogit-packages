@@ -3,25 +3,29 @@
 
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
-pkgver=3.72
-pkgrel=2
+pkgver=3.73
+pkgrel=1
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
 arch=(x86_64)
 license=(MPL GPL)
 depends=(nspr sqlite zlib sh 'p11-kit>=0.23.19')
-makedepends=(perl python gyp)
-source=("https://ftp.mozilla.org/pub/security/nss/releases/NSS_${pkgver//./_}_RTM/src/nss-${pkgver}.tar.gz"
+makedepends=(perl python gyp mercurial)
+_revision=a2050bd67f05e8af5984baca03078d69b3874b85
+source=("hg+https://hg.mozilla.org/projects/nss#revision=$_revision"
         certdata2pem.py bundle.sh)
-sha256sums=('6ea60a9ff113e493ea2ab25f41ea75a9fbd10af7903f26f703dac8680732d02e'
+sha256sums=('SKIP'
             'd2a1579dae05fd16175fac27ef08b54731ecefdf414085c610179afcf62b096c'
             '3bfadf722da6773bdabdd25bdf78158648043d1b7e57615574f189a88ca865dd')
 
-prepare() {
-  cd nss-$pkgver/nss
+pkgver() {
+  cd nss
+  hg id -t | sed 's/^NSS_//;s/_RTM$//;s/_/./g'
+}
 
-  mkdir "$srcdir/certs"
-  ln -srt "$srcdir/certs" lib/ckfw/builtins/{certdata.txt,nssckbi.h}
+prepare() {
+  mkdir -p certs
+  ln -srft certs nss/lib/ckfw/builtins/{certdata.txt,nssckbi.h}
 }
 
 build() {
@@ -31,7 +35,7 @@ build() {
   cd ..
   ./bundle.sh
 
-  cd nss-$pkgver/nss
+  cd nss
   ./build.sh \
     --target x64 \
     --opt \
@@ -42,9 +46,9 @@ build() {
 }
 
 package_nss() {
-  cd nss-$pkgver
+  local nsprver="$(pkg-config --modversion nspr)"
+  local libdir=/usr/lib
 
-  local libdir=/usr/lib nsprver="$(pkg-config --modversion nspr)"
   sed nss/pkg/pkg-config/nss.pc.in \
     -e "s,%libdir%,$libdir,g" \
     -e "s,%prefix%,/usr,g" \
