@@ -5,7 +5,7 @@
 pkgbase=python-virtualenv
 pkgname=python-virtualenv
 pkgver=20.8.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
