@@ -4,13 +4,13 @@
 
 pkgname=mkinitcpio
 pkgver=31
-pkgrel=1
+pkgrel=2
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url='https://github.com/archlinux/mkinitcpio'
 license=('GPL')
 depends=('awk' 'mkinitcpio-busybox>=1.19.4-2' 'kmod' 'util-linux>=2.23' 'libarchive' 'coreutils'
-         'bash' 'diffutils' 'findutils' 'grep' 'filesystem>=2011.10-1' 'zstd' 'systemd')
+         'bash' 'binutils' 'diffutils' 'findutils' 'grep' 'filesystem>=2011.10-1' 'zstd' 'systemd')
 optdepends=('gzip: Use gzip compression for the initramfs image'
             'xz: Use lzma or xz compression for the initramfs image'
             'bzip2: Use bzip2 compression for the initramfs image'
