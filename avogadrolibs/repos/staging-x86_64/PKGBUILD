@@ -1,0 +1,60 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+
+pkgbase=avogadrolibs
+pkgname=(avogadrolibs avogadrolibs-qt5)
+pkgver=1.95.1
+pkgrel=7
+pkgdesc='Libraries that provide 3D rendering, visualization, analysis and data processing useful in computational chemistry, molecular modeling, bioinformatics, materials science, and related areas'
+arch=(x86_64)
+url='https://www.openchemistry.org/'
+license=(custom)
+depends=(molequeue glew spglib hdf5 avogadro-molecules avogadro-crystals)
+makedepends=(cmake eigen boost python mmtf-cpp libmsym pybind11 vtk qt5-tools qt5-svg genxrdpattern tbb openmpi)
+optdepends=('avogadrolibs-qt5: For the VTK and Qt plugins')
+source=(https://github.com/OpenChemistry/avogadrolibs/archive/$pkgver/$pkgname-$pkgver.tar.gz
+        vtk9.patch)
+sha256sums=('52817eebfc0cf700e5f6c0c4455b460618ec0dd7cb4ede5d8fabc5a2d73a7816'
+            'a2272c456f1a5dd85bb98fbf5ed9aa5aabaa3fbd8b191bb6d14e6ee57c2789f4')
+
+prepare() {
+  mkdir crystals molecules # Dummy dirs to trick cmake, actually provided by avogadro-molecules and avogadro-crystals
+  patch -d $pkgname-$pkgver -p1 < vtk9.patch # Fix build with VTK 9
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DENABLE_TRANSLATIONS=ON \
+    -DUSE_HDF5=ON \
+    -DUSE_VTK=ON \
+    -DUSE_PYTHON=ON \
+    -DUSE_SYSTEM_GENXRDPATTERN=ON
+  cmake --build build
+}
+
+package_avogadrolibs() {
+  DESTDIR="$pkgdir" cmake --install build
+  rm -r "$pkgdir"/usr/lib/libAvogadroQt* \
+        "$pkgdir"/usr/lib/libAvogadroMoleQueue* \
+        "$pkgdir"/usr/lib/libAvogadroVtk* \
+        "$pkgdir"/usr/include/avogadro/{molequeue,qt*,vtk} \
+        "$pkgdir"/usr/lib/avogadro2/{scripts,staticplugins}
+
+  install -Dm644 $pkgname-$pkgver/LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
+
+# Move python module to the correct place
+  local site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  mkdir -p "$pkgdir${site_packages}"
+  mv "$pkgdir"/usr/lib/avogadro "$pkgdir${site_packages}"
+}
+
+package_avogadrolibs-qt5() {
+  pkgdesc="Qt 5 modules for Avogadro"
+  depends=(qt5-svg libarchive libmsym avogadrolibs vtk openmpi pugixml fmt tbb libxcursor)
+
+  DESTDIR="$pkgdir" cmake --install build/avogadro/molequeue
+  DESTDIR="$pkgdir" cmake --install build/avogadro/qtgui
+  DESTDIR="$pkgdir" cmake --install build/avogadro/qtopengl
+  DESTDIR="$pkgdir" cmake --install build/avogadro/qtplugins
+  DESTDIR="$pkgdir" cmake --install build/avogadro/vtk
+}
