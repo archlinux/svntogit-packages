@@ -1,0 +1,46 @@
+# Maintainer: Daniel Isenmann <daniel@archlinux.org>
+# Contributor: William Rea <sillywilly@gmail.com>
+
+pkgname=libgpod
+pkgver=0.8.3
+pkgrel=13
+pkgdesc="A shared library to access the contents of an iPod"
+arch=(x86_64)
+license=('LGPL')
+depends=('gdk-pixbuf2' 'sg3_utils' 'libimobiledevice' 'libplist' 'sqlite')
+makedepends=('intltool' 'swig' 'docbook-xsl' 'gtk-sharp-2' 'gtk-doc')
+optdepends=('gtk-sharp-2: Mono bindings')
+url="http://www.gtkpod.org/libgpod/"
+source=(https://downloads.sourceforge.net/sourceforge/gtkpod/${pkgname}-${pkgver}.tar.bz2
+        libgpod-0.8.2-pkgconfig_overlinking.patch
+        libgpod-fixswig.patch
+        0001-323-Segmentation-fault-when-opening-ipod.patch
+        libgpod-udev.patch)
+options=('!emptydirs')
+sha256sums=('638a7959d04e95f1e62abad02bd33702e4e8dfef98485ac7d9d50395c37e955d'
+            '02daa2b46d0cfdee14c9d96eabf903ba4638694e669c5cb0ec462076837ac2ff'
+            '86f7054dc53ee2aa756c98dc893af6718bbeb6361a0785a5c93a5592b8cc8cdd'
+            'b181131ee5b42673074f8217155b4f147623cc63dd382ee4bfa2cb81cd281b20'
+            '35786054ebbfab1d247d51e7c7dc7618f8ed9fc17ad3c8b590d89190728452ea')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../libgpod-0.8.2-pkgconfig_overlinking.patch
+  patch -Np1 -i ../libgpod-fixswig.patch
+  patch -Np1 -i ../0001-323-Segmentation-fault-when-opening-ipod.patch
+  patch -Np0 -i ../libgpod-udev.patch
+  sed -e 's|libplist >= 1.0|libplist-2.0 >= 2.2|' -i configure.ac # support libplist 2.2
+  autoreconf -vi
+}
+
+build() {
+  cd $pkgname-$pkgver
+  MCS=/usr/bin/mcs ./configure --prefix=/usr --with-udev-dir=/usr/lib/udev --enable-udev --with-python=no
+  make PREFIX=/usr
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make PREFIX=/usr DESTDIR="${pkgdir}" install
+}
