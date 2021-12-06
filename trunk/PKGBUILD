@@ -10,11 +10,11 @@ license=('GPL')
 url='https://archlinux.org'
 depends=('iana-etc')
 backup=('etc/crypttab' 'etc/fstab' 'etc/group' 'etc/gshadow' 'etc/host.conf'
-        'etc/hosts' 'etc/issue' 'etc/ld.so.conf' 'etc/motd' 'etc/nsswitch.conf'
+        'etc/hosts' 'etc/issue' 'etc/ld.so.conf' 'etc/nsswitch.conf'
         'etc/passwd' 'etc/profile' 'etc/resolv.conf' 'etc/securetty'
         'etc/shadow' 'etc/shells')
 source=('crypttab' 'env-generator' 'fstab' 'group' 'gshadow' 'host.conf' 'hosts'
-        'issue' 'ld.so.conf' 'locale.sh' 'motd' 'nsswitch.conf' 'os-release'
+        'issue' 'ld.so.conf' 'locale.sh' 'nsswitch.conf' 'os-release'
         'passwd' 'profile' 'resolv.conf' 'securetty' 'shadow' 'shells' 'sysctl'
         'sysusers' 'tmpfiles' 'archlinux-logo.svg' 'archlinux-logo.png'
         'archlinux-logo-text.svg' 'archlinux-logo-text-dark.svg')
@@ -28,7 +28,6 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             'c774dbbcaea38ee1c1141d0daf82aa8177bfb26aca896d6f0c4ccdc902f6ac42'
             'dad04a370e488aa85fb0a813a5c83cf6fd981ce01883fc59685447b092de84b5'
             '8ca2d8eef6fb5143c9ef7e9174ccfef59ac7ad2deee243574cd10c763156cc10'
-            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
             'c8ee7a9faf798caab178ec51afae4146f1efd8a716b7acedf28345b6c75f9697'
             'a54d010860b3e9c4b8ccc282e61da5b7118c7547697151aaca36ee771d323dc9'
             '5e06477834f51abf42ea4e8dc199632afc6afbfd8c44354685a271e9a48d2c0a'
@@ -39,7 +38,7 @@ sha256sums=('e03bede3d258d680548696623d5979c6edf03272e801a813c81ba5a5c64f4f82'
             'c390b31fffc4a2b5d78ae8c89f5317aadef1f71baac09cfb467b675db1406d61'
             '89e43a0b7028f52d5c8e7fb961d962c4b4f4e9595880a6157274ddb2c7c0b6b4'
             'b5b28f395583d141d88c0b955cd05124f9b8cdf003feab01e55885b8e8c1303e'
-            '618ac097441c1f2daffc9967e5c3cd18ea8866f776db62d04bf401c53907b1c9'
+            'f17efd1c6480c5db1fdab4a0e3cfcd4baa44a3e1ae1210aebeb40f8d5c82f742'
             '3ffe8ea4e98db43a3ec4dcca55fd4009cd8b8d220f0996aef7a5b427fdf65234'
             '3f48779141b68a81e07fee710a42025d4f67b16240295aa4cf148a7ba99cab3c'
             '601069e6e8920309178c397fd8cebe43410827d01899d31777d13212f0dfacf8'
@@ -62,7 +61,7 @@ package() {
 
   # setup /etc and /usr/share/factory/etc
   install -d etc/{ld.so.conf.d,skel,profile.d} usr/share/factory/etc
-  for f in fstab group host.conf hosts issue ld.so.conf motd nsswitch.conf \
+  for f in fstab group host.conf hosts issue ld.so.conf nsswitch.conf \
   passwd resolv.conf securetty shells profile; do
     install -m644 "$srcdir"/$f etc/
     install -m644 "$srcdir"/$f usr/share/factory/etc/
