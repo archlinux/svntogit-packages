@@ -5,7 +5,7 @@
 
 pkgname=python-twisted
 pkgver=21.7.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Asynchronous networking framework written in Python"
 arch=('any')
 url="https://twistedmatrix.com/"
@@ -30,11 +30,16 @@ checkdepends=('python-pyhamcrest' 'subversion' 'xorg-server-xvfb' 'tk' 'openssh'
               'python-cython-test-exception-raiser' 'python-pyopenssl')
 # Conflicts with the command line tools used to be provided by the python2 package.
 conflicts=("python2-twisted<=20.3.0-3")
-source=("https://github.com/twisted/twisted/archive/twisted-$pkgver.tar.gz")
-sha512sums=('a946769a6bc6c72af26e7763b9e0675788f134b4d005ea89d935da1b1d5f60d92c84fdb2615e442e7da2b98291ee8a63d5236ec7ba72ef04ad3f847b092feecb')
+source=("https://github.com/twisted/twisted/archive/twisted-$pkgver.tar.gz"
+        python310.patch)
+sha512sums=('a946769a6bc6c72af26e7763b9e0675788f134b4d005ea89d935da1b1d5f60d92c84fdb2615e442e7da2b98291ee8a63d5236ec7ba72ef04ad3f847b092feecb'
+            '5402256d06cbee74d575bdc57b8a3df2224aad531b083050c7a4e66e61b6ed2610e13de6a4346719318c076cabffce473e5dd0e14638cee6fd1cf930a50608c5')
 
 prepare() {
   cd twisted-twisted-$pkgver
+  # Avoid currentThread() DeprecationWarning (breaks tests in other packages)
+  # Related upstream PR: https://github.com/twisted/twisted/pull/1671
+  patch -Np1 -i ../python310.patch
   # Remove upper bounds
   sed -i 's/, < 4.0//;s/, < 2.0//' setup.cfg
 }
