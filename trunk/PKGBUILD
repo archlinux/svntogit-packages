@@ -2,7 +2,7 @@
 # Contributor: Tom Gundersen <teg@jklm.no>
 
 pkgname=filesystem
-pkgver=2021.12.04
+pkgver=2021.12.07
 pkgrel=1
 pkgdesc='Base Arch Linux files'
 arch=('x86_64')
