@@ -1,0 +1,46 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=alsa-lib
+pkgver=1.2.6.1
+pkgrel=1
+pkgdesc="An alternative implementation of Linux sound support"
+arch=(x86_64)
+url="https://www.alsa-project.org"
+license=(LGPL2.1)
+depends=(glibc alsa-topology-conf alsa-ucm-conf)
+provides=(libasound.so libatopology.so)
+install="${pkgname}.install"
+source=("https://www.alsa-project.org/files/pub/lib/${pkgname}-${pkgver}.tar.bz2"{,.sig})
+sha512sums=('70e539cf092b5d43e00e4134d8a3e184f0dc34312823e4b58a574320cbf06cb7369bc3251ecb1858033756a7a8c35d36faa8da48d49f6efe0cec905784adbd45'
+            'SKIP')
+b2sums=('4f3d1d078678773b4f6a569d0eea95d0cf89a846605c3a95e11b92f1fe0bd9fb164b8f710906f0de9675ade7ef2123375eb1221945bec511708d6fdd85c051b9'
+        'SKIP')
+validpgpkeys=('F04DF50737AC1A884C4B3D718380596DA6E59C91') # ALSA Release Team (Package Signing Key v1) <release@alsa-project.org>
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  autoreconf -fiv
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr \
+              --without-debug
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export LD_LIBRARY_PATH="${PWD}/src/.libs/:${LD_LIBRARY_PATH}"
+  make -k check
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+  make DESTDIR="$pkgdir" install -C doc
+  install -vDm 644 {MEMORY-LEAK,TODO,NOTES,ChangeLog,doc/asoundrc.txt} -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
