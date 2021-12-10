@@ -2,7 +2,7 @@
 
 pkgname=(archboot-linux-firmware)
 pkgver=20211027.1d00989
-pkgrel=2
+pkgrel=3
 pkgdesc="Firmware files for archboot creation"
 url="https://git.kernel.org/?p=linux/kernel/git/firmware/linux-firmware.git;a=summary"
 license=('GPL2' 'GPL3' 'custom')
@@ -19,19 +19,30 @@ package() {
   done
   mkdir -p ${pkgdir}/usr
   for i in $(echo $FIRMWARE);do
-  [[ -e /lib/firmware/$i ]] &&  tar -C / -clpf - lib/firmware/$i | tar -C ${pkgdir}/usr -vxlspf -
+    [[ -e /lib/firmware/$i ]] &&  tar -C / -clpf - lib/firmware/$i | tar -C ${pkgdir}/usr -vxlspf -
   done
+  for i in /lib/firmware/iwlwifi*; do 
+    [[ -f $i ]] &&  tar -C / -clpf - $i | tar -C ${pkgdir}/usr -vxlspf -
+  done
+  # compress firmware with xz, wait for mkinitcpio support to be implemented
+  # #FS 72263
+  find ${pkgdir}/usr -type f -execdir xz -C crc32 -z {} \+
+  # delete netronome
+  rm -r ${pkgdir}/usr/lib/firmware/netronome
+  # remove directories with symlinks
+  rm -r ${pkgdir}/usr/lib/firmware/{nvidia,mrvl,rtl_bt,rtlwifi}
   # fix symlinks
   tar -C / -clpf - lib/firmware/cypress | tar -C ${pkgdir}/usr -vxlspf -
   tar -C / -clpf - lib/firmware/cxgb4/t4fw-1.26.2.0.bin | tar -C ${pkgdir}/usr -vxlspf -
   tar -C / -clpf - lib/firmware/cxgb4/t5fw-1.26.2.0.bin | tar -C ${pkgdir}/usr -vxlspf -
   tar -C / -clpf - lib/firmware/cxgb4/t6fw-1.26.2.0.bin | tar -C ${pkgdir}/usr -vxlspf -
-  tar -C / -clpf - lib/firmware/netronome/nic | tar -C ${pkgdir}/usr -vxlspf -
+  tar -C / -clpf - lib/firmware/iwlwifi-7265-10.ucode | tar -C ${pkgdir}/usr -vxlspf -
+  tar -C / -clpf - lib/firmware/nvidia | tar -C ${pkgdir}/usr -vxlspf -
+  tar -C / -clpf - lib/firmware/mrvl | tar -C ${pkgdir}/usr -vxlspf -
   tar -C / -clpf - lib/firmware/intel/ice/ddp/ice-1.3.26.0.pkg | tar -C ${pkgdir}/usr -vxlspf -
-  tar -C / -clpf - lib/firmware/rtl_bt/rtl8821c_config.bin | tar -C ${pkgdir}/usr -vxlspf -
-  # compress firmware with xz, wait for mkinitcpio support to be implemented
-  # #FS 72263
-  find ${pkgdir}/usr -type f -execdir xz -C crc32 -z {} \+ 
+  tar -C / -clpf - lib/firmware/rtl_bt | tar -C ${pkgdir}/usr -vxlspf -
+  tar -C / -clpf - lib/firmware/rtlwifi | tar -C ${pkgdir}/usr -vxlspf -
+
   # add licenses
   mkdir -p ${pkgdir}/usr/share/licenses/archboot-linux-firmware
   tar -C /usr/share/licenses/linux-firmware -clpf - ./ | tar -C ${pkgdir}/usr/share/licenses/archboot-linux-firmware -vxlspf -
