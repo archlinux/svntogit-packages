@@ -2,7 +2,7 @@
 
 pkgname=rrdtool
 pkgver=1.7.2
-pkgrel=9
+pkgrel=10
 pkgdesc="Data logging and graphing application"
 arch=('x86_64')
 url="https://www.rrdtool.org"
@@ -23,8 +23,9 @@ prepare() {
 
   # fix FS#28521 make ruby install to vendor_ruby instead of site_ruby
   sed -e 's/$(RUBY) ${abs_srcdir}\/ruby\/extconf.rb/& --vendor/' -i bindings/Makefile.am
-  aclocal
-  automake
+
+  # https://github.com/oetiker/rrdtool-1.x/issues/1135
+  autoreconf -vi
 }
 
 build() {
