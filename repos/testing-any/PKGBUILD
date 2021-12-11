@@ -4,7 +4,7 @@
 
 pkgname=python-setuptools
 pkgver=57.4.0
-pkgrel=5
+pkgrel=6
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
@@ -12,7 +12,7 @@ license=('PSF')
 url="https://pypi.org/project/setuptools/"
 depends=('python-appdirs' 'python-more-itertools' 'python-ordered-set' 'python-packaging'
          'python-pyparsing')
-makedepends=('git')
+makedepends=('git' 'python-setuptools')
 checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip'
               'python-pytest-fixture-config' 'python-pytest-flake8' 'python-pytest-virtualenv'
               'python-wheel' 'python-paver' 'python-pytest-cov' 'python-sphinx')
@@ -24,9 +24,6 @@ sha512sums=('3fa09841118c8e554ee5db141188d4ab19853b12e11c35891600dd0159afff35bfc
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  # Bootstrap for proper metadata
-  python -m ensurepip
-
   rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
 
   # Upstream devendoring logic is badly broken, see:
