@@ -2,7 +2,7 @@
 
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
-pkgver=4.12.0
+pkgver=4.13.1
 pkgrel=1
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
@@ -11,7 +11,7 @@ url="https://caml.inria.fr/"
 makedepends=('ncurses>=5.6-7')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
 source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
-sha512sums=('fff347398300097e32dcdd0fabfa158693e3d27d4b0fef23a564be4993950be374e3e436205e621485f4188ab007e489c50b1294e1999dac36312e56ec5b52c9')
+sha512sums=('3f5f831b31fc83a281395f8461c6b074c92c648e33f55d66b6439e208e20e000e1e17b7c2d05bd5aabf3b3a622f28e64e5b9be8a1b327b505cc6aa56eadd0161')
 options=('!makeflags' '!emptydirs' 'staticlibs')
 
 
