@@ -3,8 +3,8 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=13.0.0
-pkgrel=5
-_ocaml_ver=4.12.0
+pkgrel=6
+_ocaml_ver=4.13.1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
@@ -125,7 +125,7 @@ package_llvm-libs() {
 
 package_llvm-ocaml() {
   pkgdesc="OCaml bindings for LLVM"
-  depends=('llvm' "ocaml=$_ocaml_ver" 'ocaml-ctypes')
+  depends=('llvm' "ocaml>=$_ocaml_ver" 'ocaml-ctypes')
 
   install -d "$pkgdir"/{usr/lib,usr/share/doc/$pkgname}
   cp -a "$srcdir/ocaml.lib" "$pkgdir/usr/lib/ocaml"
