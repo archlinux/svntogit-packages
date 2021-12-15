@@ -3,7 +3,7 @@
 
 pkgname=compiler-rt
 pkgver=13.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Compiler runtime libraries for clang"
 arch=('x86_64')
 url="https://compiler-rt.llvm.org/"
@@ -30,7 +30,8 @@ build() {
 
   cmake .. -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCOMPILER_RT_INSTALL_PATH=/usr/lib/clang/$pkgver
   ninja
 }
 
@@ -39,10 +40,6 @@ package() {
 
   DESTDIR="$pkgdir" ninja install
   install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-
-  mkdir -p "$pkgdir"/usr/lib/clang/$pkgver/{lib,share}
-  mv "$pkgdir"/usr/lib/{linux,clang/$pkgver/lib/}
-  mv "$pkgdir"/usr/{share/*.txt,lib/clang/$pkgver/share/}
 }
 
 # vim:set ts=2 sw=2 et:
