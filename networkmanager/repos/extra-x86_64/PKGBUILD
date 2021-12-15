@@ -8,7 +8,7 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
 pkgver=1.32.12
-pkgrel=1
+pkgrel=2
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
 arch=(x86_64)
@@ -43,7 +43,6 @@ build() {
     -D session_tracking_consolekit=false
     -D suspend_resume=systemd
     -D modify_system=true
-    -D polkit_agent=true
     -D selinux=false
 
     # features
@@ -88,19 +87,22 @@ _pick() {
 }
 
 package_networkmanager() {
-  depends=(libnm iproute2 polkit wpa_supplicant libmm-glib libnewt libndp libteam curl
+  depends=(libnm iproute2 wpa_supplicant libmm-glib libnewt libndp libteam curl
            bluez-libs libpsl audit mobile-broadband-provider-info)
-  optdepends=('dnsmasq: connection sharing'
-              'nftables: connection sharing'
-              'iptables: connection sharing'
-              'bluez: Bluetooth support'
-              'ppp: dialup connection support'
-              'modemmanager: cellular network support'
-              'iwd: wpa_supplicant alternative'
-              'dhclient: alternative DHCP client'
-              'dhcpcd: alternative DHCP client'
-              'openresolv: alternative resolv.conf manager'
-              'firewalld: firewall support')
+  optdepends=(
+    'polkit: let non-root users control networking'
+    'dnsmasq: connection sharing'
+    'nftables: connection sharing'
+    'iptables: connection sharing'
+    'bluez: Bluetooth support'
+    'ppp: dialup connection support'
+    'modemmanager: cellular network support'
+    'iwd: wpa_supplicant alternative'
+    'dhclient: alternative DHCP client'
+    'dhcpcd: alternative DHCP client'
+    'openresolv: alternative resolv.conf manager'
+    'firewalld: firewall support'
+  )
   backup=(etc/NetworkManager/NetworkManager.conf)
 
   meson install -C build --destdir "$pkgdir"
