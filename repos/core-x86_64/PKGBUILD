@@ -1,7 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=5.10.84
+pkgver=5.10.85
 pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
@@ -17,18 +17,16 @@ source=(
   https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
   0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
-  0002-gcc-plugins-modern-gcc-plugin-infrastructure-requres.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
-sha256sums=('6e96271d72dd106c4bd83931ca16fda622413b34c5649e2916116c38c12e233d'
+sha256sums=('ba89162605ac447db8953c29f649b64d16aff7de8145e2db30d759e5476b19ac'
             'SKIP'
-            '6138a9241ded831b1ef8d627661f0c439df92e9f38ca44e8c393f8b8af31bdea'
-            '96a72e1652314215da7140956c3abcf495cafd00811eda3cf4ce03ec5f791f1e'
-            'bb935ad2467637966185b88d18a3f9be2f37d3acdc71ed361eae326ca898d6fc')
+            '6fb2683ec87fffa8496534aa6e31145162284e16a989efe8dfae673c74f22936'
+            '96a72e1652314215da7140956c3abcf495cafd00811eda3cf4ce03ec5f791f1e')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
