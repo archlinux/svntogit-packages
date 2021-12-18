@@ -6,7 +6,7 @@ _openssl_ver=1.1.1l
 pkgbase=edk2
 pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
 pkgver=202111
-pkgrel=4
+pkgrel=5
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -28,6 +28,7 @@ source=(
   "80-edk2-ovmf-ia32-on-x86_64-secure.json"
   "81-edk2-ovmf-ia32-on-x86_64.json"
   "82-edk2-ovmf-ia32-on-x86_64-csm.json"
+  "${pkgname}-202111-gpu_passthrough.patch::https://github.com/tianocore/edk2/commit/ee1f8262b83dd88b30091e6e81221ff299796099.patch"
 )
 sha512sums=('212a178b2e79ab42bcf0d2d12e8769da28bc3ed3f2d4c905a85c0d23d2675500c1c05b5b645eac9c4de97df974dcfc809efd06385016331ca02944e58558954a'
             'd9611f393e37577cca05004531388d3e0ebbf714894cab9f95f4903909cd4f45c214faab664c0cbc3ad3cca309d500b9e6d0ecbf9a0a0588d1677dc6b047f9e0'
@@ -43,7 +44,8 @@ sha512sums=('212a178b2e79ab42bcf0d2d12e8769da28bc3ed3f2d4c905a85c0d23d2675500c1c
             '77e23f0c116ae5a087553edb2754df172b2c4fe5bc346356abe0e1f2acfb41a346d06d87b0569102ca4ac9356e189198c0c74476cb35f1b62773a956cb6a1e04'
             '8e5eb4e24fad4644a66eb52c95a90a82f01df0af6e57208ad61cb0859dd4425e623e75d93846e8fc3235370a88d93a1d27a512dc4e559bedfe3249404797838b'
             '7c9f8e7ce7451e7aa852998ffcd3ca95c08083c313dc8dcf0877969ef23d9da6f69c60bb1e652387a223da6e690524fa094bfbaed14d8bdae2853e68530b2f82'
-            '891d3ea36d966114ff1f79c3619675a46b30b68def16ab426f2dee00bd0768f82ca0ee26acd7adedd379f25613e309ec9dfaed4e8a5d3f3e4fa7e8d845f55b18')
+            '891d3ea36d966114ff1f79c3619675a46b30b68def16ab426f2dee00bd0768f82ca0ee26acd7adedd379f25613e309ec9dfaed4e8a5d3f3e4fa7e8d845f55b18'
+            '4e82b72ebe9f65e13cff09d1032fe8512066be031948906a268e20a5a89d18f71aec6fbd743266b2fa00a52178ee2c1131f505b59a2b1084eb6f20cb67791336')
 b2sums=('9eed28ae063982b7c44311caf414ab967355d0a1ab09201678bed96e45a71215a0f8dde3d29710d2634f05c8c359cc07ac82045c5f4bd6824300b6e6d24ca005'
         '9e8739015db63a013c05587e3d164d67c3f65f1f6c5fc75e4592bcd038c036cde88a7bc95fbc1f1b4ed876f6124ca4dabcd4f5dbb45d1b84299f2efe1a59431a'
         'SKIP'
@@ -58,7 +60,8 @@ b2sums=('9eed28ae063982b7c44311caf414ab967355d0a1ab09201678bed96e45a71215a0f8dde
         '7f48bb1747c732c597a749c851a6cac46de844c1727f3d5edca35249df845a0f578780e8bcda7d86ad2c4a62a9a2a0bc7e1cfab9b7b93d7b5415bb5817d73346'
         'ddacbab89d0fd7831149594487559bb6bac1464b2b5620641043306fabfc37800db8c6d87a833c70ec35c699ea2f35cf09d34028ec7982a94686e8cd97b73300'
         '99bf35c4042fd5105a3b3b7f71b0aeb18db7811da4ed4481ffec485258619c30d33b08633f9a1c762d383e3bf0191053be9b88b9a4c142350186c6df1261d1f7'
-        'd45b224c36eda139ca6ad9e4c6c04282724b264dd36a0b3ba904d71476b83e02963c8cadf1f1e1233955071d133dc0defa746740fa08b26398c489fbf6ba89a0')
+        'd45b224c36eda139ca6ad9e4c6c04282724b264dd36a0b3ba904d71476b83e02963c8cadf1f1e1233955071d133dc0defa746740fa08b26398c489fbf6ba89a0'
+        'c6ea41083b27c3d112188f04f07f862cac24aa2acae4530d38416ef2fc0a6d678ae95e9f4cb173b63c9d512a2103477a30c4cbe76588fc47e8744c7a336cd19a')
 validpgpkeys=('8657ABB260F056B1E5190839D9C4D26D0E604491') # Matt Caswell <matt@openssl.org>
 _arch_list=(AARCH64 IA32 X64)
 _build_type=RELEASE
@@ -67,6 +70,9 @@ _build_plugin=GCC5
 prepare() {
   mv -v "$pkgbase-$pkgbase-stable$pkgver" "$pkgbase-$pkgver"
   cd "$pkgbase-$pkgver"
+  # patch to fix issues with GPU passthrough
+  # https://bugs.archlinux.org/task/72991
+  patch -Np1 -i ../"${pkgname}-202111-gpu_passthrough.patch"
   # patch to be able to use brotli 1.0.9
   patch -Np1 -i "../${pkgbase}-202102-brotli-1.0.9.patch"
   # NOTE: patching brotli itself is not necessary (extra/brotli cherry-picks a patch for the pkgconfig integration)
