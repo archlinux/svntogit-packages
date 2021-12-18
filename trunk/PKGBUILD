@@ -5,7 +5,7 @@
 pkgname=qt6-base
 _qtver=6.2.2
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -55,6 +55,7 @@ build() {
 }
 
 package() {
+  depends+=(qt6-translations)
   DESTDIR="$pkgdir" cmake --install build
 
   install -Dm644 $_pkgfn/LICENSE* -t "$pkgdir"/usr/share/licenses/$pkgbase
