@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=95.0.1
+pkgver=95.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -25,7 +25,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         0001-Use-remoting-name-for-GDK-application-names.patch
         0002-Bug-1745560-Add-missing-stub-for-wl_proxy_marshal_fl.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('552a2bd731921f40694a4db8ad31dce6f4e9f52035d04e7cd1f917613f803efa'
+sha256sums=('c178cbf61979bd39a8daa9a09c6e03089da37baded692ad1f745ecfcaae74d64'
             'SKIP'
             'a7a5ea4680c0a4c6eb5a5f99970008f5ad3e2f29f0d6d050aa651bce8c713718'
             '8a893ae44955c90a0fb4a504134773293054ab57a41ba7931df98c8cf5449549'
