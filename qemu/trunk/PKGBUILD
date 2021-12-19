@@ -13,7 +13,7 @@ pkgname=(
 )
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=6.2.0
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
@@ -98,17 +98,20 @@ prepare() {
 }
 
 build() {
-  _build full \
-    --audio-drv-list="pa,alsa,sdl,jack"
+  _build full
 
   _build headless \
-    --audio-drv-list= \
     --disable-sdl \
     --disable-gtk \
     --disable-vte \
     --disable-brlapi \
     --disable-opengl \
-    --disable-virglrenderer
+    --disable-virglrenderer \
+    --disable-alsa \
+    --disable-jack \
+    --disable-oss \
+    --disable-pa \
+    --disable-sdl
 }
 
 _build() (
