@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.5.4
-pkgrel=10
+pkgrel=11
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
@@ -21,12 +21,12 @@ optdepends=('opencv-samples: samples'
             'java-runtime: Java interface')
 source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
         https://github.com/opencv/opencv_contrib/archive/$pkgver/opencv_contrib-$pkgver.tar.gz
-        opencv-lapack-3.10.patch
+        opencv-lapack-3.10.patch::https://github.com/opencv/opencv/commit/54c18009.patch
         fix-cvv-build.patch::https://github.com/opencv/opencv_contrib/commit/2a4348e0.patch
         vtk9.patch)
 sha256sums=('c20bb83dd790fc69df9f105477e24267706715a9d3c705ca1e7f613c7b3bad3d'
             'ad74b440b4539619dc9b587995a16b691246023d45e34097c73e259f72de9f81'
-            'f83c64f2731a39910d0d4a48898dd04e4aca5c22f746b7b0ead003992ae11199'
+            'fec670f7d1f7f6a92db9f871d73d736775c6e5875a7d9cd9894b9753d073f9a1'
             'a992cbdfe40730c584df41b9d18ab6c799bf060a67cf4332e5e3301b95720369'
             'f35a2d4ea0d6212c7798659e59eda2cb0b5bc858360f7ce9c696c77d3029668e')
 
@@ -69,6 +69,7 @@ build() {
   cmake -B build -S $pkgname-$pkgver $_opts
   cmake --build build
 
+  CFLAGS="${CFLAGS} -fno-lto" CXXFLAGS="${CXXFLAGS} -fno-lto" LDFLAGS="${LDFLAGS} -fno-lto" \
   cmake -B build-cuda -S $pkgname-$pkgver $_opts \
     -DWITH_CUDA=ON \
     -DWITH_CUDNN=ON
