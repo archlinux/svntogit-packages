@@ -6,7 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.23.4
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -16,14 +16,20 @@ depends=(knotifyconfig ksystemstats ktexteditor libqalculate kde-cli-tools appst
          plasma-integration kpeople kactivities-stats libkscreen kquickcharts kuserfeedback kio-extras kio-fuse)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt plasma-wayland-protocols kunitconversion kinit)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam
+        https://invent.kde.org/plasma/plasma-workspace/-/commit/042761bd.patch)
 sha256sums=('13ec4eedfaae97fe441aaad57cdd6bf949d06d42370e15e3426e41f49c3ea34d'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
+            '632d28b797286e62732654b7f7d2bd52bedb47bd2ee292cb7ae7753a23c59898')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+
+prepare() {
+  patch -d $pkgbase-$pkgver -p1 < 042761bd.patch # Fix crash when installing global themes
+}
 
 build() {
   cmake -B build -S $pkgbase-$pkgver \
