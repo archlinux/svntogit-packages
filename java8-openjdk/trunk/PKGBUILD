@@ -51,7 +51,7 @@ _nonheadless=(bin/policytool
               lib/${_JARCH}/libsplashscreen.so)
 
 prepare() {
-# Fix build with C++17
+# Fix build with C++17 (Fedora)
   patch -d hotspot-${_repo_ver} -p2 < gcc11.patch
 
   cd jdk8u-${_repo_ver}
