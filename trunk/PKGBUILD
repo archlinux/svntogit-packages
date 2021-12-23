@@ -4,10 +4,10 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='f223664ddf5cad0db04732985ee58006bc3916e4' # git rev-parse v${_tag_name}
-_tag_name=249.7
+_tag='9c8279cdd5d0bc256b8cc0ced2312e27e069a214' # git rev-parse v${_tag_name}
+_tag_name=250
 pkgver="${_tag_name/-/}"
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -214,9 +214,6 @@ package_systemd() {
   rm "$pkgdir"/usr/share/factory/etc/{issue,nsswitch.conf}
   sed -i -e '/^C \/etc\/nsswitch\.conf/d' \
     -e '/^C \/etc\/issue/d' "$pkgdir"/usr/lib/tmpfiles.d/etc.conf
-
-  # add back tmpfiles.d/legacy.conf, normally omitted without sysv-compat
-  install -m0644 $pkgbase-stable/tmpfiles.d/legacy.conf "$pkgdir"/usr/lib/tmpfiles.d
 
   # ship default policy to leave services disabled
   echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
