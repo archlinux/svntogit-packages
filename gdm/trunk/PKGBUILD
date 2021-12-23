@@ -3,7 +3,7 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=41.0+r15+g23ebe617
+pkgver=41.0+r25+geb6d39a2
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -13,14 +13,12 @@ depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost
          libxdmcp systemd)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl meson)
 checkdepends=(check)
-_commit=23ebe617119506a0614f1bd2c76cd9bcf7e8fb7c  # main
+_commit=eb6d39a2473f4d58431cd599d9e8480c44aaebbc  # main
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0001-Xsession-Don-t-start-ssh-agent-by-default.patch
-        0002-pam-arch-Drop-pam_faillock-counting-from-fingerprint.patch
         default.pa)
 sha256sums=('SKIP'
             '39a7e1189d423dd428ace9baac77ba0442c6706a861d3c3db9eb3a6643e223f8'
-            'e3dcaaa5ffa2dd4d3338c8b5827965ea2ca1efd9a95d7272a107e6121cb7898f'
             'e88410bcec9e2c7a22a319be0b771d1f8d536863a7fc618b6352a09d61327dcb')
 
 pkgver() {
@@ -31,14 +29,8 @@ pkgver() {
 prepare() {
   cd gdm
 
-  # https://bugs.archlinux.org/task/67485
-  git cherry-pick -n 8528a503ad70669a5f0c03d0a92ba19326983b82
-
   # Don't start ssh-agent by default
   git apply -3 ../0001-Xsession-Don-t-start-ssh-agent-by-default.patch
-
-  # https://bugs.archlinux.org/task/71750
-  git apply -3 ../0002-pam-arch-Drop-pam_faillock-counting-from-fingerprint.patch
 }
 
 build() {
