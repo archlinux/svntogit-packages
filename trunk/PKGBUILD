@@ -12,7 +12,7 @@ makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml>=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
              'python-setuptools' 'python-psutil' 'python-sphinx'
              'python-recommonmark')
-options=('staticlibs')
+options=('staticlibs' '!lto') # Getting thousands of test failures with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         don-t-accept-nullptr-as-GEP-element-type.patch
