@@ -1,29 +1,21 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
-pkgbase=python-packaging
-pkgname=(python-packaging python2-packaging)
-pkgver=20.9
-pkgrel=7
+pkgname=python-packaging
+pkgver=21.0
+pkgrel=1
 pkgdesc="Core utilities for Python packages"
 arch=('any')
 url="https://github.com/pypa/packaging"
 license=('Apache')
-makedepends=('python-setuptools' 'python2-setuptools' 'python-pyparsing' 'python2-pyparsing')
+depends=('python-pyparsing')
+makedepends=('python-setuptools')
 checkdepends=('python-pytest' 'python-pretend')
-source=("https://github.com/pypa/packaging/archive/$pkgver/$pkgbase-$pkgver.tar.gz"
-        replace-distutils-usage-with-sysconfig.patch)
-sha512sums=('fb71f1036cfaacbe94fdee663af31d6ad1960f73ecc95cba87b461c2d7d2ea90085853bb4682b146492d8c48f784b60ef082e3b1259269857166b143cd9a920b'
-            '015ddcb799259190e3a4b97d386fb8e4cb6f76a22eed2ce97babf10116e886b82f6f3e3e74e3590dd14a8fce8e6ca5980a91205c61e29afa5dbdc387f4daa8dd')
-
-prepare() {
-  cd packaging-$pkgver
-  patch -Np1 -i ../replace-distutils-usage-with-sysconfig.patch
-}
+source=("https://github.com/pypa/packaging/archive/$pkgver/$pkgname-$pkgver.tar.gz")
+sha512sums=('612744ad8d0b834709af5d4e2415679271e4cdc304a2e9297ec741e37e62241a041b678568130cd733828a1bf2e5885d62de706934f4018195566107989a6f6b')
 
 build() {
   cd packaging-$pkgver
   python setup.py build
-  python2 setup.py build
 }
 
 check() {
@@ -31,16 +23,7 @@ check() {
   python -m pytest
 }
 
-package_python-packaging() {
-  depends=('python-pyparsing' 'python-six')
-
+package() {
   cd packaging-$pkgver
-  python setup.py install --root "$pkgdir"
-}
-
-package_python2-packaging() {
-  depends=('python2-pyparsing' 'python2-six')
-
-  cd packaging-$pkgver
-  python2 setup.py install --root "$pkgdir"
+  python setup.py install --root="$pkgdir" --optimize=1
 }
