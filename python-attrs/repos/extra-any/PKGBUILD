@@ -1,17 +1,17 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-attrs
-pkgver=21.2.0
-pkgrel=4
+pkgver=21.3.0
+pkgrel=1
 pkgdesc="Attributes without boilerplate."
 arch=('any')
 license=('MIT')
 url="https://attrs.readthedocs.org/"
 depends=('python')
 makedepends=('python-setuptools')
-checkdepends=('python-pytest-runner' 'python-zope-interface' 'python-hypothesis')
+checkdepends=('python-pytest' 'python-cloudpickle' 'python-hypothesis' 'python-zope-interface')
 source=("https://pypi.io/packages/source/a/attrs/attrs-$pkgver.tar.gz")
-sha512sums=('35863f599076357e40f72a62968f4a2f9bc2af9f59f484fef051be4f9730ce9e28e11568915d690ade7980df8998af22e2ff8b9568a205d7745e246ba5f3a7e1')
+sha512sums=('23b2ba52af809581e9907ad7c6d18ed050d415645a249ae912af3f1398276ea5bf67f11991d7958f3eeafe759d8d62a65009555ae8f75580cfa464c5b4a37742')
 
 build() {
   cd "$srcdir"/attrs-$pkgver
@@ -20,7 +20,7 @@ build() {
 
 check() {
   cd attrs-$pkgver
-  python setup.py pytest
+  PYTHONPATH=build/lib pytest
 }
 
 package() {
