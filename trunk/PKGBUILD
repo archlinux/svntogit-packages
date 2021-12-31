@@ -2,16 +2,17 @@
 
 pkgbase=libadwaita
 pkgname=(libadwaita libadwaita-docs libadwaita-demos)
-pkgver=1.0.0alpha.4
+pkgver=1.0.0
 pkgrel=1
 epoch=1
-pkgdesc="Building blocks for modern GNOME applications"
-url="https://gitlab.gnome.org/GNOME/libadwaita"
+pkgdesc="Building blocks for modern adaptive GNOME applications"
+url="https://gnome.pages.gitlab.gnome.org/libadwaita/"
 arch=(x86_64)
 license=(LGPL)
 depends=(gtk4)
 makedepends=(git meson gi-docgen sassc gobject-introspection vala)
-_commit=6b447fde8f270001a0dc29ef59d3e9bf6d32dae9  # tags/1.0.0.alpha.4^0
+checkdepends=(weston)
+_commit=8896cb224e7bd737b7f99bba5a10b56e89f034c4  # tags/1.0.0^0
 source=("git+https://gitlab.gnome.org/GNOME/libadwaita.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -28,6 +29,18 @@ build() {
   arch-meson $pkgname build -D gtk_doc=true
   meson compile -C build
 }
+
+check() (
+  export XDG_RUNTIME_DIR="$PWD/runtime-dir" WAYLAND_DISPLAY=wayland-5
+
+  mkdir -p -m 700 "$XDG_RUNTIME_DIR"
+  weston --backend=headless-backend.so --socket=$WAYLAND_DISPLAY --idle-time=0 &
+  _w=$!
+
+  trap "kill $_w; wait" EXIT
+
+  meson test -C build --print-errorlogs
+)
 
 _pick() {
   local p="$1" f d; shift
