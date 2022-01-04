@@ -2,9 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_qtver=5.15.7
+_qtver=5.15.8
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -23,8 +23,8 @@ source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
-            '45ccf4ff981a26656e5105259f71a3ce386d4a7112cbf09e41cb61615b355435'
-            '8d0327615c6b6a340122640a9ddeb56be185621297a4ead8da4211e37feeaa75')
+            '398c996cb5b606695ac93645143df39e23fa67e768b09e0da6dbd37342a43f32'
+            'cf7be86f1d301001f91b89455b7edbbd269041e2e196355940c38afc84400826')
 
 prepare() {
   mkdir -p build
