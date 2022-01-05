@@ -24,7 +24,7 @@ sha256sums=('SKIP'
             'SKIP'
             'SKIP'
             '398c996cb5b606695ac93645143df39e23fa67e768b09e0da6dbd37342a43f32'
-            'cf7be86f1d301001f91b89455b7edbbd269041e2e196355940c38afc84400826')
+            'fda4ff16790799fb285847918a677f4f3f7c0f513d4751f846ffc5aa5d873932')
 
 prepare() {
   mkdir -p build
