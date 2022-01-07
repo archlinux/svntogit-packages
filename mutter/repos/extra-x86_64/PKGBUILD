@@ -4,7 +4,7 @@
 
 pkgname=mutter
 pkgver=41.2
-pkgrel=1
+pkgrel=2
 pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -12,9 +12,9 @@ license=(GPL)
 depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
          libcanberra startup-notification zenity libsm gnome-desktop upower
          libxkbcommon-x11 gnome-settings-daemon libgudev libinput pipewire
-         xorg-xwayland graphene libxkbfile)
+         xorg-xwayland graphene libxkbfile libsysprof-capture)
 makedepends=(gobject-introspection git egl-wayland meson xorg-server
-             wayland-protocols)
+             wayland-protocols sysprof)
 checkdepends=(xorg-server-xvfb pipewire-media-session python-dbusmock)
 provides=(libmutter-9.so)
 groups=(gnome)
@@ -37,8 +37,7 @@ build() {
   arch-meson $pkgname build \
     -D egl_device=true \
     -D wayland_eglstream=true \
-    -D installed_tests=false \
-    -D profiler=false
+    -D installed_tests=false
   meson compile -C build
 }
 
@@ -59,7 +58,7 @@ _check() (
 )
 
 check() {
-  dbus-run-session xvfb-run -s '-nolisten local' \
+  dbus-run-session xvfb-run -s '-nolisten local +iglx -noreset' \
     bash -c "$(declare -f _check); _check"
 }
 
