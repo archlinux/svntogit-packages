@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <jan.steffens@gmail.com>
+Date: Fri, 7 Jan 2022 18:35:12 +0000
+Subject: [PATCH] compose: Fix SVG scaling with librsvg 2.52
+
+We should only scale the canvas in the legacy path, since the viewport
+already takes care of scaling.
+
+Also, while we're here:
+
+- We should `cairo_save` before scaling, so that on error the
+  `cairo_restore` doesn't leave the canvas in the scaled state.
+- The SVG size is only used in the legacy path.
+- We don't inspect the error so no need to have `tmp_error`.
+
+Fixes: https://github.com/ximion/appstream/issues/375
+---
+ compose/asc-canvas.c | 36 ++++++++++--------------------------
+ 1 file changed, 10 insertions(+), 26 deletions(-)
+
+diff --git a/compose/asc-canvas.c b/compose/asc-canvas.c
+index 609b404fa548..bce396bb5369 100644
+--- a/compose/asc-canvas.c
++++ b/compose/asc-canvas.c
+@@ -156,70 +156,54 @@ asc_canvas_render_svg (AscCanvas *canvas, GInputStream *stream, GError **error)
+ 	RsvgHandle *handle = NULL;
+ 	gboolean ret = FALSE;
+ 	gdouble srf_width, srf_height;
+-	gdouble svg_width, svg_height;
+ #if LIBRSVG_CHECK_VERSION(2, 52, 0)
+ 	RsvgRectangle viewport;
+-	GError *tmp_error = NULL;
+ #else
+ 	RsvgDimensionData dims;
+ #endif
+ 
+ 	/* NOTE: unfortunately, Cairo/RSvg may use Fontconfig internally, so
+ 	 * we need to lock this down since a parallel-processed font
+ 	 * might need to access this too. */
+ 	g_autoptr(GMutexLocker) locker = g_mutex_locker_new (&fontconfig_mutex);
+ 
+ 	handle = rsvg_handle_new_from_stream_sync (stream,
+ 						   NULL,
+ 						   RSVG_HANDLE_FLAGS_NONE,
+ 						   NULL,
+ 						   error);
+ 	if (handle == NULL)
+ 		goto out;
+ 	rsvg_handle_set_dpi (handle, 100);
+ 
+ 	srf_width = (gdouble) cairo_image_surface_get_width (priv->srf);
+ 	srf_height = (gdouble) cairo_image_surface_get_height (priv->srf);
+ 
+-#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+-	ret = rsvg_handle_get_intrinsic_size_in_pixels(handle, &svg_width, &svg_height);
+-	if (!ret) {
+-		/* we would need a viewport to get an intrinsic pixel size. Work around this issue
+-		 * by just scaling the SVG as high or low as we want to */
+-		svg_width = srf_width;
+-		svg_height = srf_height;
+-	}
+-#else
+-	rsvg_handle_get_dimensions (handle, &dims);
+-	svg_width = dims.width;
+-	svg_height = dims.height;
+-#endif
+-
+-	/* cairo_translate (cr, (srf_width - svg_width) / 2, (srf_height - svg_height) / 2); */
+-	cairo_scale (priv->cr,
+-		     srf_width / svg_width,
+-		     srf_height / svg_height);
+-
+ 	cairo_save (priv->cr);
+ 
+-
+ #if LIBRSVG_CHECK_VERSION(2, 52, 0)
+ 	viewport.x = 0;
+ 	viewport.y = 0;
+ 	viewport.width = srf_width;
+ 	viewport.height = srf_height;
++
+ 	ret = rsvg_handle_render_document (handle,
+ 					   priv->cr,
+ 					   &viewport,
+-					   &tmp_error);
++					   error);
+ 	if (!ret) {
+ 		cairo_restore (priv->cr);
+-		g_propagate_prefixed_error (error,
+-					    tmp_error,
+-					    "SVG graphic rendering failed:");
++		g_prefix_error (error, "SVG graphic rendering failed:");
+ 		goto out;
+ 	}
+ #else
++	rsvg_handle_get_dimensions (handle, &dims);
++
++	/* cairo_translate (cr, (srf_width - dims.width) / 2, (srf_height - dims.height) / 2); */
++	cairo_scale (priv->cr,
++		     srf_width / dims.width,
++		     srf_height / dims.height);
++
+ 	ret = rsvg_handle_render_cairo (handle, priv->cr);
+ 	if (!ret) {
+ 		cairo_restore (priv->cr);
