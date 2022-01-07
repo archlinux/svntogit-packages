@@ -3,12 +3,13 @@
 
 pkgname=libsoup
 pkgver=2.74.2
-pkgrel=1
+pkgrel=2
 pkgdesc="HTTP client/server library for GNOME"
 url="https://wiki.gnome.org/Projects/libsoup"
 arch=(x86_64)
 license=(LGPL)
-depends=(glib2 libxml2 glib-networking sqlite krb5 libpsl brotli)
+depends=(glib2 libxml2 glib-networking sqlite krb5 libpsl brotli
+         libsysprof-capture)
 makedepends=(gobject-introspection python vala git gtk-doc meson samba)
 checkdepends=(apache php-apache)
 optdepends=('samba: Windows Domain SSO')
@@ -26,9 +27,7 @@ prepare() {
 }
 
 build() {
-  arch-meson libsoup build \
-    -D gtk_doc=true \
-    -D sysprof=disabled
+  arch-meson libsoup build -D gtk_doc=true
   meson compile -C build
 }
 
