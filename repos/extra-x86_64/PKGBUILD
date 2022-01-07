@@ -5,38 +5,34 @@
 # Contributor: aeolist <aeolist@hotmail.com>
 # Contributor: Gabriel Rauter <rauter.gabriel@gmail.com>
 
-pkgname=sysprof
+pkgbase=sysprof
+pkgname=(sysprof libsysprof-capture)
 pkgver=3.42.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Kernel based performance profiler"
 url="https://wiki.gnome.org/Apps/Sysprof"
 license=(GPL)
 arch=(x86_64)
 depends=(gtk3 polkit libdazzle)
 makedepends=(yelp-tools git meson)
-groups=(gnome-extra)
 _commit=2903f08d02c86e520b07c0df5dcafc18bb8ef059  # tags/3.42.1^0
 source=("git+https://gitlab.gnome.org/GNOME/sysprof.git#commit=$_commit")
 sha256sums=('SKIP')
 
-_gccver=11
-makedepends+=("gcc>=$_gccver" "gcc<$((_gccver + 1))")
-conflicts+=("gcc<$_gccver" "gcc>=$((_gccver + 1))")
-
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/^sysprof-//;s/-/+/g'
+  cd sysprof
+  git describe --tags | sed 's/^sysprof-//;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd sysprof
 }
 
 build() {
   # Ensure static library is non-LTO compatible
   CFLAGS+=" -ffat-lto-objects"
 
-  arch-meson $pkgname build
+  arch-meson sysprof build
   meson compile -C build
 }
 
@@ -44,6 +40,38 @@ check() {
   meson test -C build --print-errorlogs
 }
 
-package() {
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_sysprof() {
+  depends+=(libsysprof-capture)
+  groups=(gnome-extra)
+
   meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick capture usr/lib/libsysprof-capture-*
+  _pick capture usr/lib/pkgconfig/sysprof-capture-*
+  _pick capture usr/include/sysprof-*/sysprof-{address,capture,clock,collector,macros}.h
+  _pick capture usr/include/sysprof-*/sysprof-{platform,version,version-macros}.h
+  _pick capture usr/include/sysprof-*/sysprof-capture-{condition,cursor,reader,types,writer}.h
+}
+
+package_libsysprof-capture() {
+  pkgdesc+=" - capture library"
+  depends=()
+  license=(BSD)
+
+  mv capture/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 \
+    sysprof/src/libsysprof-capture/COPYING
 }
