@@ -3,8 +3,8 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=mercurial
-pkgver=6.0
-pkgrel=3
+pkgver=6.0.1
+pkgrel=1
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
@@ -24,16 +24,17 @@ backup=(etc/mercurial/hgrc)
 validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
               3A8155163D0E20A530FCB78647A67FFAA346AACE
               EB851395B4223EE2F7BA0B28DA54740BF08732BA
-              818D87CD1AC180C394C86E633A33DE460D9EC39F) # Pulkit Goyal <7895pulkit@gmail.com>
+              818D87CD1AC180C394C86E633A33DE460D9EC39F  # Pulkit Goyal <7895pulkit@gmail.com>
+              1F66F8CDF654E905C11DA061A11E01CD0E05D956) # Raphaël Gomès <alphare@raphaelgomes.dev>
 source=(https://www.mercurial-scm.org/release/${pkgname}-${pkgver}.tar.gz{,.asc}
         mercurial.profile)
-sha512sums=('342440af75b8e48b75ca604ee4f81298b652413a07f84cb475d9ed3c875a8b69bc22289c2a22d6f07c7bc54fdb1bc25a51a179eb9dcdc299b85fdd0fa4827dad'
+sha512sums=('dae18c38e7df001177867ed9cb1c9cea6f25fff6c23fd307c56c89bba0e4641d6cf993aabefe1fcb6ab99bd32732b858411f722bea839690fbc04c0a91c1dc53'
             'SKIP'
             '710dcddb24d928efc97370e869d9caa083107929ed9a1086dd2a3ae0caaf2c71e2f29060597e29315b6b15b1616251c42412e268ce737109c48ae4d7aa1b9555')
 
 build() {
   cd $pkgname-$pkgver
-  make
+  python setup.py build
   make -C contrib/chg
 }
 
