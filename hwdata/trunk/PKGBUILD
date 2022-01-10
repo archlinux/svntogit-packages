@@ -8,7 +8,8 @@ replaces=('hwids')
 url=https://github.com/vcrhonek/hwdata
 license=('GPL2')
 arch=('any')
-source=("git+https://github.com/vcrhonek/hwdata.git#tag=v${pkgver}")
+source=("git+https://github.com/vcrhonek/hwdata.git#tag=v${pkgver}?signed")
+validpgpkeys=('3C40194FB79138CE0F78FD4919C2F062574F5403' #Vitezslav Crhonek)
 sha256sums=('SKIP')
 
 package() {
