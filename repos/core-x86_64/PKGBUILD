@@ -4,12 +4,12 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.70.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
 arch=(x86_64)
-depends=(pcre libffi util-linux-libs zlib)
+depends=(pcre libffi util-linux-libs zlib libsysprof-capture)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus)
 checkdepends=(desktop-file-utils)
@@ -36,6 +36,7 @@ build() {
     -D glib_debug=disabled \
     -D selinux=disabled \
     -D man=true \
+    -D sysprof=enabled \
     -D gtk_doc=true
   meson compile -C build
 }
