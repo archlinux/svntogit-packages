@@ -22,7 +22,7 @@ validpgpkeys=('4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'  # Pierre Schmitz <pier
               'CFA6AF15E5C74149FC1D8C086D1655C14CE1C13E'  # Florian Pritz <bluewind@xinu.at>
               'E499C79F53C96A54E572FEE1C06086337C50773E') # Jelle van der Waa <jelle@archlinux.org>
 
-prepare() {
+build() {
   cd archlinux-keyring/
 
   make build
