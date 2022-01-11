@@ -2,25 +2,40 @@
 # Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 
 pkgname=archlinux-keyring
-pkgver=20211028
+_tag='34b70a0594853469fa326d9afd4a2b1133f22e28' # git rev-parse ${pkgver}
+pkgver=20220111
 pkgrel=1
 pkgdesc='Arch Linux PGP keyring'
 arch=(any)
 url='https://gitlab.archlinux.org/archlinux/archlinux-keyring/'
 license=(GPL)
 install=$pkgname.install
-source=(https://sources.archlinux.org/other/$pkgname/${pkgname}-${pkgver}.tar.gz{,.sig})
-sha256sums=('3d7fba47441173dfab6eec1cebf9fce4151277f6e06513e2150ccd9d71691cbc'
-            'SKIP')
+makedepends=('git' 'python' 'sequoia-sq')
+checkdepends=('python-coverage' 'python-pytest')
+source=("archlinux-keyring::git+https://gitlab.archlinux.org/archlinux/archlinux-keyring.git#tag=${_tag}?signed")
+sha256sums=('SKIP')
 validpgpkeys=('4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'  # Pierre Schmitz <pierre@archlinux.de>
               'A314827C4E4250A204CE6E13284FC34C8E4B1A25'  # Thomas Bächler <thomas@bchlr.de>
               '86CFFCA918CF3AF47147588051E8B148A9999C34'  # Evangelos Foutras <evangelos@foutrelis.com>
               'F3691687D867B81B51CE07D9BBE43771487328A9'  # Bartlomiej Piotrowski <bpiotrowski@archlinux.org>
               'BD84DE71F493DF6814B0167254EDC91609BC9183'  # Christian Hesse <Christi@n-Hes.se>
               'CFA6AF15E5C74149FC1D8C086D1655C14CE1C13E'  # Florian Pritz <bluewind@xinu.at>
-              'E499C79F53C96A54E572FEE1C06086337C50773E')  # Jelle van der Waa <jelle@archlinux.org>
+              'E499C79F53C96A54E572FEE1C06086337C50773E') # Jelle van der Waa <jelle@archlinux.org>
+
+prepare() {
+  cd archlinux-keyring/
+
+  make build
+}
+
+check() {
+  cd archlinux-keyring/
+
+  make check
+}
 
 package() {
-  cd $pkgname-$pkgver
-  make PREFIX=/usr DESTDIR="$pkgdir" install
+  cd archlinux-keyring/
+
+  make PREFIX='/usr' DESTDIR="${pkgdir}" install
 }
