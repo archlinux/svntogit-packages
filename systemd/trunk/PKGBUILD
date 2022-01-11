@@ -4,10 +4,10 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='4572cdce239cea0762b37d38005863f30b89b76a' # git rev-parse v${_tag_name}
-_tag_name=250.1
+_tag='95d0353dad616c275fda9b123ba9660e16b20d0a' # git rev-parse v${_tag_name}
+_tag_name=250.2
 pkgver="${_tag_name/-/}"
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
