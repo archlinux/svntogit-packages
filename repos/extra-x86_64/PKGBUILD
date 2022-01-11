@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=41.2
-pkgrel=2
+pkgver=41.3
+pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -20,19 +20,22 @@ checkdepends=(xorg-server-xvfb)
 optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration')
 groups=(gnome)
-_commit=618965fcd4a16255235dc6e27a88fe29118afd22  # tags/41.2^0
+_commit=0599ffd06e1795f2c1c1bb18fe3d495c7206a3b7  # tags/41.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
             'SKIP')
 
 pkgver() {
-  cd $pkgname
+  cd gnome-shell
   git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd gnome-shell
+
+  # Fix build with meson 0.61.0
+  git cherry-pick -n 65450a836ee9e0722a2d4c3327f52345eae293c6
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
@@ -40,19 +43,28 @@ prepare() {
 }
 
 build() {
-  arch-meson $pkgname build -D gtk_doc=true
+  CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
+  LDFLAGS+=" -Wl,-Bsymbolic-functions"
+
+  arch-meson gnome-shell build -D gtk_doc=true
   meson compile -C build
 }
 
-check() (
+_check() (
   mkdir -p -m 700 "${XDG_RUNTIME_DIR:=$PWD/runtime-dir}"
   export XDG_RUNTIME_DIR
 
-  dbus-run-session xvfb-run -s '-nolisten local' \
-    meson test -C build --print-errorlogs
+  meson test -C build --print-errorlogs
 )
+
+check() {
+  dbus-run-session xvfb-run -s '-nolisten local +iglx -noreset' \
+    bash -c "$(declare -f _check); _check"
+}
 
 package() {
   depends+=(libmutter-9.so)
   meson install -C build --destdir "$pkgdir"
 }
+
+# vim:set sw=2 et:
