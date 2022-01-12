@@ -3,7 +3,7 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=41.0+r25+geb6d39a2
+pkgver=41.3
 pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
@@ -13,13 +13,11 @@ depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost
          libxdmcp systemd)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl meson)
 checkdepends=(check)
-_commit=eb6d39a2473f4d58431cd599d9e8480c44aaebbc  # main
+_commit=cb49bac2fe1160094eae360f985e54073be3c49a  # tags/41.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
-        0001-Xsession-Don-t-start-ssh-agent-by-default.patch
-        default.pa)
+        0001-Xsession-Don-t-start-ssh-agent-by-default.patch)
 sha256sums=('SKIP'
-            '39a7e1189d423dd428ace9baac77ba0442c6706a861d3c3db9eb3a6643e223f8'
-            'e88410bcec9e2c7a22a319be0b771d1f8d536863a7fc618b6352a09d61327dcb')
+            '39a7e1189d423dd428ace9baac77ba0442c6706a861d3c3db9eb3a6643e223f8')
 
 pkgver() {
   cd gdm
@@ -34,20 +32,33 @@ prepare() {
 }
 
 build() {
-  arch-meson gdm build \
-    -D dbus-sys="/usr/share/dbus-1/system.d" \
-    -D default-pam-config=arch \
-    -D default-path="/usr/local/bin:/usr/local/sbin:/usr/bin" \
-    -D gdm-xsession=true \
-    -D ipv6=true \
-    -D plymouth=disabled \
-    -D run-dir=/run/gdm \
+  local meson_options=(
+    -D dbus-sys="/usr/share/dbus-1/system.d"
+    -D default-pam-config=arch
+    -D default-path="/usr/local/bin:/usr/local/sbin:/usr/bin"
+    -D gdm-xsession=true
+    -D ipv6=true
+    -D plymouth=disabled
+    -D run-dir=/run/gdm
     -D selinux=disabled
+  )
+
+  arch-meson gdm build "${meson_options[@]}"
   meson compile -C build
 }
 
 check() {
   meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
 }
 
 package_gdm() {
@@ -61,31 +72,45 @@ package_gdm() {
 
   meson install -C build --destdir "$pkgdir"
 
-  install -d "$pkgdir/var/lib"
-  install -d "$pkgdir/var/lib/gdm"                           -o120 -g120 -m1770
-  install -d "$pkgdir/var/lib/gdm/.config"                   -o120 -g120 -m700
-  install -d "$pkgdir/var/lib/gdm/.config/pulse"             -o120 -g120 -m700
-  install -d "$pkgdir/var/lib/gdm/.local"                    -o120 -g120 -m700
-  install -d "$pkgdir/var/lib/gdm/.local/share"              -o120 -g120
-  install -d "$pkgdir/var/lib/gdm/.local/share/applications" -o120 -g120
+  cd "$pkgdir"
+
+  install -d -o   0 -g   0 -m 0755 var
+  install -d -o   0 -g   0 -m 0755 var/lib
+  install -d -o 120 -g 120 -m 1770 var/lib/gdm
+  install -d -o 120 -g 120 -m 0700 var/lib/gdm/.config
+  install -d -o 120 -g 120 -m 0700 var/lib/gdm/.config/pulse
+  install -d -o 120 -g 120 -m 0700 var/lib/gdm/.local
+  install -d -o 120 -g 120 -m 0755 var/lib/gdm/.local/share
+  install -d -o 120 -g 120 -m 0755 var/lib/gdm/.local/share/applications
 
   # https://src.fedoraproject.org/rpms/gdm/blob/master/f/default.pa-for-gdm
-  install -t "$pkgdir/var/lib/gdm/.config/pulse" -o120 -g120 -m644 default.pa
+  install -o120 -g120 -m644 /dev/stdin var/lib/gdm/.config/pulse/default.pa <<END
+load-module module-device-restore
+load-module module-card-restore
+load-module module-udev-detect
+load-module module-native-protocol-unix
+load-module module-default-device-restore
+load-module module-always-sink
+load-module module-intended-roles
+load-module module-suspend-on-idle
+load-module module-systemd-login
+load-module module-position-event-sounds
+END
 
-  install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/gdm.conf" <<END
+  install -Dm644 /dev/stdin usr/lib/sysusers.d/gdm.conf <<END
 g gdm 120 -
 u gdm 120 "Gnome Display Manager" /var/lib/gdm
 END
 
-### Split libgdm
-  mkdir -p libgdm/{lib,share}
-  mv -t libgdm       "$pkgdir"/usr/include
-  mv -t libgdm/lib   "$pkgdir"/usr/lib/{girepository-1.0,libgdm*,pkgconfig}
-  mv -t libgdm/share "$pkgdir"/usr/share/{gir-1.0,glib-2.0}
+  _pick libgdm usr/include
+  _pick libgdm usr/lib/{girepository-1.0,libgdm*,pkgconfig}
+  _pick libgdm usr/share/{gir-1.0,glib-2.0}
 }
 
 package_libgdm() {
-  pkgdesc="GDM support library"
-  depends=(systemd glib2 dconf)
-  mv libgdm "$pkgdir/usr"
+  pkgdesc+=" - support library"
+  depends=(libsystemd.so libg{lib,object,io}-2.0.so)
+  provides=(libgdm.so)
+
+  mv libgdm/* "$pkgdir"
 }
