@@ -4,13 +4,13 @@
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
 pkgver=1.70.0
-pkgrel=4
+pkgrel=5
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
 depends=(python-mako python-markdown)
-_glibver=2.70.1
+_glibver=2.70.2
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
 options=(!emptydirs)
 _commit=4502dd33da995e5e9e6d73aa996cf42e92c9e217  # tags/1.70.0^0
@@ -27,6 +27,9 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
+
+  # Fix build with meson 0.61.0
+  git cherry-pick -n 827494d6415b696a effb1e09dee263cd
 }
   
 build() {
@@ -40,17 +43,28 @@ check() {
   meson test -C build
 }
 
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
 package_gobject-introspection() {
   depends+=("gobject-introspection-runtime=$pkgver-$pkgrel")
 
   meson install -C build --destdir "$pkgdir"
 
-  python -m compileall -d /usr/lib/$pkgbase "$pkgdir/usr/lib/$pkgbase"
-  python -O -m compileall -d /usr/lib/$pkgbase "$pkgdir/usr/lib/$pkgbase"
+  cd "$pkgdir"
 
-### Split runtime
-  mkdir -p "$srcdir/runtime/lib"
-  mv "$pkgdir"/usr/lib/{lib*,girepository-*} "$srcdir/runtime/lib"
+  python -m compileall -d /usr/lib/$pkgbase usr/lib/$pkgbase
+  python -O -m compileall -d /usr/lib/$pkgbase usr/lib/$pkgbase
+
+  _pick runtime usr/lib/lib*
+  _pick runtime usr/lib/girepository-*
 }
 
 package_gobject-introspection-runtime() {
@@ -58,5 +72,5 @@ package_gobject-introspection-runtime() {
   depends=(glib2)
   provides+=(libgirepository-1.0.so)
 
-  mv "$srcdir/runtime" "$pkgdir/usr"
+  mv runtime/* "$pkgdir"
 }
