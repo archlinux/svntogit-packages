@@ -7,8 +7,8 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.32.12
-pkgrel=2
+pkgver=1.34.0
+pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
 arch=(x86_64)
@@ -20,13 +20,13 @@ makedepends=(intltool dhclient dhcpcd iptables-nft gobject-introspection gtk-doc
              python-gobject git vala jansson bluez-libs glib2-docs iwd dnsmasq
              openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
-_commit=d90c03b1b8f3e6f5ff8fbc1cbc176f0a0dec6362  # tags/1.32.12^0
+_commit=9133a30c9deb3a003a20b09a617a25b07ada18ae  # tags/1.34.0^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
-sha256sums=('SKIP')
+b2sums=('SKIP')
 
 pkgver() {
   cd NetworkManager
-  git describe --abbrev=10 | sed 's/-dev/dev/;s/-rc/rc/;s/-/+/g'
+  git describe --tags | sed 's/-dev/dev/;s/-rc/rc/;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
@@ -34,7 +34,7 @@ prepare() {
 }
 
 build() {
-  local meson_args=(
+  local meson_options=(
     # system paths
     -D dbus_conf_dir=/usr/share/dbus-1/system.d
 
@@ -68,7 +68,7 @@ build() {
     -D qt=false
   )
 
-  arch-meson NetworkManager build "${meson_args[@]}"
+  arch-meson NetworkManager build "${meson_options[@]}"
   meson compile -C build
 }
 
