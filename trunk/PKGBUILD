@@ -42,6 +42,7 @@ depends=('sh' 'xz' 'gettext' 'device-mapper')
 optdepends=('freetype2: For grub-mkfont usage'
             'fuse2: For grub-mount usage'
             'dosfstools: For grub-mkrescue FAT FS and EFI support'
+            'lzop: For grub-mkrescue LZO support'
             'efibootmgr: For grub-install EFI support'
             'libisoburn: Provides xorriso for generating grub rescue iso using grub-mkrescue'
             'os-prober: To detect other OSes when generating grub.cfg in BIOS systems'
