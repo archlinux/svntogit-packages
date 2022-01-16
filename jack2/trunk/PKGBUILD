@@ -8,7 +8,7 @@ pkgbase=jack2
 pkgname=(jack2 jack2-dbus jack2-docs)
 pkgdesc="The JACK low-latency audio server"
 pkgver=1.9.20
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url="https://github.com/jackaudio/jack2"
 license=(GPL2)
@@ -64,11 +64,9 @@ package_jack2() {
     'jack2-dbus: for dbus integration'
     'jack2-docs: for developer documentation'
     'realtime-privileges: for realtime privileges'
-    'zita-ajbridge: for using multiple ALSA devices'
   )
   conflicts=(jack)
   provides=(jack libjack.so libjacknet.so libjackserver.so)
-  replaces=(jack)
 
   cd "${pkgbase}"
   export PYTHONPATH="${PWD}:${PYTHONPATH}"
