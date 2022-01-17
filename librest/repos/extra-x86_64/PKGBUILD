@@ -1,0 +1,54 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=librest
+pkgname=(librest librest-docs)
+pkgver=0.9.0
+pkgrel=1
+pkgdesc="Library for accessing RESTful web services"
+url="https://gitlab.gnome.org/GNOME/librest"
+arch=(x86_64)
+license=(LGPL2.1)
+depends=(glib2 libxml2 libsoup3 json-glib)
+makedepends=(gobject-introspection git meson gi-docgen vala)
+_commit=85bd00adfa6e06d3426ce7c9007e68e62f51be14  # tags/0.9.0^0
+source=("git+https://gitlab.gnome.org/GNOME/librest.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd librest
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd librest
+  git tag -d 1.0.0 # Fixup tags
+}
+
+build() {
+  arch-meson librest build -D soup2=false
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package_librest() {
+  depends+=(libg{lib,object,io}-2.0.so libxml2.so libsoup-3.0.so
+            libjson-glib-1.0.so)
+  provides+=(librest{,-extras}-1.0.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+}
+
+package_librest-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
