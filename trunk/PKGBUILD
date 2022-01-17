@@ -3,7 +3,7 @@
 
 pkgname=libinput
 pkgver=1.19.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Input device management and event handling library"
 url="https://www.freedesktop.org/wiki/Software/libinput/"
 arch=(x86_64)
