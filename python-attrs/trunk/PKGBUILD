@@ -1,7 +1,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-attrs
-pkgver=21.3.0
+pkgver=21.4.0
 pkgrel=1
 pkgdesc="Attributes without boilerplate."
 arch=('any')
@@ -11,7 +11,7 @@ depends=('python')
 makedepends=('python-setuptools')
 checkdepends=('python-pytest' 'python-cloudpickle' 'python-hypothesis' 'python-zope-interface')
 source=("https://pypi.io/packages/source/a/attrs/attrs-$pkgver.tar.gz")
-sha512sums=('23b2ba52af809581e9907ad7c6d18ed050d415645a249ae912af3f1398276ea5bf67f11991d7958f3eeafe759d8d62a65009555ae8f75580cfa464c5b4a37742')
+sha512sums=('5a52776eb505c8a354912fa037a9710e49830fa6ad37272cb6d8c3298f4179a5b237e36cd7db3b1c9af19fbf0194ad6b83c3db9a473f9349769180073273ba65')
 
 build() {
   cd "$srcdir"/attrs-$pkgver
