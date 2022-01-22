@@ -1,0 +1,72 @@
+# Maintainer: Anatol Pomozov
+
+pkgname=booster
+pkgver=0.7
+pkgrel=2
+pkgdesc='Fast and secure initramfs generator'
+arch=(x86_64)
+url='https://github.com/anatol/booster'
+license=(MIT)
+depends=(bash)
+makedepends=(go ruby-ronn-ng)
+#checkdepends=(qemu-headless linux tang)
+optdepends=(
+  'busybox: to enable emergency shell at the boot time'
+  'yubikey-personalization: for clevis Yubikey challenge-response support'
+  'libfido2: for systemd-enroll with FIDO2'
+)
+backup=(etc/booster.yaml)
+provides=(initramfs)
+source=(booster-$pkgver.zip::https://github.com/anatol/booster/archive/$pkgver.zip
+        firmware_xz.patch::https://github.com/anatol/booster/commit/7fcf91dfa4a346896f7faa8c4996c7251d0585eb.patch
+)
+sha512sums=('1ba3a25af4b11213809db015ca7279d6283851f0391e01c113522fb974f907f4ccf8d0eb7fbe5a508a16213acaac0a31c03f8fedbab6c432db77b53ecbcc98d5'
+            '1e54b1b3dbdfcee8157aa7bc9d9633354ea0d49f3b5cdb68f191bb009a9dec7825df69bc5ff24239d0852991a563ef64535798f340794fa2fe0ac6e029dee844')
+
+prepare() {
+  cd booster-$pkgver
+  patch -p1 < ../firmware_xz.patch # https://github.com/anatol/booster/issues/127
+}
+
+build() {
+  cd booster-$pkgver
+
+  cd generator
+  CGO_CPPFLAGS="${CPPFLAGS}" CGO_CFLAGS="${CFLAGS}" CGO_CXXFLAGS="${CXXFLAGS}" CGO_LDFLAGS="${LDFLAGS}" \
+    go build -trimpath \
+      -buildmode=pie \
+      -mod=readonly \
+      -modcacherw \
+      -ldflags "-linkmode external -extldflags \"${LDFLAGS}\""
+
+  cd ../init
+  CGO_ENABLED=0 go build -trimpath -mod=readonly -modcacherw
+
+  cd ..
+  ronn docs/manpage.md
+}
+
+check() {
+  cd booster-$pkgver
+
+  # (cd init; go test)
+  # (cd generator; go test)
+
+  # arch chroot does not allow access to KVM
+  # TEST_DISABLE_KVM=1 go test -v # disable integration tests for now as it require a lot of time and space to build 10G images
+}
+
+package() {
+  cd booster-$pkgver
+  mkdir "$pkgdir/etc/"
+  touch "$pkgdir/etc/booster.yaml"
+  install -Dp -m755 generator/booster "$pkgdir/usr/bin/booster"
+  install -Dp -m644 docs/manpage.1 "$pkgdir/usr/share/man/man1/booster.1"
+  install -Dp -m755 init/init "$pkgdir/usr/lib/booster/init"
+  install -Dp -m755 packaging/arch/regenerate_images "$pkgdir/usr/lib/booster/regenerate_images"
+
+  install -Dp -m644 packaging/arch/90-booster-install.hook "$pkgdir/usr/share/libalpm/hooks/90-booster-install.hook"
+  install -Dp -m755 packaging/arch/booster-install "$pkgdir/usr/share/libalpm/scripts/booster-install"
+  install -Dp -m644 packaging/arch/60-booster-remove.hook "$pkgdir/usr/share/libalpm/hooks/60-booster-remove.hook"
+  install -Dp -m755 packaging/arch/booster-remove "$pkgdir/usr/share/libalpm/scripts/booster-remove"
+}
