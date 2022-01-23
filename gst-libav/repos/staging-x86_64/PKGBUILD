@@ -1,0 +1,46 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gst-libav
+pkgver=1.18.5
+pkgrel=2
+pkgdesc="Multimedia graph framework - libav plugin"
+url="https://gstreamer.freedesktop.org/"
+arch=(x86_64)
+license=(GPL)
+depends=(gst-plugins-base-libs bzip2 ffmpeg)
+makedepends=(python git meson)
+provides=("gst-ffmpeg=$pkgver-$pkgrel")
+_commit=9db917cab4c20e72e53ed962406a0d94636a2a39  # tags/1.18.5^0
+source=("git+https://gitlab.freedesktop.org/gstreamer/gst-libav.git#commit=$_commit"
+        0001-gst-libav-fix-build-with-ffmpeg-5.0.0.patch)
+sha256sums=('SKIP'
+            '0718b6de9f8da1bf612efb7b428d8d81f00a1ab710da344c6a9651a4b745cea3')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Fix build with FFmpeg 5.0
+  git apply -3 ../0001-gst-libav-fix-build-with-ffmpeg-5.0.0.patch
+}
+
+build() {
+  arch-meson $pkgname build \
+    -D doc=disabled \
+    -D package-name="GStreamer FFmpeg Plugin (Arch Linux)" \
+    -D package-origin="https://www.archlinux.org/"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
