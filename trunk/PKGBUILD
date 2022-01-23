@@ -5,7 +5,7 @@
 # Contributor: Paul Mattal <paul@archlinux.org>
 
 pkgname=ffmpeg
-pkgver=4.4.1
+pkgver=5.0
 pkgrel=1
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
@@ -94,7 +94,7 @@ provides=(
   libswresample.so
   libswscale.so
 )
-_tag=7e0d640edf6c3eee1816b105c2f7498c4f948e74
+_tag=390d6853d0ef408007feb39c0040682c81c02751
 source=(
   git+https://git.ffmpeg.org/ffmpeg.git#tag=${_tag}
   vmaf-model-path.patch
