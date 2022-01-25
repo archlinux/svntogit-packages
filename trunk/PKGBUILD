@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.8
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -19,12 +19,14 @@ source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
         git+https://code.qt.io/qt/qtwebengine-chromium.git
         git+https://chromium.googlesource.com/catapult#commit=5eedfe23148a234211ba477f76fc2ea2e8529189
         qt5-webengine-python3.patch
-        qt5-webengine-chromium-python3.patch)
+        qt5-webengine-chromium-python3.patch
+        qt5-webengine-ffmpeg5.patch)
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
             '398c996cb5b606695ac93645143df39e23fa67e768b09e0da6dbd37342a43f32'
-            'fda4ff16790799fb285847918a677f4f3f7c0f513d4751f846ffc5aa5d873932')
+            'fda4ff16790799fb285847918a677f4f3f7c0f513d4751f846ffc5aa5d873932'
+            'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693')
 
 prepare() {
   mkdir -p build
@@ -37,6 +39,8 @@ prepare() {
 
   patch -p1 -i "$srcdir"/qt5-webengine-python3.patch # Fix build with Python 3
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-chromium-python3.patch
+
+  patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
 
 # Update catapult for python3 compatibility
   rm -r src/3rdparty/chromium/third_party/catapult
