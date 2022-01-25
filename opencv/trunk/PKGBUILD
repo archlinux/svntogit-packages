@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.5.5
-pkgrel=1
+pkgrel=2
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
@@ -21,13 +21,16 @@ optdepends=('opencv-samples: samples'
             'java-runtime: Java interface')
 source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
         https://github.com/opencv/opencv_contrib/archive/$pkgver/opencv_contrib-$pkgver.tar.gz
-        vtk9.patch)
+        vtk9.patch
+        ffmpeg5.patch)
 sha256sums=('a1cfdcf6619387ca9e232687504da996aaa9f7b5689986b8331ec02cb61d28ad'
             'a97c2eaecf7a23c6dbd119a609c6d7fae903e5f9ff5f1fe678933e01c67a6c11'
-            'f35a2d4ea0d6212c7798659e59eda2cb0b5bc858360f7ce9c696c77d3029668e')
+            'f35a2d4ea0d6212c7798659e59eda2cb0b5bc858360f7ce9c696c77d3029668e'
+            'b6459e0456da49d4b9e83b6ed859b144db64b1e1b150718fcee433fa19babdbe')
 
 prepare() {
   patch -d $pkgname-$pkgver -p1 < vtk9.patch # Don't require all vtk optdepends
+  patch -d $pkgname-$pkgver -p1 < ffmpeg5.patch # FFmpeg 5, patch from berolinux https://github.com/opencv/opencv/issues/21455
 }
 
 build() {
