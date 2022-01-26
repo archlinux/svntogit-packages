@@ -3,7 +3,7 @@
 # Contributor: Damir Perisa <damir.perisa@bluewin.ch>
 
 pkgname=lua
-pkgver=5.4.3
+pkgver=5.4.4
 _majorver=${pkgver%.*}
 pkgrel=1
 pkgdesc='Powerful lightweight programming language designed for extending applications'
@@ -16,7 +16,7 @@ source=(https://www.lua.org/ftp/lua-$pkgver.tar.gz
         liblua.so.patch
         lua.pc
         LICENSE)
-sha1sums=('1dda2ef23a9828492b4595c0197766de6e784bc7'
+sha1sums=('03c27684b9d5d9783fb79a7c836ba1cdc5f309cd'
           'cdfa66057f43aaf4b5914496aa6a4556f3a6e7a0'
           '1aee8d1a219639d0efc534e483ffa1ee236fb393'
           '05f5f3b7bef0258bd617c505b8992de639af4551')
