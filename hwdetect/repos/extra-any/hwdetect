@@ -1,6 +1,11 @@
 #! /bin/sh
 # Autodetection script for scanning /sys for hardware
 # for Archlinux by Tobias Powalowski <tpowa@archlinux.org>
+
+_SHOW_MODULES=""
+_SHOW_HOOKS=""
+_HWKVER=""
+
 usage () {
 	echo "$0 [options]"
 	echo ""
@@ -94,10 +99,19 @@ parameter() {
 	done
 }
 
+kver() {
+    # get kernel version
+    [[ "$(uname -m)" == "x86_64" ]] && VMLINUZ=vmlinuz-linux
+    [[ "$(uname -m)" == "aarch64" ]] && VMLINUZ=Image
+    offset=$(hexdump -s 526 -n 2 -e '"%0d"' "/boot/${VMLINUZ}")
+    read _HWKVER _ < <(dd if="/boot/${VMLINUZ}" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
+}
+
 parameter $PARAMETER
 
 if [ "$KERNEL_VERSION" = "" ]; then
-	KERNEL_VERSION="$(uname -r)"
+        kver
+	KERNEL_VERSION="${_HWKVER}"
 fi
 
 # dmraid switch
@@ -161,8 +175,8 @@ showlist() {
 showlist2() {
 	cat=$1 ; shift
 	[ $# -gt 0 ] || return
-	echo -n "$cat="
-	for i in $*; do echo -n "$i "; done
+	echo -n "$cat=("
+	for i in $*; do echo -n $i\ ; done
 	echo ""
 }
 
@@ -266,27 +280,27 @@ while [ -n "$*"  ]; do
 				done
 				[ "$(echo $FS | grep btrfs)" ] && FS="$FS crc32c"
 				MODULES_INITRAMFS="$MODULES_INITRAMFS $FS"
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				_SHOW_MODULES="1"
 				;;
 		--hostcontroller)HOSTCONTROLLER="$(listmods virtio/virtio_pci) $(listmods ata/pata pata_acpi) $(listmods scsi/ /sg.ko /st.ko scsi_mod sr_mod sd_mod) $(listmods message/fusion/) $(listmods drivers/block/ virtio_blk nbd pktcdvd sx8 floppy) $(listmods ata/ pata ata_generic) $(listmods drivers/block/sx8) $(listmods xhci-hcd) $(listmods ehci-hcd) $(listmods uhci-hcd) $(listmods ohci-hcd) $(listmods virtio_blk) $(listmods nvme/) $(listmods xhci-pci)" 
 				 MODULES_INITRAMFS="$MODULES_INITRAMFS $HOSTCONTROLLER"
-				 showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				 _SHOW_MODULES="1"
 				 ;;
 		--ati-kms) 	KMS="radeon"
 				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				_SHOW_MODULES="1"
 				;;
                 --amd-kms) 	KMS="amdgpu"
 				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				_SHOW_MODULES="1"
 				;;
 		--intel-kms) 	KMS="i915"
 				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				_SHOW_MODULES="1"
 				;;
 		--nvidia-kms) 	KMS="nouveau"
 				MODULES_INITRAMFS="$KMS $MODULES_INITRAMFS"
-				showlist2 "MODULES" \"$MODULES_INITRAMFS\" | sed -e 's/(\  /(/g' -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+				_SHOW_MODULES="1"
 				;;
 		--hooks) 
 			if [ "$HOOKS_DIR" = "" ]; then
@@ -308,13 +322,16 @@ while [ -n "$*"  ]; do
 			if ! [ "$NFS" = "1" ]; then
 				START_HOOKS=$(echo $START_HOOKS | sed -e "s/net//g")
 			fi
-			echo "HOOKS=\"$START_HOOKS\"" | sed -e 's/"\ /"/g' -e 's/\ "/"/g' -e 's/\ \ /\ /g'
+			_SHOW_HOOKS="1"
 		;;
 		--advanced) echo "$ADVANCED"
 			    ;;
 	esac
 	shift
 done
+
+[[ "${_SHOW_MODULES}" == "1" ]] && showlist2 "MODULES" $MODULES_INITRAMFS | sed -e 's/(\  / /g' -e 's/\ \ /\ /g' -e 's/ $/)/g'
+[[ "${_SHOW_HOOKS}" == "1" ]] && echo "HOOKS=($START_HOOKS " | sed -e 's/\ \ /\ /g' -e 's/\ $/)/g'
 
 # cleanup
 rm /tmp/modules-plain
