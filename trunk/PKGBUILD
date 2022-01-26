@@ -14,10 +14,10 @@ makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus)
 checkdepends=(desktop-file-utils)
 source=("git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$pkgver"
-        noisy-glib-compile-schemas.diff
+        0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
         glib-compile-schemas.hook gio-querymodules.{hook,script})
 sha256sums=('SKIP'
-            'b1cb539389aaabd13671424452f2805112a359b96c9e0e7f80fad804a77f9c7e'
+            'edb5e34ac0a77431978cab55b98e39754d73455e28a38f5003424e943bbe5fff'
             '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
             '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
             '92d08db5aa30bda276bc3d718e7ff9dd01dc40dcab45b359182dcc290054e24e')
@@ -27,7 +27,7 @@ prepare() {
   cd glib
 
   # Suppress noise from glib-compile-schemas.hook
-  git apply -3 ../noisy-glib-compile-schemas.diff
+  git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
 }
 
 build() {
