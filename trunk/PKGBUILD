@@ -2,8 +2,8 @@
 # Maintainer: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=shadow
-pkgver=4.8.1
-pkgrel=4
+pkgver=4.11.1
+pkgrel=1
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
 arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
@@ -16,10 +16,9 @@ backup=(etc/login.defs
         etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
         etc/pam.d/{chgpasswd,groupmems}
         etc/default/useradd)
-options=(strip debug)
-validpgpkeys=('D5C2F9BFCA128BBA22A77218872F702C4D6E25A8'   # Christian Perrier
-              'F1D08DB778185BF784002DFFE9FEEA06A85E3F9D')  # Serge Hallyn
-source=("https://github.com/shadow-maint/shadow/releases/download/$pkgver/shadow-$pkgver.tar.xz"{,.asc}
+options=('!emptydirs')
+validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn
+source=("https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
         LICENSE
         chgpasswd
         chpasswd
@@ -30,7 +29,7 @@ source=("https://github.com/shadow-maint/shadow/releases/download/$pkgver/shadow
         shadow.{timer,service}
         useradd.defaults)
 install=shadow.install
-sha1sums=('63457a0ba58dc4e81b2663b839dc6c89d3343f12'
+sha1sums=('9cb767b86ff2b46e880b428e817972aa07b3a67c'
           'SKIP'
           '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
           '4ad0e059406a305c8640ed30d93c2a1f62c2f4ad'
@@ -46,7 +45,6 @@ sha1sums=('63457a0ba58dc4e81b2663b839dc6c89d3343f12'
 build() {
   cd "$pkgname-$pkgver"
 
-  autoreconf -fsiv
   ./configure \
     --prefix=/usr \
     --bindir=/usr/bin \
@@ -58,7 +56,8 @@ build() {
     --with-libpam \
     --with-group-name-max-length=32 \
     --with-audit \
-    --without-selinux
+    --without-selinux \
+    --without-su
 
   make
 }
@@ -67,6 +66,7 @@ package() {
   cd "$pkgname-$pkgver"
 
   make DESTDIR="$pkgdir" install
+  make DESTDIR="$pkgdir" -C man install
 
   # license
   install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/shadow/LICENSE"
@@ -101,7 +101,7 @@ package() {
 
   # Remove utilities provided by util-linux
   rm \
-      "$pkgdir"/usr/bin/{login,su,chsh,chfn,sg,nologin} \
+      "$pkgdir"/usr/bin/{login,chsh,chfn,sg,nologin} \
       "$pkgdir"/usr/sbin/{vipw,vigr}
 
   # but we keep newgrp, as sg is really an alias to it
@@ -119,9 +119,6 @@ package() {
           -name 'vigr.8'    -o \
           -name 'newgrp.1' ')' \
       -delete
-  rmdir \
-      "$pkgdir"/usr/share/man/{fi,id,zh_TW}/man1 \
-      "$pkgdir"/usr/share/man/{fi,ko/man8}
 
   # move everything else to /usr/bin, because this isn't handled by ./configure
   mv "$pkgdir"/usr/sbin/* "$pkgdir"/usr/bin
