@@ -1,8 +1,8 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=noto-fonts-cjk
-pkgver=20211026
-_commit=87213953d187fa8b5f6c962cd16fc10937016a6c
+pkgver=20220126
+_commit=473da44c32fec739db7e5458c81a833513cb4084
 pkgrel=1
 pkgdesc='Google Noto CJK fonts'
 arch=(any)
