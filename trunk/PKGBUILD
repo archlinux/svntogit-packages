@@ -2,9 +2,9 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.2.2
+_qtver=6.2.3
 pkgver=${_qtver/-/}
-pkgrel=3
+pkgrel=1
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -17,12 +17,12 @@ groups=(qt6)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
         qt6-webengine-ffmpeg5.patch)
-sha256sums=('2d2dcde6e4678ea96e4203a6e585b73e23fb61f83b47330f1f00c25e481cd3b4'
+sha256sums=('a72293b799a91189e12c91480d485d079cbce90b069439acf0bf81847cd02058'
             'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693')
 
-prepare() {
-  patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
-}
+#prepare() {
+#  patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
+#}
 
 build() {
   cmake -B build -S $_pkgfn -G Ninja \
