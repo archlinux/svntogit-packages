@@ -2,49 +2,49 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=accountsservice
-pkgver=0.6.55
-pkgrel=3
+pkgver=22.04.62
+pkgrel=1
 pkgdesc="D-Bus interface for user account query and manipulation"
 url="https://gitlab.freedesktop.org/accountsservice/accountsservice"
 arch=(x86_64)
 license=(GPL3)
 depends=(glib2 polkit systemd shadow libxcrypt)
-makedepends=(gtk-doc gobject-introspection git meson docbook-xsl xmlto)
-provides=(libaccountsservice.so)
-_commit=6d6f7d62fd18fe5a4d4c06cb1455887ca3abdd1d  # tags/0.6.55^0
+makedepends=(gtk-doc gobject-introspection git meson docbook-xsl xmlto vala)
+checkdepends=(python-gobject python-dbusmock)
+_commit=b92982be695700537bf80c5e9aa518820adbb7b6  # tags/22.04.62^0
 source=("git+https://gitlab.freedesktop.org/accountsservice/accountsservice.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 
 prepare() {
   cd $pkgname
-  sed -i '/dbus_conf_dir/s/sysconfdir/datadir/g' meson.build
 }
 
 build() {
-  arch-meson $pkgname build \
-    -D admin_group=wheel \
-    -D systemd=true \
-    -D docbook=true \
-    -D gtk_doc=true \
-    -D user_heuristics=false
+  local meson_options=(
+    -D admin_group=wheel
+    -D docbook=true
+    -D gtk_doc=true
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
   meson compile -C build
 }
 
 check() {
-  meson test -C build
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  DESTDIR="$pkgdir" meson install -C build
+  depends+=(libg{lib,object,io}-2.0.so libsystemd.so libcrypt.so)
+  provides+=(libaccountsservice.so)
 
-  # Fix permissions to match the ones the daemon sets
-  chmod 0775 "$pkgdir/var/lib/AccountsService/icons"
+  meson install -C build --destdir "$pkgdir"
 }
 
-# vim:set ts=2 sw=2 et:
+# vim:set sw=2 et:
