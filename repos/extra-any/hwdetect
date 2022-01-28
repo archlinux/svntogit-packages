@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 # Autodetection script for scanning /sys for hardware
 # for Archlinux by Tobias Powalowski <tpowa@archlinux.org>
 
@@ -100,11 +100,13 @@ parameter() {
 }
 
 kver() {
-    # get kernel version
+    # get kernel version from installed kernel
     [[ "$(uname -m)" == "x86_64" ]] && VMLINUZ=vmlinuz-linux
     [[ "$(uname -m)" == "aarch64" ]] && VMLINUZ=Image
     offset=$(hexdump -s 526 -n 2 -e '"%0d"' "/boot/${VMLINUZ}")
-    read _HWKVER _ < <(dd if="/boot/${VMLINUZ}" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
+    read -r _HWKVER _ < <(dd if="/boot/${VMLINUZ}" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
+    # fallback if no detectable kernel is installed
+    [[ "${_HWKVER}" == "" ]] && _HWKVER="$(uname -r)"
 }
 
 parameter $PARAMETER
@@ -112,6 +114,7 @@ parameter $PARAMETER
 if [ "$KERNEL_VERSION" = "" ]; then
         kver
 	KERNEL_VERSION="${_HWKVER}"
+	
 fi
 
 # dmraid switch
