@@ -4,7 +4,7 @@
 pkgname=qt5-webengine
 _qtver=5.15.8
 pkgver=${_qtver/-/}
-pkgrel=5
+pkgrel=6
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -41,7 +41,7 @@ prepare() {
   patch -p1 -i "$srcdir"/qt5-webengine-python3.patch # Fix build with Python 3
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-chromium-python3.patch
 
-#  patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
+  patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
 
 # Update catapult for python3 compatibility
   rm -r src/3rdparty/chromium/third_party/catapult
