@@ -4,7 +4,7 @@
 pkgname=qt6-webengine
 _qtver=6.2.3
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -14,15 +14,16 @@ depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr pciutils libxss 
 makedepends=(cmake ninja python2 python gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
+options=(debug)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
         qt6-webengine-ffmpeg5.patch)
 sha256sums=('a72293b799a91189e12c91480d485d079cbce90b069439acf0bf81847cd02058'
             'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693')
 
-prepare() {
-  patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
-}
+#prepare() {
+#  patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
+#}
 
 build() {
   cmake -B build -S $_pkgfn -G Ninja \
