@@ -142,7 +142,7 @@ build() {
 
   arch-meson "$pkgbase-stable" build "${_meson_options[@]}"
 
-  ninja -C build
+  meson compile -C build
 }
 
 check() {
