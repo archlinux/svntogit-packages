@@ -1,0 +1,39 @@
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+
+pkgname=attr
+pkgver=2.5.1
+pkgrel=2
+pkgdesc='Extended attribute support library for ACL support'
+arch=('x86_64')
+url='https://savannah.nongnu.org/projects/attr'
+license=('LGPL')
+depends=('glibc')
+makedepends=('gettext')
+replaces=('xfsattr')
+provides=('xfsattr' 'libattr.so')
+conflicts=('xfsattr')
+options=('debug')
+backup=('etc/xattr.conf')
+validpgpkeys=('600CD204FBCEA418BD2CA74F154343260542DF34'  # Brandon Philips <brandon@ifup.co>
+              'B902B5271325F892AC251AD441633B9FE837F581'  # Frysinger <vapier@gentoo.org>
+              '259B3792B3D6D319212CC4DCD5BF9FEB0313653A') # Andreas Gruenbacher <andreas.gruenbacher@gmail.com>
+source=("https://download.savannah.gnu.org/releases/${pkgname}/${pkgname}-${pkgver}.tar.xz"{,.sig})
+sha256sums=('db448a626f9313a1a970d636767316a8da32aede70518b8050fa0de7947adc32'
+            'SKIP')
+
+build() {
+  cd $pkgname-$pkgver
+
+  ./configure \
+    --libdir=/usr/lib \
+    --libexecdir=/usr/lib \
+    --prefix=/usr \
+    --sysconfdir=/etc
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+
+  make DESTDIR="${pkgdir}" install
+}
