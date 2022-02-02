@@ -4,7 +4,7 @@
 
 pkgname=sudo
 _sudover=1.9.9
-pkgrel=1
+pkgrel=2
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
@@ -19,15 +19,18 @@ backup=('etc/pam.d/sudo'
 install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
         sudo_logsrvd.service
+        disable-non-interative-auth.patch
         sudo.pam)
 sha256sums=('6d6ee863a3bc26c87661093a74ec63e10fd031ceba714642d21636dfe25e3e00'
             'SKIP'
             '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
+            '094387d71f6866ff85ab1cccbdf685f97c02a803eb01b41c80c52918785db85c'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
 prepare() {
   cd "$srcdir/$pkgname-$_sudover"
+  patch -Np1 -i ../disable-non-interative-auth.patch
 }
 
 build() {
