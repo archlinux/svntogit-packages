@@ -7,13 +7,13 @@ pkgname=(util-linux util-linux-libs)
 _pkgmajor=2.37
 _realver=${_pkgmajor}.3
 pkgver=${_realver/-/}
-pkgrel=1
+pkgrel=2
 pkgdesc='Miscellaneous system utilities for Linux'
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
 makedepends=('asciidoctor' 'libcap-ng' 'libxcrypt' 'python' 'systemd')
 license=('GPL2')
-options=('strip')
+options=('debug' 'strip')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
 source=("https://www.kernel.org/pub/linux/utils/util-linux/v${_pkgmajor}/${pkgbase}-${_realver}.tar."{xz,sign}
         '0001-agetty-resolve-tty-name-even-if-stdin-is-specified.patch'
