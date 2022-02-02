@@ -1,7 +1,7 @@
 # Maintainer: Christian Hesse <mail@eworm.de>
 
 pkgname=libxcrypt
-pkgver=4.4.27
+pkgver=4.4.28
 pkgrel=1
 pkgdesc='Modern library for one-way hashing of passwords'
 arch=('x86_64')
@@ -9,10 +9,11 @@ url='https://github.com/besser82/libxcrypt/'
 license=('GPL')
 depends=('glibc')
 provides=('libcrypt.so')
+options=('debug')
 install=libxcrypt.install
 validpgpkeys=('678CE3FEE430311596DB8C16F52E98007594C21D') # Björn 'besser82' Esser
 source=("${url}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz"{,.asc})
-sha256sums=('500898e80dc0d027ddaadb5637fa2bf1baffb9ccd73cd3ab51d92ef5b8a1f420'
+sha256sums=('9e936811f9fad11dbca33ca19bd97c55c52eb3ca15901f27ade046cc79e69e87'
             'SKIP')
 
 build() {
