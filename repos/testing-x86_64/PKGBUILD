@@ -1,0 +1,69 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Gerardo Exequiel Pozzi <vmlinuz386@yahoo.com.ar>
+
+pkgbase=libcap-ng
+pkgname=(libcap-ng python-capng)
+pkgver=0.8.2
+pkgrel=7
+pkgdesc='A library for Linux that makes using posix capabilities easy'
+arch=(x86_64)
+url='https://people.redhat.com/sgrubb/libcap-ng/'
+license=(LGPL2.1)
+depends=(glibc)
+makedepends=(python swig)
+options=(debug)
+source=(https://github.com/stevegrubb/libcap-ng/archive/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
+sha512sums=('33832ee16972050a7c5cb20de21d766d5e88f5357db28166b83b05369f7ceea0b1aded39bae2d746d582ad4ee7703c131876fc4bcbc5d4b4eadd7dd429e8cf10')
+b2sums=('6bb07503421f88803ce2597289c18762f6ad06a3535ad7c6ffc28d2519adf2a130189332e56df174aa9be768340983ea6f7a6046b2209916815a19a0c6fa3693')
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+prepare() {
+  cd $pkgbase-$pkgver
+  autoreconf -fiv
+}
+
+build() {
+  cd $pkgbase-$pkgver
+  ./configure \
+    --prefix=/usr \
+    --enable-static=no \
+    --without-python \
+    --with-python3
+  make
+}
+
+check() {
+  make check -C $pkgbase-$pkgver
+}
+
+package_libcap-ng() {
+  provides=(libcap-ng.so libdrop_ambient.so)
+
+  make DESTDIR="$pkgdir" install -C $pkgbase-$pkgver
+
+  (
+    cd "$pkgdir"
+    _pick python-capng usr/lib/python*
+  )
+}
+
+package_python-capng() {
+  pkgdesc+=' (Python bindings)'
+  depends+=(libcap-ng.so)
+  provides=(python-libcap-ng)
+
+  mv -v python-capng/* "$pkgdir"
+}
+
+# vim: ts=2 sw=2 et:
