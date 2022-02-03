@@ -2,7 +2,7 @@
 
 pkgname=apparmor
 pkgver=3.0.3
-pkgrel=2
+pkgrel=3
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=(x86_64)
 url="https://gitlab.com/apparmor/apparmor"
@@ -20,6 +20,8 @@ backup=('etc/apparmor/easyprof.conf'
         'etc/apparmor/notify.conf'
         'etc/apparmor/parser.conf'
         'etc/apparmor/severity.db')
+# broken with LTO: https://gitlab.com/apparmor/apparmor/-/issues/214
+options=(debug !lto)
 source=(
   "https://launchpad.net/${pkgname}/${pkgver%.[0-9]}/${pkgver}/+download/${pkgname}-${pkgver}.tar.gz"{,.asc}
   "$pkgname-3.0.3-remove_distutils.patch::https://gitlab.com/apparmor/apparmor/-/commit/ab4cfb5e84a95decd06487dc4e59827ddb8ce79d.patch"
