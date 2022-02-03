@@ -8,13 +8,13 @@ pkgbase=jack2
 pkgname=(jack2 jack2-dbus jack2-docs)
 pkgdesc="The JACK low-latency audio server"
 pkgver=1.9.20
-pkgrel=3
+pkgrel=4
 arch=(x86_64)
 url="https://github.com/jackaudio/jack2"
 license=(GPL2)
 makedepends=(alsa-lib dbus doxygen expat git libffado libsamplerate opus systemd waf)
 # jack breaks when built with LTO: https://github.com/jackaudio/jack2/issues/485
-options=(!lto)
+options=(debug !lto)
 source=("${pkgbase}::git+https://github.com/jackaudio/${pkgname}.git#tag=v${pkgver}?signed")
 validpgpkeys=('62B11043D2F6EB6672D93103CDBAA37ABC74FBA0') # falkTX <falktx@falktx.com>
 sha512sums=('SKIP')
