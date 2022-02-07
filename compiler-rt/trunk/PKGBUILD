@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=compiler-rt
-pkgver=13.0.0
-pkgrel=2
+pkgver=13.0.1
+pkgrel=1
 pkgdesc="Compiler runtime libraries for clang"
 arch=('x86_64')
 url="https://compiler-rt.llvm.org/"
@@ -15,7 +15,7 @@ makedepends_x86_64=('lib32-gcc-libs')
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig})
-sha256sums=('4c3602d76c7868a96b30c36165c4b7643e2a20173fced7e071b4baeb2d74db3f'
+sha256sums=('7b33955031f9a9c5d63077dedb0f99d77e4e7c996266952c1cec55626dca5dfc'
             'SKIP')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -31,6 +31,7 @@ build() {
   cmake .. -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
     -DCOMPILER_RT_INSTALL_PATH=/usr/lib/clang/$pkgver
   ninja
 }
