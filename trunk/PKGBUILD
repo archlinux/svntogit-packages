@@ -2,8 +2,8 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
-pkgver=13.0.0
-pkgrel=6
+pkgver=13.0.1
+pkgrel=1
 _ocaml_ver=4.13.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -19,7 +19,7 @@ source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         no-strict-aliasing-DwarfCompileUnit.patch
         disable-bswap-for-spir.patch
         llvm-config.h)
-sha256sums=('408d11708643ea826f519ff79761fcdfc12d641a2510229eec459e72f8163020'
+sha256sums=('ec6b80d82c384acad2dc192903a6cf2cdbaffb889b84bfb98da9d71e630fc834'
             'SKIP'
             'a7e902a7612d0fdabe436a917468b043cc296bc89d8954bfc3126f737beb9ac4'
             'd1eff24508e35aae6c26a943dbaa3ef5acb60a145b008fd1ef9ac6f6c4faa662'
@@ -49,6 +49,7 @@ build() {
   cmake .. -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
     -DLLVM_HOST_TRIPLE=$CHOST \
     -DLLVM_BUILD_LLVM_DYLIB=ON \
     -DLLVM_LINK_LLVM_DYLIB=ON \
@@ -66,7 +67,7 @@ build() {
 
 check() {
   cd "$srcdir/llvm-$pkgver.src/build"
-  ninja check
+  LD_LIBRARY_PATH=$PWD/lib ninja check
 }
 
 package_llvm() {
