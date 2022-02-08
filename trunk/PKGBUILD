@@ -72,6 +72,8 @@ build() {
     --disable-rpath
   )
 
+  CFLAGS+=" -ffat-lto-objects" # Fix static libs
+
   # only build plpython3 for now
   ./configure "${options[@]}" \
     PYTHON=/usr/bin/python
