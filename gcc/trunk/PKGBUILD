@@ -1,4 +1,6 @@
-# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
+# Contributor:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: Daniel Kozak <kozzi11@gmail.com>
 
@@ -6,22 +8,22 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
-pkgver=11.1.0
+pkgver=11.2.0
 _majorver=${pkgver%%.*}
 _islver=0.24
-pkgrel=3
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
 url='https://gcc.gnu.org'
 makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python git libxcrypt)
 checkdepends=(dejagnu inetutils)
-options=(!emptydirs)
+options=(!emptydirs !lto)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 # _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
 # source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
 source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.xz{,.sig}
-        http://isl.gforge.inria.fr/isl-${_islver}.tar.xz
+        https://libisl.sourceforge.io/isl-${_islver}.tar.xz
         c89 c99
         gdc_phobos_path.patch
         fs64270.patch
@@ -34,7 +36,7 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('4c4a6fb8a8396059241c2e674b85b351c26a5d678274007f076957afa1cc9ddf'
+sha256sums=('d08edc536b54c372a1010ff6619dd274c0f1603aa49212ba20f7aa2cda36fa8b'
             'SKIP'
             '043105cc544f416b48736fff8caf077fb0663a717d06b1113f16e391ac99ebad'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
@@ -77,10 +79,11 @@ prepare() {
 build() {
   cd gcc-build
 
-  # using -pipe causes spurious test-suite failures
-  # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=48565
-  CFLAGS=${CFLAGS/-pipe/}
-  CXXFLAGS=${CXXFLAGS/-pipe/}
+  # Credits @allanmcrae
+  # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/gcc/PKGBUILD
+  # TODO: properly deal with the build issues resulting from this
+  CFLAGS=${CFLAGS/-Werror=format-security/}
+  CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
 
   "$srcdir/gcc/configure" --prefix=/usr \
       --libdir=/usr/lib \
@@ -113,10 +116,10 @@ build() {
       --disable-werror \
       gdc_include_dir=/usr/include/dlang/gdc
 
-  make
+  make -O
 
   # make documentation
-  make -C $CHOST/libstdc++-v3/doc doc-man-doxygen
+  make -O -C $CHOST/libstdc++-v3/doc doc-man-doxygen
 }
 
 check() {
@@ -126,7 +129,7 @@ check() {
   sed -i '/maybe-check-target-libphobos \\/d' Makefile 
 
   # do not abort on error as some are "expected"
-  make -k check || true
+  make -O -k check || true
   "$srcdir/gcc/contrib/test_summary"
 }
 
