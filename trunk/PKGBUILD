@@ -19,7 +19,6 @@ pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
 _tag='53c5000739db114c229fe69ec3d4b76b92441098' # git rev-parse grub-${_pkgver}
-_gnulib_commit='be584c56eb1311606e5ea1a36363b97bddb6eed3'
 _unifont_ver='14.0.01'
 _pkgver=2.06
 pkgver=${_pkgver/-/}
@@ -59,7 +58,7 @@ validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' S
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
 source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
-        "git+https://git.savannah.gnu.org/git/gnulib.git#commit=${_gnulib_commit}"
+        'git+https://git.savannah.gnu.org/git/gnulib.git'
         "https://ftp.gnu.org/gnu/unifont/unifont-${_unifont_ver}/unifont-${_unifont_ver}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
         '0002-10_linux-detect-archlinux-initramfs.patch'
