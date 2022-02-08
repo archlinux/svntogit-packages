@@ -5,34 +5,27 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.23.5
-pkgrel=2
+pkgver=5.24.0
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
 license=(LGPL)
 depends=(knotifyconfig ksystemstats ktexteditor libqalculate kde-cli-tools appstream-qt
          xorg-xrdb xorg-xsetroot kactivitymanagerd kholidays xorg-xmessage milou prison kwin
-         plasma-integration kpeople kactivities-stats libkscreen kquickcharts kuserfeedback kio-extras kio-fuse)
+         plasma-integration kpeople kactivities-stats libkscreen kquickcharts kuserfeedback
+         accountsservice kio-extras kio-fuse)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt plasma-wayland-protocols kunitconversion kinit)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam
-        https://invent.kde.org/plasma/plasma-workspace/-/commit/70d23b89.patch
-        https://invent.kde.org/plasma/plasma-workspace/-/commit/926f8647.patch)
-sha256sums=('2ebee6ab2f10cabc350e0f75a0d8462ae0b7616a795d078f6bb5765396052575'
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
+sha256sums=('e337943732cafda000b972856ba0eab953f2c3190b8d8d952a3c6e1105d5d34a'
             'SKIP'
-            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739'
-            '810660c3d7948c21c61f8d4c7d604ca7cb51c85e1a41c6225d1f39c72feae808'
-            'fe5ae91bc2c5e1b9021523efec60dc7740285e2c74684639e8238e9df9f58572')
+            '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
-
-prepare() {
-  patch -d $pkgbase-$pkgver -p1 < 70d23b89.patch # Remove implicit kinit dependency on shell runner
-  patch -d $pkgbase-$pkgver -p1 < 926f8647.patch # Fix missing taskbar thumbnails on Wayland
-}
+options=(debug)
 
 build() {
   cmake -B build -S $pkgbase-$pkgver \
