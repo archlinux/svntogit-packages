@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=khotkeys
-pkgver=5.23.5
+pkgver=5.24.0
 pkgrel=1
 pkgdesc='KHotKeys'
 arch=(x86_64)
@@ -13,12 +13,13 @@ depends=(plasma-workspace kdelibs4support)
 makedepends=(extra-cmake-modules kdoctools kdesignerplugin kinit)
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig})
-sha256sums=('6a18e89f19ba30a97a2e0f0f081acc6da1a37789fc009c7a555382bdc015a68c'
+sha256sums=('669e49fef569d9030e471de8f66bb719489c6fe65622552355cbeff27ee34d3e'
             'SKIP')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+options=(debug)
 
 build() {
   cmake -B build -S $pkgname-$pkgver \
