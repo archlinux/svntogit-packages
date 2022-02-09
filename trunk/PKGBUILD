@@ -1,8 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
 
 pkgname=xkeyboard-config
-pkgver=2.34
+pkgver=2.35
 pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
@@ -12,10 +11,10 @@ makedepends=('xorg-xkbcomp' 'libxslt' 'python' 'meson')
 provides=('xkbdata')
 replaces=('xkbdata')
 conflicts=('xkbdata')
-source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.bz2{,.sig})
-validpgpkeys=('FFB4CCD275AAA422F5F9808E0661D98FC933A145')
-validpgpkeys+=('15CFA5C595041D2CCBEA155F1732AA424A0E86B4') # "Sergey Udaltsov (For GNOME-related tasks) <svu@gnome.org>"
-sha512sums=('cf3bdb658349b2db9db44ea1a0f7060b890b95520319101d83ba5aefeb0b1e2fd578b6f72a90758438f04bffbe7536cf112b76297fd47c95e02029fd203c51fb'
+source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.xz{,.sig})
+validpgpkeys=('FFB4CCD275AAA422F5F9808E0661D98FC933A145') # Sergey Udaltsov <sergey.udaltsov@gmail.com>
+#validpgpkeys=('15CFA5C595041D2CCBEA155F1732AA424A0E86B4') # "Sergey Udaltsov (For GNOME-related tasks) <svu@gnome.org>"
+sha256sums=('10b03fdd1014f8a90715b42644f60254ca90cc5ef8fbd18dde05c36439b2bc82'
             'SKIP')
 
 build() {
