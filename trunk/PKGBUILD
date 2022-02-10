@@ -38,11 +38,7 @@ sha256sums=('d08edc536b54c372a1010ff6619dd274c0f1603aa49212ba20f7aa2cda36fa8b'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
-            '1ef190ed4562c4db8c1196952616cd201cfdd788b65f302ac2cc4dabb4d72cee'
-            'fcb11c9bcea320afd202b031b48f8750aeaedaa4b0c5dddcd2c0a16381e927e4'
-            '42865f2af3f48140580c4ae70b6ea03b5bdca0f29654773ef0d42ce00d60ea16'
-            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
-            '504e4b5a08eb25b6c35f19fdbe0c743ae4e9015d0af4759e74150006c283585e')
+            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
 
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
@@ -72,6 +68,11 @@ prepare() {
 build() {
   cd gcc-build
 
+  # remove lto
+  CFLAGS=${CFLAGS/-flto/}
+  CXXFLAGS=${CXXFLAGS/-flto/}
+  LDFLAGS=${LDFLAGS/-flto/}
+
   # Credits @allanmcrae
   # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/gcc/PKGBUILD
   # TODO: properly deal with the build issues resulting from this
@@ -96,7 +97,6 @@ build() {
       --enable-default-ssp \
       --enable-gnu-indirect-function \
       --enable-gnu-unique-object \
-      --enable-install-libiberty \
       --enable-linker-build-id \
       --enable-lto \
       --enable-multilib \
@@ -107,9 +107,15 @@ build() {
       --disable-libstdcxx-pch \
       --disable-libunwind-exceptions \
       --disable-werror \
+      --with-build-config=bootstrap-lto \
+      --enable-link-serialization=1 \
       gdc_include_dir=/usr/include/dlang/gdc
 
-  make -O
+  # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
+  make -O STAGE1_CFLAGS="-O2" \
+          BOOT_CFLAGS="$CFLAGS" \
+          BOOT_LDFLAGS="$LDFLAGS" \
+          LDFLAGS_FOR_TARGET="$LDFLAGS"
 
   # make documentation
   make -O -C $CHOST/libstdc++-v3/doc doc-man-doxygen
@@ -225,9 +231,6 @@ package_gcc() {
   make -C $CHOST/32/libitm DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
   make -C $CHOST/32/libsanitizer DESTDIR="$pkgdir" install-nodist_{saninclude,toolexeclib}HEADERS
   make -C $CHOST/32/libsanitizer/asan DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
-
-  make -C libiberty DESTDIR="$pkgdir" install
-  install -m644 libiberty/pic/libiberty.a "$pkgdir/usr/lib"
 
   make -C gcc DESTDIR="$pkgdir" install-man install-info
   rm "$pkgdir"/usr/share/man/man1/{gccgo,gfortran,gdc}.1
