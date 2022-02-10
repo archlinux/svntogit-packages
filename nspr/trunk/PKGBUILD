@@ -17,7 +17,7 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd nspr
-  hg id -t | sed 's/^NSPR_//;s/_RTM$//;s/_/./g'
+  hg id -t -r. | sed 's/^NSPR_//;s/_RTM$//;s/_/./g'
 }
 
 prepare() {
