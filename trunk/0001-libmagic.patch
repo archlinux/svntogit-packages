@@ -1,0 +1,470 @@
+From 4affafe91579799efd83f4c8e05c291eeb684c9c Mon Sep 17 00:00:00 2001
+From: Christian Hesse <mail@eworm.de>
+Date: Wed, 5 Jan 2022 14:35:15 +0100
+Subject: [PATCH 1/3] use libmagic to detect valid file formats
+
+Writing our own magic bytes detection is prone to errors and an
+everlasting catch-up-game. Let's use libmagic to get things right,
+this is less code and makes things more reliable.
+
+Building without libmagic is still possible. That will make the code
+act like specifying FEH_SKIP_MAGIC=1, effectively passing everything
+to imlib2.
+---
+ README.md   |   2 +
+ config.mk   |   6 +++
+ src/imlib.c | 134 ++++++++++++++++++++--------------------------------
+ 3 files changed, 59 insertions(+), 83 deletions(-)
+
+diff --git a/README.md b/README.md
+index 4401af2..c4cb7ef 100644
+--- a/README.md
++++ b/README.md
+@@ -22,6 +22,7 @@ Dependencies
+ 
+  * Imlib2
+  * libcurl (disable with make curl=0)
++ * libmagic (disable with make magic=0)
+  * libpng
+  * libX11
+  * libXinerama (disable with make xinerama=0)
+@@ -91,6 +92,7 @@ indicates that the corresponding feature is enabled by default.
+ | help | 0 | include help text (refers to the manpage otherwise) |
+ | inotify | 0 | enable inotify, needed for `--auto-reload` |
+ | stat64 | 0 | Support CIFS shares from 64bit hosts on 32bit machines |
++| magic | 1 | Build against libmagic to filter unsupported file formats |
+ | mkstemps | 1 | Whether your libc provides `mkstemps()`. If set to 0, feh will be unable to load gif images via libcurl |
+ | verscmp | 1 | Whether your libc provides `strvercmp()`. If set to 0, feh will use an internal implementation. |
+ | xinerama | 1 | Support Xinerama/XRandR multiscreen setups |
+diff --git a/config.mk b/config.mk
+index 2d63f72..910eac7 100644
+--- a/config.mk
++++ b/config.mk
+@@ -6,6 +6,7 @@ curl ?= 1
+ debug ?= 0
+ exif ?= 0
+ help ?= 0
++magic ?= 1
+ mkstemps ?= 1
+ verscmp ?= 1
+ xinerama ?= 1
+@@ -68,6 +69,11 @@ ifeq (${mkstemps},1)
+ 	CFLAGS += -DHAVE_MKSTEMPS
+ endif
+ 
++ifeq (${magic},1)
++	CFLAGS += -DHAVE_LIBMAGIC
++	LDLIBS += -lmagic
++endif
++
+ ifeq (${verscmp},1)
+ 	CFLAGS += -DHAVE_STRVERSCMP
+ endif
+diff --git a/src/imlib.c b/src/imlib.c
+index 6d709a2..70d459f 100644
+--- a/src/imlib.c
++++ b/src/imlib.c
+@@ -44,6 +44,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ #include "exif.h"
+ #endif
+ 
++#ifdef HAVE_LIBMAGIC
++#include <magic.h>
++#endif
++
+ Display *disp = NULL;
+ Visual *vis = NULL;
+ Screen *scr = NULL;
+@@ -242,98 +246,62 @@ void feh_print_load_error(char *file, winwidget w, Imlib_Load_Error err, enum fe
+  * avoid calling Imlib2 for files it probably cannot handle. See
+  * <https://phab.enlightenment.org/T8739> and
+  * <https://github.com/derf/feh/issues/505>.
+- *
+- * Note that this drops support for bz2-compressed files, unless
+- * FEH_SKIP_MAGIC is set
+  */
+ int feh_is_image(feh_file * file)
+ {
+-	unsigned char buf[16];
+-	FILE *fh = fopen(file->filename, "r");
+-	if (!fh) {
+-		return 0;
+-	}
+-	// Files smaller than buf will be padded with zeroes
+-	memset(buf, 0, sizeof(buf));
+-	if (fread(buf, 1, 16, fh) <= 0) {
+-		fclose(fh);
+-		return 0;
+-	}
+-	fclose(fh);
++#ifdef HAVE_LIBMAGIC
++	magic_t magic;
++	const char * mime_type;
++	int is_image = 0;
+ 
+-	if (buf[0] == 0xff && buf[1] == 0xd8) {
+-		// JPEG
+-		return 1;
+-	}
+-	if (!memcmp(buf, "\x89PNG\x0d\x0a\x1a\x0a", 8)) {
+-		// PNG
+-		return 1;
+-	}
+-	if (buf[0] == 'A' && buf[1] == 'R' && buf[2] == 'G' && buf[3] == 'B') {
+-		// ARGB
+-		return 1;
+-	}
+-	if (buf[0] == 'B' && buf[1] == 'M') {
+-		// BMP
+-		return 1;
+-	}
+-	if (!memcmp(buf, "farbfeld", 8)) {
+-		// farbfeld
+-		return 1;
+-	}
+-	if (buf[0] == 'G' && buf[1] == 'I' && buf[2] == 'F') {
+-		// GIF
+-		return 1;
+-	}
+-	if (buf[0] == 0x00 && buf[1] == 0x00 && buf[2] <= 0x02 && buf[3] == 0x00) {
+-		// ICO
+-		return 1;
+-	}
+-	if (!memcmp(buf, "FORM", 4)) {
+-		// Amiga IFF ILBM
+-		return 1;
+-	}
+-	if (buf[0] == 'P' && buf[1] >= '1' && buf[1] <= '7') {
+-		// PNM et al.
+-		return 1;
+-	}
+-	if (strstr(file->filename, ".tga")) {
+-		// TGA
+-		return 1;
+-	}
+-	if (!memcmp(buf, "II\x2a\x00", 4) || !memcmp(buf, "MM\x00\x2a", 4)) {
+-		// TIFF
+-		return 1;
+-	}
+-	if (!memcmp(buf, "RIFF", 4)) {
+-		// might be webp
+-		return 1;
+-	}
+-	if (!memcmp(buf + 4, "ftyphei", 7) || !memcmp(buf + 4, "ftypmif1", 8)) {
+-		// HEIC/HEIF - note that this is only supported in imlib2-heic. Ordinary
+-		// imlib2 releases do not support heic/heif images as of 2021-01.
+-		return 1;
+-	}
+-	if ((buf[0] == 0xff && buf[1] == 0x0a) || !memcmp(buf, "\x00\x00\x00\x0cJXL \x0d\x0a\x87\x0a", 12)) {
+-		// JXL - note that this is only supported in imlib2-jxl. Ordinary
+-		// imlib2 releases do not support JXL images as of 2021-06.
++	if (getenv("FEH_SKIP_MAGIC")) {
+ 		return 1;
+ 	}
+-	buf[15] = 0;
+-	if (strstr((char *)buf, "XPM")) {
+-		// XPM
+-		return 1;
++
++	if (!(magic = magic_open(MAGIC_MIME_TYPE | MAGIC_SYMLINK))) {
++		weprintf("unable to initialize magic library\n");
++		return 0;
+ 	}
+-	if (strstr(file->filename, ".bz2") || strstr(file->filename, ".gz")) {
+-		// Imlib2 supports compressed images. It relies on the filename to
+-		// determine the appropriate loader and does not use magic bytes here.
+-		return 1;
++
++	if (magic_load(magic, NULL) != 0) {
++		weprintf("cannot load magic database: %s\n", magic_error(magic));
++		magic_close(magic);
++		return 0;
+ 	}
+-	// moved to the end as this variable won't be set in most cases
+-	if (getenv("FEH_SKIP_MAGIC")) {
+-		return 1;
++
++	mime_type = magic_file(magic, file->filename);
++
++	if (mime_type) {
++		D(("file %s has mime type: %s\n", file->filename, mime_type));
++
++		if (strncmp(mime_type, "image/", 6) == 0) {
++			is_image = 1;
++		}
++
++		/* imlib2 supports loading compressed images, let's have a look inside */
++		if (strcmp(mime_type, "application/gzip") == 0 ||
++		    strcmp(mime_type, "application/x-bzip2") == 0 ||
++		    strcmp(mime_type, "application/x-xz") == 0) {
++			magic_setflags(magic, magic_getflags(magic) | MAGIC_COMPRESS);
++			mime_type = magic_file(magic, file->filename);
++
++			if (mime_type) {
++				D(("uncompressed file %s has mime type: %s\n", file->filename, mime_type));
++
++				if (strncmp(mime_type, "image/", 6) == 0) {
++					is_image = 1;
++				}
++			}
++		}
+ 	}
+-	return 0;
++
++	magic_close(magic);
++
++	return is_image;
++#else
++	(void)file;
++	return 1;
++#endif
+ }
+ 
+ int feh_load_image(Imlib_Image * im, feh_file * file)
+-- 
+2.35.1
+
+
+From facb67f8438aa8ef18ffacdccfd0a2d1c2730e5c Mon Sep 17 00:00:00 2001
+From: Christian Hesse <mail@eworm.de>
+Date: Wed, 12 Jan 2022 09:53:15 +0100
+Subject: [PATCH 2/3] global initialization for libmagic
+
+Add a global `magic_t magic` and initialize it just once.
+
+Also `feh_is_image()` now calls itself to check compressed files, saving
+some duplicate code.
+---
+ src/feh.h   |  4 +++
+ src/imlib.c | 94 ++++++++++++++++++++++++++++++-----------------------
+ src/main.c  |  8 +++++
+ 3 files changed, 66 insertions(+), 40 deletions(-)
+
+diff --git a/src/feh.h b/src/feh.h
+index 007c7c5..9afe238 100644
+--- a/src/feh.h
++++ b/src/feh.h
+@@ -145,6 +145,10 @@ void init_slideshow_mode(void);
+ void init_list_mode(void);
+ void init_loadables_mode(void);
+ void init_unloadables_mode(void);
++#ifdef HAVE_LIBMAGIC
++void uninit_magic(void);
++void init_magic(void);
++#endif
+ void feh_clean_exit(void);
+ int feh_should_ignore_image(Imlib_Image * im);
+ int feh_load_image(Imlib_Image * im, feh_file * file);
+diff --git a/src/imlib.c b/src/imlib.c
+index 70d459f..0accbdc 100644
+--- a/src/imlib.c
++++ b/src/imlib.c
+@@ -46,6 +46,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ 
+ #ifdef HAVE_LIBMAGIC
+ #include <magic.h>
++
++magic_t magic = NULL;
+ #endif
+ 
+ Display *disp = NULL;
+@@ -239,6 +241,33 @@ void feh_print_load_error(char *file, winwidget w, Imlib_Load_Error err, enum fe
+ 	}
+ }
+ 
++#ifdef HAVE_LIBMAGIC
++void uninit_magic(void)
++{
++	if (!magic) {
++		return;
++	}
++
++	magic_close(magic);
++	magic = NULL;
++}
++void init_magic(void)
++{
++	if (getenv("FEH_SKIP_MAGIC")) {
++		return;
++	}
++
++	if (!(magic = magic_open(MAGIC_NONE))) {
++		weprintf("unable to initialize magic library\n");
++		return;
++	}
++
++	if (magic_load(magic, NULL) != 0) {
++		weprintf("cannot load magic database: %s\n", magic_error(magic));
++		uninit_magic();
++	}
++}
++
+ /*
+  * This is a workaround for an Imlib2 regression, causing unloadable image
+  * detection to be excessively slow (and, thus, causing feh to hang for a while
+@@ -247,62 +276,47 @@ void feh_print_load_error(char *file, winwidget w, Imlib_Load_Error err, enum fe
+  * <https://phab.enlightenment.org/T8739> and
+  * <https://github.com/derf/feh/issues/505>.
+  */
+-int feh_is_image(feh_file * file)
++int feh_is_image(feh_file * file, int magic_flags)
+ {
+-#ifdef HAVE_LIBMAGIC
+-	magic_t magic;
+-	const char * mime_type;
+-	int is_image = 0;
++	const char * mime_type = NULL;
+ 
+-	if (getenv("FEH_SKIP_MAGIC")) {
++	if (!magic) {
+ 		return 1;
+ 	}
+ 
+-	if (!(magic = magic_open(MAGIC_MIME_TYPE | MAGIC_SYMLINK))) {
+-		weprintf("unable to initialize magic library\n");
+-		return 0;
+-	}
++	magic_setflags(magic, MAGIC_MIME_TYPE | MAGIC_SYMLINK | magic_flags);
++	mime_type = magic_file(magic, file->filename);
+ 
+-	if (magic_load(magic, NULL) != 0) {
+-		weprintf("cannot load magic database: %s\n", magic_error(magic));
+-		magic_close(magic);
++	if (!mime_type) {
+ 		return 0;
+ 	}
+ 
+-	mime_type = magic_file(magic, file->filename);
+-
+-	if (mime_type) {
+-		D(("file %s has mime type: %s\n", file->filename, mime_type));
+-
+-		if (strncmp(mime_type, "image/", 6) == 0) {
+-			is_image = 1;
+-		}
+-
+-		/* imlib2 supports loading compressed images, let's have a look inside */
+-		if (strcmp(mime_type, "application/gzip") == 0 ||
+-		    strcmp(mime_type, "application/x-bzip2") == 0 ||
+-		    strcmp(mime_type, "application/x-xz") == 0) {
+-			magic_setflags(magic, magic_getflags(magic) | MAGIC_COMPRESS);
+-			mime_type = magic_file(magic, file->filename);
++	D(("file %s has mime type: %s\n", file->filename, mime_type));
+ 
+-			if (mime_type) {
+-				D(("uncompressed file %s has mime type: %s\n", file->filename, mime_type));
++	if (strncmp(mime_type, "image/", 6) == 0) {
++		return 1;
++	}
+ 
+-				if (strncmp(mime_type, "image/", 6) == 0) {
+-					is_image = 1;
+-				}
+-			}
+-		}
++	/* no infinite loop on compressed content, please */
++	if (magic_flags) {
++		return 0;
+ 	}
+ 
+-	magic_close(magic);
++	/* imlib2 supports loading compressed images, let's have a look inside */
++	if (strcmp(mime_type, "application/gzip") == 0 ||
++	    strcmp(mime_type, "application/x-bzip2") == 0 ||
++	    strcmp(mime_type, "application/x-xz") == 0) {
++		return feh_is_image(file, MAGIC_COMPRESS);
++	}
+ 
+-	return is_image;
++	return 0;
++}
+ #else
+-	(void)file;
++int feh_is_image(__attribute__((unused)) feh_file * file, __attribute__((unused)) int magic_flags)
++{
+ 	return 1;
+-#endif
+ }
++#endif
+ 
+ int feh_load_image(Imlib_Image * im, feh_file * file)
+ {
+@@ -326,7 +340,7 @@ int feh_load_image(Imlib_Image * im, feh_file * file)
+ 		}
+ 	}
+ 	else {
+-		if (feh_is_image(file)) {
++		if (feh_is_image(file, 0)) {
+ 			*im = imlib_load_image_with_error_return(file->filename, &err);
+ 		} else {
+ 			feh_err = LOAD_ERROR_MAGICBYTES;
+diff --git a/src/main.c b/src/main.c
+index 3d124fd..34b667a 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -69,6 +69,10 @@ int main(int argc, char **argv)
+ #endif
+ 	}
+ 
++#ifdef HAVE_LIBMAGIC
++	init_magic();
++#endif
++
+ 	feh_event_init();
+ 
+ 	if (opt.index)
+@@ -262,6 +266,10 @@ void feh_clean_exit(void)
+ 	if(disp)
+ 		XCloseDisplay(disp);
+ 
++#ifdef HAVE_LIBMAGIC
++	uninit_magic();
++#endif
++
+ 	/*
+ 	 * Only restore the old terminal settings if
+ 	 * - we changed them in the first place
+-- 
+2.35.1
+
+
+From 26cd770c8732a4467e57cf3e7a5d4c2518836275 Mon Sep 17 00:00:00 2001
+From: Daniel Friesel <derf@finalrewind.org>
+Date: Thu, 10 Feb 2022 21:41:35 +0100
+Subject: [PATCH 3/3] Run init_magic before init_parse_options
+
+init_parse_options calls feh_prepare_filelist, which in turn calls
+feh_file_info_preload if opt.preload is set. This function will load all
+images in the filelist to determine their attributes, so we need to initialize
+libmagic before calling init_parse_options.
+---
+ src/main.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/src/main.c b/src/main.c
+index 34b667a..85e0504 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -49,6 +49,11 @@ int main(int argc, char **argv)
+ 	srandom(getpid() * time(NULL) % ((unsigned int) -1));
+ 
+ 	setup_signal_handlers();
++
++#ifdef HAVE_LIBMAGIC
++	init_magic();
++#endif
++
+ 	init_parse_options(argc, argv);
+ 
+ 	init_imlib_fonts();
+@@ -69,10 +74,6 @@ int main(int argc, char **argv)
+ #endif
+ 	}
+ 
+-#ifdef HAVE_LIBMAGIC
+-	init_magic();
+-#endif
+-
+ 	feh_event_init();
+ 
+ 	if (opt.index)
