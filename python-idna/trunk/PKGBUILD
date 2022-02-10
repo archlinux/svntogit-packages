@@ -2,7 +2,7 @@
 
 pkgname=python-idna
 pkgver=3.3
-pkgrel=3
+pkgrel=4
 pkgdesc="Internationalized Domain Names in Applications (IDNA)"
 arch=('any')
 license=('BSD')
@@ -29,5 +29,5 @@ check() {
 package() {
    cd idna-$pkgver
    python setup.py install --root="$pkgdir" --optimize=1 --skip-build
-   #install -Dm644 LICENSE.md -t "$pkgdir"/usr/share/licenses/$pkgname/
+   install -Dm644 LICENSE.md -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
