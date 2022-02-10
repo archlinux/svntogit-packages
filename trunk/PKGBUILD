@@ -56,6 +56,7 @@ build() {
       --enable-static-pie
       --enable-systemtap
       --disable-profile
+      --disable-crypt
       --disable-werror
   )
 
@@ -74,7 +75,7 @@ build() {
   "$srcdir/glibc/configure" \
       --libdir=/usr/lib \
       --libexecdir=/usr/lib \
-      ${_configure_flags[@]}
+      "${_configure_flags[@]}"
 
   # build libraries with fortify disabled
   echo "build-programs=no" >> configparms
@@ -101,7 +102,7 @@ build() {
       --host=i686-pc-linux-gnu \
       --libdir=/usr/lib32 \
       --libexecdir=/usr/lib32 \
-      ${_configure_flags[@]}
+      "${_configure_flags[@]}"
 
   # build libraries with fortify disabled
   echo "build-programs=no" >> configparms
