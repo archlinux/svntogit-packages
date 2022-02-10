@@ -20,7 +20,7 @@ sha256sums=('SKIP'
 
 pkgver() {
   cd nss
-  hg id -t | sed 's/^NSS_//;s/_RTM$//;s/_/./g'
+  hg id -t -r. | sed 's/^NSS_//;s/_RTM$//;s/_/./g'
 }
 
 prepare() {
