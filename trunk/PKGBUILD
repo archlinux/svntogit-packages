@@ -106,7 +106,6 @@ build() {
       --enable-threads=posix \
       --disable-libssp \
       --disable-libstdcxx-pch \
-      --disable-libunwind-exceptions \
       --disable-werror \
       --with-build-config=bootstrap-lto \
       --enable-link-serialization=1 \
