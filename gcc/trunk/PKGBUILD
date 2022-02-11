@@ -18,7 +18,7 @@ license=(GPL LGPL FDL custom)
 url='https://gcc.gnu.org'
 makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python git libxcrypt zstd)
 checkdepends=(dejagnu inetutils tcl expect python-pytest)
-options=(!emptydirs debug)
+options=(!emptydirs !lto debug)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 # _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
 # source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
@@ -67,11 +67,6 @@ prepare() {
 
 build() {
   cd gcc-build
-
-  # remove lto
-  CFLAGS=${CFLAGS/-flto/}
-  CXXFLAGS=${CXXFLAGS/-flto/}
-  LDFLAGS=${LDFLAGS/-flto/}
 
   # Credits @allanmcrae
   # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/gcc/PKGBUILD
