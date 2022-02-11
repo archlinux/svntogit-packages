@@ -5,17 +5,18 @@
 
 pkgname=binutils
 pkgver=2.38
-pkgrel=1
+pkgrel=2
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
 license=(GPL)
 groups=(base-devel)
-depends=(glibc zlib elfutils)
-makedepends=(elfutils git)
+depends=(glibc zlib libelf)
+checkdepends=(dejagnu debuginfod bc)
+optdepends=('debuginfod: for debuginfod server/client functionality')
 conflicts=(binutils-multilib)
 replaces=(binutils-multilib)
-options=(staticlibs !distcc !ccache)
+options=(staticlibs !distcc !ccache debug)
 #_commit=cb5f6a3e146cc70bc2d864989386df80acec5d3e
 #source=(git+https://sourceware.org/git/binutils-gdb.git#commit=$_commit)
 source=(https://ftp.gnu.org/gnu/binutils/binutils-$pkgver.tar.xz{,.sig})
@@ -46,28 +47,43 @@ build() {
     --enable-cet \
     --enable-deterministic-archives \
     --enable-gold \
+    --enable-install-libiberty \
     --enable-ld=default \
     --enable-lto \
+    --enable-pgo-build=lto \
     --enable-plugins \
     --enable-relro \
+    --enable-shared \
     --enable-targets=x86_64-pep \
     --enable-threads \
     --disable-gdb \
+    --disable-gdbserver \
+    --disable-libdecnumber \
+    --disable-readline \
+    --disable-sim \
     --disable-werror \
     --with-debuginfod \
     --with-pic \
     --with-system-zlib
 
-  make -O configure-host
   make -O tooldir=/usr
 }
 
 check() {
   cd binutils-build
 
-  # unset LDFLAGS as testsuite makes assumptions about which ones are active
-  # ignore failures in gold testsuite...
-  make -O -k LDFLAGS="" check || true
+  # current testsuite failure in debuginfod (objdump)
+  # https://sourceware.org/bugzilla/show_bug.cgi?id=28029
+  sed -i '/test_fetch_debuglink $OBJDUMP/d' \
+    $srcdir/binutils-gdb/binutils/testsuite/binutils-all/debuginfod.exp
+  # Use minimal flags for testsuite
+  # ld testsuite uses CFLAGS_FOR_TARGET and requires -g
+  # gold testsuite requires CXXFLAGS/CFLAGS with default PIE/PIC disabled
+  make -O CFLAGS_FOR_TARGET="-O2 -g" \
+          CXXFLAGS="-O2 -no-pie -fno-PIC" \
+          CFLAGS="-O2 -no-pie" \
+          LDFLAGS="" \
+          check
 }
 
 package() {
