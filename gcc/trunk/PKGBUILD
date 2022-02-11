@@ -18,7 +18,7 @@ license=(GPL LGPL FDL custom)
 url='https://gcc.gnu.org'
 makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python git libxcrypt zstd)
 checkdepends=(dejagnu inetutils tcl expect python-pytest)
-options=(!emptydirs)
+options=(!emptydirs debug)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 # _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
 # source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
@@ -100,6 +100,7 @@ build() {
       --enable-linker-build-id \
       --enable-lto \
       --enable-multilib \
+      --enable-pgo-build=lto \
       --enable-plugin \
       --enable-shared \
       --enable-threads=posix \
@@ -135,7 +136,7 @@ check() {
 package_gcc-libs() {
   pkgdesc='Runtime libraries shipped by GCC'
   depends=('glibc>=2.27')
-  options+=(!strip)
+  options=(!emptydirs !strip)
   provides=($pkgname-multilib libgo.so libgfortran.so libgphobos.so
             libubsan.so libasan.so libtsan.so liblsan.so)
   replaces=($pkgname-multilib libgphobos)
@@ -184,7 +185,7 @@ package_gcc() {
   optdepends=('lib32-gcc-libs: for generating code for 32-bit ABI')
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
-  options+=(staticlibs)
+  options=(!emptydirs staticlibs debug)
 
   cd gcc-build
 
@@ -307,7 +308,7 @@ package_gcc-ada() {
   depends=("gcc=$pkgver-$pkgrel")
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
-  options+=(staticlibs)
+  options=(!emptydirs staticlibs debug)
 
   cd gcc-build/gcc
   make DESTDIR="$pkgdir" ada.install-{common,info}
@@ -405,7 +406,7 @@ package_gcc-d() {
   depends=("gcc=$pkgver-$pkgrel")
   provides=(gdc)
   replaces=(gdc)
-  options=('staticlibs')
+  options=(staticlibs debug)
 
   cd gcc-build
   make -C gcc DESTDIR="$pkgdir" d.install-{common,man,info}
