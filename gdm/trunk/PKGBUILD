@@ -4,13 +4,13 @@
 pkgbase=gdm
 pkgname=(gdm libgdm)
 pkgver=41.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
 license=(GPL)
 depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost
-         libxdmcp systemd)
+         libxdmcp systemd libcanberra)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl meson)
 checkdepends=(check)
 _commit=cb49bac2fe1160094eae360f985e54073be3c49a  # tags/41.3^0
