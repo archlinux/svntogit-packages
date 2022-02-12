@@ -1,10 +1,11 @@
-# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Maintainer:
+# Contributor:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Thomas Bächler <thomas@archlinux.org>
 # Contributor: loqs
 
 pkgname=wpa_supplicant
 pkgver=2.10
-pkgrel=1
+pkgrel=2
 epoch=2
 pkgdesc='A utility providing key negotiation for WPA wireless networks'
 url='https://w1.fi/wpa_supplicant/'
@@ -18,6 +19,7 @@ source=(
   wpa_supplicant_dbus_service_syslog.patch        # Unit improvements from Ubuntu
   wpa_supplicant_service_ignore-on-isolate.patch  # More unit improvements from Ubuntu
   wpa_supplicant_config
+  add_extra-ies_only_if_allowed_by_driver.patch
 )
 validpgpkeys=('EC4AA0A991A5F2464582D52D2B6EF432EFC895FA') # Jouni Malinen
 sha256sums=('20df7ae5154b3830355f8ab4269123a87affdea59fe74fe9292a91d0d7e17b2f'
@@ -25,32 +27,26 @@ sha256sums=('20df7ae5154b3830355f8ab4269123a87affdea59fe74fe9292a91d0d7e17b2f'
             '08915b040d03a3e07cdc8ea6c76b497e00059e01ce85b67413dfe41d4fc68992'
             '60f6a1cf2e124813dfce1da78ee1818e2ff5236aafa4113c7ae3b3f2a0b84006'
             'd42bdbf3d4980b9f0a819612df0c39843c7e96c8afcb103aa656c824f93790b0'
-            '385c956607d9a4966b13458db60a29b7556ff0c9928d7fef59381678ce79f13b')
+            '385c956607d9a4966b13458db60a29b7556ff0c9928d7fef59381678ce79f13b'
+            'aaedf87f1530d4e6cb00bf7981d1f868409ed892cc41b83c5613019e7b51f380')
 
 prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
-  local src
-  for src in "${source[@]}"; do
-    src="${src%%::*}"
-    src="${src##*/}"
-    [[ $src = *.patch ]] || continue
-    echo "Applying patch $src..."
-    patch -Np1 < "../$src"
-  done
+  cd $pkgname-$pkgver
+  patch -p1 -i ../add_extra-ies_only_if_allowed_by_driver.patch # http://lists.infradead.org/pipermail/hostap/2022-January/040178.html
 
-  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  cd $pkgname
   cp "$srcdir/wpa_supplicant_config" ./.config
 }
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  cd $pkgname-$pkgver/$pkgname
 
   make LIBDIR=/usr/lib BINDIR=/usr/bin
   make LIBDIR=/usr/lib BINDIR=/usr/bin eapol_test
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver/$pkgname"
+  cd $pkgname-$pkgver/$pkgname
   make LIBDIR=/usr/lib BINDIR=/usr/bin DESTDIR="$pkgdir" install
   install -Dm755 eapol_test "$pkgdir/usr/bin/eapol_test"
 
