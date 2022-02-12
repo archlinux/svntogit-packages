@@ -4,7 +4,7 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk3-docs gtk3-demos)
 pkgver=3.24.31
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 arch=(x86_64)
@@ -58,6 +58,7 @@ _pick() {
 }
 
 package_gtk3() {
+  optdepends=('evince: Default print preview command')
   provides=(gtk3-print-backends libgtk-3.so libgdk-3.so libgailutil-3.so)
   conflicts=(gtk3-print-backends)
   replaces=("gtk3-print-backends<=3.22.26-1")
