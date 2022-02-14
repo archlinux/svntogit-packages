@@ -5,9 +5,9 @@
 pkgbase=util-linux
 pkgname=(util-linux util-linux-libs)
 _pkgmajor=2.37
-_realver=${_pkgmajor}.3
+_realver=${_pkgmajor}.4
 pkgver=${_realver/-/}
-pkgrel=2
+pkgrel=1
 pkgdesc='Miscellaneous system utilities for Linux'
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -22,7 +22,7 @@ source=("https://www.kernel.org/pub/linux/utils/util-linux/v${_pkgmajor}/${pkgba
         '60-rfkill.rules'
         'rfkill-unblock_.service'
         'rfkill-block_.service')
-sha256sums=('590c592e58cd6bf38519cb467af05ce6a1ab18040e3e3418f24bcfb2f55f9776'
+sha256sums=('634e6916ad913366c3536b6468e7844769549b99a7b2bf80314de78ab5655b83'
             'SKIP'
             '53395b7e434b32e6fee25f1b6fa59330ab72c1a2f99a17c3d3fd92473379fd9a'
             '99cd77f21ee44a0c5e57b0f3670f711a00496f198fc5704d7e44f5d817c81a0f'
@@ -68,7 +68,7 @@ package_util-linux() {
   replaces=('rfkill' 'hardlink')
   depends=('pam' 'shadow' 'coreutils' 'systemd-libs' 'libsystemd.so'
            'libudev.so' 'libcap-ng' 'libxcrypt' 'libcrypt.so' 'util-linux-libs'
-           'libmagic.so' 'libncursesw.so' 'libreadline.so')
+           'libmagic.so' 'libncursesw.so')
   optdepends=('python: python bindings to libmount'
               'words: default dictionary for look')
   backup=(etc/pam.d/chfn
