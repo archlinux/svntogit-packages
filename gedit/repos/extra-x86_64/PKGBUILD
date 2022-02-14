@@ -2,39 +2,44 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=gedit
-pkgver=40.1
-pkgrel=3
+pkgver=41.0
+pkgrel=1
 pkgdesc="GNOME Text Editor"
 url="https://wiki.gnome.org/Apps/Gedit"
 arch=(x86_64)
 license=(GPL)
 depends=(gtksourceview4 gsettings-desktop-schemas libpeas gspell python-gobject
-         dconf tepl)
+         dconf)
 makedepends=(yelp-tools vala gobject-introspection git gtk-doc meson
              appstream-glib desktop-file-utils libxml2)
 optdepends=('gedit-plugins: Additional features')
 conflicts=('gedit-code-assistance<=3.16.0+4+gd19b879-1')
 groups=(gnome)
-_commit=269e3a075c0c94edd6a5007fc6dfac27d5cca606  # tags/40.1^0
+_commit=71aedf66799123fab9289157014ff954add61ac5  # tags/41.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gedit.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgd.git")
 sha256sums=('SKIP'
             'SKIP')
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  cd gedit
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd gedit
+
+  # Versioning fixes
+  git cherry-pick -n e85890b64edee45e479eb6411735510d00610b0d
+  git tag -d 41
+
   git submodule init
   git submodule set-url subprojects/libgd "$srcdir/libgd"
   git submodule update
 }
 
 build() {
-  arch-meson $pkgname build \
+  arch-meson gedit build \
     -D gtk_doc=true \
     -D require_all_tests=true
   meson compile -C build
@@ -45,5 +50,5 @@ check() {
 }
 
 package() {
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 }
