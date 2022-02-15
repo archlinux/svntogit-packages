@@ -4,31 +4,56 @@
 # Contributor: M Rawash <mrawash@gmail.com>
 
 pkgname=xf86-input-wacom
-pkgver=0.40.0
-pkgrel=2
+pkgver=0.99.3
+pkgrel=1
 pkgdesc="X.Org Wacom tablet driver"
 arch=(x86_64)
 url="https://github.com/linuxwacom/xf86-input-wacom"
 license=(GPL)
 depends=(libxi libxinerama libxrandr systemd-libs)
-makedepends=('xorg-server-devel' 'X-ABI-XINPUT_VERSION=24.4')
+makedepends=('xorg-server-devel' 'X-ABI-XINPUT_VERSION=24.4' 'meson'
+ 	'gobject-introspection' )
 conflicts=('xorg-server<21.1.1' 'X-ABI-XINPUT_VERSION<24' 'X-ABI-XINPUT_VERSION>=25')
-source=(https://github.com/linuxwacom/xf86-input-wacom/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2{,.sig})
+source=(https://github.com/linuxwacom/xf86-input-wacom/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2{,.sig}
+        meson_build_fixes.patch)
 # check at https://github.com/linuxwacom/xf86-input-wacom/releases
-sha256sums=('8c4f5dba4bee803dafea98277f81cb0e67b4e474c9cc2e42ceb443cdb4ea2062'
-            'SKIP')
-validpgpkeys=('9A12ECCC5383CA2AF5B42CDCA6DC66911B2127D5') # Jason Gerecke <killertofu@gmail.com>
-validpgpkeys+=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') #  "Peter Hutterer (Who-T) <office@who-t.net>"
-validpgpkeys+=('5222AA87620F928D2C16F62BDB4ABF7C3424190B') # "Aaron Armstrong Skomra <skomra@gmail.com>"
-validpgpkeys+=('FBE078781106933D3DDCF93E5B4EA609784983CA') # "Jason Gerecke <jason.gerecke@wacom.com>"
+sha256sums=('7bc1c508ecf515675a7bcd2eb8513ae16071b4741b65fd21b680aa550214d5e7'
+            'SKIP'
+            'eadfe8c5c60a089f29f491519708bb0363701c19fd2571ba8b50c695d99a9706')
+#validpgpkeys=('9A12ECCC5383CA2AF5B42CDCA6DC66911B2127D5') # Jason Gerecke <killertofu@gmail.com>
+validpgpkeys=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') #  "Peter Hutterer (Who-T) <office@who-t.net>"
+#validpgpkeys=('5222AA87620F928D2C16F62BDB4ABF7C3424190B') # "Aaron Armstrong Skomra <skomra@gmail.com>"
+#validpgpkeys=('FBE078781106933D3DDCF93E5B4EA609784983CA') # "Jason Gerecke <jason.gerecke@wacom.com>"
+
+prepare() {
+  # https://github.com/linuxwacom/xf86-input-wacom/pull/251
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../meson_build_fixes.patch
+}
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr
-  make
+  #cd $pkgname-$pkgver
+  #./configure --prefix=/usr
+  #make
+
+  arch-meson $pkgname-$pkgver build \
+    -D xorg-conf-dir=/usr/share/X11/xorg.conf.d/ \
+    -D systemd-unit-dir=/usr/lib/systemd/system/ \
+    -D unittests=enabled
+
+#    -D sdkdir=/usr/include/xorg/
+
+  # Print config
+  meson configure build
+  ninja -C build
+}
+
+check() {
+  meson test -C build # || /bin/true
 }
 
 package() {
-  cd $pkgname-$pkgver
-  make DESTDIR="$pkgdir" install
+#  cd $pkgname-$pkgver
+#  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" ninja -C build install
 }
