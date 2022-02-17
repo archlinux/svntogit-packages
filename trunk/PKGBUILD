@@ -11,12 +11,13 @@ _minorver=332
 _updatever=02
 pkgver=${_majorver}.${_minorver}.u${_updatever}
 pkgrel=1
+_git_tag=jdk${_majorver}u${_minorver}-b${_updatever}
 arch=('x86_64')
 url='https://openjdk.java.net/'
 license=('custom')
 makedepends=('java-environment=8' 'ccache' 'cpio' 'unzip' 'zip'
              'libxrender' 'libxtst' 'fontconfig' 'libcups' 'alsa-lib')
-source=(https://github.com/openjdk/jdk${_majorver}u/archive/jdk${_majorver}u${_minorver}-b${_updatever}.tar.gz
+source=(https://github.com/openjdk/jdk${_majorver}u/archive/${_git_tag}.tar.gz
         gcc11.patch)
 options=(!lto)
 sha256sums=('1acb39a0250a1f94eb8ccf2e4357c5681d8e5208e8e870c16042c87077db9902'
@@ -29,7 +30,7 @@ esac
 
 _jdkname=openjdk8
 _jvmdir=/usr/lib/jvm/java-8-openjdk
-_prefix="jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}/image"
+_prefix="jdk8u-${_git_tag}/image"
 _imgdir="${_prefix}/jvm/openjdk-1.8.0_$(printf '%.2d' ${_minorver})"
 _nonheadless=(bin/policytool
               lib/${_JARCH}/libjsound.so
@@ -37,14 +38,14 @@ _nonheadless=(bin/policytool
               lib/${_JARCH}/libsplashscreen.so)
 
 prepare() {
-  cd jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}
+  cd jdk8u-${_git_tag}
 
   # Fix build with C++17 (Fedora)
   patch -Np1 -i "${srcdir}"/gcc11.patch
 }
 
 build() {
-  cd jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}
+  cd jdk8u-${_git_tag}
 
   unset JAVA_HOME
   # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1346
@@ -93,7 +94,7 @@ build() {
 }
 
 check() {
-  cd jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}
+  cd jdk8u-${_git_tag}
   #make -k test
 }
 
@@ -257,7 +258,7 @@ package_openjdk8-doc() {
   pkgdesc='OpenJDK Java 8 documentation'
 
   install -d -m 755 "${pkgdir}/usr/share/doc/${pkgbase}/"
-  cp -r "${srcdir}"/jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
+  cp -r "${srcdir}"/jdk8u-${_git_tag}/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
     "${pkgdir}/usr/share/doc/${pkgbase}/"
 }
 
