@@ -13,7 +13,7 @@ pkgname=(
 )
 pkgdesc="A generic and open source machine emulator and virtualizer"
 pkgver=6.2.0
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 license=(GPL2 LGPL2.1)
 url="https://wiki.qemu.org/"
