@@ -4,7 +4,7 @@
 pkgbase=e2fsprogs
 pkgname=('e2fsprogs' 'fuse2fs')
 pkgver=1.46.5
-pkgrel=2
+pkgrel=3
 pkgdesc='Ext2/3/4 filesystem utilities'
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
@@ -52,7 +52,8 @@ package_e2fsprogs() {
             'libe2p.so'
             'libext2fs.so'
             'libss.so')
-  backup=('etc/mke2fs.conf')
+  backup=('etc/mke2fs.conf'
+          'etc/e2scrub.conf')
 
   unset MAKEFLAGS
 
