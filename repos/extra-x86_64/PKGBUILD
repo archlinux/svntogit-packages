@@ -6,13 +6,13 @@
 pkgbase=alsa-plugins
 pkgname=(alsa-plugins pulseaudio-alsa)
 pkgver=1.2.6
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Additional ALSA plugins"
 arch=(x86_64)
 url="https://www.alsa-project.org"
 license=(LGPL2.1)
-makedepends=(alsa-lib dbus jack libavtp libpulse libsamplerate speexdsp ffmpeg)
+makedepends=(alsa-lib dbus ffmpeg jack libavtp libpulse libsamplerate speexdsp)
 source=("https://www.alsa-project.org/files/pub/plugins/$pkgbase-$pkgver.tar.bz2"{,.sig}
         pulse-sysdefault.diff)
 sha512sums=('ac54a6f227f1ca5f6e01e08d869e7c06f4bcd68f148932e1902a6fcf3e5ccd3667ac4d8c1a00b77e4b5cb27e17c01cf7526ded4aaf35c4b26fc69e14e6e341f9'
@@ -30,7 +30,7 @@ prepare() {
   # Keeps parity with our old config from pulseaudio-alsa
   patch -Np1 -i ../pulse-sysdefault.diff
 
-  autoreconf -fvi
+  autoreconf -fiv
 }
 
 build() {
@@ -40,6 +40,8 @@ build() {
     --sysconfdir=/etc \
     --enable-maemo-plugin \
     --enable-maemo-resource-manager
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
@@ -72,8 +74,7 @@ package_pulseaudio-alsa() {
   depends=('alsa-plugins>=1.2.2-2' pulseaudio)
 
   mkdir -p "${pkgdir}/etc/alsa/conf.d"
-  ln -st "${pkgdir}/etc/alsa/conf.d" \
-    /usr/share/alsa/alsa.conf.d/99-pulseaudio-default.conf
+  ln -st "${pkgdir}/etc/alsa/conf.d" /usr/share/alsa/alsa.conf.d/99-pulseaudio-default.conf
 }
 
 # vim:set sw=2 et:
