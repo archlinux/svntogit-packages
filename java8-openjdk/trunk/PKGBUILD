@@ -1,39 +1,25 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
 # Maintainer: Guillaume ALAUX <guillaume@archlinux.org>
 # Contributor: Boyan Ding <stu_dby@126.com>
 
 pkgname=('jre8-openjdk-headless' 'jre8-openjdk' 'jdk8-openjdk' 'openjdk8-src' 'openjdk8-doc')
 pkgbase=java8-openjdk
-_java_ver=8
-_jdk_update=312
-_jdk_build=10
-pkgver=${_java_ver}.u${_jdk_update}
-_repo_ver=jdk${_java_ver}u${_jdk_update}-ga
-pkgrel=2
+
+_majorver=8
+_minorver=332
+_updatever=02
+pkgver=${_majorver}.${_minorver}.u${_updatever}
+pkgrel=1
 arch=('x86_64')
 url='https://openjdk.java.net/'
 license=('custom')
 makedepends=('java-environment=8' 'ccache' 'cpio' 'unzip' 'zip'
              'libxrender' 'libxtst' 'fontconfig' 'libcups' 'alsa-lib')
-_url_src=https://hg.openjdk.java.net/jdk8u/jdk8u
-source=(jdk8u-${_repo_ver}.tar.gz::${_url_src}/archive/${_repo_ver}.tar.gz
-        corba-${_repo_ver}.tar.gz::${_url_src}/corba/archive/${_repo_ver}.tar.gz
-        hotspot-${_repo_ver}.tar.gz::${_url_src}/hotspot/archive/${_repo_ver}.tar.gz
-        jdk-${_repo_ver}.tar.gz::${_url_src}/jdk/archive/${_repo_ver}.tar.gz
-        jaxws-${_repo_ver}.tar.gz::${_url_src}/jaxws/archive/${_repo_ver}.tar.gz
-        jaxp-${_repo_ver}.tar.gz::${_url_src}/jaxp/archive/${_repo_ver}.tar.gz
-        langtools-${_repo_ver}.tar.gz::${_url_src}/langtools/archive/${_repo_ver}.tar.gz
-        nashorn-${_repo_ver}.tar.gz::${_url_src}/nashorn/archive/${_repo_ver}.tar.gz
+source=(https://github.com/openjdk/jdk${_majorver}u/archive/jdk${_majorver}u${_minorver}-b${_updatever}.tar.gz
         gcc11.patch)
 options=(!lto)
-sha256sums=('c10d984ab561f9e9733c313432e0da88bed9cde5202b462bc73cfe488fc65328'
-            '0a66933a2d7011eece138ca1e8d3db584335c711463092c79ada638c825c41d1'
-            '1bef21655dae14e1964c14add6c23c6c2f555a79e269a3bfe06e8a8d2a23fd0a'
-            'f06786055e3266913a0c3b647e877d6bcffea618503c5ac30f6e224d98013207'
-            '8bf8a31a5bdf98ebc1b30163b952a86288ecb1d3411f4ac659eed6a020a4f9d7'
-            'd394e6e3f7858ec16d9f32b147f30f01d37bf5fbc8428019171f6677bb511ef4'
-            '684ed7650fba6e36272d85076cdeabf73c22917e1b9e5a37c9645a91918eeab3'
-            '253d8ffa68f210d284c3344d5df94f2ef1279e5a4155a2a1b3d2436d552864b1'
+sha256sums=('1acb39a0250a1f94eb8ccf2e4357c5681d8e5208e8e870c16042c87077db9902'
             'e1e9452b2078c3e9b45aa73491f3f187e7a9abbc40b6a7fc9239d4e5e525569e')
 
 case "${CARCH}" in
@@ -43,25 +29,22 @@ esac
 
 _jdkname=openjdk8
 _jvmdir=/usr/lib/jvm/java-8-openjdk
-_prefix="jdk8u-${_repo_ver}/image"
-_imgdir="${_prefix}/jvm/openjdk-1.8.0_$(printf '%.2d' ${_jdk_update})"
+_prefix="jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}/image"
+_imgdir="${_prefix}/jvm/openjdk-1.8.0_$(printf '%.2d' ${_minorver})"
 _nonheadless=(bin/policytool
               lib/${_JARCH}/libjsound.so
               lib/${_JARCH}/libjsoundalsa.so
               lib/${_JARCH}/libsplashscreen.so)
 
 prepare() {
-# Fix build with C++17 (Fedora)
-  patch -d hotspot-${_repo_ver} -p2 < gcc11.patch
+  cd jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}
 
-  cd jdk8u-${_repo_ver}
-  for subrepo in corba hotspot jdk jaxws jaxp langtools nashorn; do
-    ln -s ../${subrepo}-${_repo_ver} ${subrepo}
-  done
+  # Fix build with C++17 (Fedora)
+  patch -Np1 -i "${srcdir}"/gcc11.patch
 }
 
 build() {
-  cd jdk8u-${_repo_ver}
+  cd jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}
 
   unset JAVA_HOME
   # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1346
@@ -75,8 +58,8 @@ build() {
   install -d -m 755 "${srcdir}/${_prefix}/"
   sh configure \
     --prefix="${srcdir}/${_prefix}" \
-    --with-update-version="${_jdk_update}" \
-    --with-build-number="b${_jdk_build}" \
+    --with-update-version="${_minorver}" \
+    --with-build-number="b${_updatever}" \
     --with-milestone="fcs" \
     --enable-unlimited-crypto \
     --with-zlib=system \
@@ -110,7 +93,7 @@ build() {
 }
 
 check() {
-  cd jdk8u-${_repo_ver}
+  cd jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}
   #make -k test
 }
 
@@ -274,7 +257,7 @@ package_openjdk8-doc() {
   pkgdesc='OpenJDK Java 8 documentation'
 
   install -d -m 755 "${pkgdir}/usr/share/doc/${pkgbase}/"
-  cp -r "${srcdir}"/jdk8u-${_repo_ver}/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
+  cp -r "${srcdir}"/jdk8u-jdk${_majorver}u${_minorver}-b${_updatever}/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
     "${pkgdir}/usr/share/doc/${pkgbase}/"
 }
 
