@@ -17,9 +17,9 @@ url='https://openjdk.java.net/'
 license=('custom')
 makedepends=('java-environment=8' 'ccache' 'cpio' 'unzip' 'zip'
              'libxrender' 'libxtst' 'fontconfig' 'libcups' 'alsa-lib')
+options=(!lto)
 source=(https://github.com/openjdk/jdk${_majorver}u/archive/${_git_tag}.tar.gz
         gcc11.patch)
-options=(!lto)
 sha256sums=('1acb39a0250a1f94eb8ccf2e4357c5681d8e5208e8e870c16042c87077db9902'
             'e1e9452b2078c3e9b45aa73491f3f187e7a9abbc40b6a7fc9239d4e5e525569e')
 
