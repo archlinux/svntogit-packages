@@ -1,42 +1,28 @@
-From a28f9aaab759d82384279c16d86bb98ab47412a3 Mon Sep 17 00:00:00 2001
-From: Georgy Yakovlev <gyakovlev@gentoo.org>
-Date: Sat, 1 Jun 2019 00:12:55 -0700
-Subject: [PATCH] respect user cflags
-
----
- buildSrc/linux.gradle                           |  7 ++++++-
- .../gstreamer/projects/linux/avplugin/Makefile  | 16 ++++++----------
- .../gstreamer/projects/linux/fxplugins/Makefile | 17 ++++++-----------
- .../projects/linux/gstreamer-lite/Makefile      | 16 ++++++----------
- .../native/jfxmedia/projects/linux/Makefile     | 16 ++++++----------
- 5 files changed, 30 insertions(+), 42 deletions(-)
-
-diff --git a/buildSrc/linux.gradle b/buildSrc/linux.gradle
-index 7a7cbc72..6705a0f3 100644
---- a/buildSrc/linux.gradle
-+++ b/buildSrc/linux.gradle
-@@ -44,8 +44,11 @@ LINUX.library = { name -> return "lib${name}.so" as String }
+diff -rupN orig/buildSrc/linux.gradle patched/buildSrc/linux.gradle
+--- orig/buildSrc/linux.gradle	2021-12-07 10:56:58.000000000 +0100
++++ patched/buildSrc/linux.gradle	2022-02-17 00:55:05.307968721 +0100
+@@ -44,8 +44,11 @@ LINUX.library = { name -> return (IS_STA
  def commonFlags = [
          "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
          "-fstack-protector",
 +        "-Wno-error=cast-function-type",
          "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=trampolines"] // warning flags
  
-+commonFlags.addAll(System.getenv("CFLAGS").trim().split(" "))
++commonFlags.addAll(System.getenv("CFLAGS").trim().replaceAll(" +", " ").split(" "))
 +
  if (!IS_64) {
      commonFlags += "-m32"
  }
-@@ -61,6 +64,8 @@ def linkFlags = ["-static-libgcc", "-static-libstdc++", "-shared", commonFlags,
-                  "-z", "relro",
-                  "-Wl,--gc-sections"].flatten()
+@@ -72,6 +75,8 @@ def staticLinkFlags = [].flatten()
+ 
+ def linkFlags = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlags;
  
 +linkFlags.addAll(System.getenv("LDFLAGS").trim().split(" "))
 +
  if (IS_DEBUG_NATIVE) {
      linkFlags += "-g"
  }
-@@ -294,7 +299,7 @@ LINUX.iio.nativeSource = [
+@@ -301,7 +306,7 @@ LINUX.iio.nativeSource = [
  LINUX.iio.compiler = compiler
  LINUX.iio.ccFlags = [cFlags, "-fvisibility=hidden"].flatten()
  LINUX.iio.linker = IS_STATIC_BUILD ? "ld" : linker
@@ -45,10 +31,16 @@ index 7a7cbc72..6705a0f3 100644
  LINUX.iio.lib = "javafx_iio"
  
  LINUX.prismES2 = [:]
-diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
-index 450b55d3..f27b9479 100644
---- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
-+++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
+@@ -349,5 +354,5 @@ LINUX.media.ar = "${toolchainDir}ar"
+ LINUX.webkit = [:]
+ LINUX.webkit.compiler = compiler
+ LINUX.webkit.linker = linker
+-LINUX.webkit.ccFlags = commonFlags.flatten()
++LINUX.webkit.ccFlags = [commonFlags, "-fno-lto"].flatten()
+ LINUX.webkit.linkFlags = linkFlags.flatten()
+diff -rupN orig/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile patched/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile
+--- orig/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile	2021-12-07 10:56:58.000000000 +0100
++++ patched/modules/javafx.media/src/main/native/gstreamer/projects/linux/avplugin/Makefile	2022-02-17 00:54:26.207056670 +0100
 @@ -17,7 +17,7 @@ TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
  OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
  endif
@@ -58,7 +50,7 @@ index 450b55d3..f27b9479 100644
           -Wformat                \
           -Wextra                 \
           -Wformat-security       \
-@@ -29,13 +29,8 @@ CFLAGS = -fPIC                   \
+@@ -30,13 +30,8 @@ CFLAGS = -fPIC                   \
           -DLINUX                 \
           -DGST_DISABLE_LOADSAVE  \
           -DGSTREAMER_LITE \
@@ -74,7 +66,7 @@ index 450b55d3..f27b9479 100644
  
  PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
  PACKAGES_LIBS     := $(shell pkg-config --libs glib-2.0 gobject-2.0)
-@@ -46,11 +41,12 @@ INCLUDES= -I../../../plugins                          \
+@@ -47,11 +42,12 @@ INCLUDES= -I../../../plugins
            -I../../../gstreamer-lite/gstreamer/libs    \
            $(PACKAGES_INCLUDES)
  
@@ -89,10 +81,9 @@ index 450b55d3..f27b9479 100644
  
  ifneq ($(strip $(LIBAV_DIR)),)
  INCLUDES += -I$(LIBAV_DIR)/include
-diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
-index 1e58d4d3..627865f9 100644
---- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
-+++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
+diff -rupN orig/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile patched/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile
+--- orig/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile	2021-12-07 10:56:58.000000000 +0100
++++ patched/modules/javafx.media/src/main/native/gstreamer/projects/linux/fxplugins/Makefile	2022-02-17 00:54:26.207056670 +0100
 @@ -14,7 +14,7 @@ DIRLIST = progressbuffer       \
  
  TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
@@ -102,7 +93,7 @@ index 1e58d4d3..627865f9 100644
           -Wformat                \
           -Wextra                 \
           -Wformat-security       \
-@@ -30,14 +30,8 @@ CFLAGS = -fPIC                   \
+@@ -31,14 +31,8 @@ CFLAGS = -fPIC                   \
           -DGST_DISABLE_LOADSAVE  \
           -DGST_DISABLE_GST_DEBUG \
           -DGSTREAMER_LITE \
@@ -119,7 +110,7 @@ index 1e58d4d3..627865f9 100644
  
  INCLUDES = -I$(SRCBASE_DIR) \
  	   $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
-@@ -47,9 +41,10 @@ INCLUDES = -I$(SRCBASE_DIR) \
+@@ -48,9 +42,10 @@ INCLUDES = -I$(SRCBASE_DIR) \
  PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
  PACKAGES_LIBS := $(shell pkg-config --libs glib-2.0 gobject-2.0)
  
@@ -132,10 +123,9 @@ index 1e58d4d3..627865f9 100644
  
  ifeq ($(ARCH), x32)
      CFLAGS += -m32
-diff --git a/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile b/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
-index 5baa30a1..ddf0e521 100644
---- a/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
-+++ b/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
+diff -rupN orig/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile patched/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile
+--- orig/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile	2021-12-07 10:56:58.000000000 +0100
++++ patched/modules/javafx.media/src/main/native/gstreamer/projects/linux/gstreamer-lite/Makefile	2022-02-17 00:54:26.207056670 +0100
 @@ -37,7 +37,7 @@ DIRLIST = gstreamer/gst \
  
  TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
@@ -145,7 +135,7 @@ index 5baa30a1..ddf0e521 100644
          -Wformat                \
          -Wextra                 \
          -Wformat-security       \
-@@ -51,13 +51,8 @@ CFLAGS =-fPIC                   \
+@@ -52,13 +52,8 @@ CFLAGS =-fPIC                   \
          -DLINUX                 \
          -DGST_DISABLE_GST_DEBUG \
          -DGST_DISABLE_LOADSAVE  \
@@ -161,7 +151,7 @@ index 5baa30a1..ddf0e521 100644
  
  INCLUDES = -I$(BASE_DIR)/plugins                          \
  	   -I$(SRCBASE_DIR)/projects/build/linux/common   \
-@@ -75,9 +70,10 @@ INCLUDES = -I$(BASE_DIR)/plugins                          \
+@@ -76,9 +71,10 @@ INCLUDES = -I$(BASE_DIR)/plugins
  PACKAGES_INCLUDES := $(shell pkg-config --cflags alsa glib-2.0)
  PACKAGES_LIBS := $(shell pkg-config --libs alsa glib-2.0 gobject-2.0 gmodule-2.0 gthread-2.0)
  
@@ -174,10 +164,9 @@ index 5baa30a1..ddf0e521 100644
  
  ifeq ($(ARCH), x32)
      CFLAGS += -m32
-diff --git a/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile b/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
-index ecbd859f..5881cf53 100644
---- a/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
-+++ b/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
+diff -rupN orig/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile patched/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile
+--- orig/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile	2021-12-07 10:56:58.000000000 +0100
++++ patched/modules/javafx.media/src/main/native/jfxmedia/projects/linux/Makefile	2022-02-17 00:54:26.207056670 +0100
 @@ -17,7 +17,7 @@ DIRLIST = jni                \
  
  TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
@@ -222,6 +211,3 @@ index ecbd859f..5881cf53 100644
  ifeq ($(ARCH), x32)
      CFLAGS += -m32
      LDFLAGS += -m32
--- 
-2.21.0
-
