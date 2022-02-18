@@ -1,0 +1,49 @@
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
+
+pkgname=libgit2-glib
+pkgver=1.0.0.1
+pkgrel=2
+pkgdesc="GLib wrapper for libgit2"
+url="https://wiki.gnome.org/Projects/Libgit2-glib"
+license=('LGPL2.1')
+arch=('x86_64')
+depends=('glibc')
+makedepends=('gobject-introspection' 'glib2' 'libgit2' 'gtk-doc' 'meson'
+             'python-gobject' 'vala' 'git')
+_commit=391b764ac7e2915ed564f5e144cfdb1ae51fbc4e  # tags/v1.0.0.1^0
+source=("git+https://gitlab.gnome.org/GNOME/libgit2-glib.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build -D gtk_doc=true
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  depends+=('libgio-2.0.so' 'libgit2.so' 'libglib-2.0.so' 'libgobject-2.0.so')
+  provides+=('libgit2-glib-1.0.so')
+
+  meson install -C build --destdir "$pkgdir"
+
+  # strip $pkgdir from embedded paths:
+  python -m compileall -d "/usr/lib" "$pkgdir/usr/lib"
+  python -O -m compileall -d "/usr/lib" "$pkgdir/usr/lib"
+
+  install -vDm 644 $pkgname/{AUTHORS,ChangeLog,NEWS,README} \
+    -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
