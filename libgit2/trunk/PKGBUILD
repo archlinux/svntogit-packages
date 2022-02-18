@@ -4,52 +4,51 @@
 # Contributor: Dave Reisner <d@falconindy.com>
 
 pkgname=libgit2
-pkgver=1.3.0
+pkgver=1.4.1
 pkgrel=1
 epoch=1
 pkgdesc="A linkable library for Git"
 arch=(x86_64)
-url="https://libgit2.github.com/"
+url="https://github.com/libgit2/libgit2"
 license=(GPL2)
 depends=(glibc http-parser openssl pcre zlib)
 makedepends=(cmake libssh2 python)
 provides=(libgit2.so)
-source=("$pkgname-$pkgver.tar.gz::https://github.com/libgit2/libgit2/archive/v${pkgver}.tar.gz"
-        "${pkgname}-1.2.0-remove_http-parse_incompatible_tests.patch")
-sha512sums=('842a648a67ff23ba9e6bf14b706ba9081164866e14000ebf3858442b7046925f05e1dbf00a7d740dc4bf32280e260730e23a9492e817094aa90736ae335ee76e'
+options=(debug)
+source=(
+  $pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz
+  $pkgname-1.2.0-remove_http-parse_incompatible_tests.patch
+)
+sha512sums=('66943d82811c5e24687231696bd1ce8d7d58f44081c00a7030e01a69a7c920605a427c315a26af6c57c9bd7c1d1d31ab857f80615fce1ba4b981d01f733215cd'
             '01bf3a960b2e6d441017af363bff267bd1513915ebefda95012d7feb38f7020778ea0908664cc479da82f441a4dd2788772005006a9c19e87cfc234268dc3785')
-b2sums=('b701c105bb0a5bdcdd5ed1db180662ad4949c540944664d5d8c2f5d78998f15d15bd3669ae3e3d43bfa1b81207c0a94b7e49fc76e57f4cc8ef791ab26e62fc70'
+b2sums=('7c8316003c168c4b366fa4376d5e4dfa0a70dcb0cd0cc0b4ac7287f7b04eba50127cca89c4bcda94f86e5331b6a2951532b5108d5376a2a3fed7a68c31472151'
         'e725fb41c9bdfd9952693c9c47be90c10a16a78ab91f80e74c40c5510a83325575ce95674a2e21282e9c300f2bc8d430c896fa379ef744b8a8a912729fa88827')
 
 prepare() {
-  cd "$pkgname-$pkgver"
   # remove tests that are only compatible with the (modified) vendored version
   # of http-parser, but not with upstream http-parser
-  patch -Np1 -i "../${pkgname}-1.2.0-remove_http-parse_incompatible_tests.patch"
+  patch -d $pkgname-$pkgver -Np1 -i ../$pkgname-1.2.0-remove_http-parse_incompatible_tests.patch
 }
 
-
 build() {
-  cd "$pkgname-$pkgver"
   cmake -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE=None \
         -DUSE_HTTP_PARSER=system \
+        -DUSE_SSH=ON \
         -DTHREADSAFE=ON \
         -Wno-dev \
         -B build \
-        -S .
-  make -C build VERBOSE=1
+        -S $pkgname-$pkgver
+  make VERBOSE=1 -C build
 }
 
 check() {
-  cd "$pkgname-$pkgver"
-  make -C build test VERBOSE=1
+  make VERBOSE=1 test -C build
 }
 
 package() {
   depends+=(libssh2.so)
 
-  cd "$pkgname-$pkgver"
-  make -C build DESTDIR="$pkgdir" install
-  install -vDm 644 {AUTHORS,README.md} -t "${pkgdir}/usr/share/doc/${pkgname}"
+  make VERBOSE=1 DESTDIR="$pkgdir" install -C build
+  install -vDm 644 $pkgname-$pkgver/{AUTHORS,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
 }
