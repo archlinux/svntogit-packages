@@ -6,50 +6,49 @@
 _name=pupnp
 pkgname=libupnp
 pkgver=1.14.12
-pkgrel=2
+pkgrel=3
 pkgdesc='Portable Open Source UPnP Development Kit'
+arch=(x86_64)
 url="https://pupnp.sourceforge.io/"
-arch=('x86_64')
-license=('BSD')
-depends=('glibc')
-makedepends=('cmake')
-provides=('libixml.so' 'libupnp.so')
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/${_name}/${_name}/archive/release-${pkgver}.tar.gz"
-         libupnp-optional-static.patch)
+license=(BSD)
+depends=(glibc)
+makedepends=(cmake)
+provides=(libixml.so libupnp.so)
+options=(debug)
+source=(
+  $pkgname-$pkgver.tar.gz::https://github.com/$_name/$_name/archive/release-$pkgver.tar.gz
+  $pkgname-1.14.12-optional_static.patch
+)
 sha512sums=('aab17aa12f15d110bfab20cbcbae5f54926b6ca7a30bce10b9287cd39919a06a5e9f1493405e1d561c0d58ba46926f87009df891e4e4f37097df1c3c67635ca9'
             '7bae244c522f35261fdc07f0036a56eb319d6bff5a88d690e7563369184f7f39c30330e0d88967a84db8c22a1e9d1335dbc66d8758855fd8f9981c4f9ca28ddc')
 b2sums=('721c10f9fa4ffc60743b4ebf8be566ea595931cb1f2a2448d8e3cecfc787abfb855cb16256eaaa10ce6a901cd5e5b3d14672610841b2a718d5dd003ccfd3c2f0'
         'ef0d9e17d45fe378ef9f7b07c1b679ee4dbe6d9f1aee540123d08c709b092a4824218a863e0a3077e728c17131ae6d817295e44b4fc0cbbc75d372e62c7319f3')
 
 prepare() {
-  mv -v ${_name}-release-${pkgver} ${pkgname}-${pkgver}
-
-# Make static libraries optional, partial backport of https://github.com/pupnp/pupnp/commit/a0622cb0199be1b5f86317fb3c9b4de59d3ac893
-  patch -d ${pkgname}-${pkgver} -p1 < libupnp-optional-static.patch
+  # Make static libraries optional, partial backport of https://github.com/pupnp/pupnp/commit/a0622cb0199be1b5f86317fb3c9b4de59d3ac893
+  patch -d $_name-release-$pkgver -p1 -i ../$pkgname-1.14.12-optional_static.patch
 }
 
 build() {
-  cd ${pkgname}-${pkgver}
   cmake -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_BUILD_TYPE='None' \
+        -DCMAKE_BUILD_TYPE=None \
         -DUPNP_BUILD_STATIC=OFF \
+        -Dblocking_tcp_connections=OFF \
+        -Dreuseaddr=ON \
         -Wno-dev \
         -B build \
-        -S .
+        -S $_name-release-$pkgver
   make VERBOSE=1 -C build
 }
 
 check() {
-  cd ${pkgname}-${pkgver}
-  make VERBOSE=1 -C build test
+  make VERBOSE=1 test -C build
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
-  make -C build DESTDIR="${pkgdir}" install
-  install -vDm 644 COPYING -t "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -vDm 644 {ChangeLog,README.md} \
-    -t "${pkgdir}/usr/share/doc/${pkgname}"
+  make VERBOSE=1 DESTDIR="$pkgdir" install -C build
+  install -vDm 644 $_name-release-$pkgver/COPYING -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -vDm 644 $_name-release-$pkgver/{ChangeLog,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
 }
 
 # vim: ts=2 sw=2 et:
