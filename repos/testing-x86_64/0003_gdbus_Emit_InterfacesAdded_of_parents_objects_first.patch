@@ -1,0 +1,36 @@
+From 19448b9cb852b8c38f15362e185e6b18d634859d Mon Sep 17 00:00:00 2001
+From: Luiz Augusto von Dentz <luiz.von.dentz@intel.com>
+Date: Thu, 3 Feb 2022 17:29:25 -0800
+Subject: gdbus: Emit InterfacesAdded of parents objects first
+
+This makes InterfacesAdded respect the object hierarchy in case its
+parent has pending interfaces to be added.
+
+Fixes: https://github.com/bluez/bluez/issues/272
+Fixes: https://github.com/bluez/bluez/issues/284
+Fixes: https://bugzilla.redhat.com/show_bug.cgi?id=1534857
+Fixes: https://bugs.archlinux.org/task/57464
+---
+ gdbus/object.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/gdbus/object.c b/gdbus/object.c
+index 50a8b4ff1..f7c8c2be5 100644
+--- a/gdbus/object.c
++++ b/gdbus/object.c
+@@ -551,6 +551,12 @@ static void emit_interfaces_added(struct generic_data *data)
+ 	if (root == NULL || data == root)
+ 		return;
+ 
++	/* Emit InterfacesAdded on the parent first so it appears first on the
++	 * bus as child objects may point to it.
++	 */
++	if (data->parent && data->parent->added)
++		emit_interfaces_added(data->parent);
++
+ 	signal = dbus_message_new_signal(root->path,
+ 					DBUS_INTERFACE_OBJECT_MANAGER,
+ 					"InterfacesAdded");
+-- 
+cgit 
+
