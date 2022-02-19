@@ -5,7 +5,7 @@
 
 pkgname=expat
 pkgver=2.4.5
-pkgrel=1
+pkgrel=2
 pkgdesc="An XML parser library"
 arch=(x86_64)
 url="https://libexpat.github.io/"
@@ -13,6 +13,7 @@ license=(MIT)
 depends=(glibc)
 makedepends=(cmake)
 provides=(libexpat.so)
+options=(debug)
 source=("https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/${pkgname}-${pkgver}.tar.bz2"{,.asc})
 sha512sums=('904c0631689f2a4092a544959d8b917b34563762075e49a7b7aa40533bfd7d89b46113d1a58477c2bc3a0abf9b68408b43ac13e82da01f79ac79466bcf2edbf9'
             'SKIP')
