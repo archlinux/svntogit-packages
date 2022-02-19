@@ -5,11 +5,12 @@ pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xvfb' 'xorg-server-xnest'
          'xorg-server-common' 'xorg-server-devel')
 pkgver=21.1.3
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
 url="https://xorg.freedesktop.org"
+options=('debug')
 makedepends=('xorgproto' 'pixman' 'libx11' 'mesa' 'mesa-libgl' 'xtrans'
              'libxkbfile' 'libxfont2' 'libpciaccess' 'libxv' 'libxcvt'
              'libxmu' 'libxrender' 'libxi' 'libxaw' 'libxtst' 'libxres'
@@ -20,19 +21,24 @@ makedepends=('xorgproto' 'pixman' 'libx11' 'mesa' 'mesa-libgl' 'xtrans'
 source=(https://xorg.freedesktop.org/releases/individual/xserver/${pkgbase}-${pkgver}.tar.xz{,.sig}
         xvfb-run # with updates from FC master
         xvfb-run.1
-        0001-xkb-fix-XkbSetMap-when-changing-a-keysym-without-cha.patch)
+        0001-xkb-fix-XkbSetMap-when-changing-a-keysym-without-cha.patch
+        0002-xephyr_Dont_check_for_SeatId_anymore.patch
+)
 validpgpkeys=('FD0004A26EADFE43A4C3F249C6F7AE200374452D') # Povilas Kanapickas <povilas@radix.lt>
 sha512sums=('cf5fed023eadda62ae732f8c4d427c272ebe005188341290f3d03147042c103b00cbb94d86a0256da815fb9b9a3da315c21a05ee0c926c1a2ff0c54ab0c0638b'
             'SKIP'
             '87c79b4a928e74463f96f58d277558783eac9b8ea6ba00d6bbbb67ad84c4d65b3792d960ea2a70089ae18162e82ae572a49ad36df169c974cc99dbaa51f63eb2'
             'de5e2cb3c6825e6cf1f07ca0d52423e17f34d70ec7935e9dd24be5fb9883bf1e03b50ff584931bd3b41095c510ab2aa44d2573fd5feaebdcb59363b65607ff22'
-            'bc3b955072f320ae72a771bebecbcf56637cd0448c3afa28149fcd9e0de3700e9fba1fec21fe283be77e1236e317e385f6970eb59df54d3181324c229c8309d7')
+            'bc3b955072f320ae72a771bebecbcf56637cd0448c3afa28149fcd9e0de3700e9fba1fec21fe283be77e1236e317e385f6970eb59df54d3181324c229c8309d7'
+            '34de52147054535256f35143d321e4d5e189baae502afca2bd3291094946dbead0829b1f196ae2a4d23bd6d0e1e04b65a387dee43f12dee55d247e37aec419d7')
 
 prepare() {
   cd ${pkgbase}-$pkgver
 
   # merged in main
   patch -Np1 -i ../0001-xkb-fix-XkbSetMap-when-changing-a-keysym-without-cha.patch
+  # FS#73274
+  patch -Np1 -i ../0002-xephyr_Dont_check_for_SeatId_anymore.patch
 }
 
 build() {
