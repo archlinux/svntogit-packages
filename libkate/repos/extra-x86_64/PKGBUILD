@@ -1,38 +1,72 @@
-# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
 # Contributor: N30N <archlinux@alunamation.com>
 # Contributor: linkmauve <linkmauve@linkmauve.fr>
 # Contributor: mokkurkalve <xenofil@gmail.com>
 
-pkgname=libkate
+pkgbase=libkate
+pkgname=(libkate libkate-docs)
 pkgver=0.4.1
-pkgrel=7
+pkgrel=8
 pkgdesc="A karaoke and text codec for embedding in ogg"
+license=(BSD)
 url="https://wiki.xiph.org/OggKate"
-license=('BSD')
-arch=('x86_64')
-depends=('libpng' 'libogg')
-makedepends=('git')
-source=("$pkgname::git+git://git.xiph.org/users/oggk/kate.git#tag=kate-${pkgver}"
-        0001-Fix-automake-warnings.patch)
-sha512sums=('SKIP'
+arch=(x86_64)
+makedepends=(libpng libogg)
+options=(debug)
+source=(
+  https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/$pkgname/$pkgname-$pkgver.tar.gz
+  0001-Fix-automake-warnings.patch
+)
+sha512sums=('2635237753abc0f6c43fc07bd0ecc57c2f3c893efa6c62ad08de9191045612477302ed45acd61cdfea7447efd654ebbe0ed2d6a2cbf867eb834581d7ee43377b'
             '525d120cddd040441859f2783e6e566da631ba304074bfa40a34399879fc3053577e8e71ef804168aeef519fac62e205829b50a61d770cddd46f7dbfba660842')
+b2sums=('99e755a365fcd9983fcce59f38a313b4c0c23c3a274e3b98c8756aafae29d19dc3ed3d200cf2207dd2d4985d8e99ec0d47dcdadc273a78ff84c4be11330b1e0a'
+        '57869bb321ca84e3ed23a5d9f2a234421da7d1979e46a357862c6376c7fb5e70336600ef834781daaf4e4d5094b41324a5374cf249ce108ec158fbf0369925eb')
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
 
 prepare() {
-  cd ${pkgname}
+  cd $pkgbase-$pkgver
   patch -Np1 -i ../0001-Fix-automake-warnings.patch
+  autoreconf -fiv
 }
 
 build() {
-  cd ${pkgname}
-  ./autogen.sh --prefix=/usr \
-               --disable-static \
-               --disable-doc
+  cd $pkgbase-$pkgver
+  ./configure --prefix=/usr \
+              --disable-static \
+              --disable-doc
   make
 }
 
-package() {
-  cd ${pkgname}
-  make DESTDIR="${pkgdir}" install
-  install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m644 COPYING
-  rm "${pkgdir}/usr/share/man/man1/KateDJ.1"
+package_libkate() {
+  depends=(glibc)
+  optdepends=(
+    'libkate-docs: for developer documentation'
+    'libogg: for katalyzer, katedec and kateenc'
+    'libpng: for kateenc'
+  )
+  provides=(libkate.so liboggkate.so)
+
+  make DESTDIR="$pkgdir" install -C $pkgbase-$pkgver
+  install -vDm 644 $pkgbase-$pkgver/COPYING -t "$pkgdir/usr/share/licenses/$pkgbase"
+  rm -v "$pkgdir/usr/share/man/man1/KateDJ.1"
+
+  cd "$pkgdir"
+  _pick docs usr/share/doc/$pkgbase/html
+}
+
+package_libkate-docs() {
+  pkgdesc+=' - developer documentation'
+
+  mv -v docs/* "$pkgdir"
+  install -vDm 644 $pkgbase-$pkgver/COPYING -t "$pkgdir/usr/share/licenses/$pkgname"
 }
