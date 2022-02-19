@@ -1,0 +1,63 @@
+From 8edd9ff4e4ea85c80bee00a4a46b1cae3678dea6 Mon Sep 17 00:00:00 2001
+From: Luiz Augusto von Dentz <luiz.von.dentz@intel.com>
+Date: Wed, 12 Jan 2022 07:22:22 -0800
+Subject: media: Fix crash when endpoint replies with an error to
+ SetConfiguration
+
+If endpoint responds to SetConfiguration the transport is being
+destroyed without removing it from the list leading a crash.
+
+Fixes: https://github.com/bluez/bluez/issues/269
+---
+ profiles/audio/media.c | 21 +++++++++++++--------
+ 1 file changed, 13 insertions(+), 8 deletions(-)
+
+diff --git a/profiles/audio/media.c b/profiles/audio/media.c
+index edefedc90..8162417ce 100644
+--- a/profiles/audio/media.c
++++ b/profiles/audio/media.c
+@@ -241,6 +241,16 @@ static struct media_adapter *find_adapter(struct btd_device *device)
+ 	return NULL;
+ }
+ 
++static void endpoint_remove_transport(struct media_endpoint *endpoint,
++					struct media_transport *transport)
++{
++	if (!endpoint || !transport)
++		return;
++
++	endpoint->transports = g_slist_remove(endpoint->transports, transport);
++	media_transport_destroy(transport);
++}
++
+ static void clear_configuration(struct media_endpoint *endpoint,
+ 					struct media_transport *transport)
+ {
+@@ -260,8 +270,7 @@ static void clear_configuration(struct media_endpoint *endpoint,
+ 							DBUS_TYPE_INVALID);
+ 	g_dbus_send_message(btd_get_dbus_connection(), msg);
+ done:
+-	endpoint->transports = g_slist_remove(endpoint->transports, transport);
+-	media_transport_destroy(transport);
++	endpoint_remove_transport(endpoint, transport);
+ }
+ 
+ static void clear_endpoint(struct media_endpoint *endpoint)
+@@ -301,12 +310,8 @@ static void endpoint_reply(DBusPendingCall *call, void *user_data)
+ 
+ 		if (dbus_message_is_method_call(request->msg,
+ 					MEDIA_ENDPOINT_INTERFACE,
+-					"SetConfiguration")) {
+-			if (request->transport == NULL)
+-				error("Expected to destroy transport");
+-			else
+-				media_transport_destroy(request->transport);
+-		}
++					"SetConfiguration"))
++			endpoint_remove_transport(endpoint, request->transport);
+ 
+ 		dbus_error_free(&err);
+ 		goto done;
+-- 
+cgit 
+
