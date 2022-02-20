@@ -4,15 +4,15 @@
 pkgname=qt5-webengine
 _qtver=5.15.8
 pkgver=${_qtver/-/}
-pkgrel=8
+pkgrel=9
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=('qt5-webchannel' 'qt5-location' 'libxcomposite' 'libxrandr' 'pciutils' 'libxss' 'libxkbfile' 
          'libevent' 'snappy' 'nss' 'libxslt' 'minizip' 'ffmpeg' 're2' 'libvpx' 'libxtst' 'ttf-font')
-makedepends=('git' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'libpipewire02' 'nodejs')
-optdepends=('libpipewire02: WebRTC desktop sharing under Wayland')
+makedepends=('git' 'python' 'gperf' 'jsoncpp' 'ninja' 'qt5-tools' 'poppler' 'pipewire' 'nodejs')
+optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=('qt' 'qt5')
 _pkgfqn=qtwebengine
 source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
@@ -20,13 +20,15 @@ source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
         git+https://chromium.googlesource.com/catapult#commit=5eedfe23148a234211ba477f76fc2ea2e8529189
         qt5-webengine-python3.patch
         qt5-webengine-chromium-python3.patch
-        qt5-webengine-ffmpeg5.patch)
+        qt5-webengine-ffmpeg5.patch
+        qt5-webengine-pipewire-0.3.patch)
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
             '398c996cb5b606695ac93645143df39e23fa67e768b09e0da6dbd37342a43f32'
             'fda4ff16790799fb285847918a677f4f3f7c0f513d4751f846ffc5aa5d873932'
-            'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693')
+            'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693'
+            '5e3a3c4711d964d5152a04059a2b5c1d14bb13dd29bce370120f60e85b476b6f')
 options=(debug)
 
 prepare() {
@@ -42,6 +44,7 @@ prepare() {
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-chromium-python3.patch
 
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
+  patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-pipewire-0.3.patch # Port to pipewire 0.3
 
 # Update catapult for python3 compatibility
   rm -r src/3rdparty/chromium/third_party/catapult
