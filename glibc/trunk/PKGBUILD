@@ -193,11 +193,11 @@ package_glibc() {
 
     # Do not strip these for gdb and valgrind functionality, but strip the rest
     find "$pkgdir"/usr/lib \
-      -not -name 'ld-*.so' \
-      -not -name 'libc-*.so' \
-      -not -name 'libpthread-*.so' \
-      -not -name 'libthread_db-*.so' \
-      -name '*-*.so' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
+      -not -name 'ld-*.so*' \
+      -not -name 'libc.so*' \
+      -not -name 'libpthread.so*' \
+      -not -name 'libthread_db.so*' \
+      -name '*.so*' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
 
   # Provide tracing probes to libstdc++ for exceptions, possibly for other
@@ -235,11 +235,11 @@ package_lib32-glibc() {
   if check_option 'debug' n; then
     find "$pkgdir"/usr/lib32 -name '*.a' -type f -exec strip $STRIP_STATIC {} + 2> /dev/null || true
     find "$pkgdir"/usr/lib32 \
-      -not -name 'ld-*.so' \
-      -not -name 'libc-*.so' \
-      -not -name 'libpthread-*.so' \
-      -not -name 'libthread_db-*.so' \
-      -name '*-*.so' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
+      -not -name 'ld-*.so*' \
+      -not -name 'libc.so*' \
+      -not -name 'libpthread.so*' \
+      -not -name 'libthread_db.so*' \
+      -name '*.so*' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
 
   # Provided by lib32-libxcrypt; keep the old shared library for backwards compatibility
