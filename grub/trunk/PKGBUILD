@@ -62,7 +62,8 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_unifont_ver}/unifont-${_unifont_ver}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
         '0002-10_linux-detect-archlinux-initramfs.patch'
-        'grub.default')
+        'grub.default'
+        'sbat.csv')
 
 sha256sums=('SKIP'
             'SKIP'
@@ -70,7 +71,8 @@ sha256sums=('SKIP'
             'SKIP'
             '5dee6628c48eef79812bb9e86ee772068d85e7fcebbd2b2b8d1e19d24eda9dab'
             '8488aec30a93e8fe66c23ef8c23aefda39c38389530e9e73ba3fbcc8315d244d'
-            'c17bf255a41103f6b71a1710afc7e9addaebc578bcf51a48845e227b2f651682')
+            'c17bf255a41103f6b71a1710afc7e9addaebc578bcf51a48845e227b2f651682'
+            '98b23d41e223bdc0a6e20bdcb3aa77e642f29b64081b1fd2f575314172fc89df')
 
 _backports=(
 	# fs/xfs: Fix unreadable filesystem with v4 superblock
@@ -273,11 +275,7 @@ _package_grub-efi() {
 	rm -f "${pkgdir}/usr/lib/grub/${_EFI_ARCH}-efi"/*.image || true
 	rm -f "${pkgdir}/usr/lib/grub/${_EFI_ARCH}-efi"/{kernel.exec,gdb_grub,gmodule.pl} || true
 
-	_sbat_file="${pkgdir}/usr/share/grub/sbat.csv"
-	touch "${_sbat_file}"
-	echo "sbat,1,SBAT Version,sbat,1,https://github.com/rhboot/shim/blob/main/SBAT.md" >> "${_sbat_file}"
-	echo "grub,1,Free Software Foundation,grub,${_pkgver},https//www.gnu.org/software/grub/" >> "${_sbat_file}"
-	echo "grub.arch,1,Arch Linux,grub,${_pkgver},https://archlinux.org/packages/core/x86_64/grub/" >> "${_sbat_file}"
+	sed -e "s/%PKGVER%/${pkgver}/" < "${srcdir}/sbat.csv" > "${pkgdir}/usr/share/grub/sbat.csv"
 }
 
 _package_grub-emu() {
