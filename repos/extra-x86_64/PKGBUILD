@@ -4,7 +4,7 @@
 pkgbase=flac
 pkgname=('flac' 'flac-doc')
 pkgver=1.3.4
-pkgrel=1
+pkgrel=2
 pkgdesc='Free Lossless Audio Codec'
 url='https://xiph.org/flac/'
 arch=('x86_64')
@@ -24,7 +24,8 @@ build() {
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_MANDIR=/usr/share/man/man1 \
     -DBUILD_SHARED_LIBS=ON \
-    -DWITH_STACK_PROTECTOR=OFF
+    -DWITH_STACK_PROTECTOR=OFF \
+    -DNDEBUG=ON
   cmake --build build
 }
 
