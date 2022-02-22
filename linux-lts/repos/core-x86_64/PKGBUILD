@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.15.24
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -22,6 +22,7 @@ source=(
   0004-cpufreq_intel_pstate_ITMT_support_for_overclocked_system.patch
   0005-Bluetooth_btintel_Fix_bdaddress_comparison_with_garbage_value.patch
   0006-lg-laptop_Recognize_more_models.patch
+  0007_fix_NFSv4_mount_regression.diff
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -36,7 +37,8 @@ sha256sums=('f496eb03c88731540d483837f919c083148875a7b400468237f0217b5e5ca97f'
             '7c7707c738983f3683d76295b496f578996b7341fa39ad334ec2833bfe4b966e'
             '420844779356286057d931e30bbe1dabb8ee52bff575845a8fbf3c34e1a1d29e'
             '3fa8a4af66d5a3b99b48ca979a247c61e81c9b2d3bcdffa9d3895a5532a420b4'
-            '79266c6cc970733fd35881d9a8f0a74c25c00b4d81741b8d4bba6827c48f7c78')
+            '79266c6cc970733fd35881d9a8f0a74c25c00b4d81741b8d4bba6827c48f7c78'
+            'e9527ad81d5b1821a7b17c56cb3abaec85785563f51e448cb3c06f1c68e2966f')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -44,6 +46,10 @@ export KBUILD_BUILD_TIMESTAMP="$(date -Ru${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EP
 
 prepare() {
   cd $_srcname
+
+  # fix NFSv4 mounting issue regression - FS#73838 / FS#73860
+  # https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/patch/?id=6f2836341d8a39e1e000572b10959347d7e61fd9
+  patch -Rp1 -i ../0007_fix_NFSv4_mount_regression.diff
 
   echo "Setting version..."
   scripts/setlocalversion --save-scmversion
