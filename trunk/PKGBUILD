@@ -3,25 +3,31 @@
 # Contributor: David Sotelo <dvsotelo at gmail.com>
 # Contributor: Nuno Araujo <nuno.araujo@russo79.com>
 
-pkgname=qpdf
+pkgbase=qpdf
+pkgname=('qpdf' 'qpdf-docs')
 pkgver=10.6.2
-pkgrel=1
+pkgrel=2
 pkgdesc="QPDF: A Content-Preserving PDF Transformation System"
 arch=('x86_64')
 url="https://github.com/qpdf/qpdf"
 license=('custom:Artistic-2.0' 'Apache')
-depends=('libjpeg-turbo' 'zlib' 'gnutls')
-makedepends=('texlive-bin' 'texlive-core' 'python-sphinx' 'python-sphinx_rtd_theme' 'texlive-latexextra')
+makedepends=('libjpeg-turbo' 'zlib' 'gnutls'
+             'texlive-bin' 'texlive-core' 'python-sphinx' 'python-sphinx_rtd_theme' 'texlive-latexextra')
 #optdepends=('perl:	required for fix-qdf')
 #checkdepends=('perl')
 # https://github.com/qpdf/qpdf/releases/download/release-qpdf-10.6.1/qpdf-10.6.1.sha256
-source=(https://github.com/qpdf/qpdf/releases/download/release-${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz{,.asc})
+source=(https://github.com/qpdf/qpdf/releases/download/release-${pkgname}-${pkgver}/${pkgname}-${pkgver}.tar.gz{,.asc}
+        https://github.com/qpdf/qpdf/releases/download/release-${pkgname}-${pkgver}/${pkgname}-${pkgver}-doc.zip)
 sha256sums=('4b8c966300fcef32352f6576b7ef40167e080e43fe8954b12ef80b49a7e5307f'
-            'SKIP')
+            'SKIP'
+            '560bba7d35fa54d77860b0abf744280cf7ac819cab6e05cf13b6096357cbd9f3')
 validpgpkeys=('C2C96B10011FE009E6D1DF828A75D10998012C7E') # "Jay Berkenbilt <ejb@ql.org>"
 
+# howto build the docs:
+# https://github.com/qpdf/qpdf/blob/main/build-scripts/build-doc
+
 build() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   ./configure --prefix=/usr \
     --disable-static \
     --enable-crypto-gnutls \
@@ -30,25 +36,34 @@ build() {
     --enable-show-failed-test-output \
     --enable-doc-maintenance --enable-html-doc
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  make doc-dist DOC_DEST=doc
 }
 
 check() {
-  cd ${pkgname}-${pkgver}
+  cd ${pkgbase}-${pkgver}
   make check # passes all
 }
 
-package() {
-  cd ${pkgname}-${pkgver}
+package_qpdf() {
+  depends=('libjpeg-turbo' 'zlib' 'gnutls')
+
+  cd ${pkgbase}-${pkgver}
   make DESTDIR="${pkgdir}/" install
-  install -Dm644 manual/build/singlehtml/index.html "${pkgdir}"/usr/share/doc/qpdf/qpdf-manual.html
-  install -Dm644 manual/build/latex/qpdf.pdf "${pkgdir}"/usr/share/doc/qpdf/qpdf-manual.pdf
 
   install -Dm644 completions/bash/qpdf "${pkgdir}/usr/share/bash-completion/completions/qpdf"
   install -Dm644 completions/zsh/_qpdf "${pkgdir}/usr/share/zsh/site-functions/_qpdf"
 
   rm -rf "${pkgdir}"/usr/share/doc/qpdf/README-doc.txt
 
-  mkdir -m755 -p "${pkgdir}"/usr/share/licenses/${pkgname}
-  install -m644 {Artistic-2.0,LICENSE.txt} "${pkgdir}"/usr/share/licenses/${pkgname}/
+  mkdir -m755 -p "${pkgdir}"/usr/share/licenses/${pkgbase}
+  install -m644 {Artistic-2.0,LICENSE.txt} "${pkgdir}"/usr/share/licenses/${pkgbase}/
+}
+
+package_qpdf-docs() {
+  pkgdesc+=" (documentation)"
+
+  cd ${pkgbase}-${pkgver}
+  mkdir -m755 -p "${pkgdir}"/usr/share/doc/qpdf
+  cp -a doc/singlehtml "${pkgdir}"/usr/share/doc/qpdf/
+  install -Dm644 doc/qpdf-manual.pdf "${pkgdir}"/usr/share/doc/qpdf/qpdf-manual.pdf
 }
