@@ -1,51 +1,39 @@
 # Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 
+pkgbase=bubblewrap
 pkgname=(bubblewrap bubblewrap-suid)
-pkgver=0.5.0
+pkgver=0.6.0
 pkgrel=1
 pkgdesc='Unprivileged sandboxing tool'
 url='https://github.com/projectatomic/bubblewrap'
 arch=(x86_64)
 license=(GPL)
 depends=(glibc libcap)
-makedepends=(libxslt docbook-xsl git)
-_commit=b84704bb64eac3011f84346c79651c7c1234712c  # tags/v0.5.0^0
+makedepends=(libxslt docbook-xsl git meson bash-completion)
+_commit=b480c5fd0d383ac5d45b6390bd4b48068de6dd6b  # tags/v0.6.0^0
 source=(git+$url#commit=$_commit)
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgbase
-  git describe | sed 's/^v//'
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd $pkgbase
-  NOCONFIGURE=1 ./autogen.sh
-
-  cd "$srcdir"
-  cp -r ${pkgbase}{,-none}
-  cp -r ${pkgbase}{,-setuid}
-}
-
-_build() {
-  pushd ${pkgbase}-$1
-  ./configure --prefix=/usr \
-    --with-priv-mode=$1
-  make
-  popd
-}
-
-_install() {
-  make -C "$srcdir/${pkgbase}-$1" DESTDIR="$pkgdir" install
 }
 
 build() {
-  _build none
-  _build setuid
+  arch-meson $pkgbase build -D selinux=disabled
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package_bubblewrap() {
-  _install none
+  meson install -C build --destdir "$pkgdir"
 }
 
 package_bubblewrap-suid() {
@@ -53,5 +41,6 @@ package_bubblewrap-suid() {
   provides=("bubblewrap=$pkgver-$pkgrel")
   conflicts=(bubblewrap)
 
-  _install setuid
+  meson install -C build --destdir "$pkgdir"
+  chmod u+s "$pkgdir/usr/bin/bwrap"
 }
