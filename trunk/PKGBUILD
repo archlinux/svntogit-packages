@@ -8,19 +8,19 @@ pkgbase=java8-openjdk
 
 _majorver=8
 _minorver=332
-_updatever=02
+_updatever=03
 pkgver=${_majorver}.${_minorver}.u${_updatever}
 pkgrel=1
 _git_tag=jdk${_majorver}u${_minorver}-b${_updatever}
 arch=('x86_64')
 url='https://openjdk.java.net/'
 license=('custom')
-makedepends=('java-environment=8' 'ccache' 'cpio' 'unzip' 'zip'
+makedepends=('java-environment=8' 'ccache' 'cpio' 'unzip' 'zip' 'git' 'bash'
              'libxrender' 'libxtst' 'fontconfig' 'libcups' 'alsa-lib')
 options=(!lto)
-source=(https://github.com/openjdk/jdk${_majorver}u/archive/${_git_tag}.tar.gz
+source=(git+https://github.com/openjdk/jdk${_majorver}u.git#tag=${_git_tag}
         gcc11.patch)
-sha256sums=('1acb39a0250a1f94eb8ccf2e4357c5681d8e5208e8e870c16042c87077db9902'
+sha256sums=('SKIP'
             'e1e9452b2078c3e9b45aa73491f3f187e7a9abbc40b6a7fc9239d4e5e525569e')
 
 case "${CARCH}" in
@@ -30,7 +30,7 @@ esac
 
 _jdkname=openjdk8
 _jvmdir=/usr/lib/jvm/java-8-openjdk
-_prefix="jdk8u-${_git_tag}/image"
+_prefix="jdk8u/image"
 _imgdir="${_prefix}/jvm/openjdk-1.8.0_$(printf '%.2d' ${_minorver})"
 _nonheadless=(bin/policytool
               lib/${_JARCH}/libjsound.so
@@ -38,14 +38,14 @@ _nonheadless=(bin/policytool
               lib/${_JARCH}/libsplashscreen.so)
 
 prepare() {
-  cd jdk8u-${_git_tag}
+  cd jdk8u
 
   # Fix build with C++17 (Fedora)
   patch -Np1 -i "${srcdir}"/gcc11.patch
 }
 
 build() {
-  cd jdk8u-${_git_tag}
+  cd jdk8u
 
   unset JAVA_HOME
   # http://icedtea.classpath.org/bugzilla/show_bug.cgi?id=1346
@@ -57,7 +57,7 @@ build() {
   export CXXFLAGS="${CXXFLAGS} -fcommon -fno-exceptions"
 
   install -d -m 755 "${srcdir}/${_prefix}/"
-  sh configure \
+  bash configure \
     --prefix="${srcdir}/${_prefix}" \
     --with-update-version="${_minorver}" \
     --with-build-number="b${_updatever}" \
@@ -94,7 +94,7 @@ build() {
 }
 
 check() {
-  cd jdk8u-${_git_tag}
+  cd jdk8u
   #make -k test
 }
 
@@ -258,7 +258,7 @@ package_openjdk8-doc() {
   pkgdesc='OpenJDK Java 8 documentation'
 
   install -d -m 755 "${pkgdir}/usr/share/doc/${pkgbase}/"
-  cp -r "${srcdir}"/jdk8u-${_git_tag}/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
+  cp -r "${srcdir}"/jdk8u/build/linux-${_DOC_ARCH}-normal-server-release/docs/* \
     "${pkgdir}/usr/share/doc/${pkgbase}/"
 }
 
