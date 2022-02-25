@@ -211,7 +211,7 @@ package_gcc-libs() {
 
 package_gcc() {
   pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.28' libmpc zstd)
+  depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.28' libmpc zstd libisl.so)
   groups=('base-devel')
   optdepends=('lib32-gcc-libs: for generating code for 32-bit ABI')
   provides=($pkgname-multilib)
@@ -296,7 +296,7 @@ package_gcc() {
 
 package_gcc-fortran() {
   pkgdesc='Fortran front-end for GCC'
-  depends=("gcc=$pkgver-$pkgrel")
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
 
@@ -319,7 +319,7 @@ package_gcc-fortran() {
 
 package_gcc-objc() {
   pkgdesc='Objective-C front-end for GCC'
-  depends=("gcc=$pkgver-$pkgrel")
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
 
@@ -336,7 +336,7 @@ package_gcc-objc() {
 
 package_gcc-ada() {
   pkgdesc='Ada front-end for GCC (GNAT)'
-  depends=("gcc=$pkgver-$pkgrel")
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
   options=(!emptydirs staticlibs debug)
@@ -375,7 +375,7 @@ package_gcc-ada() {
 
 package_gcc-go() {
   pkgdesc='Go front-end for GCC'
-  depends=("gcc=$pkgver-$pkgrel")
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=("go=1.12.2" $pkgname-multilib)
   replaces=($pkgname-multilib)
   conflicts=(go)
@@ -434,7 +434,7 @@ package_lib32-gcc-libs() {
 
 package_gcc-d() {
   pkgdesc="D frontend for GCC"
-  depends=("gcc=$pkgver-$pkgrel")
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=(gdc)
   replaces=(gdc)
   options=(staticlibs debug)
