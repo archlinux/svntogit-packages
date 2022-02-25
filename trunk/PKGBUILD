@@ -133,7 +133,8 @@ build() {
   # make documentation
   make -O -C $CHOST/libstdc++-v3/doc doc-man-doxygen
 
-  # Build libgccjit separately, so that normal compiler binaries aren't -fpic
+  # Build libgccjit separately, to avoid building all compilers with --enable-host-shared
+  # which brings a performance penalty
   cd "${srcdir}"/libgccjit-build
 
   "$srcdir/gcc/configure" \
