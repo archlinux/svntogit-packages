@@ -7,7 +7,7 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-pkgname=(gcc gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lib32-gcc-libs gcc-d)
+pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d libgccjit)
 pkgver=11.2.0
 _majorver=${pkgver%%.*}
 _islver=0.24
@@ -16,14 +16,31 @@ pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL LGPL FDL custom)
 url='https://gcc.gnu.org'
-makedepends=(binutils libmpc gcc-ada doxygen lib32-glibc lib32-gcc-libs python git libxcrypt zstd)
-checkdepends=(dejagnu inetutils tcl expect python-pytest)
+makedepends=(
+  binutils
+  doxygen
+  gcc-ada
+  git
+  lib32-glibc
+  lib32-gcc-libs
+  libisl
+  libmpc
+  libxcrypt
+  python
+  zstd
+)
+checkdepends=(
+  dejagnu
+  expect
+  inetutils
+  python-pytest
+  tcl
+)
 options=(!emptydirs !lto debug)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 # _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
 # source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
 source=(https://sourceware.org/pub/gcc/releases/gcc-${pkgver}/gcc-${pkgver}.tar.xz{,.sig}
-        https://libisl.sourceforge.io/isl-${_islver}.tar.xz
         c89 c99
         gdc_phobos_path.patch
         gcc-ada-repro.patch
@@ -34,7 +51,6 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
 sha256sums=('d08edc536b54c372a1010ff6619dd274c0f1603aa49212ba20f7aa2cda36fa8b'
             'SKIP'
-            '043105cc544f416b48736fff8caf077fb0663a717d06b1113f16e391ac99ebad'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             'c86372c207d174c0918d4aedf1cb79f7fc093649eb1ad8d9450dccc46849d308'
@@ -43,9 +59,6 @@ sha256sums=('d08edc536b54c372a1010ff6619dd274c0f1603aa49212ba20f7aa2cda36fa8b'
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
   cd gcc
-
-  # link isl for in-tree build
-  ln -s ../isl-${_islver} isl
 
   # Do not run fixincludes
   sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
@@ -63,25 +76,16 @@ prepare() {
   patch -Np0 < "$srcdir/gcc-ada-repro.patch"
 
   mkdir -p "$srcdir/gcc-build"
+  mkdir -p "$srcdir/libgccjit-build"
 }
 
 build() {
-  cd gcc-build
-
-  # Credits @allanmcrae
-  # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/gcc/PKGBUILD
-  # TODO: properly deal with the build issues resulting from this
-  CFLAGS=${CFLAGS/-Werror=format-security/}
-  CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
-
-  "$srcdir/gcc/configure" --prefix=/usr \
+  local _confflags="--prefix=/usr \
       --libdir=/usr/lib \
       --libexecdir=/usr/lib \
       --mandir=/usr/share/man \
       --infodir=/usr/share/info \
       --with-bugurl=https://bugs.archlinux.org/ \
-      --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
-      --with-isl \
       --with-linker-hash-style=gnu \
       --with-system-zlib \
       --enable-__cxa_atexit \
@@ -104,16 +108,48 @@ build() {
       --disable-werror \
       --with-build-config=bootstrap-lto \
       --enable-link-serialization=1 \
-      gdc_include_dir=/usr/include/dlang/gdc
+      gdc_include_dir=/usr/include/dlang/gdc"
+
+  cd gcc-build
+
+  # Credits @allanmcrae
+  # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/gcc/PKGBUILD
+  # TODO: properly deal with the build issues resulting from this
+  CFLAGS=${CFLAGS/-Werror=format-security/}
+  CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
+
+  "$srcdir/gcc/configure" \
+    --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
+    --enable-bootstrap \
+    $_confflags
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
   make -O STAGE1_CFLAGS="-O2" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
-          LDFLAGS_FOR_TARGET="$LDFLAGS"
+          LDFLAGS_FOR_TARGET="$LDFLAGS" \
+          profiledbootstrap
 
   # make documentation
   make -O -C $CHOST/libstdc++-v3/doc doc-man-doxygen
+
+  # Build libgccjit separately, so that normal compiler binaries aren't -fpic
+  cd "${srcdir}"/libgccjit-build
+
+  "$srcdir/gcc/configure" \
+    --enable-languages=jit \
+    --disable-bootstrap \
+    --enable-host-shared \
+    $_confflags
+
+  # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
+  make -O STAGE1_CFLAGS="-O2" \
+          BOOT_CFLAGS="$CFLAGS" \
+          BOOT_LDFLAGS="$LDFLAGS" \
+          LDFLAGS_FOR_TARGET="$LDFLAGS" \
+          all-gcc
+
+  cp -a gcc/libgccjit.so* ../gcc-build/gcc/
 }
 
 check() {
@@ -414,6 +450,19 @@ package_gcc-d() {
 
   install -d "$pkgdir"/usr/include/dlang
   ln -s /"${_libdir}"/include/d "$pkgdir"/usr/include/dlang/gdc
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_libgccjit() {
+  pkgdesc="Just-In-Time Compilation with GCC backend"
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
+
+  cd gcc-build
+  make -C gcc DESTDIR="$pkgdir" jit.install-common jit.install-info
 
   # Install Runtime Library Exception
   install -d "$pkgdir/usr/share/licenses/$pkgname/"
