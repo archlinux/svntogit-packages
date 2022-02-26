@@ -66,9 +66,6 @@ prepare() {
   # Arch Linux installs x86_64 libraries /lib
   sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
 
-  # hack! - some configure tests for header files using "$CPP $CPPFLAGS"
-  sed -i "/ac_cpp=/s/\$CPPFLAGS/\$CPPFLAGS -O2/" gcc/configure
-
   # D hacks
   patch -Np1 -i "$srcdir/gdc_phobos_path.patch"
 
@@ -99,7 +96,6 @@ build() {
       --enable-linker-build-id \
       --enable-lto \
       --enable-multilib \
-      --enable-pgo-build=lto \
       --enable-plugin \
       --enable-shared \
       --enable-threads=posix \
