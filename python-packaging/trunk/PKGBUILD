@@ -1,7 +1,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-packaging
-pkgver=21.0
+pkgver=21.3
 pkgrel=1
 pkgdesc="Core utilities for Python packages"
 arch=('any')
@@ -11,7 +11,7 @@ depends=('python-pyparsing')
 makedepends=('python-setuptools')
 checkdepends=('python-pytest' 'python-pretend')
 source=("https://github.com/pypa/packaging/archive/$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('612744ad8d0b834709af5d4e2415679271e4cdc304a2e9297ec741e37e62241a041b678568130cd733828a1bf2e5885d62de706934f4018195566107989a6f6b')
+sha512sums=('8960deacda26877b73d98a3b632e760e902a16ec7a04707f84044980e4d4fb33e4f584db115c9008066aa876079f28633bafe37fbd5ce9a23830b6b89eb4ae7a')
 
 build() {
   cd packaging-$pkgver
