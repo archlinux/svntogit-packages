@@ -3,7 +3,7 @@
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
 pkgver=4.13.1
-pkgrel=2
+pkgrel=3
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
@@ -18,6 +18,8 @@ options=('!makeflags' '!emptydirs' 'staticlibs')
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
+  CFLAGS+=' -ffat-lto-objects'
+  CXXFLAGS+=' -ffat-lto-objects'
   ./configure --prefix /usr --mandir /usr/share/man --disable-force-safe-string
   make --debug=v world.opt
 }
