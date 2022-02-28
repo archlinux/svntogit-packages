@@ -51,7 +51,6 @@ build() {
     --localstatedir=/var \
     --enable-usrdir-path \
     --enable-fs-paths-default=/usr/bin:/usr/local/bin \
-    --enable-raw \
     --enable-vipw \
     --enable-newgrp \
     --enable-chfn-chsh \
