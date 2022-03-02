@@ -14,7 +14,6 @@ arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs python)
-optdepends=('perl: for mtrace')
 options=(!strip staticlibs !lto)
 #_commit=3de512be7ea6053255afed6154db9ee31d4e557a
 #source=(git+https://sourceware.org/git/glibc.git#commit=$_commit
@@ -164,7 +163,8 @@ check() {
 package_glibc() {
   pkgdesc='GNU C Library'
   depends=('linux-api-headers>=4.10' tzdata filesystem)
-  optdepends=('gd: for memusagestat')
+  optdepends=('gd: for memusagestat'
+              'perl: for mtrace')
   install=glibc.install
   backup=(etc/gai.conf
           etc/locale.gen
