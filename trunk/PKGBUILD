@@ -99,7 +99,7 @@ build() {
   echo "CFLAGS += -Wp,-D_FORTIFY_SOURCE=2" >> configparms
   make -O
 
-  # build info pages manually for reprducibility
+  # build info pages manually for reproducibility
   make info
 
   cd "$srcdir/lib32-glibc-build"
@@ -148,7 +148,7 @@ check() {
 
   # The following tests fail due to restrictions in the Arch build system
   # The correct fix is to add the following to the systemd-nspawn call:
-  # --capability=CAP_IPC_LOCK --system-call-filter="@clock @pkey"
+  # --system-call-filter="@clock @memlock @pkey"
   skip_test test-errno-linux sysdeps/unix/sysv/linux/Makefile
   skip_test tst-ntp_gettime  sysdeps/unix/sysv/linux/Makefile
   skip_test tst-ntp_gettimex sysdeps/unix/sysv/linux/Makefile
@@ -170,11 +170,8 @@ package_glibc() {
           etc/locale.gen
           etc/nscd.conf)
 
-  install -dm755 "$pkgdir/etc"
-  touch "$pkgdir/etc/ld.so.conf"
-
   make -C glibc-build install_root="$pkgdir" install
-  rm -f "$pkgdir"/etc/ld.so.{cache,conf}
+  rm -f "$pkgdir"/etc/ld.so.cache
 
   # Shipped in tzdata
   rm -f "$pkgdir"/usr/bin/{tzselect,zdump,zic}
@@ -213,9 +210,6 @@ package_glibc() {
   # libraries too. Useful for gdb's catch command.
   install -Dm644 "$srcdir/sdt.h" "$pkgdir/usr/include/sys/sdt.h"
   install -Dm644 "$srcdir/sdt-config.h" "$pkgdir/usr/include/sys/sdt-config.h"
-
-  # Provided by libxcrypt; keep the old shared library for backwards compatibility
-  rm -f "$pkgdir"/usr/include/crypt.h "$pkgdir"/usr/lib/libcrypt.{a,so}
 }
 
 package_lib32-glibc() {
@@ -250,7 +244,4 @@ package_lib32-glibc() {
       -not -name 'libthread_db.so*' \
       -name '*.so*' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
   fi
-
-  # Provided by lib32-libxcrypt; keep the old shared library for backwards compatibility
-  rm -f "$pkgdir"/usr/lib32/libcrypt.{a,so}
 }
