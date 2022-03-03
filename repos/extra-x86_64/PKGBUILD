@@ -4,7 +4,7 @@
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=dolphin
-pkgver=21.12.2.1
+pkgver=21.12.3
 pkgrel=1
 pkgdesc='KDE File Manager'
 arch=(x86_64)
@@ -15,8 +15,8 @@ makedepends=(extra-cmake-modules kdoctools)
 optdepends=('kde-cli-tools: for editing file type options' 'ffmpegthumbs: video thumbnails' 'kdegraphics-thumbnailers: PDF and PS thumbnails'
             'konsole: terminal panel' 'purpose: share context menu')
 groups=(kde-applications kde-system)
-source=(https://download.kde.org/stable/release-service/${pkgver%.*}/src/$pkgname-$pkgver.tar.xz{,.sig})
-sha256sums=('180a9aa1982d58171f85d00434e94a93d819a7640ec98ef3f68603a932720d07'
+source=(https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz{,.sig})
+sha256sums=('5812238be9a4ee204e864cd30166285af599c6478eb9ce53cf9a552091c2b654'
             'SKIP')
 validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
               F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87  # Christoph Feck <cfeck@kde.org>
