@@ -3,14 +3,14 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=mercurial
-pkgver=6.0.3
+pkgver=6.1
 pkgrel=1
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
 license=(GPL)
 depends=(python)
-makedepends=('python-docutils')
+makedepends=(python-build python-installer python-setuptools python-wheel python-docutils)
 optdepends=('tk: for the hgk GUI')
 #checkdepends=('breezy' 'cvs' 'git' 'git-lfs' 'python-docutils' 'subversion' 'unzip')
 
@@ -28,13 +28,13 @@ validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
               1F66F8CDF654E905C11DA061A11E01CD0E05D956) # Raphaël Gomès <alphare@raphaelgomes.dev>
 source=(https://www.mercurial-scm.org/release/${pkgname}-${pkgver}.tar.gz{,.asc}
         mercurial.profile)
-sha512sums=('46f5262a364ae03515015fc0319e0b4a43a1434672b8c4c8a4ad9297d5c78fbb9d76173e835a87a9718a047c2067204ca8334d39bfa92f565d7c0a75a7b63467'
+sha512sums=('489b2c893bcfd243d9825cd78f1d8b6e0eddccdf92d16cbdbdb2ade40150b599a6d5df213e06d50c31489ee6c5203e35f21892b6439d9190757d5a36c6422338'
             'SKIP'
             '710dcddb24d928efc97370e869d9caa083107929ed9a1086dd2a3ae0caaf2c71e2f29060597e29315b6b15b1616251c42412e268ce737109c48ae4d7aa1b9555')
 
 build() {
   cd $pkgname-$pkgver
-  python setup.py build
+  python -m build --wheel --no-isolation
   make -C contrib/chg
 }
 
@@ -46,7 +46,7 @@ check() {
 
 package() {
   cd $pkgname-$pkgver
-  python setup.py install --root="$pkgdir" --optimize=1
+  python -m installer --destdir="$pkgdir" dist/*.whl
   make DESTDIR="${pkgdir}" PREFIX=/usr install
 
   install -m644 -D contrib/zsh_completion "$pkgdir/usr/share/zsh/site-functions/_hg"
