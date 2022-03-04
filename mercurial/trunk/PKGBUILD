@@ -4,13 +4,13 @@
 
 pkgname=mercurial
 pkgver=6.1
-pkgrel=1
+pkgrel=2
 pkgdesc='A scalable distributed SCM tool'
 arch=(x86_64)
 url="https://www.mercurial-scm.org/"
 license=(GPL)
 depends=(python)
-makedepends=(python-build python-installer python-setuptools python-wheel python-docutils)
+makedepends=(python-docutils)
 optdepends=('tk: for the hgk GUI')
 #checkdepends=('breezy' 'cvs' 'git' 'git-lfs' 'python-docutils' 'subversion' 'unzip')
 
@@ -34,7 +34,7 @@ sha512sums=('489b2c893bcfd243d9825cd78f1d8b6e0eddccdf92d16cbdbdb2ade40150b599a6d
 
 build() {
   cd $pkgname-$pkgver
-  python -m build --wheel --no-isolation
+  python setup.py build
   make -C contrib/chg
 }
 
@@ -46,7 +46,7 @@ check() {
 
 package() {
   cd $pkgname-$pkgver
-  python -m installer --destdir="$pkgdir" dist/*.whl
+  python setup.py install --root="$pkgdir" --skip-build --optimize=1
   make DESTDIR="${pkgdir}" PREFIX=/usr install
 
   install -m644 -D contrib/zsh_completion "$pkgdir/usr/share/zsh/site-functions/_hg"
