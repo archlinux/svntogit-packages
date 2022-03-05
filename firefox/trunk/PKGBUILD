@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=97.0.1
+pkgver=97.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -24,7 +24,7 @@ options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('3f2c87cf28645130777e875ddc9c67e8994c8d5c859f425f3ddced6fecb78d45'
+sha256sums=('c9f127741beabde78b021dc95b1740259d01677d461400682cb30e072126f075'
             'SKIP'
             '8de6c0ecc70d2763936be6df4b91a3d2e806765bf510f987d6f2ffa2377c3f01'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
