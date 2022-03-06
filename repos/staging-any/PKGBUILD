@@ -1,0 +1,125 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Olli <olli@suruatoel.xyz>
+
+pkgname=tomcat9
+pkgver=9.0.58
+pkgrel=2
+pkgdesc='Open source implementation of the Java Servlet 4.0 and JavaServer Pages 2.3 technologies'
+arch=(any)
+url=https://tomcat.apache.org/
+license=(APACHE)
+depends=(
+  'java-runtime>=8'
+  java-jsvc
+  java-commons-daemon
+  eclipse-ecj
+)
+makedepends=(
+  ant
+  git
+  java-environment=8
+)
+optdepends=('tomcat-native: to allow optimal performance in production environments')
+backup=(
+  etc/tomcat9/catalina.policy
+  etc/tomcat9/catalina.properties
+  etc/tomcat9/context.xml
+  etc/tomcat9/logging.properties
+  etc/tomcat9/server.xml
+  etc/tomcat9/tomcat-users.xml
+  etc/tomcat9/web.xml
+)
+install=tomcat9.install
+_tag=bd9afafc1ec568f8160ed3679a776b26d8a29b99
+source=(
+  git+https://github.com/apache/tomcat.git#tag=${_tag}
+  tomcat9.service
+  tomcat9.sysusers
+  tomcat9.tmpfiles
+)
+b2sums=('SKIP'
+        '54b745cefdb9dbe5993b0b2ca08fae8d453a7610ffdeb2795b766d3ce321c267d570f6a1f5bd197f4c8053df3ab46ff68363f9d5ea1d96ddf96d19b84c075d21'
+        'b5206f649229ed67e8f9bfbd942d2fcdeb4056633e47b6a0cbbd813220c74a708a418fb09fe2e5a3c6fb17e271f268e2326bc3d26cdfd0e54c4f0eb9eeba3413'
+        '85a0dc807d3398856046e1450578e8f3a81ee34435eba119a883231ecd0e09ed32c97bf1747b20a253270df8a6e918d3823e6273ec52c01afd9a34a042e9dfcf')
+
+_gid_log=19
+_gid_tomcat=58
+_uid_tomcat=58
+
+pkgver() {
+  cd tomcat
+
+  _pkgver=$(git describe --tags)
+
+  if [[ ${_pkgver} != 9.* ]]; then
+    exit 1
+  fi
+
+  echo ${_pkgver}
+}
+
+prepare() {
+  cd tomcat
+
+  cp build.properties.default build.properties
+  sed "/^base\.path=/c\base\.path=${srcdir}" -i build.properties
+  sed "/^compile.debug=/c\compile.debug=false" -i build.properties
+  sed "/^trydownload.httpusecaches=/c\trydownload.httpusecaches=false" -i build.properties
+}
+
+build() {
+  cd tomcat
+
+  export JAVA_HOME=/usr/lib/jvm/java-8-openjdk
+  export PATH="$JAVA_HOME/bin:$PATH"
+
+  ant
+}
+
+package() {
+  cd tomcat/output/build
+
+  # Tomcat general files
+  install -dm 755 "${pkgdir}"/usr/share/tomcat9/bin
+  install -m 755  bin/* -t "${pkgdir}"/usr/share/tomcat9/bin/
+  # commons-daemon is packaged on its own
+  rm "${pkgdir}"/usr/share/tomcat9/bin/{*.bat,commons-daemon*}
+  ln -s /usr/share/java/commons-daemon.jar "${pkgdir}"/usr/share/tomcat9/bin/commons-daemon.jar
+
+  install -dm 755 "${pkgdir}"/usr/share/java/tomcat9
+  install -m 644 lib/* -t "${pkgdir}"/usr/share/java/tomcat9/
+  # eclipse-ecj is packaged on its own
+  rm "${pkgdir}"/usr/share/java/tomcat9/ecj-*.jar
+  ln -s ../eclipse-ecj.jar "${pkgdir}"/usr/share/java/tomcat9/ecj.jar
+
+  ln -s /usr/share/java/tomcat9 "${pkgdir}"/usr/share/tomcat9/lib
+
+  # We log through systemd but this would still be required for stock Tomcat logging
+  install -dm 775 -o ${_uid_tomcat} -g ${_gid_log} "${pkgdir}"/var/log/tomcat9
+  ln -s /var/log/tomcat9 "${pkgdir}"/usr/share/tomcat9/logs
+  touch "${pkgdir}"/var/log/tomcat9/catalina.{out,err}
+  chgrp ${_gid_log} "${pkgdir}"/var/log/tomcat9/catalina.{out,err}
+
+  install -dm 775 "${pkgdir}"/etc/tomcat9
+  install -m 640 -g ${_gid_tomcat} conf/* -t "${pkgdir}"/etc/tomcat9/
+
+  install -dm 775 -g ${_gid_tomcat} "${pkgdir}"/etc/tomcat9/Catalina
+  ln -s /etc/tomcat9 "${pkgdir}"/usr/share/tomcat9/conf
+
+  install -dm 775 "${pkgdir}"/var/lib/tomcat9
+  cp -dr --no-preserve=ownership webapps "${pkgdir}"/var/lib/tomcat9/
+  chown -R ${_uid_tomcat}:${_gid_tomcat} "${pkgdir}"/var/lib/tomcat9
+  chmod 775 "${pkgdir}"/var/lib/tomcat9/webapps
+  ln -s /var/lib/tomcat9/webapps "${pkgdir}"/usr/share/tomcat9/webapps
+
+  install -dm 1777 "${pkgdir}"/var/tmp
+  install -dm 775 -o ${_uid_tomcat} -g ${_gid_tomcat} "${pkgdir}"/var/tmp/tomcat9/{temp,work}
+  ln -s /var/tmp/tomcat9/temp "${pkgdir}"/usr/share/tomcat9/temp
+  ln -s /var/tmp/tomcat9/work "${pkgdir}"/usr/share/tomcat9/work
+
+  install -Dm 644 ../../../tomcat9.service -t "${pkgdir}"/usr/lib/systemd/system/
+  install -Dm 644 ../../../tomcat9.sysusers "${pkgdir}"/usr/lib/sysusers.d/tomcat9.conf
+  install -Dm 644 ../../../tomcat9.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/tomcat9.conf
+}
+
+# vim: ts=2 sw=2 et:
