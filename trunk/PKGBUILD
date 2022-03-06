@@ -2,7 +2,7 @@
 
 pkgname=python-tomli-w
 pkgver=1.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc="A lil' TOML writer"
 url=https://github.com/hukkin/tomli-w
 license=(MIT)
