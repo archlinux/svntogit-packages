@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=97.0.2
+pkgver=98.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -22,11 +22,9 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'xdg-desktop-portal: Screensharing with Wayland')
 options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
-        0001-Use-remoting-name-for-GDK-application-names.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('c9f127741beabde78b021dc95b1740259d01677d461400682cb30e072126f075'
+sha256sums=('fd0a4c11d007d9045706667eb0f99f9b7422945188424cb937bfef530cb6f4dd'
             'SKIP'
-            '8de6c0ecc70d2763936be6df4b91a3d2e806765bf510f987d6f2ffa2377c3f01'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
@@ -46,9 +44,6 @@ _mozilla_api_key=e05d56db0a694edc8b5aaebda3f2db6a
 prepare() {
   mkdir mozbuild
   cd firefox-$pkgver
-
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
-  patch -Np1 -i ../0001-Use-remoting-name-for-GDK-application-names.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
