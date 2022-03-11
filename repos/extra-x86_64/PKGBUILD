@@ -3,16 +3,23 @@
 
 pkgname=emacs
 pkgver=27.2
-pkgrel=1
+pkgrel=2
 pkgdesc="The extensible, customizable, self-documenting real-time display editor"
 arch=('x86_64')
 url="https://www.gnu.org/software/emacs/emacs.html"
 license=('GPL3')
 depends=('librsvg' 'gpm' 'giflib' 'libxpm' 'libotf' 'm17n-lib' 'gtk3' 'hicolor-icon-theme' 'desktop-file-utils' 'alsa-lib' 'gnutls' 'jansson' 'cairo' 'harfbuzz')
 validpgpkeys=('E6C9029C363AD41D787A8EBB91C1262F01EB8D39' '28D3BED851FDF3AB57FEF93C233587A47C207910')
-source=(https://ftp.gnu.org/gnu/emacs/$pkgname-$pkgver.tar.xz{,.sig})
+source=(https://ftp.gnu.org/gnu/emacs/$pkgname-$pkgver.tar.xz{,.sig}
+        glibc-2.34.patch)
 sha1sums=('8d18e2bfb6e28cf060ce7587290954e9c582aa25'
-          'SKIP')
+          'SKIP'
+          '2546c57b7778d370a69b9ed8ba9a17dafb602506')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -p1 -i ../glibc-2.34.patch # Fix build with glibc 2.34
+}
 
 build() {
   cd "$srcdir"/$pkgname-$pkgver
