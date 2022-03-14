@@ -96,12 +96,10 @@ build() {
     #  * Cloudflare (https://1.1.1.1/)
     #  * Quad9 (https://www.quad9.net/)
     #  * Google (https://developers.google.com/speed/public-dns/)
-    # TODO: go back to cloudflare? Currently it is unusable with systemd-resolved...
-    #  https://community.cloudflare.com/t/ttl-for-cnames/354506
-    #'1.1.1.1#cloudflare-dns.com'
+    '1.1.1.1#cloudflare-dns.com'
     '9.9.9.9#dns.quad9.net'
     '8.8.8.8#dns.google'
-    #'2606:4700:4700::1111#cloudflare-dns.com'
+    '2606:4700:4700::1111#cloudflare-dns.com'
     '2620:fe::9#dns.quad9.net'
     '2001:4860:4860::8888#dns.google'
   )
