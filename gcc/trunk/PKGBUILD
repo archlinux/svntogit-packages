@@ -14,7 +14,7 @@ _islver=0.24
 pkgrel=4
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
-license=(GPL LGPL FDL custom)
+license=(GPL3 LGPL FDL custom)
 url='https://gcc.gnu.org'
 makedepends=(
   binutils
