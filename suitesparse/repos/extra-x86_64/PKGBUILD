@@ -2,8 +2,8 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=suitesparse
-pkgver=5.10.1
-pkgrel=2
+pkgver=5.11.0
+pkgrel=1
 pkgdesc='A collection of sparse matrix libraries'
 url='http://faculty.cse.tamu.edu/davis/suitesparse.html'
 arch=(x86_64)
@@ -13,7 +13,7 @@ license=(GPL)
 options=(staticlibs)
 source=(https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v$pkgver/$pkgname-$pkgver.tar.gz
         suitesparse-no-demo.patch)
-sha256sums=('acb4d1045f48a237e70294b950153e48dce5b5f9ca8190e86c2b8c54ce00a7ee'
+sha256sums=('fdd957ed06019465f7de73ce931afaf5d40e96e14ae57d91f60868b8c123c4c8'
             '409b32e546ec4936d0d88e39c59ee68dfd9f630d8c454ce1e3d58243df7ad396')
 
 prepare() {
