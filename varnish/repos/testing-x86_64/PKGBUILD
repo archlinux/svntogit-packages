@@ -1,0 +1,59 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
+# Contributor: Douglas Soares de Andrade
+# Contributor: Roberto Alsina <ralsina@kde.org>
+
+pkgname=varnish
+pkgver=7.1.0
+pkgrel=1
+pkgdesc="High-performance HTTP accelerator"
+arch=('x86_64')
+url="https://www.varnish-cache.org/"
+license=('BSD')
+depends=('gcc' 'libnsl' 'pcre2')
+makedepends=('python-docutils' 'python-sphinx' 'git')
+optdepends=('python: needed for vmod development')
+backup=('etc/varnish/default.vcl')
+install=$pkgname.install
+source=("https://varnish-cache.org/_downloads/varnish-$pkgver.tgz"
+        "git+https://github.com/varnishcache/pkg-varnish-cache.git#commit=a5df068")
+sha512sums=('ad9ce0cdc759976fcb7044914d28863edd197167f583fab2d1bc57f4e5b86c224b7c948faf1f7364a2a16bde9c415375d011462bdc43026c5f7a60e65bd21f73'
+            'SKIP')
+
+build() {
+  cd "varnish-$pkgver"
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var/lib \
+    --sbindir=/usr/bin
+
+  make
+}
+
+check() {
+  cd "varnish-$pkgver"
+
+  rm bin/varnishtest/tests/m00000.vtc
+  make check
+}
+
+package() {
+  cd "varnish-$pkgver"
+
+  make DESTDIR="$pkgdir" install
+
+  install -Dm644 "$srcdir/pkg-varnish-cache/systemd/varnish.service" "$pkgdir/usr/lib/systemd/system/varnish.service"
+  install -Dm644 "$srcdir/pkg-varnish-cache/systemd/varnishncsa.service" "$pkgdir/usr/lib/systemd/system/varnishncsa.service"
+  install -Dm755 "$srcdir/pkg-varnish-cache/systemd/varnishreload" "$pkgdir/usr/bin/varnishreload"
+  install -Dm755 "$srcdir/pkg-varnish-cache/systemd/varnish.logrotate" "$pkgdir/etc/logrotate.d/varnish"
+  install -Dm755 "$srcdir/pkg-varnish-cache/systemd/varnish.sysusers" "$pkgdir/usr/lib/sysusers.d/varnish.conf"
+
+  # config
+  install -Dm644 "etc/example.vcl" "$pkgdir/etc/varnish/default.vcl"
+
+  # license
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
