@@ -3,17 +3,17 @@
 
 pkgbase=gobject-introspection
 pkgname=(gobject-introspection gobject-introspection-runtime)
-pkgver=1.70.0
-pkgrel=5
+pkgver=1.72.0
+pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
+_glibver=2.72.0
 depends=(python-mako python-markdown)
-_glibver=2.70.2
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
-options=(!emptydirs)
-_commit=4502dd33da995e5e9e6d73aa996cf42e92c9e217  # tags/1.70.0^0
+options=(debug)
+_commit=c1ce7d179cfce327162bd206cdf2808bd9bd0cc7  # tags/1.72.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver")
 sha512sums=('SKIP'
@@ -22,14 +22,11 @@ validpgpkeys=('923B7025EE03C1C59F42684CF0942E894B2EAFA0') # Philip Withnall <phi
 
 pkgver() {
   cd $pkgbase
-  git describe --tags | sed 's/-/+/g'
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd $pkgbase
-
-  # Fix build with meson 0.61.0
-  git cherry-pick -n 827494d6415b696a effb1e09dee263cd
 }
   
 build() {
