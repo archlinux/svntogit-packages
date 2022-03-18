@@ -2,9 +2,9 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.2.3
+_qtver=6.2.4
 pkgver=${_qtver/-/}
-pkgrel=8
+pkgrel=1
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -18,7 +18,7 @@ options=(debug)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
         qt6-webengine-ffmpeg5.patch)
-sha256sums=('a72293b799a91189e12c91480d485d079cbce90b069439acf0bf81847cd02058'
+sha256sums=('2e3e96b7a0335b1f683fecf8863ff2930b1bed4df00ce2ff064fa26d0a49e2b1'
             'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693')
 
 prepare() {
