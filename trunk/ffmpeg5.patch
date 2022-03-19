@@ -50,24 +50,26 @@ index 5550164..a3b8de7 100644
  	m_codec_ctx->request_sample_fmt = AV_SAMPLE_FMT_S16;
  
  	ret = avcodec_open2(m_codec_ctx, codec, nullptr);
-@@ -278,7 +284,21 @@ inline bool FFmpegAudioReader::Read(const int16_t **data, size_t *size) {
+@@ -278,7 +284,23 @@ inline bool FFmpegAudioReader::Read(const int16_t **data, size_t *size) {
  			}
  		}
  
 +#if LIBAVCODEC_VERSION_MAJOR < 59
  		ret = avcodec_decode_audio4(m_codec_ctx, m_frame, &m_got_frame, &m_packet);
 +#else
-+		ret = avcodec_receive_frame(m_codec_ctx, m_frame);
-+		if (ret == 0)
-+			m_got_frame = true;
-+		if(ret == AVERROR(EAGAIN))
++		m_got_frame = 0;
++		ret = avcodec_send_packet(m_codec_ctx, &m_packet);
++		if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
 +			ret = 0;
-+		if (ret == 0)
-+			ret = avcodec_send_packet(m_codec_ctx, &m_packet);
-+		if (ret == AVERROR(EAGAIN))
++		if(ret >= 0) {
++			ret = avcodec_receive_frame(m_codec_ctx, m_frame);
++			if (ret == 0) {
++				m_got_frame = 1;
++				ret = m_packet.size;
++			}
++		}
++		if(ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
 +			ret = 0;
-+		if (ret >= 0)
-+			ret = m_packet.size;
 +#endif
  		if (ret < 0) {
  			if (m_decode_error) {
