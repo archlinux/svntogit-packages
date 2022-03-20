@@ -1,31 +1,30 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-tomli
-pkgver=2.0.0
+pkgver=2.0.1
 pkgrel=1
 pkgdesc="A lil' TOML parser"
 url="https://github.com/hukkin/tomli"
 license=('MIT')
 arch=('any')
 depends=('python')
-makedepends=('python-pyproject2setuppy')
-checkdepends=('python-pytest' 'python-dateutil')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/hukkin/tomli/archive/$pkgver.tar.gz")
-sha512sums=('dc7cdfadaca74f39dd6cb00686ec2e5b47b8ee3dbec9bd0a289a6ff78619cfdbf125adb6253d838f197722f4389690872a3ca870664b7785c19f3c2bb1a18231')
+makedepends=('python-build' 'python-installer' 'python-flit-core')
+source=("https://github.com/hukkin/tomli/archive/$pkgver/$pkgname-$pkgver.tar.gz")
+sha512sums=('a467f8d48cdbd7213bd9b6f85fd48ba142ab7c9656c40bb30785e1c4b37a9e29eaed420f183458ad20112baee8413ebbec87755332795c8f02235d1018c3aa5c')
 
 build() {
   cd tomli-$pkgver
-  python -m pyproject2setuppy.main build
+  python -m build -wn
 }
 
 check() {
   cd tomli-$pkgver
-  python -m pytest
+  PYTHONPATH="$PWD"/src python -m unittest
 }
 
 package() {
   cd tomli-$pkgver
-  python -m pyproject2setuppy.main install --root="$pkgdir" --optimize=1
+  python -m installer -d "$pkgdir" dist/*.whl
 
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
