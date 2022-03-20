@@ -1,0 +1,40 @@
+# Maintainer: Daniel Isenmann <daniel [at] archlinux.org>
+# Contributor: dorphell <dorphell@gmx.net>
+
+pkgname=gc
+pkgver=8.2.0
+pkgrel=3
+pkgdesc="A garbage collector for C and C++"
+arch=('x86_64')
+url="https://www.hboehm.info/gc/"
+license=('GPL')
+depends=('gcc-libs')
+source=(https://github.com/ivmai/bdwgc/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.gz
+        gc-missing-header.patch::https://github.com/ivmai/bdwgc/commit/c876dc2b.patch)
+sha512sums=('ff781360bca667f1f95fbfed073e9035f63134cac1bda4f7e4217664a3713c2846f750a3ce92732972c0435c69355b051f6e8eb6f2698b0d48d9107ff960bacf'
+            '489c121556d6a6fa25da8751676d39179643bfd187cb9f216a095ce606a43790e9348b5b2b7dded76650b33df61078c457150776532d08491a7f09e5a57013a8')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -p1 < ../gc-missing-header.patch # Install missing header
+  ./autogen.sh
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr --enable-cplusplus --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+  sed 's|GC_MALLOC 1L|gc 3|g' doc/gc.man |
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/man/man3/gc.3"
+}
