@@ -5,7 +5,7 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python-urllib3-doc)
-pkgver=1.26.8
+pkgver=1.26.9
 pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
@@ -17,21 +17,14 @@ makedepends=('python-setuptools' 'python-sphinx' 'python-ndg-httpsclient'
              'python-brotli' 'python-sphinx-furo')
 checkdepends=('python-pytest-runner' 'python-tornado' 'python-nose' 'python-psutil' 'python-trustme'
               'python-gcp-devrel-py-tools' 'python-flaky' 'python-dateutil')
-source=("https://github.com/urllib3/urllib3/archive/$pkgver/$pkgbase-$pkgver.tar.gz"
-        urllib3-use-brotli-or-brotli-cffi.patch::https://github.com/urllib3/urllib3/pull/2099.patch)
-sha512sums=('7ba3c3f48315d0f2ef3f2fbdef2b9e508a4af4e9c9f805b96bab2f47d5d35dc29672a16f2163a0ba375ea01bbc005052481ead37dfdcba18f22e90e03616b6d5'
-            '08b58960410a996b039eb3f46da252703055d79228733c65fbbe8d31fedd5b3956670230602deabf02407cac5f5d425b8d65bf3b16bdecd38f2541c6c9c82934')
-
-prepare() {
-  patch -d urllib3-$pkgver -p1 -i ../urllib3-use-brotli-or-brotli-cffi.patch || :
-  cp -a urllib3-$pkgver{,-py2}
-}
+source=("https://github.com/urllib3/urllib3/archive/$pkgver/$pkgbase-$pkgver.tar.gz")
+sha512sums=('328994450c2053681acf81d6dc6132b3d2408d728cb0e44f571d794f673fe212f2211142b26bacc1c5a076cc20c40e37cecbc3ffb5673b6399419b1345d0c0d2')
 
 build() {
-  cd "$srcdir"/urllib3-$pkgver
+  cd urllib3-$pkgver
   python setup.py build
 
-  cd "$srcdir"/urllib3-$pkgver/docs
+  cd docs
   make html
 }
 
@@ -50,7 +43,7 @@ package_python-urllib3() {
 
   cd urllib3-$pkgver
   python setup.py install --root="$pkgdir"
-  install -Dm644 LICENSE.txt "$pkgdir"/usr/share/licenses/$pkgname/LICENSE.txt
+  install -Dm644 LICENSE.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
 
 package_python-urllib3-doc() {
@@ -59,5 +52,5 @@ package_python-urllib3-doc() {
   cd urllib3-$pkgver/docs
   install -d "$pkgdir"/usr/share/doc
   cp -r _build/html "$pkgdir"/usr/share/doc/python-urllib3
-  install -Dm644 ../LICENSE.txt "$pkgdir"/usr/share/licenses/$pkgname/LICENSE.txt
+  install -Dm644 ../LICENSE.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
