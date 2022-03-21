@@ -1,13 +1,14 @@
 # Maintainer: Rémy Oudompheng <remy@archlinux.org>
 
 pkgname=texlive-core
-pkgver=2021.61403
+pkgver=2021.62793
 _revnr=${pkgver#2021.}
 pkgrel=1
 pkgdesc="TeX Live core distribution"
 license=('GPL')
 arch=(any)
 depends=('texlive-bin' 'perl')
+makedepends=('subversion')
 optdepends=(
   'dialog:      for texconfig'
   'ghostscript: for epstopdf, epspdf and other ConTeXt tools' 
@@ -17,6 +18,7 @@ optdepends=(
   'python:      for de-macro, dviasm, pythontex'
   'ruby:        for old ConTeXT MkII and epspdf'
   't1utils:     can be useful when installing Type1 fonts'
+  'wdiff:       for texdiff'
 )
 groups=('texlive-most')
 conflicts=('tetex' 'texlive-latex3' 'pdfjam'
@@ -30,6 +32,7 @@ replaces=('tetex' 'texlive-latex3' 'pdfjam'
           'texlive-plainextra')
 url='http://tug.org/texlive/'
 source=("https://sources.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip"
+        "texlive-man::svn://tug.org/texlive/tags/texlive-2021.3/Master/texmf-dist/doc/man#revision=${_revnr}"
         "$pkgname.maps"
         "$pkgname.fmts"
         "mktexlsr.hook"
@@ -53,7 +56,8 @@ backup=(etc/texmf/web2c/texmf.cnf \
 	etc/texmf/web2c/fmtutil.cnf \
 	etc/texmf/web2c/mktex.cnf \
 	etc/texmf/xdvi/XDvi)
-sha256sums=('6eff64808531e8064e84ef9177ad8f458f466ef88e499beb1a2bb0966f2219b0'
+sha256sums=('2b779f3acf87348736d28fb158c88c7b1c5c0eef8ca70c8fbd9b69e8b7c9fc96'
+            'SKIP'
             'bbed1c20c91daca967e344505b9dd4e502569365709ce6b87be5510c2ebb98ef'
             '09cbe0717c53078d30bdc378322f82e673dafbe7cf76a11e0a3c6dd54dcdfea3'
             'c76f01fe2a42e5860f7d0b2f16a4fc09101e1a14ea7488985e914cda749f1a21'
@@ -86,7 +90,7 @@ package() {
    install -m644 $pkgname.maps "$pkgdir"/var/lib/texmf/arch/installedpkgs/
    install -m644 $pkgname.fmts "$pkgdir"/var/lib/texmf/arch/installedpkgs/
    install -m755 -d "$pkgdir"/usr/share
-   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && [[ $d != texlive-man ]] && echo $d; done) || true
    for dir in $wanteddirs; do
      find $dir -type d -exec install -d -m755 "$pkgdir"/usr/share/texmf-dist/'{}' \;
      find $dir -type f -exec install -m644 '{}' "$pkgdir"/usr/share/texmf-dist/'{}' \;
@@ -299,6 +303,7 @@ texlive/updmap-user.sh
 texlive/updmap.pl
 texliveonfly/texliveonfly.py
 texloganalyser/texloganalyser
+texlogsieve/texlogsieve
 texplate/texplate.sh
 thumbpdf/thumbpdf.pl
 typeoutfileinfo/typeoutfileinfo.sh
@@ -307,10 +312,14 @@ xindy/texindy.pl
 xindy/xindy.pl
 "
     install -m755 -d "$pkgdir/usr/bin"
+    install -m755 -d "$pkgdir/usr/share/man/man1"
     for _script in ${_linked_scripts}; do
         _scriptbase=$(basename $_script)
         _scriptbase=${_scriptbase%.*}
         ln -s /usr/share/texmf-dist/scripts/${_script} "${pkgdir}/usr/bin/${_scriptbase}"
+        if [[ -f "$srcdir/texlive-man/man1/${_scriptbase}.1" ]]; then
+            install -m644 "$srcdir/texlive-man/man1/${_scriptbase}.1" "${pkgdir}/usr/share/man/man1/"
+        fi
     done
     ln -s /usr/share/texmf-dist/scripts/listings-ext/listings-ext.sh "${pkgdir}/usr/bin/listings-ext.sh"
 
@@ -326,4 +335,7 @@ xindy/xindy.pl
     ln -s mktexlsr "${pkgdir}"/usr/bin/texhash
     ln -s pdfcrop "${pkgdir}"/usr/bin/rpdfcrop
     ln -s texdef "${pkgdir}"/usr/bin/latexdef
+    for _scriptbase in allec kpsepath kpsexpand mktexfmt texhash; do
+        install -m644 "$srcdir/texlive-man/man1/${_scriptbase}.1" "${pkgdir}/usr/share/man/man1/"
+    done
 }
