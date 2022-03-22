@@ -1,7 +1,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
  
 pkgname=graphene
-pkgver=1.10.6
+pkgver=1.10.8
 pkgrel=1
 pkgdesc="A thin layer of graphic data types"
 url="https://ebassi.github.io/graphene/"
@@ -9,27 +9,33 @@ arch=(x86_64)
 license=(MIT)
 makedepends=(git gtk-doc gobject-introspection meson glib2)
 checkdepends=(python-gobject python-tappy)
-_commit=01c1b63e98c9191093880919fe6a8c4327515756  # tags/1.10.6^0
+options=(debug)
+_commit=4e2578450809c2099400cf85caf18eafcd7100aa  # tags/1.10.8^0
 source=("git+https://github.com/ebassi/graphene#commit=$_commit"
-        "git+https://github.com/ebassi/mutest")
+        "git+https://github.com/ebassi/mutest"
+        no-installed-tests.diff)
 sha256sums=('SKIP'
-            'SKIP')
+            'SKIP'
+            'fd7c41b25920077158d7de77f5d073e3a5a215c4d96c3b9bd016ffda615be4c4')
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  cd graphene
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd graphene
+
+  # Don't install tests
+  git apply -3 ../no-installed-tests.diff
 
   git submodule init
-  git config --local submodule.subprojects/mutest.url "$srcdir/mutest"
+  git submodule set-url subprojects/mutest "$srcdir/mutest"
   git submodule update
 }
 
 build() {
-  arch-meson $pkgname build \
+  arch-meson graphene build \
     -D gtk_doc=true \
     -D installed_tests=false
   meson compile -C build
@@ -43,8 +49,8 @@ package() {
   depends=(libg{lib,object}-2.0.so)
   provides=(libgraphene-1.0.so)
 
-  DESTDIR="$pkgdir" meson install -C build
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname/LICENSE.txt
+  meson install -C build --destdir "$pkgdir"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 graphene/LICENSE.txt
 }
 
 # vim:set sw=2 et:
