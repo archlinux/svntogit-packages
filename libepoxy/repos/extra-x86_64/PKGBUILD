@@ -1,30 +1,34 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Maintainer: Laurent Carlier <lordheavym@gmail.com>
 
-pkgname=libepoxy
-pkgver=1.5.9
+pkgbase=libepoxy
+pkgname=(libepoxy libepoxy-docs)
+pkgver=1.5.10
 pkgrel=1
 pkgdesc="Library handling OpenGL function pointer management"
 url="https://github.com/anholt/libepoxy"
 arch=(x86_64)
 license=(MIT)
 depends=(glibc)
-makedepends=(python mesa-libgl git meson doxygen graphviz)
+makedepends=(git meson mesa-libgl systemd doxygen graphviz)
 checkdepends=(xorg-server-xvfb)
-_commit=ecfa8e0f083084181d36966fa084aca9a6c97d53  # tags/1.5.9^0
+options=(debug)
+_commit=c84bc9459357a40e46e2fec0408d04fbdde2c973  # tags/1.5.10^0
 source=("git+https://github.com/anholt/libepoxy#commit=$_commit")
 sha256sums=('SKIP')
+validpgpkeys=('53EF3DC3B63E2899271BD26322E8091EEA11BBB7') # Emmanuele Bassi <ebassi@gnome.org>
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  cd libepoxy
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd libepoxy
 }
 
 build() {
-  arch-meson $pkgname build -D docs=true
+  arch-meson libepoxy build -D docs=true
   meson compile -C build
 }
 
@@ -33,9 +37,24 @@ check() {
     meson test -C build --print-errorlogs
 }
 
-package() {
+package_libepoxy() {
+  provides=(libepoxy.so)
+
   meson install -C build --destdir "$pkgdir"
-  install -Dm644 $pkgname/COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 libepoxy/COPYING
+}
+
+package_libepoxy-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 libepoxy/COPYING
 }
 
 # vim:set sw=2 et:
