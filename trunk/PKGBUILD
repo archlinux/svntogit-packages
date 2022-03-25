@@ -4,14 +4,15 @@
 
 pkgname=openconnect
 pkgver=8.20
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc='Open client for Cisco AnyConnect VPN'
 url='https://www.infradead.org/openconnect/'
 arch=('x86_64')
 license=('LGPL2.1')
 depends=('libxml2' 'gnutls' 'libproxy' 'vpnc' 'krb5' 'lz4' 'pcsclite'
-         'stoken' 'libstoken.so')
+         'stoken' 'libstoken.so' 'tpm2-tss' 'libtss2-esys.so'
+         'libtss2-mu.so' 'libtss2-tctildr.so')
 makedepends=('intltool' 'python')
 optdepends=('python: tncc-wrapper')
 provides=('libopenconnect.so')
