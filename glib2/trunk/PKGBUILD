@@ -51,7 +51,8 @@ package_glib2() {
   provides+=(libgio-2.0.so libglib-2.0.so libgmodule-2.0.so libgobject-2.0.so
              libgthread-2.0.so)
   optdepends=('python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
-              'libelf: gresource inspection tool')
+              'libelf: gresource inspection tool'
+              'gvfs: most gio functionality')
 
   meson install -C build --destdir "$pkgdir"
 
