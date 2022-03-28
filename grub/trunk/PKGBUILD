@@ -22,7 +22,7 @@ _tag='53c5000739db114c229fe69ec3d4b76b92441098' # git rev-parse grub-${_pkgver}
 _unifont_ver='14.0.02'
 _pkgver=2.06
 pkgver=${_pkgver/-/}
-pkgrel=4
+pkgrel=5
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -77,6 +77,9 @@ sha256sums=('SKIP'
 _backports=(
 	# fs/xfs: Fix unreadable filesystem with v4 superblock
 	'a4b495520e4dc41a896a8b916a64eda9970c50ea'
+
+	# fs/btrfs: Use full btrfs bootloader area
+	'b0f06a81c6f31b6fa20be67a96b6683bba8210c9'
 )
 
 _configure_options=(
