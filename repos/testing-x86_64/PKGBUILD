@@ -1,0 +1,47 @@
+# Maintainer: Jelle van der Waa <jelle@dwaa.nl>
+
+pkgname=prometheus-blackbox-exporter
+pkgver=0.20.0
+pkgrel=2
+pkgdesc="Allows blackbox probing of endpoints over HTTP, HTTPS, DNS, TCP and ICMP"
+arch=('x86_64')
+url="https://github.com/prometheus/blackbox_exporter"
+license=('Apache')
+depends=(glibc)
+makedepends=(go git)
+options=(!lto)
+backup=('etc/conf.d/prometheus-blackbox-exporter')
+source=($pkgname-$pkgver.tar.gz::https://github.com/prometheus/blackbox_exporter/archive/v${pkgver}.tar.gz
+        prometheus-blackbox-exporter.service
+        prometheus-blackbox-exporter.conf)
+sha512sums=('62aabcdc7a740521959e9187dcb24be4c8c09c55c60b510efbc9991d37d9a87adf1e11b4577b72c74d14a96c066e09d935a32e4b2ae82d7e2b2ea63b48f31358'
+            '72747736e4783e313acb4cb917c3311ed736d69e9b22799132b4aad46b50072f3664c6377c271e720c3e620ab2a6db48110f8d92cc62cf7674cafc32fd1fb2e4'
+            '4cf607e698801396cd7cbde9371b6bc504c7e2ad62e127bccca098222be052e2a312490d93c7ba63304defbb40bc156fc76c79097c6b71bde243d834c02ed2cd')
+
+check() {
+  cd blackbox_exporter-$pkgver
+  go test ./...
+}
+
+build() {
+  cd blackbox_exporter-$pkgver
+  go build \
+    -trimpath \
+    -buildmode=pie \
+    -mod=readonly \
+    -modcacherw \
+    -ldflags "-linkmode external -extldflags ${LDFLAGS} \
+      -X github.com/prometheus/common/version.Version=$pkgver \
+      -X github.com/prometheus/common/version.Revision=$pkgver \
+      -X github.com/prometheus/common/version.Branch=tarball \
+      -X github.com/prometheus/common/version.BuildUser=someone@builder \
+      -X github.com/prometheus/common/version.BuildDate=$(date --date=@"$SOURCE_DATE_EPOCH" +%Y%m%d-%H:%M:%S)" \
+    .
+}
+
+package() {
+  install -Dm644 prometheus-blackbox-exporter.conf "$pkgdir"/etc/conf.d/prometheus-blackbox-exporter
+  install -Dm644 prometheus-blackbox-exporter.service "$pkgdir"/usr/lib/systemd/system/prometheus-blackbox-exporter.service
+  cd blackbox_exporter-$pkgver
+  install -Dm755 blackbox_exporter "$pkgdir"/usr/bin/prometheus-blackbox-exporter
+}
