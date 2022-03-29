@@ -2,8 +2,8 @@
 
 pkgbase=ghostscript
 pkgname=(ghostscript ghostxps ghostpcl)
-pkgver=9.55.0
-pkgrel=4
+pkgver=9.56.0
+pkgrel=1
 pkgdesc="An interpreter for the PostScript language"
 url="https://www.ghostscript.com/"
 arch=('x86_64')
@@ -16,10 +16,10 @@ options=('debug')
 source=(https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs${pkgver//./}/ghostpdl-${pkgver}.tar.xz
         #https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/ghostpdl-${pkgver/.0//}/ghostpdl-${pkgver}.tar.xz
         2010_add_build_timestamp_setting.patch
-        fix-gx_default_copy_alpha.patch::"https://git.ghostscript.com/?p=ghostpdl.git;a=patch;h=d9d8db23e862707795e76ea8f8cdcf7434b2df65")
-sha512sums=('d23864be1548ce7c7ae61398f52c34c5485dfe74e78bf7ef16c8fa5690e2ea857cc9795409a70feda5ff78c27b3c2bbc0e0710d190763fca77137ee9c56a0fed'
+        https://github.com/ArtifexSoftware/ghostpdl/commit/9aae213ff3ae971942b427062799b009c07ea713.patch)
+sha512sums=('213aaa844533fe28ffde0008ff6e8ae10096efddf480c236407668a6445ef2c146557af8da05d9664f44ff53bd31809e89178dfe464763365a1af9de49edf507'
             'cd7794ee4f28b11177021b950196385200b610127ed6cb94a45e3202b690b721a0dfcc0276ff39448d4dab64c1b31a76e6c323696a8315aad9edc22077f18a3d'
-            '94a63b2d33cf1412bfba75d4cab31c5d6f00846b2e608ad82200ff0d55a11bb80d827c12d4edd1f38cef029cae6cdcd5e39cd98791a17bf356119ba8f74fd0a9')
+            '530a03f3d333a6c45cc024b5ebd57138b4f7fbff8069e8a81f3015aed9d553b1294e529f57e4123d20442e896dde780c120f438e61c1e3a6436d90c03580e982')
 
 ### update jbig2dec first! ###
 
@@ -63,8 +63,8 @@ prepare() {
   # Debian: # allow the build timestamp to be externally set
   patch -Np1 -i ../2010_add_build_timestamp_setting.patch
 
-  # Fix build of asymptote
-  patch -Np1 -i ../fix-gx_default_copy_alpha.patch
+  # Revert patch breaking build of GTK gsx
+  patch -Rp1 -i ../9aae213ff3ae971942b427062799b009c07ea713.patch
 }
 
 build() {
@@ -90,7 +90,8 @@ package_ghostscript() {
               'gtk3:              needed for gsx')
 
   cd ghostpdl-${pkgver}
-  make DESTDIR="${pkgdir}"  install-gs install-so-gs
+  make DESTDIR="${pkgdir}" install-gs install-so-gs
+
   # replace statically linked gs binary with symlink to dynamically linked gsc
   rm -v "${pkgdir}"/usr/bin/gs
   ln -s gsc "${pkgdir}"/usr/bin/gs
@@ -108,11 +109,11 @@ package_ghostxps() {
   cd ghostpdl-${pkgver}
   make DESTDIR="${pkgdir}" install-gxps install-so-gxps
   rm -r "${pkgdir}"/usr/include
-  
-  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
 
   # fix file conflict - FS#70238
   rm -r "${pkgdir}"/usr/lib/libgxps.so
+  
+  install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
 }
 
 package_ghostpcl() {
