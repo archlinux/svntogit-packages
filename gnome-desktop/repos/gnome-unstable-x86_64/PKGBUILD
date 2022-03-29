@@ -1,0 +1,93 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jan@archlinux.org>
+
+pkgbase=gnome-desktop
+pkgname=(gnome-desktop-common gnome-desktop gnome-desktop-4)
+pkgver=42.0
+pkgrel=1
+epoch=1
+pkgdesc="Library with common API for various GNOME modules"
+url="https://gitlab.gnome.org/GNOME/gnome-desktop"
+arch=(x86_64)
+license=(GPL LGPL)
+makedepends=(gobject-introspection git meson gtk-doc yelp-tools
+             gsettings-desktop-schemas gtk3 gtk4 xkeyboard-config iso-codes
+             libseccomp bubblewrap systemd libxkbcommon)
+checkdepends=(xorg-server-xvfb)
+options=(debug)
+_commit=c3e756b28ddfeda0fa061d51cb11e47e09791770  # tags/42.0^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-desktop.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+}
+
+build() {
+  arch-meson $pkgbase build \
+    -D gnome_distributor="Arch Linux" \
+    -D gtk_doc=true \
+    -D debug_tools=false \
+    -D date_in_gnome_version=false
+  meson compile -C build
+}
+
+check() {
+  dbus-run-session xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_gnome-desktop-common() {
+  pkgdesc+=" (common files)"
+  depends=(gsettings-desktop-schemas xkeyboard-config iso-codes libseccomp
+           bubblewrap systemd libxkbcommon)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick gtk3 usr/include/gnome-desktop-3.0
+  _pick gtk3 usr/lib/libgnome-desktop-3.so*
+  _pick gtk3 usr/lib/pkgconfig/gnome-desktop-3.0.pc
+  _pick gtk3 usr/lib/girepository-1.0/GnomeDesktop-3.0.typelib
+  _pick gtk3 usr/share/gir-1.0/GnomeDesktop-3.0.gir
+
+  _pick gtk4 usr/include/gnome-desktop-4.0
+  _pick gtk4 usr/lib/libgnome-*-4.so*
+  _pick gtk4 usr/lib/pkgconfig/gnome-*-4.pc
+  _pick gtk4 usr/lib/girepository-1.0/Gnome*-4.0.typelib
+  _pick gtk4 usr/share/gir-1.0/Gnome*-4.0.gir
+}
+
+package_gnome-desktop() {
+  pkgdesc+=" (GTK3)"
+  depends=(gnome-desktop-common="$epoch:$pkgver-$pkgrel" gtk3)
+  provides=(libgnome-desktop-3.so)
+
+  mv gtk3/* "$pkgdir"
+}
+
+package_gnome-desktop-4() {
+  pkgdesc+=" (GTK4)"
+  depends=(gnome-desktop-common="$epoch:$pkgver-$pkgrel" gtk4)
+  provides=(libgnome-{bg,desktop,rr}-4.so)
+
+  mv gtk4/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
