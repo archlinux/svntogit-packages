@@ -1,0 +1,97 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=freetype2
+pkgname=(freetype2 freetype2-demos freetype2-docs)
+pkgver=2.12.0
+pkgrel=1
+pkgdesc="Font rasterization library"
+url="https://www.freetype.org/"
+arch=(x86_64)
+license=(GPL)
+# adding harfbuzz for improved OpenType features auto-hinting
+# introduces a cycle dep to harfbuzz depending on freetype wanted by upstream
+depends=(zlib bzip2 sh libpng harfbuzz brotli)
+makedepends=(libx11 qt5-base meson librsvg)
+options=(debug)
+source=(https://download-mirror.savannah.gnu.org/releases/freetype/freetype-$pkgver.tar.xz{,.sig}
+        https://download-mirror.savannah.gnu.org/releases/freetype/freetype-doc-$pkgver.tar.xz{,.sig}
+        https://download-mirror.savannah.gnu.org/releases/freetype/ft2demos-$pkgver.tar.xz{,.sig}
+        0001-Enable-table-validation-modules.patch
+        0002-Enable-subpixel-rendering.patch
+        0003-Enable-infinality-subpixel-hinting.patch
+        0004-Enable-long-PCF-family-names.patch
+        freetype2.sh)
+sha256sums=('ef5c336aacc1a079ff9262d6308d6c2a066dd4d2a905301c4adda9b354399033'
+            'SKIP'
+            '22cf273cba41da07b7414a82a3ae701df1239e29928f0b8c42d08c5ef98dc01d'
+            'SKIP'
+            'dbc7ecaebc8c1658e4cc9e04e5978bba35375f664e87b857ca67451ab6b372d3'
+            'SKIP'
+            '12c869eeba212c74d07d3d7815848b047ecb5282d5463dffb3bb6d219315d4da'
+            '2497dcb3650271db9bb7ad4f3379b5b3c6a19f5ca5388dd9ba7d42b5c15c8c4f'
+            'caa0bc7d3dfa3b4c6b9beecda6141405dafe540f99a655dc83d1704fa232ac20'
+            '8bf978cd1abd73f54c53f7d214c368b1fd8921cd9800d2cc84427c662ffbbdcb'
+            'f7f8e09c44f7552c883846e9a6a1efc50377c4932234e74adc4a8ff750606467')
+validpgpkeys=(E30674707856409FF1948010BE6C3AAC63AD8E3F) # Werner Lemberg <wl@gnu.org>
+
+prepare() {
+  ln -sr freetype-$pkgver ft2demos-$pkgver/subprojects/freetype2
+
+  cd freetype-$pkgver
+  patch -Np1 -i ../0001-Enable-table-validation-modules.patch
+  patch -Np1 -i ../0002-Enable-subpixel-rendering.patch
+  patch -Np1 -i ../0003-Enable-infinality-subpixel-hinting.patch
+  patch -Np1 -i ../0004-Enable-long-PCF-family-names.patch
+}
+
+build() {
+  arch-meson ft2demos-$pkgver build \
+    -D freetype2:default_library=shared
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_freetype2() {
+  provides=(libfreetype.so)
+  install=freetype2.install
+  backup=(etc/profile.d/freetype2.sh)
+
+  meson install -C build --destdir="$pkgdir"
+  install -Dt "$pkgdir/etc/profile.d" -m644 freetype2.sh
+  install -Dt "$pkgdir/usr/share/aclocal" -m644 \
+    freetype-$pkgver/builds/unix/freetype2.m4
+
+  _pick demos "$pkgdir"/usr/bin
+  _pick demos "$pkgdir"/usr/share/man/man1
+}
+
+package_freetype2-demos() {
+  pkgdesc="Freetype tools and demos"
+  depends=(freetype2 libx11 librsvg)
+  optdepends=('qt5-base: ftinspect')
+  mv demos/* "$pkgdir"
+}
+
+package_freetype2-docs() {
+  pkgdesc="Freetype documentation"
+  depends=(freetype2)
+
+  mkdir -p "${pkgdir}/usr/share/doc"
+  cp -r freetype-$pkgver/docs "$pkgdir/usr/share/doc/$pkgbase"
+}
+
+# vim:set sw=2 et:
