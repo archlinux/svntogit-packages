@@ -2,13 +2,14 @@
 
 pkgname=krb5
 _pkgvermajor=1.19
-pkgver=1.19.2
-pkgrel=2
+pkgver=1.19.3
+pkgrel=1
 pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
 arch=('x86_64')
 license=('custom')
-depends=('glibc' 'e2fsprogs' 'libss.so' 'libcom_err.so' 'libldap' 'keyutils')
+depends=('glibc' 'e2fsprogs' 'libldap' 'keyutils'
+         libkeyutils.so libss.so libcom_err.so)
 makedepends=('perl')
 provides=(
   libgssapi_krb5.so
@@ -35,7 +36,7 @@ source=(https://web.mit.edu/kerberos/dist/krb5/${_pkgvermajor}/${pkgname}-${pkgv
         krb5-kpropd.service
         krb5-kpropd@.service
         krb5-kpropd.socket)
-sha512sums=('b90d6ed0e1e8a87eb5cb2c36d88b823a6a6caabf85e5d419adb8a930f7eea09a5f8491464e7e454cca7ba88be09d19415962fe0036ad2e31fc584f9fc0bbd470'
+sha512sums=('18235440d6f7d8a72c5d7ca5cd8c6465e8adf091d85c483225c7b00d64b4688c1c7924cb800c2fc17e590b2709f1a9de48e6ec79f6debd11dcb7d6fa16c6f351'
             'SKIP'
             '5a3782ff17b383f8cd0415fd13538ab56afd788130d6ad640e9f2682b7deaae7f25713ce358058ed771091040dccf62a3bc87e6fd473d505ec189a95debcc801'
             'ae1fa980e8e30a83dfef7fe233be70a9ec530ebaffc344a0e7eba61e7de4c800421b45cf203f1e526cc8351754038d6539184b30aa049a567e2a9e80f0d39841'
