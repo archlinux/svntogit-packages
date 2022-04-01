@@ -1,0 +1,82 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=libsecret
+pkgname=(libsecret libsecret-docs)
+pkgver=0.20.5
+pkgrel=2
+pkgdesc="Library for storing and retrieving passwords and other secrets"
+url="https://wiki.gnome.org/Projects/Libsecret"
+arch=(x86_64)
+license=(LGPL)
+depends=(glib2 libgcrypt tpm2-tss)
+makedepends=(gobject-introspection vala git meson gi-docgen bash-completion)
+checkdepends=(python-dbus python-gobject gjs swtpm tpm2-abrmd)
+options=(debug)
+_commit=d64530ac70d9723945d68ca079293ea0f9df9e9f  # tags/0.20.5^0
+source=("git+https://gitlab.gnome.org/GNOME/libsecret.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+
+  # Secure memory tests fail in containers
+  sed -i '/test-secmem/d' egg/meson.build
+}
+
+build() {
+  arch-meson $pkgbase build -D tpm2=true
+  meson compile -C build
+}
+
+_check() (
+  mkdir -p "${TPM_PATH:=$PWD/tpm}"
+  export TPM_PATH
+
+  swtpm_setup --create-config-files
+  swtpm_setup --tpm2 --tpm-state "$TPM_PATH" --createek --allow-signing \
+    --decryption --overwrite --display
+
+  swtpm socket --tpm2 --flags startup-clear \
+    --server type=unixio,path="$TPM_PATH/socket" \
+    --ctrl type=unixio,path="$TPM_PATH/socket.ctrl" &
+  _p1=$!
+
+  tpm2-abrmd --tcti=swtpm:path="$TPM_PATH/socket" \
+    --session --flush-all &
+  _p2=$!
+
+  trap "kill $_p1 $_p2; wait" EXIT
+
+  export TCTI=tabrmd:bus_type=session
+
+  meson test -C build --print-errorlogs
+)
+
+check() {
+  dbus-run-session bash -c "$(declare -f _check); _check"
+}
+
+package_libsecret() {
+  optdepends=('org.freedesktop.secrets: secret storage backend')
+  provides=(libsecret-1.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+}
+
+package_libsecret-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
