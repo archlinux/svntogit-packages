@@ -2,17 +2,18 @@
 # Contributor: Ronald van Haren <ronald.archlinux.org>
 # Contributor: Damir Perisa <damir@archlinux.org>
 
-pkgname=maxima
+pkgbase=maxima
+pkgname=($pkgbase{,-sbcl,-ecl,-fas})
 pkgver=5.45.1
 _sbclver=2.2.2
 _eclver=21.2.1
-pkgrel=9
+pkgrel=10
 pkgdesc='A sophisticated computer algebra system'
 arch=(x86_64)
 license=(GPL)
 url='http://maxima.sourceforge.net'
-depends=(sbcl=$_sbclver texinfo shared-mime-info)
-makedepends=(python emacs ecl)
+depends=(texinfo shared-mime-info)
+makedepends=(python emacs ecl sbcl)
 optdepends=('gnuplot: plotting capabilities'
             'rlwrap: readline support via /usr/bin/rmaxima'
             'tk: graphical xmaxima interface' 
@@ -20,7 +21,7 @@ optdepends=('gnuplot: plotting capabilities'
 provides=(maxima-ecl)
 replaces=(maxima-ecl)
 # needs rebuild when bash changes version
-# needs a rebuild when sbcl changes version
+# needs a rebuild when ecl or sbcl changes version
 options=(!zipman) # don't zip info pages or they won't work inside maxima
 source=(https://downloads.sourceforge.net/sourceforge/$pkgname/$pkgname-$pkgver.tar.gz
         build-fasl.patch
@@ -38,7 +39,7 @@ prepare() {
 }
 
 build() {
-  cd $pkgname-$pkgver
+  cd $pkgbase-$pkgver
   ./configure \
     --prefix=/usr \
     --mandir=/usr/share/man \
@@ -58,10 +59,35 @@ build() {
 #  make check
 #}
 
-package() {
-  cd $pkgname-$pkgver
+package_maxima() {
+  depends+=(maxima-backend)
+
+  cd $pkgbase-$pkgver
   make DESTDIR="$pkgdir" emacsdir=/usr/share/emacs/site-lisp/maxima install
 
-# Install FAS module for sagemath
-  install -Dm644 src/binary-ecl/maxima.fas -t "$pkgdir"/usr/lib/ecl-$_eclver
+# Remove backends
+  rm -r "$pkgdir"/usr/lib/maxima/$pkgver/binary-*
+}
+
+package_maxima-sbcl() {
+  pkgdesc='SBCL backend for Maxima'
+  depends=(gmp sbcl=$_sbclver)
+  provides=(maxima-backend)
+
+  install -Dm755 $pkgbase-$pkgver/src/binary-sbcl/maxima.core -t "$pkgdir"/usr/lib/maxima/$pkgver/binary-sbcl
+}
+
+package_maxima-ecl() {
+  pkgdesc='ECL backend for Maxima'
+  depends=(ecl=$_eclver)
+  provides=(maxima-backend)
+
+  install -Dm755 $pkgbase-$pkgver/src/binary-ecl/maxima -t "$pkgdir"/usr/lib/maxima/$pkgver/binary-ecl
+}
+
+package_maxima-fas() {
+  pkgdesc='Maxima FAS module for ECL'
+  depends=(ecl=$_eclver maxima)
+
+  install -Dm644 $pkgbase-$pkgver/src/binary-ecl/maxima.fas -t "$pkgdir"/usr/lib/ecl-$_eclver
 }
