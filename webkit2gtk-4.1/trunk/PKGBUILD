@@ -3,7 +3,7 @@
 
 pkgname=webkit2gtk-4.1
 pkgver=2.36.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Web content engine for GTK"
 url="https://webkitgtk.org"
 arch=(x86_64)
@@ -20,7 +20,7 @@ optdepends=('geoclue: Geolocation support'
             'gst-plugins-good: media decoding'
             'gst-plugins-bad: media decoding'
             'gst-libav: nonfree media decoding')
-options=(!lto)
+options=(debug)
 source=($url/releases/webkitgtk-$pkgver.tar.xz{,.asc})
 sha256sums=('b877cca1f105235f5dd57c7ac2b2c2be3c6b691ff444f93925c7254cf156c64d'
             'SKIP')
@@ -32,6 +32,11 @@ prepare() {
 }
 
 build() {
+  # Produce minimal debug info: 4.3 GB of debug data makes the
+  # build too slow and is too much to package for debuginfod
+  CFLAGS+=' -g1'
+  CXXFLAGS+=' -g1'
+
   cmake -S webkitgtk-$pkgver -B build -G Ninja \
     -DPORT=GTK \
     -DCMAKE_BUILD_TYPE=Release \
@@ -39,6 +44,7 @@ build() {
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DCMAKE_SKIP_RPATH=ON \
+    -DUSE_SOUP2=OFF \
     -DENABLE_GTKDOC=ON \
     -DENABLE_MINIBROWSER=ON
   cmake --build build
