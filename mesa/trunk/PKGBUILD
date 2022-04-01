@@ -7,7 +7,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=22.0.1
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -15,6 +15,7 @@ makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence
              'valgrind' 'glslang' 'vulkan-icd-loader' 'directx-headers' 'cmake' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
+options=('debug')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
         LICENSE)
 sha512sums=('cc8012b8f3fcbecfbb153d0e009e6522c3776023501da8499c06f1eaa9ab0a555ca597e16e4d7a2b954b05c8c0737ae6567e0d8549fb63aa86ae587eb31cd01e'
@@ -33,8 +34,11 @@ prepare() {
 }
 
 build() {
+  # Build only minimal debug info to reduce size
+  CFLAGS+=' -g1'
+  CXXFLAGS+=' -g1'
+
   arch-meson mesa-$pkgver build \
-    -D b_lto=true \
     -D b_ndebug=true \
     -D platforms=x11,wayland \
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,iris,crocus,zink,d3d12 \
