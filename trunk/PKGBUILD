@@ -3,8 +3,8 @@
 
 pkgbase=gdm
 pkgname=(gdm libgdm)
-pkgver=41.3
-pkgrel=2
+pkgver=42.0
+pkgrel=1
 pkgdesc="Display manager and login screen"
 url="https://wiki.gnome.org/Projects/GDM"
 arch=(x86_64)
@@ -13,7 +13,8 @@ depends=(gnome-shell gnome-session upower xorg-xrdb xorg-server xorg-xhost
          libxdmcp systemd libcanberra)
 makedepends=(yelp-tools gobject-introspection git docbook-xsl meson)
 checkdepends=(check)
-_commit=cb49bac2fe1160094eae360f985e54073be3c49a  # tags/41.3^0
+options=(debug)
+_commit=55f5724789f9f8e85af310c69d8f7096b8e730e8  # tags/42.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gdm.git#commit=$_commit"
         0001-Xsession-Don-t-start-ssh-agent-by-default.patch)
 sha256sums=('SKIP'
@@ -21,7 +22,7 @@ sha256sums=('SKIP'
 
 pkgver() {
   cd gdm
-  git describe --tags | sed 's/\.rc/rc/;s/[^-]*-g/r&/;s/-/+/g'
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
