@@ -1,0 +1,71 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=gnome-builder
+pkgname=(gnome-builder gnome-builder-libide-docs)
+pkgver=42.0+r12+gfd803f606
+pkgrel=1
+pkgdesc="An IDE for writing GNOME-based software"
+url="https://wiki.gnome.org/Apps/Builder"
+arch=(x86_64)
+license=(GPL3)
+depends=(gtksourceview4 devhelp libgit2-glib gjs python-gobject sysprof
+         desktop-file-utils ctags libpeas vte3 vala autoconf-archive libhandy
+         gspell libdazzle template-glib jsonrpc-glib python-sphinx webkit2gtk
+         glade python-lxml meson libportal-gtk3 cmark clang flatpak-builder)
+makedepends=(llvm gobject-introspection gi-docgen yelp-tools appstream-glib git
+             mm-common python-sphinx_rtd_theme jedi-language-server)
+checkdepends=(xorg-server-xvfb)
+options=(debug)
+_commit=fd803f606f6bc5ea7af5a3fdbf325a1f0165c212  # gnome-builder-42
+source=("git+https://gitlab.gnome.org/GNOME/gnome-builder.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+}
+
+build() {
+  arch-meson $pkgbase build \
+    -D docs=true \
+    -D help=true
+  meson compile -C build
+}
+
+check() {
+  dbus-run-session xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_gnome-builder() {
+  depends+=(libgladeui-2.so)
+  optdepends=('gnome-code-assistance: Legacy assistance services'
+              'jedi-language-server: Python code assistance')
+  groups=(gnome-extra)
+
+  meson install -C build --destdir "$pkgdir"
+
+  _pick libide-docs "$pkgdir"/usr/share/doc/libide
+}
+
+package_gnome-builder-libide-docs() {
+  pkgdesc+=" (libide API documentation)"
+  depends=()
+  mv libide-docs/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
