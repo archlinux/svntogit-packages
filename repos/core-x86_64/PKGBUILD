@@ -3,13 +3,14 @@
 
 pkgname=mdadm
 pkgver=4.2
-pkgrel=1
+pkgrel=2
 pkgdesc='A tool for managing/monitoring Linux md device arrays, also known as Software RAID'
 arch=('x86_64')
 license=('GPL')
 url='https://git.kernel.org/pub/scm/utils/mdadm'
 makedepends=('git')
 depends=('glibc' 'systemd')
+optdepends=('bash: mdcheck')
 replaces=('raidtools')
 backup=('etc/mdadm.conf')
 validpgpkeys=('6A86B80E1D22F21D0B26BA75397D82E0531A9C91') # Jes Sorensen
@@ -39,5 +40,6 @@ package() {
   make SYSTEMD_DIR="$pkgdir"/usr/lib/systemd/system install-systemd
   install -D -m644 ../mdadm.conf "$pkgdir"/etc/mdadm.conf
   install -D -m644 ../mdadm_udev_install "$pkgdir"/usr/lib/initcpio/install/mdadm_udev
+  install -D -m755 misc/mdcheck "$pkgdir"/usr/share/mdadm/mdcheck
   ln -s mdadm_udev "$pkgdir"/usr/lib/initcpio/install/mdadm
 }
