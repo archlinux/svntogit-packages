@@ -3,13 +3,13 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=98.0.2
+pkgver=99.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
 url="https://www.mozilla.org/firefox/"
-depends=(gtk3 libxt mime-types dbus-glib ffmpeg4.4 nss ttf-font libpulse)
+depends=(gtk3 libxt mime-types dbus-glib ffmpeg nss ttf-font libpulse)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils xorg-server-xvfb
              autoconf2.13 rust clang llvm jack nodejs cbindgen nasm
              python-setuptools python-psutil python-zstandard lld dump_syms
@@ -23,7 +23,7 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('c144b6016aaa8ceab8154b9f0b2bbeee6cbc22ab7f811fcece28d36e49565890'
+sha256sums=('513f8d2cafa39a2d50f2c4a25cc48093e89f715a706b941170fa48e397976327'
             'SKIP'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
