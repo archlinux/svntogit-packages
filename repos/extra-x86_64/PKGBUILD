@@ -4,7 +4,7 @@
 pkgname=qt6-webengine
 _qtver=6.2.4
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -17,12 +17,15 @@ groups=(qt6)
 options=(debug)
 _pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
-        qt6-webengine-ffmpeg5.patch)
+        qt6-webengine-ffmpeg5.patch
+        https://download.qt.io/official_releases/qt/6.2/CVE-2022-1096-qtwebengine-6.2.diff)
 sha256sums=('2e3e96b7a0335b1f683fecf8863ff2930b1bed4df00ce2ff064fa26d0a49e2b1'
-            'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693')
+            'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693'
+            '331117c3aebe6ae35a630e743a3e03018e66347a2a44d39963c383f083763008')
 
 prepare() {
   patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
+  patch -d $_pkgfn -p1 < CVE-2022-1096-qtwebengine-6.2.diff
 }
 
 build() {
