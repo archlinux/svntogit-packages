@@ -1,30 +1,35 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Fabian Bornschein <fabiscafe-cat-mailbox-dog-org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.42.4
+pkgver=3.44.0
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
 arch=(x86_64)
 license=(GPL)
-depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef
-         dconf gspell libcryptui gnome-autoar)
+depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef gspell
+         libcryptui gnome-autoar libgweather-4 enchant cmark)
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
-options=(!emptydirs)
-_commit=76d1a3c05dbd24436e28bdd0b7e6f2300c5c28a6  # tags/3.42.4^0
+options=(!emptydirs debug)
+_commit=0839b6f5b459b2fdd79e1fcf385b8d5c7759135f  # tags/3.44.0^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgbase
-  git describe --tags | sed 's/^EVOLUTION_//;s/_/./g;s/-/+/g'
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd $pkgbase
+
+  # https://gitlab.gnome.org/GNOME/evolution/-/issues/1835
+  # Mail: Preview uses wrong colors for HTML mail with dark theme
+  git cherry-pick -n dea447327f92ea1617f1f852658326dc8852e721
 }
 
 build() {
@@ -33,7 +38,8 @@ build() {
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
     -DSYSCONF_INSTALL_DIR=/etc \
     -DENABLE_SMIME=ON \
-    -DENABLE_GTK_DOC=ON
+    -DENABLE_GTK_DOC=ON \
+    -DWITH_GWEATHER4=ON
   cmake --build build
 }
 
