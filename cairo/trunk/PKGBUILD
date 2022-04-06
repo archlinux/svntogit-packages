@@ -14,10 +14,8 @@ depends=(lzo zlib libpng fontconfig freetype2 libx11 libxext libxrender libxcb
 makedepends=(valgrind git meson gtk-doc)
 options=(debug)
 _commit=b43e7c6f3cf7855e16170a06d3a9c7234c60ca94  # tags/1.17.6^0
-source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit"
-        0001-Fix-type1-subset-indexing.patch)
-sha256sums=('SKIP'
-            '296be3c73638314bea08fa51b5f1650ea0a2aab2a037ea55e41c319d64ca4c3c')
+source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit")
+sha256sums=('SKIP')
 
 pkgver() {
   cd cairo
@@ -27,8 +25,8 @@ pkgver() {
 prepare() {
   cd cairo
 
-  # FS#74354
-  patch -Np1 -i ../0001-Fix-type1-subset-indexing.patch
+  # https://bugs.archlinux.org/task/74354
+  git cherry-pick -n ff4fd6f960deb7afdac233465a1f4e807234ad15
 }
 
 build() {
