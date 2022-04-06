@@ -2,38 +2,45 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=yelp
-pkgver=41.2
-pkgrel=1
+pkgver=42.1
+pkgrel=2
 pkgdesc="Get help with GNOME"
 url="https://wiki.gnome.org/Apps/Yelp"
 license=(GPL)
 arch=(x86_64)
-depends=(webkit2gtk-4.1 yelp-xsl libxslt xz bzip2)
-makedepends=(gtk-doc itstool autoconf-archive git appstream-glib)
+depends=(webkit2gtk-4.1 yelp-xsl libxslt xz bzip2 libhandy)
+makedepends=(itstool autoconf-archive git appstream-glib)
 groups=(gnome)
-_commit=72d73437a3d444739d722e580153f2dd8ee50f1d  # tags/41.2^0
-source=("git+https://gitlab.gnome.org/GNOME/yelp.git#commit=$_commit")
-sha256sums=('SKIP')
+options=(debug)
+_commit=d16114cb46e4de07e6d1c0511ef8d6e1921e023e  # tags/42.1^0
+source=("git+https://gitlab.gnome.org/GNOME/yelp.git#commit=$_commit"
+        no-gtk-doc.diff)
+sha256sums=('SKIP'
+            'adbc49d20ee3055cd38f2ec739b2de7b1710e306cfae09eafc5fe57e63d84e40')
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  cd yelp
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd yelp
+
+  # Remove vestiges of docs build to allow building without gtk-doc
+  git apply -3 ../no-gtk-doc.diff
+
   NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
+  cd yelp
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-    --disable-static --enable-gtk-doc --enable-compile-warnings=minimum
+    --disable-static --enable-compile-warnings=minimum
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 package() {
-  cd $pkgname
+  cd yelp
   make DESTDIR="$pkgdir" install
 }
