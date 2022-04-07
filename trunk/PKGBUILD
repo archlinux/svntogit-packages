@@ -1,9 +1,9 @@
-# Mainainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
+# Maintainer: Sébastien "Seblu" Luttringer <seblu@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=gzip
-pkgver=1.11
+pkgver=1.12
 pkgrel=1
 pkgdesc='GNU compression utility'
 arch=('x86_64')
@@ -13,15 +13,15 @@ groups=('base-devel')
 depends=('glibc' 'bash' 'less')
 validpgpkeys=('155D3FC500C834486D1EEA677FD9FCCB000BEEEE') # Jim Meyering
 source=("https://ftp.gnu.org/pub/gnu/gzip/gzip-$pkgver.tar.xz"{,.sig})
-md5sums=('d1e93996dba00cab0caa7903cd01d454'
-         'SKIP')
+sha256sums=('ce5e03e519f637e1f814011ace35c4f87b33c0bbabeec35baf5fbd3479e91956'
+            'SKIP')
 prepare() {
   cd $pkgname-$pkgver
   # apply patch from the source array (should be a pacman feature)
   local filename
   for filename in "${source[@]}"; do
     if [[ "$filename" =~ \.patch$ ]]; then
-      msg2 "Applying patch ${filename##*/}"
+      echo "Applying patch ${filename##*/}"
       patch -p1 -N -i "$srcdir/${filename##*/}"
     fi
   done
