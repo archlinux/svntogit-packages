@@ -1,52 +1,64 @@
-# Contributor: Sergej Pupykin
+# Maintainer: David Runge <dvzrv@archlinux.org>
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Sergej Pupykin
+
 pkgname=vde2
 pkgver=2.3.2
-pkgrel=20
+pkgrel=21
 pkgdesc="Virtual Distributed Ethernet for emulators like qemu"
-url="https://sourceforge.net/projects/vde/"
-license=("GPL" "LGPL" "CUSTOM")
-arch=('x86_64')
-depends=('bash' 'libpcap' 'openssl')
-makedepends=('python')
-source=(https://downloads.sourceforge.net/vde/$pkgname-$pkgver.tar.bz2
-        vde_cryptcab-compile-against-openssl-1.1.0.patch
-        dhcpd.conf.sample
-        iptables.rules.sample
-        vde-config.sample
-        vde-connection.sample
-        format-security.patch)
+arch=(x86_64)
+url="https://github.com/virtualsquare/vde-2"
+license=(GPL2 LGPL2.1 BSD)
+depends=(bash libpcap openssl)
+source=(
+  https://downloads.sourceforge.net/vde/$pkgname-$pkgver.tar.bz2
+  dhcpd.conf.sample
+  iptables.rules.sample
+  vde-config.sample
+  vde-connection.sample
+  vde2-2.3.2-openssl-1.1.patch
+  vde2-2.3.2-format-security.patch
+)
 install=vde2.install
-options=(!makeflags)
+options=(debug)
 sha256sums=('cbea9b7e03097f87a6b5e98b07890d2275848f1fe4b9fcda77b8994148bc9542'
-            '110370a5f48f1e241d43f8bb5e3ea6d2ca7d2c1949e1cf672d03bfc897f2e11f'
             'da0e2766dc63069da929c28126831ad5fdddcc4a04105a21217d78832c7ca1bc'
             '99076d7466cd99673dbe91ef83865187e7868177959b38e125df63eea957f83e'
             '5727c215646333c37b26388146cd3e6b3814b88d60d54051d7da99e00c0aef87'
             '5139110ed6d5d1174bf12971512dac5196d9d07df46dd393d7b1cd083118fe9b'
-            'a3207c93c4be4848e09a0b8618dcdc4e9d88a99153e95d3fcdd690efa6237a79')
+            '110370a5f48f1e241d43f8bb5e3ea6d2ca7d2c1949e1cf672d03bfc897f2e11f'
+            'af087758609338365b9f331c498e330fc67efdac6d0dd9ce699e2bd1645e52b5')
+b2sums=('6c4900578b992eff914136f29395a822bc52945906d291eee78b3bf7cb806bbf4d8ebeec2080daa10923e98b648d071ce1f846214143e4dce749da9be8b48990'
+        '95687f7a895e48be47bf183de011d6e10c0bb48a32fa99635dc82aac517c0c9646cf2044136b2d2a1667e617cb4fd7d7b7c44e7410fb13fcb1aa20f1bfb2c319'
+        'f5900923b47eff8438525346531205a8034ae462cea4a6ee519497f2baa37eaef90c7d200ffa6965b2545082ef1f04da3995f6385feeefe4ba362c000f1097c7'
+        '4f78982013168cac4ed57a006fb99e3de4b22b225a0874dbe9287c96a6ba8ebdd0d72e6e1f387fe41684f29c5e4a73e6ddda981f8f03d5b85008f876fb59f43d'
+        '9bda749135c87a6cf0621e7ee09718ecc4e647732a986de127c2ab6675f7674fc298e2bf84753f967f98b71afd104a8f87df4d7b7fccd4cba3988a75210c5e2f'
+        '6681dec01d1d2df3375685117e6d597998605e65fdbd40b52390c99b583e54332c94dfbd35fb023b9bbdfa441bbd269fcde2a14fbccdf710973184696abaef23'
+        '7345ac269e243939ef6ce3104932c14c4718e7c812b4249a5bb3484c9dd4913ddeb90e567a61e2990de9d28d1dbdad40997f040d7f2daa597aaf8a9184af0a74')
 
 prepare() {
-  cd $pkgname-$pkgver
-  patch -Np1 -i ../vde_cryptcab-compile-against-openssl-1.1.0.patch
-# Fix format-security build errors
-  patch -p2 -i ../format-security.patch
+  # allow compilation with openssl 1.1
+  patch -Np1 -d $pkgname-$pkgver -i ../vde2-2.3.2-openssl-1.1.patch
+  # Fix format-security build errors
+  patch -Np1 -d $pkgname-$pkgver -i ../vde2-2.3.2-format-security.patch
 }
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr --sbindir=/usr/bin --sysconfdir=/etc --libexecdir=/usr/lib/vde2 \
-             --enable-experimental
-  make
+  ./configure --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/lib/vde2 \
+    --enable-experimental \
+    --disable-python
+  # NOTE: build can not be parallelized
+  make -j1
 }
 
 package() {
-  cd $pkgname-$pkgver 
-  make prefix="$pkgdir/usr" sysconfdir="$pkgdir/etc" sbindir="$pkgdir/usr/bin" libexecdir="$pkgdir/usr/lib/vde2" install
-  install -D -m 644 ../vde-config.sample "$pkgdir"/etc/vde/vde-config.sample
-  install -D -m 644 ../vde-connection.sample "$pkgdir"/etc/vde/vde-connection.sample
-  install -D -m 644 ../dhcpd.conf.sample "$pkgdir"/usr/share/vde2/dhcpd.conf.sample
-  install -D -m 644 ../iptables.rules.sample "$pkgdir"/usr/share/vde2/iptables.rules.sample
-  # install slirp license
-  install -D -m 644 COPYING.slirpvde "$pkgdir"/usr/share/licenses/vde2/COPYING.slirpvde
+  make DESTDIR="$pkgdir" install -C $pkgname-$pkgver
+  install -Dm 644 vde-{config,connection}.sample -t "$pkgdir/etc/vde/"
+  install -Dm 644 {dhcpd.conf,iptables.rules}.sample -t "$pkgdir/usr/share/vde2/"
+  # install slirpvde license
+  install -Dm 644 $pkgname-$pkgver/COPYING.slirpvde -t "$pkgdir/usr/share/licenses/$pkgname/"
 }
