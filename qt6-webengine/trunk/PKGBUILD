@@ -17,12 +17,12 @@ groups=(qt6)
 options=(debug)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
-        system-icu.patch)
+        qt6-webengine-system-icu.patch::https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=75f0f4eb)
 sha256sums=('2001b45dd81dcb7ad1bc6cf1aa32f2eca5367a11fed49656053c75676c4d093d'
-            '469ca3f2da107dd28736f827cb20e5658455cb70bd277e101c50f80d00931944')
+            'ec28b71135f293f624365a50be0c329e396eaa9433655386af146614837e82a2')
 
 prepare() {
-  patch -d $_pkgfn -p1 < system-icu.patch # Fix build with system ICU
+  patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-system-icu.patch # Fix build with system ICU
 }
 
 build() {
