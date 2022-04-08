@@ -2,30 +2,27 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.2.4
+_qtver=6.3.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
 pkgdesc='Provides support for web applications using the Chromium browser project'
-depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr pciutils libxss libxkbfile 
-         libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font)
-makedepends=(cmake ninja python2 python gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets)
+depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr libxkbfile 
+         libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font pciutils)
+makedepends=(cmake ninja python-html5lib gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
 options=(debug)
-_pkgfn="${pkgname/6-/}-everywhere-src-$_qtver"
+_pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
-        qt6-webengine-ffmpeg5.patch
-        https://download.qt.io/official_releases/qt/6.2/CVE-2022-1096-qtwebengine-6.2.diff)
-sha256sums=('2e3e96b7a0335b1f683fecf8863ff2930b1bed4df00ce2ff064fa26d0a49e2b1'
-            'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693'
-            '331117c3aebe6ae35a630e743a3e03018e66347a2a44d39963c383f083763008')
+        system-icu.patch)
+sha256sums=('2001b45dd81dcb7ad1bc6cf1aa32f2eca5367a11fed49656053c75676c4d093d'
+            '469ca3f2da107dd28736f827cb20e5658455cb70bd277e101c50f80d00931944')
 
 prepare() {
-  patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
-  patch -d $_pkgfn -p1 < CVE-2022-1096-qtwebengine-6.2.diff
+  patch -d $_pkgfn -p1 < system-icu.patch # Fix build with system ICU
 }
 
 build() {
@@ -34,6 +31,7 @@ build() {
     -DQT_FEATURE_webengine_system_ffmpeg=ON \
     -DQT_FEATURE_webengine_system_icu=ON \
     -DQT_FEATURE_webengine_system_libevent=ON \
+    -DQT_FEATURE_webengine_system_libxslt=ON \
     -DQT_FEATURE_webengine_proprietary_codecs=ON \
     -DQT_FEATURE_webengine_kerberos=ON \
     -DQT_FEATURE_webengine_webrtc_pipewire=ON \
