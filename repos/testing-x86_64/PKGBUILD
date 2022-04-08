@@ -1,0 +1,46 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+
+pkgname=gnu-efi
+pkgver=3.0.14
+pkgrel=3
+pkgdesc="Develop EFI applications using the GNU toolchain and the EFI development environment"
+arch=(x86_64)
+url="https://sourceforge.net/projects/gnu-efi/"
+license=(BSD)
+conflicts=(gnu-efi-libs)
+provides=(gnu-efi-libs)
+replaces=(gnu-efi-libs)
+source=(https://download.sourceforge.net/$pkgname/$pkgname-$pkgver.tar.bz2)
+options=(!strip)
+sha512sums=('37420ba3804e8547451a7b143a689ceb6af0557234fa7801efdeba3c2fc581a5354fe34cbaacb338d7b394d913e7274098ebf07026b7c1d50b2236d7f86c470c')
+b2sums=('c7f9127d3bb7e5e2bc52f5fc7be3376ddc5076b262e5db5a30a997cf10bf10288da63ded64d11327fad09190a803ce26e82b32aea2d8525ee0d1e1a23ebadff2')
+
+prepare() {
+  # -Werror, not even once
+  sed -e 's/-Werror//g' -i $pkgname-$pkgver/Make.defaults
+}
+
+build() {
+  cd $pkgname-$pkgver
+  # NOTE: apply only minimal CFLAGS, as gnu-efi does not provide userspace
+  # libs, but may be used in unitialized machine state and should therefore not
+  # be architecture optmized
+  # NOTE: fat-lto-objects is required for non-mangled (static) object files
+  CFLAGS="-O2 -flto -ffat-lto-objects"
+  make
+  make -C lib
+  make -C gnuefi
+  make -C inc
+  # unset LDFLAGS for custom linker used in apps, as we have patched our
+  # LDFLAGS in manually in prepare()
+  LDFLAGS=""
+  make -C apps
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make INSTALLROOT="$pkgdir" PREFIX=/usr install
+  install -vDm 644 apps/*.efi -t "$pkgdir/usr/share/$pkgname/apps/$CARCH/"
+  install -vDm 644 README.efilib -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -vDm 644 {ChangeLog,README.{gnuefi,git,elilo}} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
