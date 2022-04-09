@@ -2,14 +2,14 @@
 
 pkgbase=linux-lts
 pkgver=5.15.33
-pkgrel=1
+pkgrel=1.2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
 license=(GPL2)
 makedepends=(
   bc kmod libelf pahole cpio perl tar xz
-  xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
+  xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick texlive-latexextra
 )
 options=('!strip')
 _srcname=linux-$pkgver
