@@ -5,7 +5,7 @@
 pkgbase=emacs
 pkgname=(emacs emacs-nativecomp)
 pkgver=28.1
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
@@ -66,7 +66,7 @@ package_emacs() {
 
 package_emacs-nativecomp() {
   pkgdesc='The extensible, customizable, self-documenting real-time display editor with native compilation enabled'
-  depends=(libgccjit)
+  depends+=(libgccjit)
   provides=(emacs)
   conflicts=(emacs)
 
