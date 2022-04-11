@@ -1,91 +1,86 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
-pkgname=refind
-pkgver=0.13.2
+pkgbase=refind
+pkgname=(refind refind-docs)
+pkgver=0.13.3
 pkgrel=1
 pkgdesc="An EFI boot manager"
-arch=('any')
+arch=(any)
 url="https://www.rodsbooks.com/refind/"
-license=('BSD' 'CCPL' 'FDL1.3' 'GPL2' 'GPL3' 'LGPL3')
-depends=('bash' 'dosfstools' 'efibootmgr')
-makedepends=('gnu-efi-libs')
-optdepends=('gptfdisk: for finding non-vfat ESP with refind-install'
-            'imagemagick: for refind-mkfont'
-            'openssl: for generating local certificates with refind-install'
-            'python: for refind-mkdefault'
-            'sbsigntools: for EFI binary signing with refind-install'
-            'sudo: for privilege elevation in refind-install and refind-mkdefault'
-)
-# the drivers don't build with many jobs
-options=(!makeflags)
-source=("https://sourceforge.net/projects/refind/files/${pkgver}/${pkgname}-src-${pkgver}.tar.gz")
-sha512sums=('e671d44385297295c143824dd95593f2e7bc8e282745d127b041a645aa27003467a3a23f368fd30297f33faa06bd914540d7bdc3c71ec42f6b7a38d7ee8e0ddb')
-b2sums=('2c3b1daf5fa100dcd4e1c801aa625e269ae9c1a99b567a271d7cdd30f95fa1e041e22984623b9a0e61f8af45966919f4b9f3a5b6c2026271d1bc37c6925f1e70')
+makedepends=(bash dosfstools efibootmgr gnu-efi)
+source=(https://sourceforge.net/projects/refind/files/$pkgver/$pkgname-src-$pkgver.tar.gz)
+sha512sums=('a14724355458da681824dab8ec9407fd1265484d14c30f71f1e1bd0dbe96b5d08032ee8daf77118592e9850e3e3a4d3ece13a4f75c231b5edd8212d7589008ea')
+b2sums=('a079eb8a890495e099505f2025e7041b9cfc6332287ea6c242f53d778091cca3d6b0c0ec9f5f20ad0649c07d60ab2973ddb038f233168d42ab1748dcaf5e2a12')
 _arch='x64'
 
 prepare() {
-  cd "$pkgname-$pkgver"
+  cd $pkgbase-$pkgver
   # remove the path prefix from the css reference, so that the css can live
   # in the same directory
-  sed -e 's|../Styles/||g' -i "docs/${pkgname}/"*.html
+  sed -e 's|../Styles/||g' -i docs/$pkgbase/*.html
   # hardcode RefindDir, so that refind-install can find refind_x64.efi
-  sed -e 's|RefindDir=\"\$ThisDir/refind\"|RefindDir="/usr/share/refind/"|g' \
-      -i refind-install
+  sed -e 's|RefindDir=\"\$ThisDir/refind\"|RefindDir="/usr/share/refind/"|g' -i refind-install
 }
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname-$pkgver
   make
   make gptsync
-  make fs
+  # NOTE: build can not be parallelized
+  make fs -j1
 }
 
-package() {
-  cd "$pkgname-$pkgver"
-  # the install target calls refind-install, therefore we install things
-  # manually
+package_refind() {
+  license=(BSD CCPL GPL2 GPL3 LGPL3)
+  depends=(bash dosfstools efibootmgr)
+  optdepends=(
+    'gptfdisk: for finding non-vfat ESP with refind-install'
+    'imagemagick: for refind-mkfont'
+    'openssl: for generating local certificates with refind-install'
+    'python: for refind-mkdefault'
+    'refind-docs: for HTML documentation'
+    'sbsigntools: for EFI binary signing with refind-install'
+    'sudo: for privilege elevation in refind-install and refind-mkdefault'
+  )
 
+  cd $pkgbase-$pkgver
+  # NOTE: the install target calls refind-install, therefore we install things
+  # manually
   # efi binaries
-  install -vDm 644 refind/*.efi -t "${pkgdir}/usr/share/${pkgname}"
-  install -vDm 644 drivers_*/*.efi \
-    -t "${pkgdir}/usr/share/refind/drivers_${_arch}"
-  install -vDm 644 gptsync/*.efi \
-    -t "${pkgdir}/usr/share/${pkgname}/tools_${_arch}"
+  install -vDm 644 refind/*.efi -t "$pkgdir/usr/share/$pkgname/"
+  install -vDm 644 drivers_*/*.efi -t "$pkgdir/usr/share/refind/drivers_$_arch/"
+  install -vDm 644 gptsync/*.efi -t "$pkgdir/usr/share/$pkgname/tools_$_arch/"
   # sample config
-  install -vDm 644 "${pkgname}.conf-sample" -t "${pkgdir}/usr/share/${pkgname}"
+  install -vDm 644 $pkgname.conf-sample -t "$pkgdir/usr/share/$pkgname/"
   # keys
-  install -vDm 644 keys/*{cer,crt} -t "${pkgdir}/usr/share/${pkgname}/keys"
+  install -vDm 644 keys/*{cer,crt} -t "$pkgdir/usr/share/$pkgname/keys/"
   # keysdir
-  install -vdm 700 "${pkgdir}/etc/refind.d/keys"
+  install -vdm 700 "$pkgdir/etc/refind.d/keys"
   # fonts
-  install -vDm 644 fonts/*.png \
-    -t "${pkgdir}/usr/share/${pkgname}/fonts"
+  install -vDm 644 fonts/*.png -t "$pkgdir/usr/share/$pkgname/fonts/"
   # icons
-  install -vDm 644 icons/*.png \
-    -t "${pkgdir}/usr/share/${pkgname}/icons"
-  install -vDm 644 icons/svg/*.svg \
-    -t "${pkgdir}/usr/share/${pkgname}/icons/svg"
+  install -vDm 644 icons/*.png -t "$pkgdir/usr/share/$pkgname/icons"
+  install -vDm 644 icons/svg/*.svg -t "$pkgdir/usr/share/$pkgname/icons/svg/"
   # scripts
-  install -vDm 755 {refind-{install,mkdefault},mkrlconf,mvrefind} \
-    -t "${pkgdir}/usr/bin"
-  install -vDm 755 fonts/mkfont.sh "${pkgdir}/usr/bin/${pkgname}-mkfont"
+  install -vDm 755 {refind-{install,mkdefault},mkrlconf,mvrefind} -t "$pkgdir/usr/bin/"
+  install -vDm 755 fonts/mkfont.sh "$pkgdir/usr/bin/$pkgname-mkfont"
   # man pages
-  install -vDm 644 docs/man/*.8 -t "${pkgdir}/usr/share/man/man8"
+  install -vDm 644 docs/man/*.8 -t "$pkgdir/usr/share/man/man8/"
   # docs
-  install -vDm 644 {CREDITS,NEWS,README}.txt \
-    -t "${pkgdir}/usr/share/doc/${pkgname}"
-  install -vDm 644 fonts/README.txt \
-    "${pkgdir}/usr/share/doc/${pkgname}/README.${pkgname}-mkfont.txt"
-  install -vDm 644 icons/README \
-    "${pkgdir}/usr/share/doc/${pkgname}/README.icons.txt"
-  install -vDm 644 keys/README.txt \
-    "${pkgdir}/usr/share/doc/${pkgname}/README.keys.txt"
-  install -vDm 644 "docs/${pkgname}/"*.{html,png,svg,txt} \
-    -t "${pkgdir}/usr/share/doc/${pkgname}/html"
-  install -vDm 644 docs/Styles/*.css \
-    -t "${pkgdir}/usr/share/doc/${pkgname}/html"
-  install -vDm 644 images/${pkgname}-banner.{png,svg} \
-    -t "${pkgdir}/usr/share/doc/${pkgname}/html"
+  install -vDm 644 {CREDITS,NEWS,README}.txt -t "$pkgdir/usr/share/doc/$pkgname/"
+  install -vDm 644 fonts/README.txt "$pkgdir/usr/share/doc/$pkgname/README.$pkgname-mkfont.txt"
+  install -vDm 644 icons/README "$pkgdir/usr/share/doc/$pkgname/README.icons.txt"
+  install -vDm 644 keys/README.txt "$pkgdir/usr/share/doc/$pkgname/README.keys.txt"
   # license
-  install -vDm 644 LICENSE.txt -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -vDm 644 LICENSE.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_refind-docs() {
+  pkgdesc+=" - documentation"
+  license=(FDL1.3)
+
+  cd $pkgbase-$pkgver
+  install -vDm 644 docs/$pkgbase/*.{html,png,svg,txt} -t "$pkgdir/usr/share/doc/$pkgbase/html/"
+  install -vDm 644 docs/Styles/*.css -t "$pkgdir/usr/share/doc/$pkgbase/html/"
+  install -vDm 644 images/$pkgbase-banner.{png,svg} -t "$pkgdir/usr/share/doc/$pkgbase/html/"
 }
