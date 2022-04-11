@@ -1,0 +1,103 @@
+From d8d8dd628302f5bde4f55f11137690bf40abaa88 Mon Sep 17 00:00:00 2001
+From: Christian Hesse <mail@eworm.de>
+Date: Thu, 28 Jul 2016 08:49:20 +0200
+Subject: [PATCH 1/1] make iproute2 fhs compliant
+
+---
+ Makefile       |  2 +-
+ netem/Makefile |  4 ++--
+ tc/q_netem.c   |  2 +-
+ tc/tc_util.c   | 15 +++++++++++++++
+ tc/tc_util.h   |  1 +
+ 5 files changed, 20 insertions(+), 4 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index f6214534..f80f46c9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -32,7 +32,7 @@ DBM_INCLUDE:=$(DESTDIR)/usr/include
+ 
+ SHARED_LIBS = y
+ 
+-DEFINES= -DRESOLVE_HOSTNAMES -DLIBDIR=\"$(LIBDIR)\"
++DEFINES= -DRESOLVE_HOSTNAMES -DLIBDIR=\"$(LIBDIR)\" -DDATADIR=\"$(DATADIR)\"
+ ifneq ($(SHARED_LIBS),y)
+ DEFINES+= -DNO_SHARED_LIBS
+ endif
+diff --git a/netem/Makefile b/netem/Makefile
+index ba4c5a76..cb197afa 100644
+--- a/netem/Makefile
++++ b/netem/Makefile
+@@ -23,9 +23,9 @@ stats: stats.c
+ 	$(HOSTCC) $(CCOPTS) -I../include -o $@ $@.c -lm
+ 
+ install: all
+-	mkdir -p $(DESTDIR)$(LIBDIR)/tc
++	mkdir -p $(DESTDIR)$(DATADIR)/tc
+ 	for i in $(DISTDATA); \
+-	do install -m 644 $$i $(DESTDIR)$(LIBDIR)/tc; \
++	do install -m 644 $$i $(DESTDIR)$(DATADIR)/tc; \
+ 	done
+ 
+ clean:
+diff --git a/tc/q_netem.c b/tc/q_netem.c
+index f45a64b9..83fa952d 100644
+--- a/tc/q_netem.c
++++ b/tc/q_netem.c
+@@ -128,7 +128,7 @@ static int get_distribution(const char *type, __s16 *data, int maxdata)
+ 	char *line = NULL;
+ 	char name[128];
+ 
+-	snprintf(name, sizeof(name), "%s/%s.dist", get_tc_lib(), type);
++	snprintf(name, sizeof(name), "%s/%s.dist", get_tc_datadir(), type);
+ 	f = fopen(name, "r");
+ 	if (f == NULL) {
+ 		fprintf(stderr, "No distribution data for %s (%s: %s)\n",
+diff --git a/tc/tc_util.c b/tc/tc_util.c
+index ba34aed7..0adbb9ba 100644
+--- a/tc/tc_util.c
++++ b/tc/tc_util.c
+@@ -31,6 +31,10 @@
+ #define LIBDIR "/usr/lib"
+ #endif
+ 
++#ifndef DATADIR
++#define DATADIR "/usr/share"
++#endif
++
+ static struct db_names *cls_names;
+ 
+ #define NAMES_DB "/etc/iproute2/tc_cls"
+@@ -72,6 +76,17 @@ const char *get_tc_lib(void)
+ 	return lib_dir;
+ }
+ 
++const char *get_tc_datadir(void)
++{
++	const char *data_dir;
++
++	data_dir = getenv("TC_DATA_DIR");
++	if (!data_dir)
++		data_dir = DATADIR "/tc/";
++
++	return data_dir;
++}
++
+ int get_qdisc_handle(__u32 *h, const char *str)
+ {
+ 	__u32 maj;
+diff --git a/tc/tc_util.h b/tc/tc_util.h
+index b197bcdd..e812b895 100644
+--- a/tc/tc_util.h
++++ b/tc/tc_util.h
+@@ -71,6 +71,7 @@ struct exec_util {
+ };
+ 
+ const char *get_tc_lib(void);
++const char *get_tc_datadir(void);
+ 
+ struct qdisc_util *get_qdisc_kind(const char *str);
+ struct filter_util *get_filter_kind(const char *str);
+-- 
+2.35.1
+
