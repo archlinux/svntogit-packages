@@ -1,0 +1,53 @@
+# Maintainer:  Christian Hesse <mail@eworm.de>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: kfgz <kfgz at interia dot pl>
+# Contributor: pootzko <pootzko at gmail dot com>
+
+pkgname=haveged
+pkgver=1.9.18
+pkgrel=1
+pkgdesc='Entropy harvesting daemon using CPU timings'
+arch=('x86_64')
+url='https://github.com/jirka-h/haveged'
+license=('GPL')
+depends=('glibc')
+options=('debug')
+validpgpkeys=('8F6B7293B03E5AC5762B65CE2E2F252B05CCA168') # Jirka Hladky <hladky.jiri@gmail.com>
+source=("$pkgname-$pkgver.tar.gz::https://github.com/jirka-h/$pkgname/archive/v$pkgver.tar.gz"
+        'initcpio-hook'
+        'initcpio-install')
+sha256sums=('b835fa02b52ee7d06276e028571cadcb14d08f5e5a4b5767adf81451f70561c7'
+            'a59ff95d521a860031693d1e1d65d37ffba58412f0199b029bd340e2f7f52a0b'
+            'befb42d418d13c832da6d67f50417f6bca9a1c754dbdc63175f1e2546ea29b51')
+
+prepare() {
+  cd $pkgname-$pkgver
+
+  sed -i 's/@SBIN_DIR@/\/usr\/bin/' contrib/Fedora/haveged*.service
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+  ./configure \
+      --prefix=/usr \
+      --bindir=/usr/bin \
+      --sbindir=/usr/bin
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd $pkgname-$pkgver
+
+  make DESTDIR="$pkgdir" install
+
+  install -D -m0644 contrib/Fedora/haveged.service "$pkgdir"/usr/lib/systemd/system/haveged.service
+  install -D -m0644 contrib/Fedora/haveged-once.service "$pkgdir"/usr/lib/systemd/system/haveged-once.service
+  install -D -m0644 "${srcdir}/initcpio-hook" "$pkgdir"/usr/lib/initcpio/hooks/haveged
+  install -D -m0644 "${srcdir}/initcpio-install" "$pkgdir"/usr/lib/initcpio/install/haveged
+}
