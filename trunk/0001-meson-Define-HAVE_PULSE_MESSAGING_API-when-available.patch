@@ -1,0 +1,64 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <heftig@archlinux.org>
+Date: Wed, 13 Apr 2022 15:59:56 +0000
+Subject: [PATCH] meson: Define HAVE_PULSE_MESSAGING_API when available
+
+To match the autotools build.
+---
+ meson.build     |  8 ++++++++
+ src/meson.build | 12 ++++++++++--
+ 2 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/meson.build b/meson.build
+index 15acb6c81119..0d72ca17bd42 100644
+--- a/meson.build
++++ b/meson.build
+@@ -6,13 +6,21 @@ project('pavucontrol', 'cpp',
+ 
+ with_lynx = get_option('lynx')
+ 
++cpp = meson.get_compiler('cpp')
++
+ gtkmm_dep = dependency('gtkmm-3.0', version : '>= 3.0', required : true)
+ sigcpp_dep = dependency('sigc++-2.0', required : true)
+ canberragtk_dep = dependency('libcanberra-gtk3', version : '>= 0.16', required : true)
+ 
+ libpulse_dep = dependency('libpulse', version : '>= 5.0', required : true)
+ libpulsemlglib_dep = dependency('libpulse-mainloop-glib', version : '>= 0.9.16', required : true)
+ 
++have_pulse_messaging_api = cpp.has_function('pa_context_send_message_to_object',
++  dependencies: [libpulse_dep],
++)
++
++json_glib_dep = dependency('json-glib-1.0', required : have_pulse_messaging_api)
++
+ lynx = find_program('lynx', required: with_lynx)
+ tidy = find_program('tidy', required: false)
+ 
+diff --git a/src/meson.build b/src/meson.build
+index fa2abf44eb1a..d48047513e38 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -14,12 +14,20 @@ pavucontrol_sources = [
+   'streamwidget.cc',
+ ]
+ 
++pavucontrol_deps = [gtkmm_dep, sigcpp_dep, canberragtk_dep, libpulse_dep, libpulsemlglib_dep]
++pavucontrol_defines = ['-DHAVE_CONFIG_H']
++
++if have_pulse_messaging_api
++  pavucontrol_deps += [json_glib_dep]
++  pavucontrol_defines += ['-DHAVE_PULSE_MESSAGING_API']
++endif
++
+ executable('pavucontrol',
+   pavucontrol_sources,
+   install: true,
+-  cpp_args: ['-DHAVE_CONFIG_H'],
++  cpp_args: pavucontrol_defines,
+   include_directories : configinc,
+-  dependencies : [gtkmm_dep, sigcpp_dep, canberragtk_dep, libpulse_dep, libpulsemlglib_dep],
++  dependencies : pavucontrol_deps,
+ )
+ 
+ install_data('pavucontrol.glade')
