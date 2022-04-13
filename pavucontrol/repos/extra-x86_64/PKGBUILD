@@ -4,37 +4,51 @@
 # Contributor: William Rea <sillywilly@gmail.com>
 
 pkgname=pavucontrol
-pkgver=5.0
+pkgver=5.0+r35+g964f298
 pkgrel=1
 epoch=1
 pkgdesc="PulseAudio Volume Control"
 url="https://freedesktop.org/software/pulseaudio/pavucontrol/"
 arch=(x86_64)
 license=(GPL)
-depends=(libcanberra-pulse gtkmm3 libsigc++ json-glib)
-makedepends=(intltool lynx git)
+depends=(gtkmm3 libsigc++ libcanberra json-glib)
+makedepends=(meson lynx git)
+checkdepends=(tidy)
 optdepends=("pulseaudio: Audio backend")
-_commit=14e7cc0a215a708d845adf5eab715ec598814bb4  # tags/v5.0^0
-source=("git+https://gitlab.freedesktop.org/pulseaudio/pavucontrol.git#commit=$_commit")
-sha256sums=('SKIP')
+options=(debug)
+_commit=964f2987a46aa984d9ba83369b1f27c0bb28e9af  # master
+source=("git+https://gitlab.freedesktop.org/pulseaudio/pavucontrol.git#commit=$_commit"
+        0001-meson-Define-HAVE_PULSE_MESSAGING_API-when-available.patch
+        0002-fix-focus-trap-in-output-selection-widget.patch)
+sha256sums=('SKIP'
+            '915c73ebd14b9ce53600a4c636c23a0d2a329f887360512eacc2f6d621394ae9'
+            'd9ab38eea6838a95e6d337c07292cc74de1f7c875f65f967f5f89a141021fc15')
 
 pkgver() {
   cd pavucontrol
-  git describe --tags | sed 's/^v//;s/-/+/g'
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd pavucontrol
-  NOCONFIGURE=1 ./bootstrap.sh
+
+  # Fix meson build
+  git apply -3 ../0001-meson-Define-HAVE_PULSE_MESSAGING_API-when-available.patch
+
+  # https://gitlab.freedesktop.org/pulseaudio/pavucontrol/-/issues/124
+  # https://gitlab.freedesktop.org/pulseaudio/pavucontrol/-/merge_requests/73
+  git apply -3 ../0002-fix-focus-trap-in-output-selection-widget.patch
 }
 
 build() {
-  cd pavucontrol
-  ./configure --prefix=/usr --enable-gtk3
-  make
+  arch-meson pavucontrol build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd pavucontrol
-  make DESTDIR="$pkgdir" install
+  meson install -C build --destdir "$pkgdir"
 }
