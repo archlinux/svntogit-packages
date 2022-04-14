@@ -2,7 +2,7 @@
 # Contributor: Art Gramlich <art@gramlich-net.com>
 
 pkgname=icu
-pkgver=70.1
+pkgver=71.1
 pkgrel=1
 pkgdesc="International Components for Unicode library"
 arch=(x86_64)
@@ -12,8 +12,8 @@ depends=('gcc-libs' 'sh')
 makedepends=('python')
 provides=(libicu{data,i18n,io,test,tu,uc}.so)
 source=(https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/${pkgname}4c-${pkgver//./_}-src.tgz{,.asc})
-# https://github.com/unicode-org/icu/releases/download/release-70-1/SHASUM512.txt
-sha512sums=('0b26ae7207155cb65a8fdb25f7b2fa4431e74b12bccbed0884a17feaae3c96833d12451064dd152197fd6ea5fd3adfd95594284a463e66c82e0d860f645880c9'
+# https://github.com/unicode-org/icu/releases/download/release-71-1/SHASUM512.txt
+sha512sums=('1fd2a20aef48369d1f06e2bb74584877b8ad0eb529320b976264ec2db87420bae242715795f372dbc513ea80047bc49077a064e78205cd5e8b33d746fd2a2912'
             'SKIP')
 #validpgpkeys=('BA90283A60D67BA0DD910A893932080F4FB419E3') #  "Steven R. Loomis (filfla-signing) <srloomis@us.ibm.com>" 
 #validpgpkeys+=('9731166CD8E23A83BEE7C6D3ACA5DBE1FD8FABF1') #  "Steven R. Loomis (ICU Project) <srl@icu-project.org>" 
