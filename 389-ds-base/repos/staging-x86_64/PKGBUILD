@@ -1,0 +1,93 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+# Contributor: Javier Torres <javitonino [at] gmail [dot] com>
+# Contributor: Jameson Pugh <imntreal@gmail.com>
+# Contributor: Xiao-Long Chen <chenxiaolong@cxl.epac.to>
+
+pkgname=389-ds-base
+pkgver=2.1.0
+pkgdesc="389 Directory Server (base)"
+pkgrel=2
+arch=(x86_64)
+url="http://port389.org/"
+license=('GPL')
+provides=('libsvrcore.so')
+replaces=('python-lib389')
+backup=(etc/dirsrv/config/certmap.conf
+        etc/dirsrv/config/ldap-agent.conf
+        etc/dirsrv/config/slapd-collations.conf
+        etc/dirsrv/config/template-initconfig)
+depends=('cracklib' 'libevent' 'nspr' 'nss' 'net-snmp' 'pam' 'openldap' 'icu'
+         'python-argcomplete' 'python-dateutil' 'python-ldap' 'python-packaging' 'lmdb')
+makedepends=('cargo' 'rsync' 'doxygen' 'cmocka' 'python-setuptools' 'python-argparse-manpage'
+             'npm' 'nodejs-lts-fermium' 'systemd')
+source=(https://github.com/389ds/389-ds-base/archive/389-ds-base-${pkgver}.tar.gz
+        389-ds-base.sysusers
+        389-ds-base.tmpfiles)
+sha512sums=('b0ef27c3eed9307175ea25d510b1bf9520ccc59e443358bf60053f831d444945ffae25f1b85f662a0a22b012daca4c0d225ff75c845100a3da9dc9c8bebee60a'
+            '8689b60f13517e6541e1faa62e61781654a8e4678990d14a3fe0cfe4673697cdde1c46763fdc7ef6203e4026286fa004c73b2857fd7fecff69483e6d1e8e6d68'
+            '69ed8b8f3bdbf9098088b0c92c41a238f16d14ba9f86ebc2b5debe5f001b4d8e235f7cff4731d72b30b5ac70486b0f4300b99646aa3926a3fa59515a64f16402')
+
+prepare() {
+  cd "${pkgname}-${pkgname}-${pkgver}"
+
+  # Required until https://github.com/389ds/389-ds-base/issues/5043 is fixed:
+  # sed -i "/deny(warnings)/d" src/librnsslapd/src/lib.rs
+
+  ./autogen.sh
+}
+
+build() {
+  cd "${pkgname}-${pkgname}-${pkgver}"
+
+  # Build 389-ds-base
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin \
+    --localstatedir=/var \
+    --libexecdir=/usr/lib/${pkgname} \
+    --with-tmpfiles-d=/usr/lib/tmpfiles.d \
+    --with-systemd \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-systemdsystemconfdir=/etc/systemd/system \
+    --with-journald \
+    --with-openldap \
+    --enable-autobind \
+    --enable-cmocka \
+    --enable-rust \
+    --with-libldap_r=no
+  make
+
+  # Build lib389
+  cd src/lib389
+  COLUMNS=80 python setup.py build
+
+  # Build cockpit plugin
+  cd ../cockpit/389-console
+  npm install
+  npm run build
+  mv dist cockpit_dist
+}
+
+check() {
+  cd "${pkgname}-${pkgname}-${pkgver}"
+  make check
+}
+
+package() {
+  cd "${pkgname}-${pkgname}-${pkgver}"
+  # make DESTDIR="${pkgdir}/" install
+  make -j1 DESTDIR="${pkgdir}/" install
+
+  install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+
+  # Upstream expects lib389 and 389-ds-base to be shipped in the same package more or less
+  # so that's why it's not a split package.
+  cd src/lib389
+  python setup.py install --skip-build -O1 --root="${pkgdir}"
+  mv "${pkgdir}"/usr/sbin/* "${pkgdir}"/usr/bin/
+  rmdir "${pkgdir}"/usr/sbin
+
+  install -Dm644 "${srcdir}/${pkgname}.sysusers" "${pkgdir}/usr/lib/sysusers.d/${pkgname}.conf"
+  install -Dm644 "${srcdir}/${pkgname}.tmpfiles" "${pkgdir}/usr/lib/tmpfiles.d/${pkgname}.conf"
+}
