@@ -2,13 +2,13 @@
 
 pkgname=python-automat
 pkgver=20.2.0
-pkgrel=8
+pkgrel=9
 arch=('any')
 license=('MIT')
 pkgdesc="Self-service finite-state machines for the programmer on the go."
 url="https://github.com/glyph/automat"
-depends=('python-attrs')
-makedepends=('python-setuptools-scm' 'm2r' 'python-attrs')
+depends=('python-attrs' 'python-six')
+makedepends=('python-setuptools-scm' 'm2r')
 checkdepends=('python-pytest' 'python-twisted' 'python-graphviz')
 source=("https://github.com/glyph/automat/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
 sha512sums=('ccba3e82f589fedb1f83dfb37a6a42b51a78d8c3e6fea22c9518135ff194f5f70e2f9c5f0eab50b6e116dae92c94754aac8dbf0e670a59015c916991736b4076')
