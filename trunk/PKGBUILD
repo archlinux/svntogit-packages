@@ -5,7 +5,7 @@
 pkgbase=tracker3
 pkgname=(tracker3 tracker3-docs)
 pkgver=3.3.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
 arch=(x86_64)
