@@ -7,15 +7,15 @@
 pkgbase=jack2
 pkgname=(jack2 jack2-dbus jack2-docs)
 pkgdesc="The JACK low-latency audio server"
-pkgver=1.9.20
-pkgrel=4
+pkgver=1.9.21
+pkgrel=1
 arch=(x86_64)
 url="https://github.com/jackaudio/jack2"
 license=(GPL2)
 makedepends=(alsa-lib dbus doxygen expat git libffado libsamplerate opus systemd waf)
 # jack breaks when built with LTO: https://github.com/jackaudio/jack2/issues/485
 options=(debug !lto)
-source=("${pkgbase}::git+https://github.com/jackaudio/${pkgname}.git#tag=v${pkgver}?signed")
+source=(git+https://github.com/jackaudio/$pkgbase.git#tag=v$pkgver?signed)
 validpgpkeys=('62B11043D2F6EB6672D93103CDBAA37ABC74FBA0') # falkTX <falktx@falktx.com>
 sha512sums=('SKIP')
 
@@ -39,14 +39,13 @@ prepare() {
 }
 
 build() {
-  cd "${pkgbase}"
+  cd $pkgbase
   export LINKFLAGS="$LDFLAGS"
-  export PYTHONPATH="${PWD}:${PYTHONPATH}"
+  export PYTHONPATH="$PWD:$PYTHONPATH"
   waf configure --prefix=/usr \
-                --htmldir="/usr/share/doc/${pkgbase}/html" \
+                --htmldir=/usr/share/doc/$pkgbase/html \
                 --autostart=none \
                 --doxygen=yes \
-                --example-tools=no \
                 --systemd-unit \
                 --classic \
                 --dbus
@@ -69,8 +68,8 @@ package_jack2() {
   provides=(jack libjack.so libjacknet.so libjackserver.so)
 
   cd "${pkgbase}"
-  export PYTHONPATH="${PWD}:${PYTHONPATH}"
-  waf install --destdir="${pkgdir}"
+  export PYTHONPATH="$PWD:$PYTHONPATH"
+  waf install --destdir="$pkgdir"
 
   ( cd "$pkgdir"
 
@@ -85,13 +84,13 @@ package_jack2-dbus() {
   depends=(gcc-libs glibc jack2 libdbus-1.so libexpat.so libjackserver.so
   python-dbus)
 
-  mv -v jack2-dbus/* "${pkgdir}"
+  mv -v jack2-dbus/* "$pkgdir"
 }
 
 package_jack2-docs() {
   pkgdesc+=" (documentation)"
 
-  mv -v jack2-docs/* "${pkgdir}"
+  mv -v jack2-docs/* "$pkgdir"
 }
 
 # vim:set ts=2 sw=2 et:
