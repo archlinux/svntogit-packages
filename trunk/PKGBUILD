@@ -6,7 +6,7 @@ _openssl_ver=1.1.1n
 pkgbase=edk2
 pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
 pkgver=202202
-pkgrel=1
+pkgrel=2
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -104,7 +104,8 @@ build() {
   local _efi_args=(
     -D NETWORK_IP6_ENABLE
     -D TPM_CONFIG_ENABLE
-    -D TPM_ENABLE
+    -D TPM1_ENABLE
+    -D TPM2_ENABLE
   )
   # shared targets x86_64 and i686
   local _x86_args=(
