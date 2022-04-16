@@ -4,7 +4,7 @@
 pkgbase=vte3
 pkgname=(vte3 vte-common)
 pkgver=0.68.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Virtual Terminal Emulator widget"
 url="https://wiki.gnome.org/Apps/Terminal/VTE"
 arch=(x86_64)
