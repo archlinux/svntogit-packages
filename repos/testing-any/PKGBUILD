@@ -1,0 +1,57 @@
+# Maintainer: Firmicus <firmicus āt gmx dōt net>
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+
+pkgname=texlive-langextra
+pkgver=2022.62837
+_revnr=${pkgver#2022.}
+pkgrel=1
+pkgdesc="TeX Live - Bundle of all extra language support"
+license=('GPL')
+arch=(any)
+conflicts=('texlive-langafrican' 'texlive-langarab' 'texlive-langarabic'
+           'texlive-langarmenian' 'texlive-langcroatian' 'texlive-langhebrew'
+           'texlive-langindic' 'texlive-langmongolian' 'texlive-langtibetan'
+           'texlive-langvietnamese')
+provides=('texlive-langafrican' 'texlive-langarabic' 'texlive-langarmenian' 
+          'texlive-langarmenian' 'texlive-langcroatian' 'texlive-langhebrew'
+          'texlive-langindic' 'texlive-langmongolian' 'texlive-langtibetan'
+          'texlive-langvietnamese')
+depends=('texlive-latexextra')
+groups=('texlive-lang')
+url='http://tug.org/texlive/'
+source=("https://sources.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip" "$pkgname.maps")
+options=('!emptydirs')
+sha256sums=('c65531ed82cd59e58618dcc0ac63c973de5f1ae72b28763b07649c023cc480df'
+            '5f7941ded76d37cf8d6d644edfb206345557905fee38e18ada0b3b98f8a8c0f7')
+
+build() {
+   cd "$srcdir"
+   for p in *.tar.xz; do
+	   bsdtar -xf $p
+   done
+   rm -rf {tlpkg,doc,source} || true
+}
+
+package() {
+   cd "$srcdir"
+   install -m755 -d "$pkgdir"/var/lib/texmf/arch/installedpkgs
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS "$pkgdir"/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs
+   install -m644 $pkgname.maps "$pkgdir"/var/lib/texmf/arch/installedpkgs/
+   install -m755 -d "$pkgdir"/usr/share
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 "$pkgdir"/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' "$pkgdir"/usr/share/texmf-dist/'{}' \;
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 "$pkgdir"/usr/share/'{}' \;
+     find texmf-dist -type f -exec install -m644 '{}' "$pkgdir"/usr/share/'{}' \;
+   fi
+   if [[ -d "$pkgdir"/usr/share/texmf-dist/scripts ]]; then
+     find "$pkgdir"/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+   #remove parts of ethiop that depend on Omega:
+   rm -rf "$pkgdir"/usr/share/texmf-dist/fonts/{ofm,ovf,ovp}
+   rm -rf "$pkgdir"/usr/share/texmf-dist/omega
+}
