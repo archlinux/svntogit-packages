@@ -1,0 +1,56 @@
+# Maintainer: Firmicus <firmicus āt gmx dōt net>
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+
+pkgname=texlive-langcyrillic
+pkgver=2022.62517
+_revnr=${pkgver#2022.}
+pkgrel=1
+pkgdesc="TeX Live - Fonts and macro packages to typeset Cyrillic texts"
+license=('GPL')
+arch=(any)
+depends=('texlive-core')
+makedepends=('subversion')
+groups=('texlive-lang')
+url='http://tug.org/texlive/'
+source=("https://sources.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip"
+        "$pkgname.maps"
+        "texlive-man::svn://tug.org/texlive/tags/texlive-2022.0/Master/texmf-dist/doc/man#revision=${_revnr}")
+options=('!emptydirs')
+sha256sums=('18834e4d4205574ebf1abe62fecbb92ca79bcd9a4428b981300392c94880c086'
+            '313214980ace9c724766e9ffbfcfd3fb234fb97b3ff340508326f9712fc57770'
+            'SKIP')
+
+build() {
+   cd "$srcdir"
+   for p in *.tar.xz; do
+	   bsdtar -xf $p
+   done
+   rm -rf {tlpkg,doc,source} || true
+}
+
+package() {
+   cd "$srcdir"
+   install -m755 -d "$pkgdir/var/lib/texmf/arch/installedpkgs"
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS "$pkgdir/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs"
+   install -m644 $pkgname.maps "$pkgdir/var/lib/texmf/arch/installedpkgs/"
+   install -m755 -d "$pkgdir/usr/share"
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && [[ $d != texlive-man ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 "$pkgdir"/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' "$pkgdir"/usr/share/texmf-dist/'{}' \;
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 "$pkgdir"/usr/share/'{}' \;
+     find texmf-dist -type f -exec install -m644 '{}' "$pkgdir"/usr/share/'{}' \;
+   fi
+   if [[ -d "$pkgdir/usr/share/texmf-dist/scripts" ]]; then
+     find "$pkgdir/usr/share/texmf-dist/scripts" -type f -exec chmod a+x '{}' \;
+   fi
+   mkdir -p "${pkgdir}/usr/bin"
+   mkdir -p "${pkgdir}/usr/share/man/man1"
+   ln -s /usr/share/texmf-dist/scripts/texlive-extra/rubibtex.sh "${pkgdir}/usr/bin/rubibtex"
+   ln -s /usr/share/texmf-dist/scripts/texlive-extra/rumakeindex.sh "${pkgdir}/usr/bin/rumakeindex"
+   install -m644 "$srcdir/texlive-man/man1/rubibtex.1" "${pkgdir}/usr/share/man/man1/"
+   install -m644 "$srcdir/texlive-man/man1/rumakeindex.1" "${pkgdir}/usr/share/man/man1/"
+}
