@@ -1,0 +1,47 @@
+# Maintainer: Firmicus <firmicus āt gmx dōt net>
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+
+pkgname=texlive-langgreek
+pkgver=2022.61820
+_revnr=${pkgver#2022.}
+pkgrel=1
+pkgdesc="TeX Live - Fonts and support for typesetting Greek"
+license=('GPL')
+arch=(any)
+depends=('texlive-core')
+groups=('texlive-lang')
+url='http://tug.org/texlive/'
+source=("https://sources.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip" "$pkgname.maps")
+options=('!emptydirs')
+sha256sums=('167443bb29531fbf1b8a5d85d7a65af03f6a05c4e0d91627236645a3cc84a604'
+            '1d808532a77ad46260660e87b74de23403ffdd51ca76d14a406d5719e4e02f26')
+
+build() {
+   cd "$srcdir"
+   for p in *.tar.xz; do
+	   bsdtar -xf $p
+   done
+   rm -rf {tlpkg,doc,source} || true
+}
+
+package() {
+   install -m755 -d "$pkgdir"/var/lib/texmf/arch/installedpkgs
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS "$pkgdir"/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs
+   install -m644 $pkgname.maps "$pkgdir"/var/lib/texmf/arch/installedpkgs/
+   install -m755 -d "$pkgdir"/usr/share
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 "$pkgdir"/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' "$pkgdir"/usr/share/texmf-dist/'{}' \;
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 "$pkgdir"/usr/share/'{}' \;
+     find texmf-dist -type f -exec install -m644 '{}' "$pkgdir"/usr/share/'{}' \;
+   fi
+   if [[ -d "$pkgdir"/usr/share/texmf-dist/scripts ]]; then
+     find "$pkgdir"/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+   install -m755 -d "$pkgdir"/usr/bin
+   ln -s /usr/share/texmf-dist/scripts/mkgrkindex/mkgrkindex "$pkgdir"/usr/bin/mkgrkindex
+}
