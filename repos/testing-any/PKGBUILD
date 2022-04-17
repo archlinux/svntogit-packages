@@ -1,0 +1,64 @@
+# Contributor: Firmicus <firmicus āt gmx dōt net>
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+
+pkgname=texlive-bibtexextra
+pkgver=2022.63023
+_revnr=${pkgver#2022.}
+pkgrel=1
+pkgdesc="TeX Live - Additional BibTeX styles and bibliography databases"
+license=('GPL')
+arch=(any)
+depends=('texlive-core')
+groups=('texlive-most')
+url='https://tug.org/texlive/'
+source=("https://sources.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip")
+sha256sums=('990caa789e64c36bf38dfdb2a0c071920f0fd43a80bb4e29a92a39ea20eee720')
+
+build() {
+   cd "$srcdir"
+   for p in *.tar.xz; do
+	   bsdtar -xf $p
+   done
+   rm -rf {tlpkg,doc,source} || true
+}
+
+package() {
+   install -m755 -d "$pkgdir"/var/lib/texmf/arch/installedpkgs
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS "$pkgdir"/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs
+   install -m755 -d "$pkgdir"/usr/share
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 "$pkgdir"/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' "$pkgdir"/usr/share/texmf-dist/'{}' \;
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 "$pkgdir"/usr/share/'{}' \;
+     find texmf-dist -type f -exec install -m644 '{}' "$pkgdir"/usr/share/'{}' \;
+   fi
+   if [[ -d "$pkgdir"/usr/share/texmf-dist/scripts ]]; then
+     find "$pkgdir"/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+
+   # link programs from /usr/share/texmf-dist/scripts
+   _linked_scripts="
+bib2gls/bib2gls.sh
+bib2gls/convertgls2bib.sh
+bibexport/bibexport.sh
+crossrefware/bbl2bib.pl
+crossrefware/bibdoiadd.pl
+crossrefware/bibmradd.pl
+crossrefware/biburl2doi.pl
+crossrefware/bibzbladd.pl
+crossrefware/ltx2crossrefxml.pl
+listbib/listbib
+multibibliography/multibibliography.pl
+urlbst/urlbst
+"
+    install -m755 -d "$pkgdir"/usr/bin
+    for _script in ${_linked_scripts}; do
+        _scriptbase=$(basename $_script)
+        _scriptbase=${_scriptbase%.*}
+        ln -s /usr/share/texmf-dist/scripts/${_script} "${pkgdir}/usr/bin/${_scriptbase}"
+    done
+}
