@@ -1,0 +1,82 @@
+# Maintainer: Firmicus <firmicus āt gmx dōt net>
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+
+pkgname=texlive-latexextra
+pkgver=2022.63034
+_revnr=${pkgver#2022.}
+pkgrel=1
+pkgdesc="TeX Live - Large collection of add-on packages for LaTeX"
+license=('GPL')
+arch=(any)
+depends=('texlive-core'
+         'perl-file-which' # for pdfannotextractor
+        )
+optdepends=(
+  'inkscape: required for svg package'
+  'java-environment: to use pdfannotextractor'
+  'python-pygments: for pygmentex'
+  'texlive-genericextra: required for calctab package'
+  'texlive-pictures: required for overpic package'
+)
+groups=('texlive-most')
+url='http://tug.org/texlive/'
+source=("https://sources.archlinux.org/other/texlive/$pkgname-$pkgver-src.zip"
+        "$pkgname.maps"
+        "$pkgname.fmts")
+options=('!emptydirs')
+sha256sums=('b1b2f1a5ac580890cfe5145f9aed064a6af57e87109e5ef991cc093e029c8fdf'
+            'd53750a03a52472a1c7c5ba5142959ba382a5d69215471691c0b12c3663950ce'
+            '828a9cf082b9a89a4aa0eec402a9c32b8056bb873e4a5dc92ce60aec2ea69435')
+
+build() {
+   for p in *.tar.xz; do
+	   bsdtar -xf $p
+   done
+   rm -rf {tlpkg,doc,source} || true
+}
+
+package() {
+   install -m755 -d "$pkgdir"/var/lib/texmf/arch/installedpkgs
+   sed -i '/^#/d' CONTENTS
+   install -m644 CONTENTS "$pkgdir"/var/lib/texmf/arch/installedpkgs/${pkgname}_${_revnr}.pkgs
+   install -m644 $pkgname.maps "$pkgdir"/var/lib/texmf/arch/installedpkgs/
+   install -m755 -d "$pkgdir"/usr/share
+   wanteddirs=$(for d in *; do test -d $d && [[ $d != texmf* ]] && echo $d; done) || true
+   for dir in $wanteddirs; do
+     find $dir -type d -exec install -d -m755 "$pkgdir"/usr/share/texmf-dist/'{}' \;
+     find $dir -type f -exec install -m644 '{}' "$pkgdir"/usr/share/texmf-dist/'{}' \;
+   done
+   if [[ -d texmf-dist ]]; then
+     find texmf-dist -type d -exec install -d -m755 "$pkgdir"/usr/share/'{}' \;
+     find texmf-dist -type f -exec install -m644 '{}' "$pkgdir"/usr/share/'{}' \;
+   fi
+   if [[ -d "$pkgdir"/usr/share/texmf-dist/scripts ]]; then
+     find "$pkgdir"/usr/share/texmf-dist/scripts -type f -exec chmod a+x '{}' \;
+   fi
+
+    #add symlinks that were in texlive-bin:
+    _linked_scripts="
+authorindex/authorindex
+exceltex/exceltex
+glossaries/makeglossaries
+glossaries/makeglossaries-lite.lua
+hyperxmp/hyperxmp-add-bytecount.pl
+l3build/l3build.lua
+makedtx/makedtx.pl
+pax/pdfannotextractor.pl
+perltex/perltex.pl
+pygmentex/pygmentex.py
+splitindex/splitindex.pl
+svn-multi/svn-multi.pl
+vpe/vpe.pl
+webquiz/webquiz.py
+wordcount/wordcount.sh
+yplan/yplan
+"
+    install -m755 -d "$pkgdir"/usr/bin
+    for _script in ${_linked_scripts}; do
+        _scriptbase=$(basename $_script)
+        _scriptbase=${_scriptbase%.*}
+        ln -s /usr/share/texmf-dist/scripts/${_script} "${pkgdir}/usr/bin/${_scriptbase}"
+    done
+}
