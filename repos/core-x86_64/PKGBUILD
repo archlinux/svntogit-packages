@@ -4,19 +4,17 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=coreutils
-pkgver=9.0
-pkgrel=2
+pkgver=9.1
+pkgrel=1
 pkgdesc='The basic file, shell and text manipulation utilities of the GNU operating system'
 arch=('x86_64')
 license=('GPL3')
 url='https://www.gnu.org/software/coreutils/'
 depends=('glibc' 'acl' 'attr' 'gmp' 'libcap' 'openssl')
-source=("https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig}
-        '01-fix-fs72253.patch')
+source=("https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig})
 validpgpkeys=('6C37DC12121A5006BC1DB804DF6FD971306037D9') # Pádraig Brady
-sha256sums=('ce30acdf4a41bc5bb30dd955e9eaa75fa216b4e3deb08889ed32433c7b3b97ce'
-            'SKIP'
-            'aefec296212c10f8ddae10225216847f537e573d80b678161f453b34fd183bf5')
+sha256sums=('61a1f410d78ba7e7f37a5a4f50e6d1320aca33375484a3255eddf17a38580423'
+            'SKIP')
 
 prepare() {
   cd $pkgname-$pkgver
