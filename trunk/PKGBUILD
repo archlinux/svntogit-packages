@@ -5,7 +5,7 @@
 pkgbase=emacs
 pkgname=(emacs emacs-nativecomp)
 pkgver=28.1
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
@@ -45,9 +45,8 @@ build() {
   cd ../${pkgbase}-${pkgver}-nativecomp
   ./configure \
     --with-native-compilation \
-    --without-compress-install \
     $_confflags
-  make NATIVE_FULL_AOT=1
+  make NATIVE_FULL_AOT=1 bootstrap
 }
 
 package_emacs() {
@@ -75,7 +74,7 @@ package_emacs-nativecomp() {
 
   # remove conflict with ctags package
   mv "${pkgdir}"/usr/bin/{ctags,ctags.emacs}
-  mv "${pkgdir}"/usr/share/man/man1/{ctags.1,ctags.emacs.1}
+  mv "${pkgdir}"/usr/share/man/man1/{ctags.1.gz,ctags.emacs.1}
 
   # fix user/root permissions on usr/share files
   find "${pkgdir}"/usr/share/emacs/${pkgver} -exec chown root:root {} \;
