@@ -59,7 +59,7 @@ prepare() {
 
 build() {
   cd postgresql-${pkgver}
-  local options=(
+  local configure_options=(
     --prefix=/usr
     --mandir=/usr/share/man
     --datadir=/usr/share/postgresql
@@ -71,6 +71,7 @@ build() {
     --with-python
     --with-tcl
     --with-pam
+    --with-readline
     --with-system-tzdata=/usr/share/zoneinfo
     --with-uuid=e2fs
     --with-icu
@@ -83,10 +84,11 @@ build() {
     --disable-rpath
   )
 
-  CFLAGS+=" -ffat-lto-objects" # Fix static libs
+  # Fix static libs
+  CFLAGS+=" -ffat-lto-objects"
 
   # only build plpython3 for now
-  ./configure "${options[@]}" \
+  ./configure "${configure_options[@]}" \
     PYTHON=/usr/bin/python
   make -C src/pl/plpython all
   make -C contrib/hstore_plpython all
@@ -100,7 +102,7 @@ build() {
   make distclean
 
   # regular build with everything
-  ./configure "${options[@]}" \
+  ./configure "${configure_options[@]}" \
     PYTHON=/usr/bin/python2
   make world
 }
