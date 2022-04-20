@@ -3,15 +3,16 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=13.6
+pkgver=14.2
 _majorver=${pkgver%.*}
-pkgrel=2
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
 license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
-             'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt')
+             'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt'
+             'util-linux')
 options=('debug')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
@@ -22,33 +23,33 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql-check-db-dir
         postgresql.sysusers
         postgresql.tmpfiles)
-b2sums=('f5ea95fd9ffc8846e0aaf5bac03b02afa71e62e796bbe40f68af727a2f3c74eddd98cb68427bcc13b87b6fa00a8e2a7b18dd7749318f0a4a32cfdbf9b0e0a873'
-        '71dc1b4e41294fd235db05317c991d42de082c49d38a2f97d1394572a93a4aa77f42ec29b4e6cf0a17adb3a4471afcb1e2464870f2b9e847906bf49541763a53'
-        '5135c5f9dafe427de8d3740d4a67c6dba2869be47dc52b4190b8aa1148e702992fde1821371b68e93b224f5805f697d490ea28ec80d7ce55e5a224551b0a6247'
+b2sums=('6460533a40064404f18642147b949cf7c85d036c45ede478fb9af8919895ee7b09dc78b89ed08a292226911f07cfc9e46d7f2d42e0aaea546c5e97a291d599b9'
+        'f91b7bbd23569af7c24189f01d93cf71752c5559fd0dc93027b0944e3986dfddee929027884a77393d104b8ebf848650ed907e327828346e67a16f0aa0629fc1'
+        'cb10afa597fd7e99f3f69322657c2137ffcc311f11acc97782d48f928361c5b7063cec4ceb08a63c6d97d6a96793f209bbc5026369999fbe0097c0db137c25e1'
         '3eab84d332d96678fe6e435ee243c8f1a82b838f601d61d3604d11e918aed7a62202edca5e476c4b9031ed284570e6fcd6c659cfdbd9624aa0019d3233755f81'
         '2209b7550acad7955102ec6922754b4046b2a2ad2a7e1cfb2cc4053c0705abac7aa7d7968eab617f50894797d06345f51c9a669926bd2a77dcf688206a2027e0'
         'a4255df47b7ac1418d20aa73aa0f6e70c7952a10d706e5523043c48b2c3b6d8e39838049dfcc826913cd0f2c06502561d1abe8b19cce7071db66139ae93a37bf'
-        '2eaf8867cc71b8e838925e1e1e2c37b5edd69c3fe7c144410a8683662ba0c342122803217d436d808e18826d28da352978e5d15dd1bc91b6b44dbaf4cfcd4d51'
+        '9151b25750675fa93480378022679f2af5c4fb26c219012b668f5e4d16f3f9424982a6bd42941a20b4052d11d3b087ede74026cc199e61e59328c094d28bfe70'
         '5e9cba2f45604db83eb77c7bbb54bc499a38274be6cd97abb056c9bdf18e637a8ac354e18f41f614f7e1a2d6f13c2a0b562ab0aaebf9447cf5eb2d60e6501e12'
         '8a8e5ec24ea338b2b51b8d2be5a336ac8d4cc6b25200ed0f0d564df9942997478df0c54da2fac7b27d677774a34398f69047eecd0f97bdc0df8fe50a1b5ed74d')
 
 # Upstream provides md5 and sha256
-md5sums=('06161451ca1b9fc888ce6e18ca93f7d1'
-         '0f96c09cb07cb5bf7c0f74b399128f33'
-         '21816c9949ab9766c409421314045d2e'
+md5sums=('aae1ede6de233e2d44437d66bc1cd3b8'
+         'bdafe5b6cd3ac2675cda972f322b6188'
+         '4572e8317064bd47429938c4c5681470'
          '96f82c38f3f540b53f3e5144900acf17'
          'd28e443f9f65a5712c52018b84e27137'
          '0418d1b78f15b969c1575657d47ab130'
-         '38fe206c794e2eff95556947af0e5ce5'
+         '984ab302670537938627688bdcd5c296'
          '2050d34e4dfa05f3c6fe4cd7615eaa4b'
          '02d017978f0bba21f455feceb3f0a45a')
-sha256sums=('bafc7fa3d9d4da8fe71b84c63ba8bdfe8092935c30c0aa85c24b2c08508f67fc'
-            '02ffb53b0a5049233f665c873b96264db77daab30e5a2194d038202d815a8e6a'
-            'af6186d40128e043f333da4591455bf62b7c96e80214835f5c8c60b635ea9afb'
+sha256sums=('2cf78b2e468912f8101d695db5340cf313c2e9f68a612fb71427524e8c9a977a'
+            '55d4c36b41b3925e2d74d4695c261aa267f06d70b9d768864f54262ec332eda4'
+            'dc17da62ce200ea2dacd5eb27adc33b0e296eb5bb10fada54fe4539d214c81c8'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
             '6abb842764bbed74ea4a269d24f1e73d1c0b1d8ecd6e2e6fb5fb10590298605e'
             '25fb140b90345828dc01a4f286345757e700a47178bab03d217a7a5a79105b57'
-            '7db9626c322928b2465aa126b48ba7f0eebd366bf2aa19c9c0a92b488cb469c5'
+            '0ad19ab58ee90c6cd97fe4ccb3287b3a2982768d937b4742d9e5572311349e6d'
             '7fa8f0ef3f9d40abd4749cc327c2f52478cb6dfb6e2405bd0279c95e9ff99f12'
             '4a4c0bb9ceb156cc47e9446d8393d1f72b4fe9ea1d39ba17213359df9211da57')
 
