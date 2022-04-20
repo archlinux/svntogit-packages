@@ -10,7 +10,7 @@ pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
 license=('custom:PostgreSQL')
-makedepends=('krb5' 'libxml2' 'python' 'python2' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
+makedepends=('krb5' 'libxml2' 'python' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
              'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
@@ -87,23 +87,7 @@ build() {
   # Fix static libs
   CFLAGS+=" -ffat-lto-objects"
 
-  # only build plpython3 for now
-  ./configure "${configure_options[@]}" \
-    PYTHON=/usr/bin/python
-  make -C src/pl/plpython all
-  make -C contrib/hstore_plpython all
-  make -C contrib/ltree_plpython all
-
-  # save plpython3 build and Makefile.global
-  cp -a src/pl/plpython{,3}
-  cp -a contrib/hstore_plpython{,3}
-  cp -a contrib/ltree_plpython{,3}
-  cp -a src/Makefile.global{,.python3}
-  make distclean
-
-  # regular build with everything
-  ./configure "${configure_options[@]}" \
-    PYTHON=/usr/bin/python2
+  ./configure "${configure_options[@]}"
   make world
 }
 
@@ -182,8 +166,7 @@ package_postgresql() {
   backup=('etc/pam.d/postgresql' 'etc/logrotate.d/postgresql')
   depends=("postgresql-libs>=${pkgver}" 'krb5' 'libxml2' 'readline>=6.0'
            'openssl>=1.0.0' 'pam' 'icu' 'systemd-libs' 'libldap' 'llvm-libs' 'libxslt')
-  optdepends=('python2: for PL/Python 2 support'
-              'python: for PL/Python 3 support'
+  optdepends=('python: for PL/Python 3 support'
               'perl: for PL/Perl support'
               'tcl: for PL/Tcl support'
               'postgresql-old-upgrade: upgrade from previous major version using pg_upgrade'
@@ -197,14 +180,6 @@ package_postgresql() {
   make DESTDIR="${pkgdir}" install
   make -C contrib DESTDIR="${pkgdir}" install
   make -C doc/src/sgml DESTDIR="${pkgdir}" install-man
-
-  # install plpython3
-  mv src/Makefile.global src/Makefile.global.save
-  cp src/Makefile.global.python3 src/Makefile.global
-  touch -r src/Makefile.global.save src/Makefile.global
-  make -C src/pl/plpython3 DESTDIR="${pkgdir}" install
-  make -C contrib/hstore_plpython3 DESTDIR="${pkgdir}" install
-  make -C contrib/ltree_plpython3 DESTDIR="${pkgdir}" install
 
   # we don't want these, they are in the -libs package
   for dir in src/interfaces src/bin/pg_config src/bin/pg_dump src/bin/psql src/bin/scripts; do
