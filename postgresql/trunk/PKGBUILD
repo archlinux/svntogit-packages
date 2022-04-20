@@ -12,6 +12,7 @@ arch=('x86_64')
 license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
              'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt')
+options=('debug')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
         postgresql-perl-rpath.patch
@@ -147,7 +148,7 @@ package_postgresql-libs() {
 
 package_postgresql-docs() {
   pkgdesc="HTML documentation for PostgreSQL"
-  options=('docs')
+  options+=('docs')
 
   cd postgresql-${pkgver}
 
@@ -171,7 +172,7 @@ package_postgresql() {
               'tcl: for PL/Tcl support'
               'postgresql-old-upgrade: upgrade from previous major version using pg_upgrade'
               'logrotate: rotates system logs automatically')
-  options=('staticlibs')
+  options+=('staticlibs')
   install=postgresql.install
 
   cd postgresql-${pkgver}
