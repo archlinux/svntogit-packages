@@ -24,7 +24,7 @@ pkgname=(
   qemu-virtiofsd
 )
 pkgver=7.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -96,7 +96,7 @@ makedepends=(
   zstd
 )
 # NOTE: currently the debug package for qemu >= 7.0.0 contains an invalid /build dir
-# options=(debug)
+options=(debug)
 source=(
   https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
   bridge.conf
@@ -238,8 +238,8 @@ package_qemu() {
     'qemu-hw-display-virtio-gpu: for virtio-gpu display device'
     'qemu-hw-display-virtio-gpu-pci: for virtio-gpu-pci display device'
     'qemu-hw-display-virtio-gpu-pci-gl: for virtio-gpu-pci-gl display device'
-    'qemu-hw-display-virtio-gpu-vga: for virtio-gpu-vga display device'
-    'qemu-hw-display-virtio-gpu-vga-gl: for virtio-gpu-vga-gl display device'
+    'qemu-hw-display-virtio-vga: for virtio-gpu-vga display device'
+    'qemu-hw-display-virtio-vga-gl: for virtio-gpu-vga-gl display device'
     'qemu-hw-s390x-virtio-gpu-ccw: for s390x-virtio-gpu-ccw display device'
     'qemu-hw-usb-host: for USB host device'
     'qemu-hw-usb-redirect: for usbredir device'
