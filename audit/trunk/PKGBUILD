@@ -1,5 +1,6 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
-# Maintainer : Christian Rebischke <Chris.Rebischke@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Christian Rebischke <Chris.Rebischke@archlinux.org>
 # Contributor: Daniel Micay <danielmicay@gmail.com>
 # Contributor: <kang@insecure.ws>
 # Contributor: Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
@@ -7,26 +8,31 @@
 # Contributor: henning mueller <henning@orgizm.net>
 
 pkgbase=audit
-pkgname=('audit' 'python-audit')
-pkgver=3.0.7
+pkgname=(audit python-audit)
+pkgver=3.0.8
 pkgrel=1
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
-arch=('x86_64')
-makedepends=('glibc' 'krb5' 'libcap-ng' 'libldap' 'swig' 'linux-headers' 'python')
-license=('GPL')
-options=('emptydirs' 'debug')
-source=(https://people.redhat.com/sgrubb/audit/${pkgname}-${pkgver}.tar.gz)
-sha512sums=('b5662b32082fc2ac54e247aa0db5442d76afa30134ebba1d624a17004e9ccf6856bb75344af4ce9d9a0a66c03e1c6f18b7d45658d7df13ea71af0c8362e08d70')
-b2sums=('706db746fb779913619da794bab24a9e890e1655bbd0abb007cbc909b32ab1d643e93953a23ef864d5e189f3447a7ddb4dca1478144cdc226f5a5594545bd28f')
+arch=(x86_64)
+makedepends=(glibc krb5 libcap-ng libldap linux-headers python swig)
+license=(GPL2 LGPL2.1)
+options=(debug emptydirs)
+source=(
+  https://people.redhat.com/sgrubb/audit/$pkgname-$pkgver.tar.gz
+  $pkgbase-3.0.8-config_paths.patch
+)
+sha512sums=('8379bf425d68381d182300e628e42de8460d2f3e15b2395e10880f94b9989656852a50a9bece75b632ec8a04c40c9e666ff4c9d6b25ace3a8f50d2011506afab'
+            'bc699123f810abcf9300728bf61d7fcfcc83677b75fbeb713fb24cc11b2f9edf687661aab70766acde7c3c41c6a62f8e0a54cdfb49d1c7ce2246b67fbe3feec5')
+b2sums=('38a35a7540e608127cfc54a2de2cb12df8c29e778799ca53318824c84565a67b7ea131f9bba455fa469ce9139a27908738f571a6e383ce9a3274f70c09d27ec7'
+        '50be1b4f76ace20d8d14b4c57a9bb69daa3da35fd654aca8730bc287682fe38f1c1917b37469fb087daf9f309ffc15cca15f54166ece0a055f540c2604778fc6')
 
 prepare() {
-  cd ${pkgbase}-${pkgver}
-  sed 's|/var/run/auditd.pid|/run/auditd.pid|' -i init.d/auditd.service
+  # replace the use of /sbin with /usr/bin in configs
+  patch -Np1 -d $pkgbase-$pkgver -i ../$pkgbase-3.0.8-config_paths.patch
 }
 
 build() {
-  cd ${pkgbase}-${pkgver}
+  cd $pkgbase-$pkgver
   ./configure \
     --prefix=/usr \
     --sbindir=/usr/bin \
@@ -35,13 +41,15 @@ build() {
     --enable-gssapi-krb5=yes \
     --enable-systemd=yes \
     --with-libcap-ng=yes
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
-  [ -n "${SOURCE_DATE_EPOCH}" ] && touch -h -d @$SOURCE_DATE_EPOCH bindings/swig/python/audit.py
+  [ -n "$SOURCE_DATE_EPOCH" ] && touch -h -d @$SOURCE_DATE_EPOCH bindings/swig/python/audit.py
 }
 
 package_audit() {
-  depends=('glibc' 'krb5' libkrb5.so libgssapi_krb5.so 'libcap-ng' libcap-ng.so)
-  provides=('libaudit.so' 'libauparse.so')
+  depends=(glibc krb5 libkrb5.so libgssapi_krb5.so libcap-ng libcap-ng.so)
+  provides=(libaudit.so libauparse.so)
   backup=(
     etc/libaudit.conf
     etc/audit/audit-stop.rules
@@ -54,29 +62,23 @@ package_audit() {
     etc/audit/plugins.d/syslog.conf
   )
 
-  cd ${pkgbase}-${pkgver}
-  make DESTDIR="${pkgdir}" INSTALL='install -p' install
+  make DESTDIR="$pkgdir" install -C $pkgbase-$pkgver
 
-  cd "${pkgdir}"
-  install -d -m 0700 var/log/audit
-  rm -rf etc/rc.d \
-    etc/sysconfig \
-    usr/lib/audit \
-    usr/lib/python*
+  # add log dir
+  install -vdm 700 "$pkgdir/var/log/$pkgname"
 
-  sed -ri 's|/sbin|/usr/bin|' \
-    etc/audit/*.conf \
-    etc/audit/plugins.d/*.conf \
-    usr/lib/systemd/system/auditd.service
+  # remove legacy files
+  rm -frv "$pkgdir/usr/lib/audit"
 
-  chmod 644 usr/lib/systemd/system/auditd.service
+  # remove files provided by python-audit
+  rm -frv "$pkgdir/usr/lib/python"*
 }
 
 package_python-audit() {
-  depends=('python' 'audit')
+  depends=(audit libaudit.so libauparse.so glibc python)
   pkgdesc+=' (python bindings)'
-  cd ${pkgbase}-${pkgver}
-  make -C bindings DESTDIR="${pkgdir}" INSTALL='install -p' install
+
+  make DESTDIR="$pkgdir" install -C $pkgbase-$pkgver/bindings
 }
 
 # vim: ts=2 sw=2 et:
