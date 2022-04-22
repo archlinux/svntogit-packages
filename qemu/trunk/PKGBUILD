@@ -24,7 +24,7 @@ pkgname=(
   qemu-virtiofsd
 )
 pkgver=7.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -183,14 +183,10 @@ build() {
       --libexecdir=/usr/lib/qemu \
       --localstatedir=/var \
       --docdir=/usr/share/doc/qemu \
-      --audio-drv-list="pa,jack,alsa,oss" \
       --enable-modules \
-      --enable-lto \
       --enable-sdl \
       --enable-slirp=system \
       --enable-tpm \
-      --extra-ldflags="$LDFLAGS" \
-      --extra-cflags="$CFLAGS" \
       --smbd=/usr/bin/smbd \
       --tls-priority=@QEMU,SYSTEM \
       --with-coroutine=ucontext
