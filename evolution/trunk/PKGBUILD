@@ -4,7 +4,7 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.44.0
+pkgver=3.44.1
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
@@ -15,7 +15,7 @@ depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef gspell
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
 options=(!emptydirs debug)
-_commit=0839b6f5b459b2fdd79e1fcf385b8d5c7759135f  # tags/3.44.0^0
+_commit=38912dc06f22d414877ba6e3d43f280554b9670f  # tags/3.44.1^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -26,10 +26,6 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
-
-  # https://gitlab.gnome.org/GNOME/evolution/-/issues/1835
-  # Mail: Preview uses wrong colors for HTML mail with dark theme
-  git cherry-pick -n dea447327f92ea1617f1f852658326dc8852e721
 }
 
 build() {
