@@ -1,0 +1,67 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Ian Beringer <ian@ianberinger.com>
+
+pkgname=usbguard
+pkgver=1.1.1
+pkgrel=2
+pkgdesc='Software framework for implementing USB device authorization policies'
+url='https://github.com/USBGuard/usbguard'
+arch=('x86_64')
+license=('GPL2')
+depends=('glibc' 'libqb' 'libqb.so' 'libsodium' 'libcap-ng' 'protobuf' 'polkit' 'dbus-glib'
+         'audit' 'libaudit.so' 'libseccomp' 'libseccomp.so' 'libcap-ng.so' 'libgio-2.0.so'
+         'libglib-2.0.so' 'libprotobuf.so')
+makedepends=('catch2' 'pegtl' 'libxslt' 'libxml2' 'asciidoc' 'systemd')
+provides=('libusbguard.so')
+backup=(etc/usbguard/usbguard-daemon.conf
+        etc/usbguard/rules.conf)
+source=(https://github.com/USBGuard/usbguard/releases/download/usbguard-${pkgver}/usbguard-${pkgver}.tar.gz{,.asc})
+sha512sums=('7810471a3778b4bca644565cefa2666f98d53c2747bff7262b9bbb0327e7dba7a1e8c067c96d89e6742ccec5f65410f4e273bf84ee2bb1fbc7ff5738df3af780'
+            'SKIP')
+validpgpkeys=(
+  'DE78B93EAED8A620F5AA14DF52F7E84653274B59' # Radovan Sroka <rsroka@redhat.com>
+)
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  autoreconf -fiv
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sys=/etc \
+    --sbindir=/usr/bin \
+    --libdir=/usr/lib \
+    --enable-systemd \
+    --without-bundled-catch \
+    --without-bundled-pegtl \
+    --with-dbus \
+    --with-polkit \
+    --with-crypto-library=sodium
+  make
+  touch rules.conf
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  make check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make INSTALL='install -p' DESTDIR="${pkgdir}" install
+
+  chmod 750 "${pkgdir}/etc/usbguard"
+  install -Dpm 600 usbguard-daemon.conf rules.conf -t "${pkgdir}/etc/usbguard"
+
+  install -Dpm 644 scripts/bash_completion/usbguard -t "${pkgdir}/usr/share/bash-completion/completions"
+  install -Dpm 644 scripts/usbguard-zsh-completion "${pkgdir}/usr/share/zsh/site-functions/_usbguard"
+
+  install -Dm 644 CHANGELOG.md README.adoc -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
