@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=4
+pkgrel=5
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
