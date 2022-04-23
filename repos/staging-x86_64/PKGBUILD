@@ -1,0 +1,76 @@
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Contributor: David Runge <dvzrv@archlinux.org>
+# Contributor: Aleksey Filippov <sarum9in@gmail.com>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Sven-Hendrik Haase <sh@lutzhaase.com>
+# Contributor: Thomas S Hatch <thatch45@gmail.com>
+# Contributor: Geoffroy Carrier <geoffroy@archlinux.org>
+# Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgbase='protobuf'
+pkgname=('protobuf' 'python-protobuf')
+pkgver=3.20.1
+pkgrel=1
+pkgdesc="Protocol Buffers - Google's data interchange format"
+arch=('x86_64')
+url='https://developers.google.com/protocol-buffers/'
+license=('BSD')
+depends=('gcc-libs' 'glibc' 'zlib')
+makedepends=('unzip' 'python-setuptools')
+source=("https://github.com/protocolbuffers/$pkgname/releases/download/v$pkgver/$pkgname-all-$pkgver.tar.gz")
+sha512sums=('8b32f944be76a4713084a9b18664d17bb6947fafa10412ebaf98f1cebb0e7650e0d9389d9bbb1d53df6c6e96c44467ec2e52cf1740b4e091ddb5f2c0ae9aa742')
+
+prepare() {
+  cd "$pkgbase-$pkgver"
+  autoreconf -vfi
+
+# Don't fail tests on deprecation warnings
+  sed -e "/DeprecationWarning/d" -i python/google/protobuf/internal/*test.py
+}
+
+build() {
+  cd "$pkgbase-$pkgver"
+  ./configure --prefix=/usr
+  make
+  cd python
+  python setup.py build --cpp_implementation
+}
+
+check() {
+  cd "$pkgbase-$pkgver"
+  make check
+
+  cd python
+  python setup.py test
+}
+
+package_protobuf() {
+  replaces=('protobuf-cpp')
+  provides=('libprotoc.so' 'libprotobuf.so' 'libprotobuf-lite.so')
+
+  cd "$pkgbase-$pkgver"
+  make DESTDIR="$pkgdir" install
+
+  install -vDm 644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -vDm 644 editors/protobuf-mode.el \
+    -t "$pkgdir/usr/share/emacs/site-lisp/"
+  install -vDm 644 editors/proto.vim \
+    -t "${pkgdir}/usr/share/vim/vimfiles/syntax"
+}
+
+package_python-protobuf() {
+  pkgdesc='Python 3 bindings for Google Protocol Buffers'
+  depends=('python' 'python-six' "protobuf=$pkgver")
+
+  local python_version=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+  cd "$pkgbase-$pkgver"
+  (
+    cd python
+    PYTHONPATH="$PWD/build/lib.linux-$CARCH-${python_version}:PYTHONPATH" \
+    python setup.py install --skip-build \
+                            --cpp_implementation \
+                            --optimize=1 \
+                            --root="$pkgdir"
+  )
+  install -vDm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
