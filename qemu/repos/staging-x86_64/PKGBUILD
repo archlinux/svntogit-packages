@@ -4,7 +4,7 @@
 
 pkgbase=qemu
 pkgname=(
-  qemu
+  qemu-common
   qemu-audio-{alsa,dbus,jack,oss,pa,sdl,spice}
   qemu-block-{curl,dmg,gluster,iscsi,nfs,rbd,ssh}
   qemu-chardev-{baum,spice}
@@ -22,9 +22,10 @@ pkgname=(
   qemu-user
   qemu-vhost-user-gpu
   qemu-virtiofsd
+  qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -143,11 +144,80 @@ _qemu_system_deps=(
   numactl libnuma.so
   pam libpam.so
   pixman libpixman-1.so
-  qemu
+  qemu-common
   snappy
   vde2
   zlib
   zstd libzstd.so
+)
+
+# TODO: qemu-user-static
+#  'qemu-user-static: for static user mode emulation of QEMU targets'
+_qemu_optdepends=(
+  'qemu-audio-alsa: for ALSA audio driver'
+  'qemu-audio-dbus: for D-Bus audio driver'
+  'qemu-audio-jack: for JACK audio driver'
+  'qemu-audio-oss: for OSS audio driver'
+  'qemu-audio-pa: for PulseAudio audio driver'
+  'qemu-audio-sdl: for SDL audio driver'
+  'qemu-audio-spice: for spice audio driver'
+  'qemu-block-curl: for curl block driver'
+  'qemu-block-dmg: for DMG block driver'
+  'qemu-block-gluster: for Gluster block driver'
+  'qemu-block-iscsi: for iSCSI block driver'
+  'qemu-block-nfs: for NFS block driver'
+  'qemu-block-rbd: for Ceph/RBD block driver'
+  'qemu-block-ssh: for SSH block driver'
+  'qemu-chardev-baum: for Baum chardev driver'
+  'qemu-chardev-spice: for spice chardev driver'
+  'qemu-docs: for documentation'
+  'qemu-hw-display-qxl: for QXL display device'
+  'qemu-hw-display-virtio-gpu-gl: for virtio-gpu-gl display device'
+  'qemu-hw-display-virtio-gpu: for virtio-gpu display device'
+  'qemu-hw-display-virtio-gpu-pci: for virtio-gpu-pci display device'
+  'qemu-hw-display-virtio-gpu-pci-gl: for virtio-gpu-pci-gl display device'
+  'qemu-hw-display-virtio-vga: for virtio-gpu-vga display device'
+  'qemu-hw-display-virtio-vga-gl: for virtio-gpu-vga-gl display device'
+  'qemu-hw-s390x-virtio-gpu-ccw: for s390x-virtio-gpu-ccw display device'
+  'qemu-hw-usb-host: for USB host device'
+  'qemu-hw-usb-redirect: for usbredir device'
+  'qemu-hw-usb-smartcard: for USB smartcard device'
+  'qemu-img: for manipulating disk images'
+  'qemu-pr-helper: for persistent reservation utility'
+  'qemu-system-aarch64: for AARCH64 system emulator'
+  'qemu-system-alpha: for Alpha system emulator'
+  'qemu-system-arm: for ARM system emulator'
+  'qemu-system-avr: for AVR system emulator'
+  'qemu-system-cris: for CRIS system emulator'
+  'qemu-system-hppa: for HPPA system emulator'
+  'qemu-system-m68k: for ColdFire (m68k) system emulator'
+  'qemu-system-microblaze: for Microblaze system emulator'
+  'qemu-system-mips: for MIPS system emulator'
+  'qemu-system-nios2: for nios2 system emulator'
+  'qemu-system-or1k: for OpenRisc32 system emulator'
+  'qemu-system-ppc: for PPC system emulator'
+  'qemu-system-riscv: for RISC-V system emulator'
+  'qemu-system-rx: for RX system emulator'
+  'qemu-system-s390x: for S390 system emulator'
+  'qemu-system-sh4: for SH4 system emulator'
+  'qemu-system-sparc: for SPARC system emulator'
+  'qemu-system-tricore: for tricore system emulator'
+  'qemu-system-x86: for x86 system emulator'
+  'qemu-system-xtensa: for Xtensa system emulator'
+  'qemu-tests: for QEMU tests'
+  'qemu-tools: for QEMU tools'
+  'qemu-ui-curses: for curses UI driver'
+  'qemu-ui-dbus: for D-Bus UI driver'
+  'qemu-ui-egl-headless: for EGL headless UI driver'
+  'qemu-ui-gtk: for GTK UI driver'
+  'qemu-ui-opengl: for OpenGL UI driver'
+  'qemu-ui-sdl: for SDL UI driver'
+  'qemu-ui-spice-app: for spice app UI driver'
+  'qemu-ui-spice-core: for spice core UI driver'
+  'qemu-user: for user mode emulation of QEMU targets'
+  'qemu-vhost-user-gpu: for vhost-user-gpu display device'
+  'qemu-virtiofsd: for virtio-fs shared filesystem daemon'
+  'samba: for SMB/CIFS server support'
 )
 
 _pick() {
@@ -162,12 +232,12 @@ _pick() {
 
 prepare() {
   # extract licenses for TCG
-  sed -n '1,23p' $pkgname-$pkgver/tcg/tcg-internal.h > tcg.LICENSE.MIT
-  sed -n '1,23p' $pkgname-$pkgver/tcg/arm/tcg-target.c.inc > tcg-arm.LICENSE.MIT
-  sed -n '1,23p' $pkgname-$pkgver/tcg/tci/tcg-target.h > tci.LICENSE.MIT
+  sed -n '1,23p' $pkgbase-$pkgver/tcg/tcg-internal.h > tcg.LICENSE.MIT
+  sed -n '1,23p' $pkgbase-$pkgver/tcg/arm/tcg-target.c.inc > tcg-arm.LICENSE.MIT
+  sed -n '1,23p' $pkgbase-$pkgver/tcg/tci/tcg-target.h > tci.LICENSE.MIT
 
   # install qemu-pr-helper.socket to sockets.target
-  sed -e 's/multi-user.target/sockets.target/g' -i $pkgname-$pkgver/contrib/systemd/qemu-pr-helper.socket
+  sed -e 's/multi-user.target/sockets.target/g' -i $pkgbase-$pkgver/contrib/systemd/qemu-pr-helper.socket
 
   # create build dir
   mkdir -vp build
@@ -175,9 +245,12 @@ prepare() {
 }
 
 build() {
+  # Build only minimal debug info to reduce size
+  CFLAGS+=' -g1'
+  CXXFLAGS+=' -g1'
   (
     cd build
-    ../$pkgname-$pkgver/configure \
+    ../$pkgbase-$pkgver/configure \
       --prefix=/usr \
       --sysconfdir=/etc \
       --libexecdir=/usr/lib/qemu \
@@ -206,77 +279,9 @@ build() {
 #  )
 }
 
-package_qemu() {
+package_qemu-common() {
   license+=(BSD MIT)
   depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so hicolor-icon-theme libcap-ng libcap-ng.so)
-  # TODO: qemu-user-static
-  #  'qemu-user-static: for static user mode emulation of QEMU targets'
-  optdepends=(
-    'qemu-audio-alsa: for ALSA audio driver'
-    'qemu-audio-dbus: for D-Bus audio driver'
-    'qemu-audio-jack: for JACK audio driver'
-    'qemu-audio-oss: for OSS audio driver'
-    'qemu-audio-pa: for PulseAudio audio driver'
-    'qemu-audio-sdl: for SDL audio driver'
-    'qemu-audio-spice: for spice audio driver'
-    'qemu-block-curl: for curl block driver'
-    'qemu-block-dmg: for DMG block driver'
-    'qemu-block-gluster: for Gluster block driver'
-    'qemu-block-iscsi: for iSCSI block driver'
-    'qemu-block-nfs: for NFS block driver'
-    'qemu-block-rbd: for Ceph/RBD block driver'
-    'qemu-block-ssh: for SSH block driver'
-    'qemu-chardev-baum: for Baum chardev driver'
-    'qemu-chardev-spice: for spice chardev driver'
-    'qemu-docs: for documentation'
-    'qemu-hw-display-qxl: for QXL display device'
-    'qemu-hw-display-virtio-gpu-gl: for virtio-gpu-gl display device'
-    'qemu-hw-display-virtio-gpu: for virtio-gpu display device'
-    'qemu-hw-display-virtio-gpu-pci: for virtio-gpu-pci display device'
-    'qemu-hw-display-virtio-gpu-pci-gl: for virtio-gpu-pci-gl display device'
-    'qemu-hw-display-virtio-vga: for virtio-gpu-vga display device'
-    'qemu-hw-display-virtio-vga-gl: for virtio-gpu-vga-gl display device'
-    'qemu-hw-s390x-virtio-gpu-ccw: for s390x-virtio-gpu-ccw display device'
-    'qemu-hw-usb-host: for USB host device'
-    'qemu-hw-usb-redirect: for usbredir device'
-    'qemu-hw-usb-smartcard: for USB smartcard device'
-    'qemu-img: for manipulating disk images'
-    'qemu-pr-helper: for persistent reservation utility'
-    'qemu-system-aarch64: for AARCH64 system emulator'
-    'qemu-system-alpha: for Alpha system emulator'
-    'qemu-system-arm: for ARM system emulator'
-    'qemu-system-avr: for AVR system emulator'
-    'qemu-system-cris: for CRIS system emulator'
-    'qemu-system-hppa: for HPPA system emulator'
-    'qemu-system-m68k: for ColdFire (m68k) system emulator'
-    'qemu-system-microblaze: for Microblaze system emulator'
-    'qemu-system-mips: for MIPS system emulator'
-    'qemu-system-nios2: for nios2 system emulator'
-    'qemu-system-or1k: for OpenRisc32 system emulator'
-    'qemu-system-ppc: for PPC system emulator'
-    'qemu-system-riscv: for RISC-V system emulator'
-    'qemu-system-rx: for RX system emulator'
-    'qemu-system-s390x: for S390 system emulator'
-    'qemu-system-sh4: for SH4 system emulator'
-    'qemu-system-sparc: for SPARC system emulator'
-    'qemu-system-tricore: for tricore system emulator'
-    'qemu-system-x86: for x86 system emulator'
-    'qemu-system-xtensa: for Xtensa system emulator'
-    'qemu-tests: for QEMU tests'
-    'qemu-tools: for QEMU tools'
-    'qemu-ui-curses: for curses UI driver'
-    'qemu-ui-dbus: for D-Bus UI driver'
-    'qemu-ui-egl-headless: for EGL headless UI driver'
-    'qemu-ui-gtk: for GTK UI driver'
-    'qemu-ui-opengl: for OpenGL UI driver'
-    'qemu-ui-sdl: for SDL UI driver'
-    'qemu-ui-spice-app: for spice app UI driver'
-    'qemu-ui-spice-core: for spice core UI driver'
-    'qemu-user: for user mode emulation of QEMU targets'
-    'qemu-vhost-user-gpu: for vhost-user-gpu display device'
-    'qemu-virtiofsd: for virtio-fs shared filesystem daemon'
-    'samba: for SMB/CIFS server support'
-  )
   install=$pkgname.install
   options=(!strip)
 
@@ -488,97 +493,97 @@ package_qemu() {
 
 package_qemu-audio-alsa() {
   pkgdesc="QEMU ALSA audio driver"
-  depends=(alsa-lib libasound.so glibc qemu)
+  depends=(alsa-lib libasound.so glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-audio-dbus() {
   pkgdesc="QEMU D-Bus audio driver"
-  depends=(gcc-libs glib2 libgio-2.0.so libgobject-2.0.so libglib-2.0.so glibc qemu)
+  depends=(gcc-libs glib2 libgio-2.0.so libgobject-2.0.so libglib-2.0.so glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-audio-jack() {
   pkgdesc="QEMU JACK audio driver"
-  depends=(jack libjack.so glibc qemu)
+  depends=(jack libjack.so glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-audio-oss() {
   pkgdesc="QEMU OSS audio driver"
-  depends=(glibc qemu)
+  depends=(glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-audio-pa() {
   pkgdesc="QEMU PulseAudio audio driver"
-  depends=(glibc libpulse libpulse.so qemu)
+  depends=(glibc libpulse libpulse.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-audio-sdl() {
   pkgdesc="QEMU SDL audio driver"
-  depends=(glibc qemu sdl2)
+  depends=(glibc qemu-common sdl2)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-audio-spice() {
   pkgdesc="QEMU spice audio driver"
-  depends=(glibc qemu qemu-ui-spice-core spice libspice-server.so)
+  depends=(glibc qemu-common qemu-ui-spice-core spice libspice-server.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-curl() {
   pkgdesc="QEMU curl block driver"
-  depends=(curl libcurl.so gcc-libs glibc qemu)
+  depends=(curl libcurl.so gcc-libs glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-dmg() {
   pkgdesc="QEMU DMG block driver"
-  depends=(bzip2 libbz2.so glibc qemu)
+  depends=(bzip2 libbz2.so glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-gluster() {
   pkgdesc="QEMU Gluster block driver"
-  depends=(glibc glusterfs qemu)
+  depends=(glibc glusterfs qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-iscsi() {
   pkgdesc="QEMU iSCSI block driver"
-  depends=(gcc-libs glibc libiscsi qemu)
+  depends=(gcc-libs glibc libiscsi qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-nfs() {
   pkgdesc="QEMU NFS block driver"
-  depends=(gcc-libs glibc libnfs qemu)
+  depends=(gcc-libs glibc libnfs qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-rbd() {
   pkgdesc="QEMU Ceph/RBD block driver"
-  depends=(ceph-libs glibc qemu)
+  depends=(ceph-libs glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-block-ssh() {
   pkgdesc="QEMU SSH block driver"
-  depends=(gcc-libs glibc libssh libssh.so qemu)
+  depends=(gcc-libs glibc libssh libssh.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-chardev-baum() {
   pkgdesc="QEMU Baum chardev driver"
-  depends=(brltty libbrlapi.so glibc qemu)
+  depends=(brltty libbrlapi.so glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-chardev-spice() {
   pkgdesc="QEMU spice chardev driver"
-  depends=(libspice-server.so glibc qemu qemu-ui-spice-core)
+  depends=(libspice-server.so glibc qemu-common qemu-ui-spice-core)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -605,49 +610,49 @@ package_qemu-guest-agent() {
 
 package_qemu-hw-display-qxl() {
   pkgdesc="QEMU QXL display device"
-  depends=(gcc-libs glibc pixman libpixman-1.so qemu qemu-ui-spice-core spice libspice-server.so)
+  depends=(gcc-libs glibc pixman libpixman-1.so qemu-common qemu-ui-spice-core spice libspice-server.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-display-virtio-gpu() {
   pkgdesc="QEMU virtio-gpu display device"
-  depends=(glibc pixman libpixman-1.so qemu)
+  depends=(glibc pixman libpixman-1.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-display-virtio-gpu-gl() {
   pkgdesc="QEMU virtio-gpu-gl display device"
-  depends=(glibc qemu virglrenderer)
+  depends=(glibc qemu-common virglrenderer)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-display-virtio-gpu-pci() {
   pkgdesc="QEMU virtio-gpu-pci display device"
-  depends=(qemu)
+  depends=(qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-display-virtio-gpu-pci-gl() {
   pkgdesc="QEMU virtio-gpu-pci-gl display device"
-  depends=(qemu)
+  depends=(qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-display-virtio-vga() {
   pkgdesc="QEMU virtio-vga display device"
-  depends=(qemu)
+  depends=(qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-display-virtio-vga-gl() {
   pkgdesc="QEMU virtio-vga-gl display device"
-  depends=(qemu)
+  depends=(qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-s390x-virtio-gpu-ccw() {
   pkgdesc="QEMU s390x-virtio-gpu-ccw display device"
-  depends=(qemu)
+  depends=(qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -784,19 +789,19 @@ package_qemu-system-xtensa() {
 
 package_qemu-hw-usb-host() {
   pkgdesc="QEMU USB host device"
-  depends=(glibc libusb libusb-1.0.so qemu)
+  depends=(glibc libusb libusb-1.0.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-usb-redirect() {
   pkgdesc="QEMU usbredir device"
-  depends=(gcc-libs glibc qemu usbredir)
+  depends=(gcc-libs glibc qemu-common usbredir)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-hw-usb-smartcard() {
   pkgdesc="QEMU USB smartcard device"
-  depends=(gcc-libs libcacard glib2 libglib-2.0.so glibc qemu)
+  depends=(gcc-libs libcacard glib2 libglib-2.0.so glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -808,20 +813,20 @@ package_qemu-img() {
 
 package_qemu-pr-helper() {
   pkgdesc="QEMU persistent reservation utility"
-  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc gnutls libcap-ng libcap-ng.so liburing liburing.so multipath-tools pam libpam.so qemu)
+  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc gnutls libcap-ng libcap-ng.so liburing liburing.so multipath-tools pam libpam.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
   install -vDm 644 $pkgbase-$pkgver/contrib/systemd/$pkgname.{service,socket} -t "$pkgdir/usr/lib/systemd/system/"
 }
 
 package_qemu-tests() {
   pkgdesc="QEMU tests"
-  depends=(qemu)
+  depends=(qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-tools() {
   pkgdesc="QEMU tools"
-  depends=(curl libcurl.so gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc libxkbcommon libxkbcommon.so python qemu)
+  depends=(curl libcurl.so gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc libxkbcommon libxkbcommon.so python qemu-common)
   mv -v $pkgname/* "$pkgdir"
   install -vDm 644 $pkgbase-$pkgver/scripts/dump-guest-memory.py -t "$pkgdir/usr/share/$pkgbase/"
   install -vDm 755 $pkgbase-$pkgver/scripts/simpletrace.py -t "$pkgdir/usr/share/$pkgbase/"
@@ -832,19 +837,19 @@ package_qemu-tools() {
 
 package_qemu-ui-curses() {
   pkgdesc="QEMU curses UI driver"
-  depends=(gcc-libs glib2 libglib-2.0.so glibc ncurses libncursesw.so qemu)
+  depends=(gcc-libs glib2 libglib-2.0.so glibc ncurses libncursesw.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-ui-dbus() {
   pkgdesc="QEMU D-Bus UI driver"
-  depends=(gcc-libs glib2 libgio-2.0.so libgobject-2.0.so libglib-2.0.so glibc libepoxy pixman libpixman-1.so qemu)
+  depends=(gcc-libs glib2 libgio-2.0.so libgobject-2.0.so libglib-2.0.so glibc libepoxy pixman libpixman-1.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-ui-egl-headless() {
   pkgdesc="QEMU EGL headless UI driver"
-  depends=(glibc libepoxy qemu qemu-ui-opengl)
+  depends=(glibc libepoxy qemu-common qemu-ui-opengl)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -860,7 +865,7 @@ package_qemu-ui-gtk() {
     libepoxy
     libx11
     pixman libpixman-1.so
-    qemu
+    qemu-common
     qemu-ui-opengl
     vte3 libvte-2.91.so
   )
@@ -869,31 +874,31 @@ package_qemu-ui-gtk() {
 
 package_qemu-ui-opengl() {
   pkgdesc="QEMU OpenGL UI driver"
-  depends=(glibc libepoxy mesa pixman libpixman-1.so qemu)
+  depends=(glibc libepoxy mesa pixman libpixman-1.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-ui-sdl() {
   pkgdesc="QEMU SDL UI driver"
-  depends=(glib2 libglib-2.0.so glibc libx11 pixman libpixman-1.so qemu sdl2_image sdl2)
+  depends=(glib2 libglib-2.0.so glibc libx11 pixman libpixman-1.so qemu-common sdl2_image sdl2)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-ui-spice-app() {
   pkgdesc="QEMU spice app UI driver"
-  depends=(glib2 libgio-2.0.so libglib-2.0.so glibc qemu qemu-chardev-spice qemu-ui-spice-core)
+  depends=(glib2 libgio-2.0.so libglib-2.0.so glibc qemu-common qemu-chardev-spice qemu-ui-spice-core)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-ui-spice-core() {
   pkgdesc="QEMU spice core UI driver"
-  depends=(gcc-libs glibc pixman libpixman-1.so qemu qemu-ui-opengl spice libspice-server.so)
+  depends=(gcc-libs glibc pixman libpixman-1.so qemu-common qemu-ui-opengl spice libspice-server.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-user() {
   pkgdesc="QEMU user mode emulation"
-  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc gnutls liburing liburing.so qemu zlib)
+  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc gnutls liburing liburing.so qemu-common zlib)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -905,14 +910,100 @@ package_qemu-user() {
 
 package_qemu-vhost-user-gpu() {
   pkgdesc="QEMU vhost-user-gpu display device"
-  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc pixman libpixman-1.so mesa qemu virglrenderer)
+  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc pixman libpixman-1.so mesa qemu-common virglrenderer)
   mv -v $pkgname/* "$pkgdir"
 }
 
 package_qemu-virtiofsd() {
   pkgdesc="QEMU virtio-fs shared filesystem daemon"
-  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc libcap-ng libcap-ng.so libseccomp libseccomp.so qemu)
+  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc libcap-ng libcap-ng.so libseccomp libseccomp.so qemu-common)
   mv -v $pkgname/* "$pkgdir"
+}
+
+package_qemu-base() {
+  pkgdesc="A basic QEMU setup for headless environments"
+  depends=(
+    qemu-common
+    qemu-audio-spice
+    qemu-block-{curl,dmg,nfs,ssh}
+    qemu-chardev-spice
+    qemu-hw-display-{qxl,virtio-gpu{,-{gl,pci,pci-gl}}}
+    qemu-hw-display-virtio-vga{,-gl}
+    qemu-hw-s390x-virtio-gpu-ccw
+    qemu-hw-usb-{host,redirect,smartcard}
+    qemu-img
+    qemu-pr-helper
+    qemu-system-x86
+    qemu-tools
+    qemu-ui-{curses,spice-{app,core}}
+    qemu-virtiofsd
+  )
+  optdepends=("${_qemu_optdepends[@]}")
+  # TODO: remove conflicts/provides/replaces for qemu-headless after 2022-10-01
+  conflicts=(qemu-headless)
+  provides=(qemu=$pkgver qemu-headless)
+  replaces=(qemu-headless)
+}
+
+package_qemu-desktop() {
+  pkgdesc="A QEMU setup for desktop environments"
+  depends=(
+    qemu-common
+    qemu-audio-{alsa,dbus,jack,oss,pa,sdl,spice}
+    qemu-block-{curl,dmg,nfs,ssh}
+    qemu-chardev-spice
+    qemu-hw-display-{qxl,virtio-gpu{,-{gl,pci,pci-gl}}}
+    qemu-hw-display-virtio-vga{,-gl}
+    qemu-hw-s390x-virtio-gpu-ccw
+    qemu-hw-usb-{host,redirect,smartcard}
+    qemu-img
+    qemu-pr-helper
+    qemu-system-x86
+    qemu-tools
+    qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}
+    qemu-vhost-user
+    qemu-virtiofsd
+  )
+  optdepends=("${_qemu_optdepends[@]}")
+  provides=(qemu=$pkgver)
+  replaces=('qemu<7')
+}
+
+package_qemu-emulators-full() {
+  pkgdesc="All QEMU user mode and system emulators"
+  depends=(
+    qemu-system-{aarch64,alpha,arm,avr,cris,hppa,m68k,microblaze,mips,nios2,or1k,ppc,riscv,rx,s390x,sh4,sparc,tricore,x86,xtensa}
+    qemu-user
+  )
+  # TODO: remove conflicts/provides/replaces after 2022-10-01
+  conflicts=(qemu-arch-extra qemu-headless-arch-extra)
+  provides=(qemu-arch-extra qemu-headless-arch-extra)
+  replaces=(qemu-arch-extra qemu-headless-arch-extra)
+}
+
+package_qemu-full() {
+  pkgdesc="A full QEMU setup"
+  depends=(
+    qemu-common
+    qemu-audio-{alsa,dbus,jack,oss,pa,sdl,spice}
+    qemu-block-{curl,dmg,gluster,iscsi,nfs,rbd,ssh}
+    qemu-chardev-{baum,spice}
+    qemu-docs
+    qemu-hw-display-{qxl,virtio-{gpu{,-{gl,pci,pci-gl}},vga{,-gl}}}
+    qemu-hw-s390x-virtio-gpu-ccw
+    qemu-hw-usb-{host,redirect,smartcard}
+    qemu-img
+    qemu-pr-helper
+    qemu-system-{aarch64,alpha,arm,avr,cris,hppa,m68k,microblaze,mips,nios2,or1k,ppc,riscv,rx,s390x,sh4,sparc,tricore,x86,xtensa}
+    qemu-tests
+    qemu-tools
+    qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}
+    qemu-user
+    qemu-vhost-user-gpu
+    qemu-virtiofsd
+  )
+  optdepends=("${_qemu_optdepends[@]}")
+  provides=(qemu=$pkgver)
 }
 
 # vim:set ts=2 sw=2 et:
