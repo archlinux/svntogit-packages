@@ -14,13 +14,13 @@ makedepends=('git' 'python' 'sequoia-sq')
 checkdepends=('python-coverage' 'python-pytest')
 source=("archlinux-keyring::git+https://gitlab.archlinux.org/archlinux/archlinux-keyring.git#tag=${_tag}?signed")
 sha256sums=('SKIP')
-validpgpkeys=('4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'  # Pierre Schmitz <pierre@archlinux.de>
-              'A314827C4E4250A204CE6E13284FC34C8E4B1A25'  # Thomas Bächler <thomas@bchlr.de>
-              '86CFFCA918CF3AF47147588051E8B148A9999C34'  # Evangelos Foutras <evangelos@foutrelis.com>
-              'F3691687D867B81B51CE07D9BBE43771487328A9'  # Bartlomiej Piotrowski <bpiotrowski@archlinux.org>
-              'BD84DE71F493DF6814B0167254EDC91609BC9183'  # Christian Hesse <Christi@n-Hes.se>
-              'CFA6AF15E5C74149FC1D8C086D1655C14CE1C13E'  # Florian Pritz <bluewind@xinu.at>
-              'E499C79F53C96A54E572FEE1C06086337C50773E') # Jelle van der Waa <jelle@archlinux.org>
+validpgpkeys=('02FD1C7A934E614545849F19A6234074498E9CEE'  # Christian Hesse <eworm@archlinux.org>
+              'C7E7849466FE2358343588377258734B41C31549'  # David Runge <dvzrv@archlinux.org>
+              '4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'  # Pierre Schmitz <pierre@archlinux.org>
+              'CFA6AF15E5C74149FC1D8C086D1655C14CE1C13E'  # Florian Pritz <bluewind@archlinux.org>
+              'ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'  # Giancarlo Razzolini <grazzolini@archlinux.org>
+              'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak <anthraxx@archlinux.org>
+              'C100346676634E80C940FB9E9C02FF419FECBE16') # Morten Linderud <foxboron@archlinux.org>
 
 build() {
   cd archlinux-keyring/
