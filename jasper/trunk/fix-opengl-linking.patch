@@ -1,0 +1,85 @@
+diff --git a/build/cmake/modules/JasOpenGL.cmake b/build/cmake/modules/JasOpenGL.cmake
+index b58b8de..4e58ead 100644
+--- a/build/cmake/modules/JasOpenGL.cmake
++++ b/build/cmake/modules/JasOpenGL.cmake
+@@ -5,50 +5,28 @@
+ if (JAS_ENABLE_OPENGL)
+ 	set(OpenGL_GL_PREFERENCE GLVND)
+ 	find_package(OpenGL ${JAS_REQUIRED})
+-	message("OpenGL library found: ${OPENGL_FOUND}")
+-else()
+-	set(OPENGL_FOUND false)
+-endif()
+-if (JAS_ENABLE_OPENGL AND OPENGL_FOUND)
+-	set(JAS_HAVE_OPENGL 0)
+-	message("OpenGL include directory: ${OPENGL_INCLUDE_DIR}")
+-	message("OpenGL libraries: ${OPENGL_LIBRARIES}")
++	if (TARGET OpenGL::GL)
++		message("OpenGL library found: ${OPENGL_FOUND}")
++		message("OpenGL include directory: ${OPENGL_INCLUDE_DIR}")
++		message("OpenGL libraries: ${OPENGL_LIBRARIES}")
++	endif()
+ 	find_package(GLUT ${JAS_REQUIRED})
+-	message("GLUT library found: ${GLUT_FOUND}")
+-	if (GLUT_FOUND)
++	if (TARGET GLUT::GLUT)
+ 		message("GLUT include directory: ${GLUT_INCLUDE_DIR}")
+ 		message("GLUT libraries: ${GLUT_LIBRARIES}")
+-		set(CMAKE_REQUIRED_INCLUDES ${GLUT_INCLUDE_DIR})
++	endif()
++	if((TARGET OpenGL::GL) AND (TARGET GLUT::GLUT))
+ 		check_include_files(GL/glut.h JAS_HAVE_GL_GLUT_H)
+ 		check_include_files(glut.h JAS_HAVE_GLUT_H)
+ 		if (JAS_HAVE_GL_GLUT_H OR JAS_HAVE_GLUT_H)
++			set(JAS_OPENGL_TARGETS GLUT::GLUT OpenGL::GL)
++			if (TARGET OpenGL::GLU)
++				set(JAS_OPENGL_TARGETS ${JAS_OPENGL_TARGETS} OpenGL::GLU)
++			endif()
+ 			set(JAS_HAVE_OPENGL 1)
+-			include_directories(${GLUT_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
+ 		else()
+ 			message(WARNING "The header files GL/glut.h and glut.h both appear to be missing.")
+ 			message(WARNING "Disabling OpenGL.")
+ 		endif()
+ 	endif()
+-	# On some systems (e.g., Fedora 21), there is a bug in the cmake code
+-	# that detects GLUT libraries.  The following ugliness is a workaround for 
+-	# this problem.
+-	if (NOT GLUT_Xmu_LIBRARY OR NOT GLUT_Xmi_LIBRARY)
+-		if (NOT GLUT_Xmu_LIBRARY)
+-			set(GLUT_Xmu_LIBRARY "")
+-			message(WARNING "Clearing bogus value for GLUT_Xmu_LIBRARY.")
+-			message(WARNING "Your version of CMake may be buggy.")
+-		endif()
+-		if (NOT GLUT_Xmi_LIBRARY)
+-			set(GLUT_Xmi_LIBRARY "")
+-			message(WARNING "Clearing bogus value for GLUT_Xmi_LIBRARY.")
+-			message(WARNING "Your version of CMake may be buggy.")
+-		endif()
+-		set(GLUT_LIBRARIES "${GLUT_glut_LIBRARY}")
+-	endif()
+-else()
+-	set(JAS_HAVE_OPENGL 0)
+-	set(OPENGL_INCLUDE_DIR "")
+-	set(OPENGL_LIBRARIES "")
+-	set(GLUT_INCLUDE_DIR "")
+-	set(GLUT_LIBRARIES "")
+ endif()
+diff --git a/src/appl/CMakeLists.txt b/src/appl/CMakeLists.txt
+index 1b865de..3d0c57b 100644
+--- a/src/appl/CMakeLists.txt
++++ b/src/appl/CMakeLists.txt
+@@ -22,10 +22,9 @@ set(man_pages "${man_pages}" imgcmp.1)
+ # The jiv program (which requires GLUT)
+ if(JAS_HAVE_OPENGL)
+ 	add_executable(jiv jiv.c)
+-	target_include_directories(jiv PUBLIC
+-	  ${GLUT_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
+-	target_link_libraries(jiv libjasper ${JPEG_LIBRARIES} ${GLUT_LIBRARIES}
+-	  ${OPENGL_LIBRARIES} ${MATH_LIBRARY})
++	target_link_libraries(jiv libjasper
++	  ${JPEG_LIBRARIES} ${HEIF_LIBRARIES} ${JAS_OPENGL_TARGETS}
++	  ${JAS_OPENGL_TARGETS} ${MATH_LIBRARY} ${THREAD_LIBRARY})
+ 	set(programs "${programs}" jiv)
+ 	set(man_pages "${man_pages}" jiv.1)
+ else()
