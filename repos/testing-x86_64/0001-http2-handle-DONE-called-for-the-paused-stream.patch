@@ -1,0 +1,34 @@
+From b5a9680577925a65477a666174a8e021ab418693 Mon Sep 17 00:00:00 2001
+From: Daniel Stenberg <daniel@haxx.se>
+Date: Fri, 1 Apr 2022 13:22:58 +0200
+Subject: [PATCH 1/3] http2: handle DONE called for the paused stream
+
+As it could otherwise stall all streams on the connection
+
+Reported-by: Evangelos Foutras
+Fixes #8626
+Closes #8664
+---
+ lib/http2.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/lib/http2.c b/lib/http2.c
+index 82a993930..34daaf17c 100644
+--- a/lib/http2.c
++++ b/lib/http2.c
+@@ -1240,11 +1240,10 @@ void Curl_http2_done(struct Curl_easy *data, bool premature)
+     if(!nghttp2_submit_rst_stream(httpc->h2, NGHTTP2_FLAG_NONE,
+                                   http->stream_id, NGHTTP2_STREAM_CLOSED))
+       (void)nghttp2_session_send(httpc->h2);
+-
+-    if(http->stream_id == httpc->pause_stream_id) {
+-      H2BUGF(infof(data, "stopped the pause stream!"));
+-      httpc->pause_stream_id = 0;
+-    }
++  }
++  if(http->stream_id == httpc->pause_stream_id) {
++    H2BUGF(infof(data, "DONE the pause stream!"));
++    httpc->pause_stream_id = 0;
+   }
+ 
+   if(data->state.drain)
