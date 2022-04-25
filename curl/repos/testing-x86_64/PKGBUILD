@@ -1,0 +1,137 @@
+# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Angel Velasquez <angvp@archlinux.org>
+# Contributor: Eric Belanger <eric@archlinux.org>
+# Contributor: Lucien Immink <l.immink@student.fnt.hvu.nl>
+# Contributor: Daniel J Griffiths <ghost1227@archlinux.us>
+
+pkgbase=curl
+pkgname=(curl libcurl-compat libcurl-gnutls)
+pkgver=7.82.0
+pkgrel=3
+pkgdesc='An URL retrieval utility and library'
+arch=('x86_64')
+url='https://curl.haxx.se'
+license=('MIT')
+options=('debug')
+depends=('ca-certificates' 'brotli' 'libbrotlidec.so' 'krb5' 'libgssapi_krb5.so'
+         'libidn2' 'libidn2.so' 'libnghttp2' 'libpsl' 'libpsl.so' 'libssh2' 'libssh2.so'
+         'openssl' 'zlib' 'zstd' 'libzstd.so')
+provides=('libcurl.so')
+source=("https://curl.haxx.se/download/${pkgname}-${pkgver}.tar.gz"{,.asc}
+        0001-http2-handle-DONE-called-for-the-paused-stream.patch
+        0002-http-close-the-stream-not-connection-on-time-conditi.patch
+        0003-http2-RST-the-stream-if-we-stop-it-on-our-own-will.patch
+        0004-openssl-fix-CN-check-error-code.patch)
+sha512sums=('d4c4a785876e0d1ba1c1adbe65528d56a8b81fc03ff724e87819cfe51aca60f8a7bf2ac9384f30c3a6bbd28669b2bd3e9a6794737243c836c4902d085a72c474'
+            'SKIP'
+            '0d883c3fc267c4c5d82078e03689db31f83292cb41f3f6fab26d05fa9cbaa77ae75cfd3bbb4f6953bbc4bc9760c54b49bdfdae219cd48af92312abbb1ba70ec6'
+            '422df75880b107a5c457d25ca1488166f5e61cc2876ad0193a742ad6cf4cae5363b0c7bd00cbaf9f49a5e5d503159cb2d2fd3d602abf3935dc3f77f14e9027dc'
+            '394f27e8721c23b82924064df8f72aa33f6e5064d0a3798a59543fd7d9660939437f1a6f45f03370d517edf5d4a218a9d41b4d62e7498d4f520f026da68007b1'
+            'bb2e3d40d65c5c1c07b2623c2d5db11fe232ecf4d9f223ec2bdd8fba32c76c991292b36114b48dd0cad2ed376d127070a65f30fcec7af4b328e4adaab81b4dc1')
+validpgpkeys=('27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2') # Daniel Stenberg
+
+_configure_options=(
+  --prefix='/usr'
+  --mandir='/usr/share/man'
+  --disable-ldap
+  --disable-ldaps
+  --disable-manual
+  --enable-ipv6
+  --enable-threaded-resolver
+  --with-gssapi
+  --with-libssh2
+  --with-openssl
+  --with-random='/dev/urandom'
+  --with-ca-bundle='/etc/ssl/certs/ca-certificates.crt'
+)
+
+prepare() {
+  cd "${srcdir}/${pkgbase}-${pkgver}"
+  # https://github.com/curl/curl/issues/8626
+  patch -Np1 -i ../0001-http2-handle-DONE-called-for-the-paused-stream.patch
+  patch -Np1 -i ../0002-http-close-the-stream-not-connection-on-time-conditi.patch
+  patch -Np1 -i ../0003-http2-RST-the-stream-if-we-stop-it-on-our-own-will.patch
+  # https://github.com/curl/curl/issues/8559
+  patch -Np1 -i ../0004-openssl-fix-CN-check-error-code.patch
+}
+
+build() {
+  mkdir build-curl{,-compat,-gnutls}
+
+  # build curl
+  cd "${srcdir}"/build-curl
+
+  "${srcdir}/${pkgbase}-${pkgver}"/configure \
+    "${_configure_options[@]}" \
+    --enable-versioned-symbols
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+
+  # build libcurl-compat
+  cd "${srcdir}"/build-curl-compat
+
+  "${srcdir}/${pkgbase}-${pkgver}"/configure \
+    "${_configure_options[@]}" \
+    --disable-versioned-symbols
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make -C lib
+
+  # build libcurl-gnutls
+  cd "${srcdir}"/build-curl-gnutls
+
+  "${srcdir}/${pkgbase}-${pkgver}"/configure \
+    "${_configure_options[@]}" \
+    --disable-versioned-symbols \
+    --without-ssl \
+    --with-gnutls='/usr'
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make -C lib
+}
+
+package_curl() {
+  cd build-curl
+
+  make DESTDIR="${pkgdir}" install
+  make DESTDIR="${pkgdir}" install -C scripts
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # license
+  install -Dt "${pkgdir}/usr/share/licenses/$pkgname" -m0644 COPYING
+}
+
+package_libcurl-compat() {
+  pkgdesc='An URL retrieval library (without versioned symbols)'
+  depends=('curl' 'openssl')
+
+  cd "${srcdir}"/build-curl-compat
+
+  make -C lib DESTDIR="${pkgdir}" install
+
+  mv "${pkgdir}"/usr/lib/libcurl{,-compat}.so.4.7.0
+  rm "${pkgdir}"/usr/lib/libcurl.{a,so}*
+  for version in 3 4.0.0 4.1.0 4.2.0 4.3.0 4.4.0 4.5.0 4.6.0; do
+    ln -s libcurl-compat.so.4.7.0 "${pkgdir}"/usr/lib/libcurl.so.${version}
+  done
+
+  install -dm 0755 "${pkgdir}"/usr/share/licenses
+  ln -s curl "${pkgdir}"/usr/share/licenses/libcurl-compat
+}
+
+package_libcurl-gnutls() {
+  pkgdesc='An URL retrieval library (without versioned symbols and linked against gnutls)'
+  depends=('curl' 'gnutls')
+
+  cd "${srcdir}"/build-curl-gnutls
+
+  make -C lib DESTDIR="${pkgdir}" install
+
+  mv "${pkgdir}"/usr/lib/libcurl{,-gnutls}.so.4.7.0
+  rm "${pkgdir}"/usr/lib/libcurl.{a,so}*
+  for version in 3 4 4.0.0 4.1.0 4.2.0 4.3.0 4.4.0 4.5.0 4.6.0; do
+    ln -s libcurl-gnutls.so.4.7.0 "${pkgdir}"/usr/lib/libcurl-gnutls.so.${version}
+  done
+
+  install -dm 0755 "${pkgdir}"/usr/share/licenses
+  ln -s curl "${pkgdir}"/usr/share/licenses/libcurl-gnutls
+}
