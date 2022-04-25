@@ -4,7 +4,7 @@
 pkgbase=gtk3
 pkgname=(gtk3 gtk3-docs gtk3-demos)
 pkgver=3.24.33
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="GObject-based multi-platform GUI toolkit"
 url="https://www.gtk.org/"
@@ -31,6 +31,12 @@ pkgver() {
 
 prepare() {
   cd gtk
+
+  # Add legacy icons
+  git cherry-pick -n 5a0ffbbb4568e39bdf26006e1bf18c1c1d0d597a
+
+  # Fix annotation
+  git cherry-pick -n 56ada2f01f3b522a42831aba158786e843fca817
 }
 
 build() {
