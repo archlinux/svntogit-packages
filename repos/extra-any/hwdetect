@@ -5,8 +5,6 @@
 _SHOW_MODULES=""
 _SHOW_HOOKS=""
 _HWKVER=""
-[[ "$(uname -m)" == "x86_64" ]] && VMLINUZ=/boot/vmlinuz-linux
-[[ "$(uname -m)" == "aarch64" ]] && VMLINUZ=/boot/Image
 
 usage () {
 	echo "$0 [options]"
@@ -98,8 +96,10 @@ parameter() {
 	done
 }
 
-_kver_x86() {
+kver() {
     # get kernel version from installed kernel
+    [[ "$(uname -m)" == "x86_64" ]] && VMLINUZ=/boot/vmlinuz-linux
+    [[ "$(uname -m)" == "aarch64" ]] && VMLINUZ=/boot/Image
     if [[ -f "${VMLINUZ}" ]]; then
         offset=$(hexdump -s 526 -n 2 -e '"%0d"' "${VMLINUZ}")
         read -r _HWKVER _ < <(dd if="${VMLINUZ}" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
@@ -108,25 +108,12 @@ _kver_x86() {
     [[ "${_HWKVER}" == "" ]] && _HWKVER="$(uname -r)"
 }
 
-_kver_generic() {
-    # get kernel version from installed kernel
-    read _ _ _HWKVER _ < <(grep -m1 -aoE 'Linux version .(\.[-[:alnum:]]+)+' "${VMLINUZ}")
-
-    # try if the image is gzip compressed
-    if [[ -z "${_HWKVER}" ]]; then
-        read _ _ _HWKVER _ < <(gzip -c -d "${VMLINUZ}" | grep -m1 -aoE 'Linux version .(\.[-[:alnum:]]+)+')
-    fi
-
-    # fallback if no detectable kernel is installed
-    [[ -z "${_HWKVER}" ]] && _HWKVER="$(uname -r)"
-}
-
 parameter $PARAMETER
 
 if [ "$KERNEL_VERSION" = "" ]; then
-	[[ "$(uname -m)" == "x86_64" ]] && _kver_x86
-	[[ "$(uname -m)" == "aarch64" ]] && _kver_generic
+        kver
 	KERNEL_VERSION="${_HWKVER}"
+	
 fi
 
 # dmraid switch
