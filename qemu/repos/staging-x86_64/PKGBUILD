@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=5
+pkgrel=6
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -961,7 +961,7 @@ package_qemu-desktop() {
     qemu-system-x86
     qemu-tools
     qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}
-    qemu-vhost-user
+    qemu-vhost-user-gpu
     qemu-virtiofsd
   )
   optdepends=("${_qemu_optdepends[@]}")
