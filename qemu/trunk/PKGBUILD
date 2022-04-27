@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=6
+pkgrel=7
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -940,7 +940,7 @@ package_qemu-base() {
   )
   optdepends=("${_qemu_optdepends[@]}")
   # TODO: remove conflicts/provides/replaces for qemu-headless after 2022-10-01
-  conflicts=(qemu-headless)
+  conflicts=(qemu qemu-headless)
   provides=(qemu=$pkgver qemu-headless)
   replaces=(qemu-headless)
 }
@@ -965,6 +965,7 @@ package_qemu-desktop() {
     qemu-virtiofsd
   )
   optdepends=("${_qemu_optdepends[@]}")
+  conflicts=(qemu)
   provides=(qemu=$pkgver)
   replaces=('qemu<7')
 }
@@ -1003,6 +1004,7 @@ package_qemu-full() {
     qemu-virtiofsd
   )
   optdepends=("${_qemu_optdepends[@]}")
+  conflicts=(qemu)
   provides=(qemu=$pkgver)
 }
 
