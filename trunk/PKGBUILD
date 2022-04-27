@@ -6,7 +6,7 @@
 pkgbase=emacs
 pkgname=(emacs emacs-nativecomp emacs-nox)
 pkgver=28.1
-pkgrel=5
+pkgrel=6
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
@@ -91,7 +91,7 @@ package_emacs-nativecomp() {
 
 package_emacs-nox() {
   pkgdesc='The extensible, customizable, self-documenting real-time display editor without X11 support'
-  depends=(dbus glib2 gnutls jansson libxml2 ncurses perl)
+  depends=(dbus glib2 gnutls gpm jansson libxml2 ncurses perl)
   provides=(emacs)
   conflicts=(emacs)
 
