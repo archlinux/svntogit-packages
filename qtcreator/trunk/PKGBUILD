@@ -20,7 +20,6 @@ makedepends=(cmake llvm python)
 options=(docs)
 optdepends=('qt6-doc: integrated Qt documentation'
             'qt6-examples: welcome page examples'
-            'qt6-translations: for other languages'
             'gdb: debugger'
             'cmake: cmake project support'
             'x11-ssh-askpass: ssh support'
