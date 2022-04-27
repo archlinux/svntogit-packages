@@ -1,11 +1,12 @@
 # Maintainer: Juergen Hoetzel <juergen@archlinux.org>
 # Maintainer: Frederik Schwan <freswa at archlinux dot org>
+# Contributor: Jaroslav Lichtblau <svetlemodry@archlinux.org>
 # Contributor: Renchi Raju <renchi@green.tam.uiuc.edu>
 
 pkgbase=emacs
-pkgname=(emacs emacs-nativecomp)
+pkgname=(emacs emacs-nativecomp emacs-nox)
 pkgver=28.1
-pkgrel=4
+pkgrel=5
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
@@ -22,6 +23,7 @@ b2sums=('42a12bec2dc74f4838ae79b5589fb7439ff415d8ddd34f2ff7a8c503f909ddd4144ad35
 
 prepare() {
   cp -ar ${pkgname}-${pkgver} ${pkgbase}-${pkgver}-nativecomp
+  cp -ar ${pkgname}-${pkgver} ${pkgbase}-${pkgver}-nox
 }
 
 build() {
@@ -31,22 +33,29 @@ build() {
     --localstatedir=/var \
     --with-cairo \
     --with-harfbuzz \
-    --with-modules \
-    --with-wide-int \
-    --with-x-toolkit=gtk3 \
-    --with-xft"
+    --with-libsystemd \
+    --with-modules"
 
   export ac_cv_lib_gif_EGifPutExtensionLast=yes
 
   cd ${pkgname}-${pkgver}
-  ./configure $_confflags
+  ./configure $_confflags \
+    --with-x-toolkit=gtk3
   make
 
   cd ../${pkgbase}-${pkgver}-nativecomp
   ./configure \
+    --with-x-toolkit=gtk3 \
     --with-native-compilation \
     $_confflags
   make NATIVE_FULL_AOT=1 bootstrap
+
+  cd ../${pkgbase}-${pkgver}-nox
+  ./configure \
+    --without-x \
+    --without-sound \
+    $_confflags
+  make
 }
 
 package_emacs() {
@@ -70,6 +79,23 @@ package_emacs-nativecomp() {
   conflicts=(emacs)
 
   cd ${pkgbase}-${pkgver}-nativecomp
+  make DESTDIR="${pkgdir}" install
+
+  # remove conflict with ctags package
+  mv "${pkgdir}"/usr/bin/{ctags,ctags.emacs}
+  mv "${pkgdir}"/usr/share/man/man1/{ctags.1.gz,ctags.emacs.1}
+
+  # fix user/root permissions on usr/share files
+  find "${pkgdir}"/usr/share/emacs/${pkgver} -exec chown root:root {} \;
+}
+
+package_emacs-nox() {
+  pkgdesc='The extensible, customizable, self-documenting real-time display editor without X11 support'
+  depends=(dbus glib2 gnutls jansson libxml2 ncurses perl)
+  provides=(emacs)
+  conflicts=(emacs)
+
+  cd ${pkgbase}-${pkgver}-nox
   make DESTDIR="${pkgdir}" install
 
   # remove conflict with ctags package
