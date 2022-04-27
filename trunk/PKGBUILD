@@ -6,13 +6,43 @@
 pkgbase=emacs
 pkgname=(emacs emacs-nativecomp emacs-nox)
 pkgver=28.1
-pkgrel=6
+pkgrel=7
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
-depends=('librsvg' 'gpm' 'giflib' 'libxpm' 'libotf' 'm17n-lib' 'gtk3'
-          'hicolor-icon-theme' 'desktop-file-utils' 'alsa-lib' 'gnutls'
-          'jansson' 'cairo' 'harfbuzz'
+depends=(
+  gmp
+  gnutls
+  jansson
+  lcms2
+  libacl.so
+  libasound.so
+  libdbus-1.so
+  libfontconfig.so
+  libfreetype.so
+  libgdk-3.so
+  libgdk_pixbuf-2.0.so
+  libgif.so
+  libgio-2.0.so
+  libglib-2.0.so
+  libgobject-2.0.so
+  libgpm.so
+  libgtk-3.so
+  libharfbuzz.so
+  libice
+  libjpeg.so
+  libncursesw.so
+  libotf
+  libpango-1.0.so
+  libpng
+  librsvg-2.so
+  libsm
+  libsystemd.so
+  libtiff.so
+  libxfixes
+  libxml2.so
+  m17n-lib
+  zlib
 )
 makedepends=(libgccjit)
 validpgpkeys=('17E90D521672C04631B1183EE78DAE0F3115E06B')
@@ -91,7 +121,20 @@ package_emacs-nativecomp() {
 
 package_emacs-nox() {
   pkgdesc='The extensible, customizable, self-documenting real-time display editor without X11 support'
-  depends=(dbus glib2 gnutls gpm jansson libxml2 ncurses perl)
+  depends=(
+    gmp
+    gnutls
+    hicolor-icon-theme
+    jansson
+    lcms2
+    libacl.so
+    libdbus-1.so
+    libgpm.so
+    libncursesw.so
+    libsystemd.so
+    libxml2.so
+    zlib
+  )
   provides=(emacs)
   conflicts=(emacs)
 
