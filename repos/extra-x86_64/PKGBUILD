@@ -4,29 +4,36 @@
 
 pkgname=irqbalance
 pkgver=1.8.0
-pkgrel=1
+pkgrel=2
 pkgdesc="IRQ balancing daemon for SMP systems"
-arch=('x86_64')
+arch=(x86_64)
 url="https://github.com/irqbalance/irqbalance"
-license=('GPL2')
-backup=('etc/irqbalance.env')
-depends=('glibc')
-makedepends=('glib2' 'libcap-ng' 'ncurses' 'numactl' 'systemd' 'systemd-libs')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/${pkgname}/${pkgname}/archive/v$pkgver.tar.gz")
-sha512sums=('3d757198dbe680b010ed9233d73cbf3b4a150e6b07ef97d3e94f5fa0472a22b0b3800868634340fb413a18683ff95ff6a8f7fa51ace65d870651336479e32740')
-b2sums=('0181ee57c4ddbdb55e1529cfd7da4b875320eff65cb606f925f0b4f4243b51e1349d4aba38690a78d7deab6d3f55ae8d6c45af44a904f03d7127678202f288db')
+license=(GPL2)
+backup=(etc/$pkgname.env)
+depends=(glibc)
+makedepends=(glib2 libcap-ng ncurses numactl systemd systemd-libs)
+options=(debug)
+source=(
+  $pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz
+  $pkgname-1.8.0-printf_werror_format_security.patch::https://github.com/Irqbalance/irqbalance/commit/f8bdd0e64284d841544fd3ebe22f4652902ba8d2.patch
+)
+sha512sums=('3d757198dbe680b010ed9233d73cbf3b4a150e6b07ef97d3e94f5fa0472a22b0b3800868634340fb413a18683ff95ff6a8f7fa51ace65d870651336479e32740'
+            '0cb423b9be08c848688cbcbf9ab5c8a6dd4de93c21178e663c691cbf3b9640f86cefc3163a9bbf8abab0d1d29ceaf8e6e769156eddbde571be0d0797a4621b7f')
+b2sums=('0181ee57c4ddbdb55e1529cfd7da4b875320eff65cb606f925f0b4f4243b51e1349d4aba38690a78d7deab6d3f55ae8d6c45af44a904f03d7127678202f288db'
+        '13cd26d8ce73fb5c0e0d3c75c70a084164f010013ee6fcef69795b82333ce5ecf8101b883e7a5ff60cb2393c56a68e463291e2ec2186d7cc4d6603f3ebce86da')
 
 prepare() {
-  cd "$pkgname-$pkgver"
+  # fix issues with -Werror=format-security: https://bugs.archlinux.org/task/74485
+  patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-1.8.0-printf_werror_format_security.patch
+
+  cd $pkgname-$pkgver
   # fix location of configuration and binary in service
-  sed -e 's|/path/to/|/etc/|g' \
-      -e 's|/usr/sbin|/usr/bin|g' \
-      -i "misc/${pkgname}.service"
-  autoreconf -vfi
+  sed -e 's|/path/to/|/etc/|g;s|/usr/sbin|/usr/bin|g' -i misc/$pkgname.service
+  autoreconf -fiv
 }
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname-$pkgver
   ./configure --prefix=/usr \
               --sbindir=/usr/bin \
               --with-systemd
@@ -34,11 +41,11 @@ build() {
 }
 
 package() {
-  depends+=('libglib-2.0.so' 'libcap-ng.so' 'libncursesw.so' 'libnuma.so' 'libsystemd.so')
-  cd "$pkgname-$pkgver"
+  depends+=(libglib-2.0.so libcap-ng.so libncursesw.so libnuma.so libsystemd.so)
+
+  cd $pkgname-$pkgver
   make install DESTDIR="$pkgdir"
-  install -vDm 644 misc/irqbalance.service \
-    -t "${pkgdir}/usr/lib/systemd/system/"
-  install -vDm 644 misc/irqbalance.env -t "${pkgdir}/etc/"
-  install -vDm 644 {AUTHORS,README.md} -t "${pkgdir}/usr/share/doc/${pkgname}"
+  install -vDm 644 misc/irqbalance.service -t "$pkgdir/usr/lib/systemd/system/"
+  install -vDm 644 misc/irqbalance.env -t "$pkgdir/etc/"
+  install -vDm 644 {AUTHORS,README.md} -t "$pkgdir/usr/share/doc/$pkgname/"
 }
