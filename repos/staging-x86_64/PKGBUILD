@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=7
+pkgrel=8
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -288,7 +288,7 @@ package_qemu-common() {
   meson install -C build --destdir "$pkgdir"
 
   install -vdm 755 "$pkgdir/usr/lib/binfmt.d/"
-  $pkgbase-$pkgver/scripts/qemu-binfmt-conf.sh --systemd ALL --exportdir "$pkgdir/usr/lib/binfmt.d/" --qemu-path "$pkgdir/usr/bin/"
+  $pkgbase-$pkgver/scripts/qemu-binfmt-conf.sh --systemd ALL --exportdir "$pkgdir/usr/lib/binfmt.d/" --qemu-path "/usr/bin"
 
 # TODO: qemu-user-static
 #  for _conf in "$pkgdir/usr/lib/binfmt.d/"*; do
