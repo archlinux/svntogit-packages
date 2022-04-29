@@ -4,7 +4,7 @@
 pkgbase=transmission
 pkgname=(transmission-cli transmission-gtk transmission-qt libtransmission)
 pkgver=3.00
-pkgrel=3
+pkgrel=4
 arch=(x86_64)
 url="http://www.transmissionbt.com/"
 license=(MIT)
