@@ -4,15 +4,16 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.16.20.hardened1
+pkgver=5.17.5.hardened1
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
 license=(GPL2)
 makedepends=(
-  bc kmod libelf pahole cpio perl tar xz
-  xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick
+  bc libelf pahole cpio perl tar xz
+  xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick texlive-latexextra
+  git
 )
 options=('!strip')
 _srcname=linux-${pkgver%.*}
@@ -27,11 +28,11 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('d8060dc88f862baaae66b42a2dbc12298ed667c698eb5c55617a7786ee47bf25'
+sha256sums=('9bbcd185b94436f9c8fe977fa0e862f60d34003562327fcebb27c9fa342fe987'
             'SKIP'
-            'cc53fef1524cfab08f290853444236d20917e399f0e092234d6bb0e99398c0b8'
+            '806baa962ee52aa9d41c2abb9b620edf19ed455b07f0564e3e515525ae1e64b3'
             'SKIP'
-            '0430ab1ed3ba94637dfc170127d63dd4823a74e2348c57b39427c9913c9d7f6b')
+            'bd1ca982c7a2aabc95b3a1ebb0d281e544cdced8200789ea222e1be3d8e87664')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -90,7 +91,8 @@ _package() {
   echo "$pkgbase" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
 
   echo "Installing modules..."
-  make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 modules_install
+  make INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 \
+    DEPMOD=/doesnt/exist modules_install  # Suppress depmod
 
   # remove build and source links
   rm "$modulesdir"/{source,build}
