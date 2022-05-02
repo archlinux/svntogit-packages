@@ -1,9 +1,10 @@
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=rhythmbox
-pkgver=3.4.4
-pkgrel=5
+pkgver=3.4.5
+pkgrel=1
 pkgdesc="Music playback and management application"
 arch=(x86_64)
 license=(GPL)
@@ -11,8 +12,8 @@ url="https://wiki.gnome.org/Apps/Rhythmbox"
 depends=(dconf gst-plugins-base gst-plugins-good libsoup json-glib libnotify
          libpeas media-player-info totem-plparser tdb python-gobject libgudev
          grilo)
-makedepends=(itstool intltool brasero gobject-introspection vala libdmapsharing
-             lirc libgpod libmtp zeitgeist gtk-doc yelp-tools git)
+makedepends=(brasero gobject-introspection vala libdmapsharing lirc libgpod
+             libmtp zeitgeist gtk-doc yelp-tools git meson)
 checkdepends=(check xorg-server-xvfb)
 optdepends=('gst-plugins-ugly: Extra media codecs'
             'gst-plugins-bad: Extra media codecs'
@@ -25,54 +26,41 @@ optdepends=('gst-plugins-ugly: Extra media codecs'
             'libmtp: Portable Players - MTP plugin'
             'gvfs-mtp: Portable Players - Android plugin'
             'zeitgeist: Zeitgeist logging plugin')
-_commit=473a28752bfd6260d74f41e3b0d737f71495f4a8  # tags/v3.4.4^0
+options=(debug)
+_commit=015ce7418d2bc6486f51f8fc0c21a4514fcbc50a  # tags/v3.4.5^0
 source=("git+https://gitlab.gnome.org/GNOME/rhythmbox.git#commit=$_commit")
 sha512sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/^v//;s/-/+/g'
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd $pkgname
 
-  # https://bugs.archlinux.org/task/68537
-  git cherry-pick -n 3360f18d15cd6fabcadac56bc07d4ca133fa661f
-
-  NOCONFIGURE=1 ./autogen.sh
+  # Allow building with a newer version of meson
+  sed -i '/unsupported version of meson/d' meson.build
 }
 
 build() {
-  cd $pkgname
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc \
-    --localstatedir=/var \
-    --libexecdir=/usr/lib/rhythmbox \
-    --disable-browser-plugin \
-    --disable-static \
-    --disable-more-warnings \
-    --enable-daap \
-    --enable-gtk-doc \
-    --enable-python \
-    --enable-vala \
-
-  # https://bugzilla.gnome.org/show_bug.cgi?id=655517
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-
-  make
+  arch-meson $pkgname build \
+    -D gtk_doc=true \
+    -D tests=true
+  meson compile -C build
 }
 
 check() (
-  cd $pkgname
-  glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/data}"
+  glib-compile-schemas "${GSETTINGS_SCHEMA_DIR:=$PWD/$pkgname/data}"
   export GSETTINGS_SCHEMA_DIR GSETTINGS_BACKEND=memory CK_TIMEOUT_MULTIPLIER=3
-  xvfb-run -s '-nolisten local' make check
+
+  xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
 )
 
 package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
-  rm -r "$pkgdir/usr/lib/rhythmbox/sample-plugins"
+  meson install -C build --destdir "$pkgdir"
+
+  python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
 }
