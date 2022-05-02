@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=8
+pkgrel=9
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -104,7 +104,6 @@ source=(
   qemu-ga.conf
   qemu-sysusers.conf
   65-kvm.rules
-  95-qemu-system-ppc.conf
   99-qemu-guest-agent.rules
 )
 sha512sums=('44ecd10c018a3763e1bc87d1d35b98890d0d5636acd69fe9b5cadf5024d5af6a31684d60cbe1c3370e02986434c1fb0ad99224e0e6f6fe7eda169992508157b1'
@@ -113,7 +112,6 @@ sha512sums=('44ecd10c018a3763e1bc87d1d35b98890d0d5636acd69fe9b5cadf5024d5af6a316
             '6e838773d63ae0ffdffe2b891bf611d8f5f3c67a9bc4cbbedf8363c150c2c9971c8e44d92270bc581af40eb0ece02192760bcdd6aee229fff55635f3a4825afa'
             '985c2c7a6b5217c87a15b45368089ee91b2f9027b070f9eafa448a18b27ae0d9edd964d52e134b9c1f4aeef4d6aae88afd3f454551ca898affef7f9d28b99b8f'
             'bdf05f99407491e27a03aaf845b7cc8acfa2e0e59968236f10ffc905e5e3d5e8569df496fd71c887da2b5b8d1902494520c7da2d3a8258f7fd93a881dd610c99'
-            'd93ab81c08545722b92e7ff0a9c52ae5e339aa928baf65e811ec81772b400860403aa56b1585752c44d43435f4ffcb5092bc30de1c042355152e4ac0359a22a8'
             '93b905046fcea8a0a89513b9259c222494ab3b91319dde23baebcb40dc17376a56661b159b99785d6e816831974a0f3cbd7b2f7d89e5fc3c258f88f4492f3839')
 b2sums=('ceda6d9f1a585298bd49fed61e8bb35f0064ad8388a9f979c8bd68a38bfe1a47c5bb055e5f74f970c2c440957042b9de4a861524120040c56e4cd8b56c5cfb68'
         'SKIP'
@@ -121,7 +119,6 @@ b2sums=('ceda6d9f1a585298bd49fed61e8bb35f0064ad8388a9f979c8bd68a38bfe1a47c5bb055
         '2102e4a34e11e406e9606c97e026e7b92e887e296a7f77b9cede1b37119d0df33735f3588628167b2b8e32244c196c491bfab623e2caddac9014d445aa2a6d98'
         '69177b962d2fda20cafdbc6226fd017b5ca5a0f69f866d055dc1c744b7b2955059f47c693cfb5b4c863ec159569fdabd4327ab4b8a95566a68cd8ce38e339c7a'
         '3559fe9c4f744194939770047a0a02d07ff791c845a80726d0bc7b8c4801ed5f11150e7d5adab813844b3dab1cf38c3a5a87fb6efbb8fc9dccdda9fa56409ed8'
-        '56fd37a1aa9f07b4c5b401cff0283283e20a2d7928cbd4bbd89efbbbf8c8f2126be2a47dd6bb24528c2dac3932f9bf52dae0790b6bf2f2d60b3865d7e5dca041'
         'a9a2bdfeeb44eb86cbe88ac7c65f72800bdb2fd5cecb02f3a258cf9470b52832180aab43c89d481f7fd4d067342a9a27dd6c8a94d625b95d6e2b912e47d274e7')
 validpgpkeys=('CEACC9E15534EBABB82D3FA03353C9CEF108B584') # Michael Roth <flukshun@gmail.com>
 
@@ -702,7 +699,7 @@ package_qemu-system-m68k() {
 }
 
 package_qemu-system-microblaze() {
-  pkgdesc="QEMU system emulator for ColdFire (m68k)"
+  pkgdesc="QEMU system emulator for Microblaze"
   depends=("${_qemu_system_deps[@]}")
   mv -v $pkgname/* "$pkgdir"
 }
@@ -731,7 +728,6 @@ package_qemu-system-ppc() {
   depends=("${_qemu_system_deps[@]}" systemd-libs libudev.so)
   options=(!strip)
   mv -v $pkgname/* "$pkgdir"
-  install -vDm 644 95-$pkgname.conf -t "$pkgdir/etc/security/limits.d/"
 }
 
 package_qemu-system-riscv() {
