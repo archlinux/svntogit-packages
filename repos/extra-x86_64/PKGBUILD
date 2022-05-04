@@ -1,30 +1,31 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=ndctl
-pkgver=72.1
+pkgver=73
 pkgrel=1
 pkgdesc='Utility library for managing the libnvdimm (non-volatile memory device) sub-system in the Linux kernel'
 arch=('x86_64')
 url="https://github.com/pmem/ndctl"
 license=('LGPL')
 depends=('iniparser' 'json-c' 'keyutils' 'kmod' 'systemd-libs' 'util-linux-libs')
-makedepends=('asciidoctor' 'bash-completion' 'systemd' 'xmlto')
+makedepends=('asciidoctor' 'bash-completion' 'meson' 'systemd' 'xmlto')
 source=("https://github.com/pmem/ndctl/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('7304e23121c99457fa6e22a399fb636f6a66d6d07b090463ec41e424687b06e7e8a1a18623ab9dd5783aaccfa09ff964e3477b63aaa4614ac60f6e6050452f12')
+sha512sums=('a52a1fb655f044e5cd48b95b3abd89b4f6a991d6439c02e66da6b55947b8a08c279fec873def0b5a18a4e0b670d40e246c333b619fb62f0c6808357d15d847a5')
 
 prepare() {
   # fix location of modprobe.d conf
-  sed -i 's|^modprobedir =.*|modprobedir = /usr/lib/modprobe.d/|' $pkgname-$pkgver/Makefile.am
+  sed -i "s|^modprobedatadir =.*|modprobedatadir = '/usr/lib/modprobe.d/'|" $pkgname-$pkgver/contrib/meson.build
 }
 
 build() {
-  cd "$srcdir"/$pkgname-$pkgver
-  ./autogen.sh
-  ./configure --prefix=/usr --sysconfdir=/etc
-  make
+  arch-meson $pkgname-$pkgver build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd "$srcdir"/$pkgname-$pkgver
-  make DESTDIR="$pkgdir" install
+  meson install -C build --destdir "$pkgdir"
 }
