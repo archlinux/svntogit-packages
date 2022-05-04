@@ -2,17 +2,18 @@
 
 pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
-pkgver=20201226
-_commit=2b1fbc36600ccd8becb9f894922f644bff2cbc9b
-pkgrel=2
-pkgdesc="Google Noto TTF fonts"
+pkgver=20220502
+_commit=c5481f3a1b57d54190a4e7881103033fbbbcec0c
+pkgrel=1
+pkgdesc='Google Noto TTF fonts'
 arch=(any)
-url="https://www.google.com/get/noto/"
+url='https://www.google.com/get/noto/'
 license=(custom:SIL)
-source=($pkgbase-$_commit.tar.gz::https://github.com/googlefonts/noto-fonts/archive/$_commit.tar.gz
+makedepends=(git)
+source=(git+https://github.com/googlefonts/noto-fonts#commit=$_commit
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
         46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
-sha256sums=('7ef8fc4b10f869de28cfcf3d6cf53345949ed7335d79472810d31787d8aba719'
+sha256sums=('SKIP'
             '52684bebf6447be22618d2a04ff37623ec92f9d8ccf6b6f972e5bcbcfee90d69'
             '4459944b63dc083107280f5d7375c69746bf80a09416a4a4909a100e58e5a33a'
             '4526289f59654e2a81dc734669a1ae4e416f9a56d0896ec3741c6bf065baf8a8'
@@ -25,7 +26,10 @@ package_noto-fonts() {
               'noto-fonts-extra: additional variants (condensed, semi-bold, extra-light)')
   provides=(ttf-font)
 
-  cd $pkgbase-*/
+  cd $pkgbase
+  # Remove duplicated fonts
+  rm {un,}hinted/ttf/NotoSansTifinagh/NotoSansTifinagh[AGHRST]*.ttf
+
   install -Dm644 unhinted/ttf/Noto*/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
   install -Dm644 hinted/ttf/Noto*/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/noto-fonts
@@ -43,7 +47,7 @@ package_noto-fonts-extra() {
   pkgdesc+=' - additional variants'
   depends=(noto-fonts)
   
-  cd $pkgbase-*/
+  cd $pkgbase
   mkdir -p "$pkgdir"/usr/share/fonts/noto
   cp hinted/ttf/Noto*/*{Condensed,SemiBold,Extra}*.tt[fc] "$pkgdir"/usr/share/fonts/noto
 }
@@ -52,7 +56,7 @@ package_ttf-croscore() {
   pkgdesc='Chrome OS core fonts'
   provides=(ttf-font)
 
-  cd $pkgbase-*/
+  cd $pkgbase
   install -Dm644 hinted/ttf/{Arimo,Cousine,Tinos}/*.ttf -t "$pkgdir"/usr/share/fonts/croscore
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/ttf-croscore
 }
