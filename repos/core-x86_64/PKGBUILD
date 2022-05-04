@@ -6,7 +6,7 @@
 # Contributor: John Proctor <jproctor@prium.net>
 
 pkgname=pcre2
-pkgver=10.39
+pkgver=10.40
 pkgrel=1
 pkgdesc='A library that implements Perl 5-style regular expressions. 2nd version'
 arch=('x86_64')
@@ -14,7 +14,7 @@ url='https://www.pcre.org/'
 license=('BSD')
 depends=('gcc-libs' 'readline' 'zlib' 'bzip2' 'bash')
 source=("https://github.com/PhilipHazel/pcre2/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2"{,.sig})
-sha512sums=('b3d898198f4b5ffc3453d2ba56fe2a7298c01c52e5f67d45f1e046fc0dee62e16a4024fcb65839ac9c367beedb531647affd6f8599fbeb102f19423c150d80d4'
+sha512sums=('00e7b48a6554b9127cb6fe24c5cacf72783416a9754ec88f62f73c52f46ed72c86c1869e62c91a31b2ff2cbafbbedabca44b3f1eb7670bc92f49d8401c7374e8'
             'SKIP')
 validpgpkeys=('45F68D54BBE23FB3039B46E59766E084FB0F43D8')  # Philip Hazel
 
