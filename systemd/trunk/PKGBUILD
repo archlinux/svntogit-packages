@@ -1,11 +1,9 @@
 # Maintainer: Christian Hesse <mail@eworm.de>
-# Maintainer: Dave Reisner <dreisner@archlinux.org>
-# Maintainer: Tom Gundersen <teg@jklm.no>
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='20e3fdcb595febff92fe3e89ee33da2c04c5c682' # git rev-parse v${_tag_name}
-_tag_name=250.5
+_tag='917aa5cc34eec198c241aed7aaa564cade4737f4' # git rev-parse v${_tag_name}
+_tag_name=251-rc2
 pkgver="${_tag_name/-/}"
 pkgrel=1
 arch=('x86_64')
@@ -62,8 +60,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # bus: Use OrderedSet for introspection
-  'acac88340ace3cd631126eebb6d0390cd54e8231'
 )
 
 _reverts=(
@@ -112,6 +108,7 @@ build() {
     # internal version comparison is incompatible with pacman:
     #   249~rc1 < 249 < 249.1 < 249rc
     -Dversion-tag="${_tag_name/-/\~}-${pkgrel}-arch"
+    -Dshared-lib-tag="${pkgver}-${pkgrel}"
     -Dmode=release
 
     -Dgnu-efi=true
