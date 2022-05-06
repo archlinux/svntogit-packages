@@ -32,6 +32,10 @@ prepare() {
 }
 
 build() {
+  # Produce more debug info: GLib has a lot of useful macros
+  CFLAGS+=' -g3'
+  CXXFLAGS+=' -g3'
+
   CFLAGS+=" -DG_DISABLE_CAST_CHECKS"
   arch-meson glib build \
     -D glib_debug=disabled \
