@@ -5,7 +5,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='917aa5cc34eec198c241aed7aaa564cade4737f4' # git rev-parse v${_tag_name}
 _tag_name=251-rc2
 pkgver="${_tag_name/-/}"
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -60,6 +60,8 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
+  # udev: fix parent token handling
+  'eba782d59bfc1ce82b4c41883d15fa5e705126e5'
 )
 
 _reverts=(
