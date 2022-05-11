@@ -14,6 +14,7 @@ makedepends=(git meson gtk-doc gobject-introspection)
 checkdepends=(cairo)
 provides=(libfprint-2.so)
 groups=(fprint)
+options=(debug)
 _commit=8fad2652ee75836e5a60c73af0f06cc8b57a07f5  # tags/v1.94.3^0
 source=("git+https://gitlab.freedesktop.org/libfprint/libfprint.git#commit=$_commit")
 sha256sums=('SKIP')
