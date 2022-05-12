@@ -71,33 +71,35 @@ prepare() {
 }
 
 build() {
-  local _confflags="--prefix=/usr \
-      --libdir=/usr/lib \
-      --libexecdir=/usr/lib \
-      --mandir=/usr/share/man \
-      --infodir=/usr/share/info \
-      --with-bugurl=https://bugs.archlinux.org/ \
-      --with-linker-hash-style=gnu \
-      --with-system-zlib \
-      --enable-__cxa_atexit \
-      --enable-cet=auto \
-      --enable-checking=release \
-      --enable-clocale=gnu \
-      --enable-default-pie \
-      --enable-default-ssp \
-      --enable-gnu-indirect-function \
-      --enable-gnu-unique-object \
-      --enable-linker-build-id \
-      --enable-lto \
-      --enable-multilib \
-      --enable-plugin \
-      --enable-shared \
-      --enable-threads=posix \
-      --disable-libssp \
-      --disable-libstdcxx-pch \
-      --disable-werror \
-      --with-build-config=bootstrap-lto \
-      --enable-link-serialization=1"
+  local _confflags=(
+      --prefix=/usr
+      --libdir=/usr/lib
+      --libexecdir=/usr/lib
+      --mandir=/usr/share/man
+      --infodir=/usr/share/info
+      --with-bugurl=https://bugs.archlinux.org/
+      --with-linker-hash-style=gnu
+      --with-system-zlib
+      --enable-__cxa_atexit
+      --enable-cet=auto
+      --enable-checking=release
+      --enable-clocale=gnu
+      --enable-default-pie
+      --enable-default-ssp
+      --enable-gnu-indirect-function
+      --enable-gnu-unique-object
+      --enable-linker-build-id
+      --enable-lto
+      --enable-multilib
+      --enable-plugin
+      --enable-shared
+      --enable-threads=posix
+      --disable-libssp
+      --disable-libstdcxx-pch
+      --disable-werror
+      --with-build-config=bootstrap-lto
+      --enable-link-serialization=1
+  )
 
   cd gcc-build
 
@@ -110,7 +112,7 @@ build() {
   "$srcdir/gcc/configure" \
     --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++ \
     --enable-bootstrap \
-    $_confflags
+    "${confflags[@]}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
   make -O STAGE1_CFLAGS="-O2" \
@@ -130,7 +132,7 @@ build() {
     --enable-languages=jit \
     --disable-bootstrap \
     --enable-host-shared \
-    $_confflags
+    "${confflags[@]}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
   make -O STAGE1_CFLAGS="-O2" \
