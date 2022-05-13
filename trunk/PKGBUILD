@@ -4,12 +4,12 @@ pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
 pkgver=20220502
 _commit=c5481f3a1b57d54190a4e7881103033fbbbcec0c
-pkgrel=1
+pkgrel=2
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
 url='https://www.google.com/get/noto/'
 license=(custom:SIL)
-makedepends=(git)
+makedepends=(git python-fonttools)
 source=(git+https://github.com/googlefonts/noto-fonts#commit=$_commit
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
         46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
@@ -20,6 +20,14 @@ sha256sums=('SKIP'
             '83a8faf6a47954075f97a2d555048e2a6689c38603b2ca00150157bf645f4593'
             'c94368b24506770767d003e5bcba589a8e402e489c240ee52453bf3ac7e9b5fa'
             'f5c09b37280d7569b6c99a78511639be4ae25b8c5406464422fe0421fe13a884')
+
+prepare() {
+# Fix weight of Arimo-BoldItalic.ttf https://github.com/googlefonts/noto-fonts/issues/2350
+  cd $pkgbase/hinted/ttf/Arimo
+  ttx Arimo-BoldItalic.ttf
+  sed -e 's|usWeightClass value=\"400\"|usWeightClass value=\"700\"|' -i Arimo-BoldItalic.ttx
+  ttx -f Arimo-BoldItalic.ttx
+}
 
 package_noto-fonts() {
   optdepends=('noto-fonts-cjk: CJK characters' 'noto-fonts-emoji: Emoji characters'
