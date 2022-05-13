@@ -10,12 +10,12 @@ pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.35
 _commit=28ea43f8d64f0dd1f2de75525157730e1532e600
-pkgrel=4
+pkgrel=5
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs python)
-options=(!strip staticlibs !lto)
+options=(debug staticlibs !lto)
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
         locale-gen
@@ -182,19 +182,6 @@ package_glibc() {
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
     "$srcdir/glibc/localedata/SUPPORTED" >> "$pkgdir/etc/locale.gen"
 
-  if check_option 'debug' n; then
-    find "$pkgdir"/usr/bin -type f -executable -exec strip $STRIP_BINARIES {} + 2> /dev/null || true
-    find "$pkgdir"/usr/lib -name '*.a' -type f -exec strip $STRIP_STATIC {} + 2> /dev/null || true
-
-    # Do not strip these for gdb and valgrind functionality, but strip the rest
-    find "$pkgdir"/usr/lib \
-      -not -name 'ld-*.so*' \
-      -not -name 'libc.so*' \
-      -not -name 'libpthread.so*' \
-      -not -name 'libthread_db.so*' \
-      -name '*.so*' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
-  fi
-
   # Provide tracing probes to libstdc++ for exceptions, possibly for other
   # libraries too. Useful for gdb's catch command.
   install -Dm644 "$srcdir/sdt.h" "$pkgdir/usr/include/sys/sdt.h"
@@ -223,14 +210,4 @@ package_lib32-glibc() {
 
   # Symlink /usr/lib32/locale to /usr/lib/locale
   ln -s ../lib/locale "$pkgdir/usr/lib32/locale"
-
-  if check_option 'debug' n; then
-    find "$pkgdir"/usr/lib32 -name '*.a' -type f -exec strip $STRIP_STATIC {} + 2> /dev/null || true
-    find "$pkgdir"/usr/lib32 \
-      -not -name 'ld-*.so*' \
-      -not -name 'libc.so*' \
-      -not -name 'libpthread.so*' \
-      -not -name 'libthread_db.so*' \
-      -name '*.so*' -type f -exec strip $STRIP_SHARED {} + 2> /dev/null || true
-  fi
 }
