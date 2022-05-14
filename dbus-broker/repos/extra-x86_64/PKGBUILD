@@ -2,50 +2,29 @@
 # Contributor: David Herrmann <dh.herrmann@gmail.com>
 
 pkgname=dbus-broker
-pkgver=29
+pkgver=30
 pkgrel=2
 pkgdesc="Linux D-Bus Message Broker"
 url="https://github.com/bus1/dbus-broker/wiki"
 arch=(x86_64)
 license=(Apache)
 depends=(systemd-libs expat audit)
-makedepends=(git meson systemd python-docutils)
+makedepends=(meson systemd python-docutils)
 options=(debug)
-_commit=d2e888c68413cfeae6a5b87862570e70af8f85bd  # tags/v29^0
-source=("git+https://github.com/bus1/dbus-broker#commit=$_commit"
-        git+https://github.com/c-util/c-{rbtree,list,dvar,utf8,shquote,ini,stdaux})
-sha256sums=('SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP')
-
-pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
-}
+source=(https://github.com/bus1/dbus-broker/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz
+        0001-util-user-keep-reference-to-user-in-each-usage-table.patch)
+sha256sums=('bf22ba6a13680ba93b99f0bccb54dde9f4f6bdff5f298dbc8cdb067a80f3827a'
+            'e7107b54a0051e3945cfde3a8cfc617abcef63b38dd0c5783ba805fedab9e2d1')
 
 prepare() {
-  cd $pkgname
+  cd $pkgname-$pkgver
 
-  # Run user service in session.slice
-  git cherry-pick -n 833a92c0aa262d467faed35d8cac3896f5bc352d
-
-  git submodule init
-
-  local sm
-  for sm in c-{rbtree,list,dvar,utf8,shquote,ini,stdaux}; do
-    git submodule set-url subprojects/$sm "$srcdir/$sm"
-  done
-
-  git submodule update
+  # Fix asserts in system bus
+  patch -Np1 -i ../0001-util-user-keep-reference-to-user-in-each-usage-table.patch
 }
 
 build() {
-  arch-meson $pkgname build \
+  arch-meson $pkgname-$pkgver build \
     -D audit=true \
     -D docs=true \
     -D linux-4-17=true \
