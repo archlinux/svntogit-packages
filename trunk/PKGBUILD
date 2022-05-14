@@ -2,9 +2,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=qt5-webengine
-_basever=5.15.3
+_basever=5.15.4
 pkgver=5.15.9
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
@@ -21,14 +21,16 @@ source=(git+https://code.qt.io/qt/qtwebengine.git#tag=v${pkgver}-lts
         qt5-webengine-python3.patch
         qt5-webengine-chromium-python3.patch
         qt5-webengine-ffmpeg5.patch
-        qt5-webengine-pipewire-0.3.patch)
+        qt5-webengine-pipewire-0.3.patch
+        qt5-webengine-gcc12.patch)
 sha256sums=('SKIP'
             'SKIP'
             'SKIP'
             '398c996cb5b606695ac93645143df39e23fa67e768b09e0da6dbd37342a43f32'
             'fda4ff16790799fb285847918a677f4f3f7c0f513d4751f846ffc5aa5d873932'
             'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693'
-            '5e3a3c4711d964d5152a04059a2b5c1d14bb13dd29bce370120f60e85b476b6f')
+            '5e3a3c4711d964d5152a04059a2b5c1d14bb13dd29bce370120f60e85b476b6f'
+            'cf9be3ffcc3b3cd9450b1ff13535ff7d76284f73173412d097a6ab487463a379')
 options=(debug)
 
 prepare() {
@@ -45,6 +47,7 @@ prepare() {
 
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-ffmpeg5.patch # Fix build with ffmpeg 5
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-pipewire-0.3.patch # Port to pipewire 0.3
+  patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-gcc12.patch # Fix build with GCC 12
 
 # Update catapult for python3 compatibility
   rm -r src/3rdparty/chromium/third_party/catapult
