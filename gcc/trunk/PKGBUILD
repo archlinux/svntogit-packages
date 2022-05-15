@@ -112,7 +112,7 @@ build() {
   "$srcdir/gcc/configure" \
     --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++ \
     --enable-bootstrap \
-    "${_confflags[@]}"
+    "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
   make -O STAGE1_CFLAGS="-O2" \
@@ -132,7 +132,7 @@ build() {
     --enable-languages=jit \
     --disable-bootstrap \
     --enable-host-shared \
-    "${_confflags[@]}"
+    "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
   make -O STAGE1_CFLAGS="-O2" \
