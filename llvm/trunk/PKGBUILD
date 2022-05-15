@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=13.0.1
-pkgrel=2
+pkgrel=3
 _ocaml_ver=4.13.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -18,14 +18,16 @@ source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         don-t-accept-nullptr-as-GEP-element-type.patch
         don-t-move-DBG_VALUE-instructions.patch
         no-strict-aliasing-DwarfCompileUnit.patch
-        disable-bswap-for-spir.patch
+        disable-A-B-A-B-and-BSWAP-in-InstCombine.patch
+        disable-DIArgList-in-SPIR-V.patch
         llvm-config.h)
 sha256sums=('ec6b80d82c384acad2dc192903a6cf2cdbaffb889b84bfb98da9d71e630fc834'
             'SKIP'
             'a7e902a7612d0fdabe436a917468b043cc296bc89d8954bfc3126f737beb9ac4'
             'f7d69f84241416398fdb3df8bb44f9fae3c49d89889c7ffa3b37aa2e9d78f708'
             'd1eff24508e35aae6c26a943dbaa3ef5acb60a145b008fd1ef9ac6f6c4faa662'
-            'af163392fbc19d65d11ab4b1510a2eae39b417d6228023b3ba5395b138bb41f5'
+            '34cc0d79a30599cb2287b47b4e9a1a5bf03d57a1f8bb35be3fe976ffc4a604f6'
+            '8642da2d556092e4284873ba6ddc6c9a67841f42cc16f923bcd523e4b304a3ff'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
@@ -45,8 +47,9 @@ prepare() {
   # https://bugs.llvm.org/show_bug.cgi?id=50611#c3
   patch -Np2 -i ../no-strict-aliasing-DwarfCompileUnit.patch
 
-  # Fix an ISPC build failure (https://github.com/ispc/ispc/issues/2189)
-  patch -Np2 -i ../disable-bswap-for-spir.patch
+  # Patches needed for ISPC for Xe only
+  patch -Np2 -i ../disable-A-B-A-B-and-BSWAP-in-InstCombine.patch
+  patch -Np2 -i ../disable-DIArgList-in-SPIR-V.patch
 }
 
 build() {
