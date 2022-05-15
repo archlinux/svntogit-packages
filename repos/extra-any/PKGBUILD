@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=60.3.1
+pkgver=60.4.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -19,7 +19,7 @@ checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pi
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('109557478e32b53c4068843775c5b2f7ec09ba61f7a5eb274976a6515b33b9e020b3ec602fcc7f96f8665ed54842de687119c4c04242356dd06a972899d27cef')
+sha512sums=('a4ef1a919da0ff29741250f980bc7384b7076445869c9c9021c016964ee589fffb911feb434e3bd4cc31b848fd1054768fa773959104d998755fbcb7fbe9104a')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -74,7 +74,9 @@ check() { (
   export PYTHONDONTWRITEBYTECODE=1
 
   cd setuptools-$pkgver
-  SETUPTOOLS_USE_DISTUTILS=stdlib python -m pytest --deselect setuptools/tests/test_distutils_adoption.py
+  SETUPTOOLS_USE_DISTUTILS=stdlib python -m pytest \
+    --deselect setuptools/tests/test_distutils_adoption.py \
+    --deselect setuptools/tests/integration/test_pip_install_sdist.py
 )}
 
 package() {
