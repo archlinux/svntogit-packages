@@ -1,30 +1,26 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
-pkgname=malcontent
-pkgver=0.10.3
-pkgrel=2
+pkgbase=malcontent
+pkgname=(malcontent libmalcontent)
+pkgver=0.10.4
+pkgrel=1
 pkgdesc="Parental control support for applications"
 url="https://gitlab.freedesktop.org/pwithnall/malcontent"
-license=(LGPL2.1)
 arch=(x86_64)
+license=(LGPL2.1)
 depends=(accountsservice dbus flatpak glib2 gtk3 polkit appstream-glib)
 makedepends=(git meson gobject-introspection gtk-doc libglib-testing yelp-tools)
-provides=(libmalcontent{,-ui}-${pkgver%%.*}.so)
-_commit=9dd47e5abcbddb8b08c29be0304ead70cee1c5bc  # tags/0.10.3^0
+_commit=d9bcc0537baa73d2c9f63825f14134a629cf6eba  # tags/0.10.4^0
 source=("git+https://gitlab.freedesktop.org/pwithnall/malcontent.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd $pkgname
-
-  # Fix build with Meson 0.61
-  # https://bugs.archlinux.org/task/73879
-  git cherry-pick -n f433aaf8c8f82f0aeaedee664f08bc6fcad47b0d
 }
 
 build() {
@@ -36,7 +32,36 @@ check() {
   meson test -C build --print-errorlogs
 }
 
-package() {
-  meson install -C build --destdir "$pkgdir"
-  install -d -o root -g 102 -m 750 "$pkgdir/usr/share/polkit-1/rules.d"
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
 }
+
+package_malcontent() {
+  depends+=("libmalcontent=$pkgver-$pkgrel")
+  groups=(gnome)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick libs usr/include
+  _pick libs usr/lib/{girepository-1.0,libmalcontent*,pkgconfig}
+  _pick libs usr/share/gir-1.0
+
+  install -d -o root -g 102 -m 750 usr/share/polkit-1/rules.d
+}
+
+package_libmalcontent() {
+  pkgdesc="Parental control library"
+  depends=(libg{lib,object,io}-2.0.so gcc-libs)
+  provides=(libmalcontent{,-ui}-${pkgver%%.*}.so)
+  mv libs/* "$pkgdir"
+}
+
+# vim:set sw=2 et:
