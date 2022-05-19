@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=13.0.1
-pkgrel=3
+pkgrel=4
 _ocaml_ver=4.13.1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -16,6 +16,7 @@ options=('staticlibs' '!lto') # Getting thousands of test failures with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
         don-t-accept-nullptr-as-GEP-element-type.patch
+        don-t-override-__attribute__-no_stack_protector.patch
         don-t-move-DBG_VALUE-instructions.patch
         no-strict-aliasing-DwarfCompileUnit.patch
         disable-A-B-A-B-and-BSWAP-in-InstCombine.patch
@@ -24,6 +25,7 @@ source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
 sha256sums=('ec6b80d82c384acad2dc192903a6cf2cdbaffb889b84bfb98da9d71e630fc834'
             'SKIP'
             'a7e902a7612d0fdabe436a917468b043cc296bc89d8954bfc3126f737beb9ac4'
+            '9f0a4578b94eb8853b83af2f65e92705254b4b56d96f9a941714d174b932f465'
             'f7d69f84241416398fdb3df8bb44f9fae3c49d89889c7ffa3b37aa2e9d78f708'
             'd1eff24508e35aae6c26a943dbaa3ef5acb60a145b008fd1ef9ac6f6c4faa662'
             '34cc0d79a30599cb2287b47b4e9a1a5bf03d57a1f8bb35be3fe976ffc4a604f6'
@@ -38,6 +40,11 @@ prepare() {
 
   # https://github.com/intel/intel-graphics-compiler/issues/204
   patch -Rp2 -i ../don-t-accept-nullptr-as-GEP-element-type.patch
+
+  # Fixes Chromium error "*** stack smashing detected ***: terminated"
+  # (which also goes away with "--change-stack-guard-on-fork=disabled")
+  # https://reviews.llvm.org/D116589
+  patch -Np2 -i ../don-t-override-__attribute__-no_stack_protector.patch
 
   # https://github.com/llvm/llvm-project/issues/53243
   # https://github.com/rust-lang/rust/issues/92869
