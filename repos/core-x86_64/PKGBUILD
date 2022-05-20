@@ -3,7 +3,7 @@
 
 pkgbase=iptables
 pkgname=(iptables iptables-nft)
-pkgver=1.8.7
+pkgver=1.8.8
 pkgrel=1
 epoch=1
 pkgdesc='Linux kernel packet control tool'
@@ -15,8 +15,9 @@ makedepends=(linux-api-headers)
 backup=(etc/ethertypes etc/iptables/{ip,ip6}tables.rules)
 source=(https://www.netfilter.org/projects/iptables/files/$pkgbase-$pkgver.tar.bz2{,.sig}
         empty.rules simple_firewall.rules empty-{filter,mangle,nat,raw,security}.rules
-        {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush)
-sha1sums=('05ef75415cb7cb7641f51d51e74f3ea29cc31ab1'
+        {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush
+        iptables-format-security.patch::https://git.netfilter.org/iptables/patch/?id=b72eb12e)
+sha1sums=('98783621a5e58ff55f83b1350523f3de41af621d'
           'SKIP'
           '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
           'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
@@ -30,7 +31,8 @@ sha1sums=('05ef75415cb7cb7641f51d51e74f3ea29cc31ab1'
           '8d66d21fa4cbfe2a80478301af94ba54f65e4ea0'
           '9cec592787e32451f58fa608ea057870e07aa704'
           'd10af7780d1634778d898c709e2d950aa1561856'
-          '15c1684f3e671f4d0ede639a7c9c08e1a841511c')
+          '15c1684f3e671f4d0ede639a7c9c08e1a841511c'
+          'df4b0a31dfa01cff65926d439ab1475f246d4e74')
 validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4'
               '37D964ACC04981C75500FB9BD55D978A8A1420E4') # Netfilter Core Team
 
@@ -40,6 +42,9 @@ prepare() {
 
   # use system one
   rm include/linux/types.h
+
+  ln -rs libiptc/linux_list.h include/libiptc
+  patch -p1 -i ../iptables-format-security.patch # Fix build with -Werror=format-security
 }
 
 build() {
