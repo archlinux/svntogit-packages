@@ -5,7 +5,7 @@ pkgbase=xorg-server
 pkgname=('xorg-server' 'xorg-server-xephyr' 'xorg-server-xvfb' 'xorg-server-xnest'
          'xorg-server-common' 'xorg-server-devel')
 pkgver=21.1.3
-pkgrel=6
+pkgrel=7
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
@@ -70,7 +70,8 @@ build() {
     -D systemd_logind=true \
     -D suid_wrapper=true \
     -D xkb_dir=/usr/share/X11/xkb \
-    -D xkb_output_dir=/var/lib/xkb
+    -D xkb_output_dir=/var/lib/xkb \
+    -D libunwind=true
 
   # Print config
   meson configure build
@@ -161,7 +162,7 @@ package_xorg-server-xvfb() {
 
 package_xorg-server-xnest() {
   pkgdesc="A nested X server that runs as an X application"
-  depends=(libxfont2 libxext pixman xorg-server-common nettle libtirpc systemd-libs)
+  depends=(libxfont2 libunwind libxext pixman xorg-server-common nettle libtirpc systemd-libs)
 
   _install fakeinstall/usr/bin/Xnest
   _install fakeinstall/usr/share/man/man1/Xnest.1
