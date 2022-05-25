@@ -2,10 +2,10 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='e93cff8c9c8ceaee8d19cf2599b84a7683ce4ecd' # git rev-parse v${_tag_name}
-_tag_name=251
+_tag='a57280c2c63622b0f31b707db0ea13ce0c7ce6a0' # git rev-parse v${_tag_name}
+_tag_name=251.1
 pkgver="${_tag_name/-/}"
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -61,11 +61,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # bootctl: Make sure bootctl install returns 0 on success
-  'eb76587f33a08c91f025d4c7fa685c44f7b2d332'
-
-  # Revert "core/device: ignore DEVICE_FOUND_UDEV bit on switching root"
-  '011161de615c125e91a27d10decf4b5a3c5fbb99'
 )
 
 _reverts=(
