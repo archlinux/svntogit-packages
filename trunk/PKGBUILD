@@ -3,8 +3,8 @@
 # Contributor: Alexander Baldeck <alexander@archlinux.org>
 
 pkgname=nspr
-pkgver=4.33
-pkgrel=2
+pkgver=4.34
+pkgrel=1
 pkgdesc="Netscape Portable Runtime"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSPR"
 arch=(x86_64)
@@ -12,7 +12,7 @@ license=(MPL GPL)
 depends=(glibc sh)
 makedepends=(zip mercurial)
 options=(debug)
-_revision=5f753966dc01e1872eb4fee6e7b6d0a4fd3daad2
+_revision=e7a3ef720ee023dce074f57820a627c6c87a7bb5
 source=("hg+https://hg.mozilla.org/projects/nspr#revision=$_revision")
 sha256sums=('SKIP')
 
