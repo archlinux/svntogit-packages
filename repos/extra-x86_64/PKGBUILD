@@ -4,7 +4,7 @@
 pkgname=qt6-webengine
 _qtver=6.3.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -17,12 +17,15 @@ groups=(qt6)
 options=(debug)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
-        qt6-webengine-system-icu.patch::https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=75f0f4eb)
+        qt6-webengine-system-icu.patch::https://code.qt.io/cgit/qt/qtwebengine-chromium.git/patch/?id=75f0f4eb
+        qtbug-103778.patch::https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=8d0bd4b1)
 sha256sums=('2001b45dd81dcb7ad1bc6cf1aa32f2eca5367a11fed49656053c75676c4d093d'
-            'ec28b71135f293f624365a50be0c329e396eaa9433655386af146614837e82a2')
+            'ec28b71135f293f624365a50be0c329e396eaa9433655386af146614837e82a2'
+            '28c07aebc9725905d7b569b1eae815fec11f51433a21eab29177a29af67f8552')
 
 prepare() {
   patch -d $_pkgfn/src/3rdparty -p1 < qt6-webengine-system-icu.patch # Fix build with system ICU
+  patch -d $_pkgfn -p1 < qtbug-103778.patch # Fix local->remote navigation
 }
 
 build() {
