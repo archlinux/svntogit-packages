@@ -15,7 +15,7 @@ optdepends=('perl: to use corresponding binding'
             'ruby: to use corresponding binding'
             'lua51: to use corresponding binding')
 options=('!emptydirs' '!makeflags')
-source=(https://oss.oetiker.ch/rrdtool/pub/rrdtool-${pkgver}.tar.gz)
+source=(https://github.com/oetiker/rrdtool-1.x/releases/download/v$pkgver/rrdtool-$pkgver.tar.gz)
 sha256sums=('a199faeb7eff7cafc46fac253e682d833d08932f3db93a550a4a5af180ca58db')
 
 prepare() {
