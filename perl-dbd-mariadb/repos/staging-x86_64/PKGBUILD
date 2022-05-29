@@ -1,0 +1,43 @@
+# Maintainer: Christian Hesse <mail@eworm.de>
+
+pkgname=perl-dbd-mariadb
+pkgver=1.22
+pkgrel=2
+pkgdesc='MariaDB and MySQL driver for the Perl5 Database Interface (DBI)'
+arch=('x86_64')
+license=('GPL' 'PerlArtistic')
+url='https://metacpan.org/release/DBD-MariaDB'
+depends=('mariadb-libs' 'perl-dbi')
+makedepends=('perl-devel-checklib')
+checkdepends=('mariadb' 'perl-test-deep')
+source=("https://cpan.metacpan.org/authors/id/P/PA/PALI/DBD-MariaDB-${pkgver}.tar.gz")
+sha512sums=('f2bd16fa609b94bd5eb538b38b122dec6a4484da062f2cc84fa6ca4a5dfc30e7ff754a00ece22a3a30297c92b4fd3f878ab0e2a581b7082cd1b9a00f33e2b2c7')
+
+build() {
+  cd DBD-MariaDB-${pkgver}
+
+  perl Makefile.PL INSTALLDIRS=vendor --testsocket=/tmp/socket.mysql
+  make
+}
+
+check() {
+  cd DBD-MariaDB-${pkgver}
+
+  mkdir -p /tmp/mysql_test
+  mariadb-install-db \
+     --basedir=/usr \
+     --datadir=/tmp/mysql_test
+  mariadbd -P 17999 \
+     --socket=/tmp/socket.mysql \
+     --datadir=/tmp/mysql_test &
+  sleep 10
+  DAEMON_PORT=$!
+  make test
+  kill -9 $DAEMON_PORT
+}
+
+package() {
+  cd DBD-MariaDB-${pkgver}
+
+  make install DESTDIR="${pkgdir}"
+}
