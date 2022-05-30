@@ -4,7 +4,7 @@ pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
 pkgver=20220502
 _commit=c5481f3a1b57d54190a4e7881103033fbbbcec0c
-pkgrel=2
+pkgrel=3
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
 url='https://www.google.com/get/noto/'
@@ -49,6 +49,9 @@ package_noto-fonts() {
   install -Dm644 "$srcdir"/*.conf -t "$pkgdir"/usr/share/fontconfig/conf.avail/
   install -d "$pkgdir"/usr/share/fontconfig/conf.default
   ln -rs "$pkgdir"/usr/share/fontconfig/conf.avail/* "$pkgdir"/usr/share/fontconfig/conf.default
+
+  # Remove duplicate Display fonts https://github.com/googlefonts/noto-fonts/issues/2315
+  rm "$pkgdir"/usr/share/fonts/noto/NotoSans-Display*
 }
 
 package_noto-fonts-extra() {
@@ -58,6 +61,9 @@ package_noto-fonts-extra() {
   cd $pkgbase
   mkdir -p "$pkgdir"/usr/share/fonts/noto
   cp hinted/ttf/Noto*/*{Condensed,SemiBold,Extra}*.tt[fc] "$pkgdir"/usr/share/fonts/noto
+
+  # Remove duplicate Display fonts https://github.com/googlefonts/noto-fonts/issues/2315
+  rm "$pkgdir"/usr/share/fonts/noto/NotoSans-Display*
 }
 
 package_ttf-croscore() {
