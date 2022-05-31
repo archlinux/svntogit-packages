@@ -1,0 +1,60 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Eric Bélanger <eric@archlinux.org>
+
+pkgname=libtiff
+pkgver=4.4.0
+pkgrel=1
+pkgdesc='Library for manipulation of TIFF images'
+url='http://www.simplesystems.org/libtiff/'
+arch=('x86_64')
+license=('custom')
+depends=('glibc' 'libjpeg' 'libjpeg.so' 'zlib' 'xz' 'zstd')
+makedepends=('freeglut' 'glu' 'mesa' 'jbigkit')
+optdepends=('freeglut: for using tiffgt')
+provides=('libtiff.so' 'libtiffxx.so')
+source=(https://download.osgeo.org/libtiff/tiff-${pkgver}.tar.gz{,.sig})
+sha256sums=('917223b37538959aca3b790d2d73aa6e626b688e02dcda272aec24c2f498abed'
+            'SKIP')
+b2sums=('1480aca5f9b3d4509229fb6c1b967bdeb2053c4100f21d486d9f4a375742249aa7f54d6b5ab27679075499c226a011bc65988e22c064b3986d89f2cf5b0200dc'
+        'SKIP')
+validpgpkeys=(
+  'EBDFDB21B020EE8FD151A88DE301047DE1198975' # Bob Friesenhahn <bfriesen@simple.dallas.tx.us>
+	'B1FA7D81EEB8E66399178B9733EBBFC47B3DD87D' # Even Rouault <even.rouault@spatialys.com>
+)
+
+prepare() {
+  cd tiff-${pkgver}
+  # apply patch from the source array (should be a pacman feature)
+  local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
+  done
+}
+
+build() {
+  cd tiff-${pkgver}
+  ./configure \
+    --prefix=/usr \
+	  --sysconfdir=/etc \
+	  --mandir=/usr/share/man \
+    --with-docdir=/usr/share/doc/${pkgname}
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd tiff-${pkgver}
+  make check
+}
+
+package() {
+  cd tiff-${pkgver}
+  make DESTDIR="${pkgdir}" install
+  install -Dm 644 COPYRIGHT -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
