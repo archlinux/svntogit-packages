@@ -3,14 +3,15 @@
 
 pkgname=('llvm' 'llvm-libs' 'llvm-ocaml')
 pkgver=13.0.1
-pkgrel=5
+pkgrel=6
 _ocaml_ver=4.13.1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              "ocaml>=$_ocaml_ver" 'ocaml-ctypes' 'ocaml-findlib'
-             'python-setuptools' 'python-psutil' 'python-sphinx')
+             'python-setuptools' 'python-psutil' 'python-sphinx'
+             'python-recommonmark')
 options=('staticlibs' '!lto') # Getting thousands of test failures with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
@@ -74,7 +75,6 @@ build() {
     -DLLVM_BUILD_TESTS=ON \
     -DLLVM_BUILD_DOCS=ON \
     -DLLVM_ENABLE_SPHINX=ON \
-    -DSPHINX_OUTPUT_HTML=OFF \
     -DSPHINX_WARNINGS_AS_ERRORS=OFF \
     -DLLVM_BINUTILS_INCDIR=/usr/include
   ninja all ocaml_doc
@@ -114,8 +114,8 @@ package_llvm() {
     cp "$srcdir/llvm-config.h" "$pkgdir/usr/include/llvm/Config/llvm-config.h"
   fi
 
-  # Remove empty documentation directory
-  rmdir "$pkgdir"/usr/share/doc{/llvm,}
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/$pkgname/html/{_sources,.buildinfo}
 
   install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
