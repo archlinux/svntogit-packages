@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=5.17.12.hardened2
-pkgrel=1
+pkgrel=2
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -32,7 +32,7 @@ sha256sums=('4225ad8100910dcd5de6fd30b99d14d0130afcabc74c8c261d3ad0a29beb287b'
             'SKIP'
             'bbdb6b139f3bfad150a8cfbc96a2d6469441f851c70eaeb3c676148ea82a217e'
             'SKIP'
-            'f643222508239d6134817ca3322b7cc6f6507f61f10c1a8004a5c3cf1c42d346')
+            '9b41235c2e6794bad7c452413b3d7ac1d0550cf01999f4c1acbd4058d2d6076f')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
