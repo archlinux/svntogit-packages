@@ -8,7 +8,6 @@ arch=('x86_64')
 url="http://www.libsdl.org/projects/SDL_ttf"
 license=('MIT')
 depends=('sdl2' 'freetype2')
-makedepends=('cmake')
 source=("https://www.libsdl.org/projects/SDL_ttf/release/SDL2_ttf-${pkgver}.tar.gz")
 sha512sums=('9a211c07d4180fe3fb2f7614e907d1002ddf3bb77b57f62116f22dc29a6043f091deb6a8113656d26a44d2f06b9abcc372aa3e0761500fcf47b455406973a1c7')
 
