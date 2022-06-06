@@ -3,17 +3,13 @@
 pkgname=krb5
 _pkgvermajor=1.19
 pkgver=1.19.3
-pkgrel=1.2
-# 1.1 mit intern virto / files removed
-# 1.2 external virto
+pkgrel=2
 pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
 arch=('x86_64')
 license=('custom')
 depends=('glibc' 'e2fsprogs' 'libldap' 'keyutils' 'libverto-module-base'
          libkeyutils.so libss.so libcom_err.so libverto.so)
-#depends=('glibc' 'e2fsprogs' 'libldap' 'keyutils'
-#         libkeyutils.so libss.so libcom_err.so)
 makedepends=('perl')
 provides=(
   libgssapi_krb5.so
@@ -98,10 +94,6 @@ package() {
    # systemd stuff
    install -Dm 644 "${srcdir}"/krb5-{kadmind.service,kdc.service,kpropd.service,kpropd@.service,kpropd.socket} \
       -t "${pkgdir}/usr/lib/systemd/system"
-
-#rm ${pkgdir}/usr/include/verto-module.h
-#rm ${pkgdir}/usr/include/verto.h
-#rm ${pkgdir}/usr/lib/libverto.so*
 
 }
 
