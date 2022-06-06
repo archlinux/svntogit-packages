@@ -4,7 +4,7 @@
 pkgbase=libverto
 pkgname=('libverto' 'libverto-glib2' 'libverto-libevent' 'libverto-libev')
 pkgver=0.3.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Main event loop abstraction library"
 arch=('x86_64')
 url="https://github.com/latchset/libverto"
@@ -58,7 +58,7 @@ check() {
 # glib will support signal in the future.
 
 package_libverto() {
-  depends=('glibc' 'libverto-module-base')
+  depends=('glibc')
   provides=('libverto.so')
   conflicts=("krb5<1.19.3-2")
 
