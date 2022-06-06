@@ -9,7 +9,7 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.35
-_commit=28ea43f8d64f0dd1f2de75525157730e1532e600
+_commit=d7d1eebd4d5806be55ffacbf18917ad68d4ae7fd
 pkgrel=5
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
