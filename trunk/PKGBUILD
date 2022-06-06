@@ -3,13 +3,17 @@
 pkgname=krb5
 _pkgvermajor=1.19
 pkgver=1.19.3
-pkgrel=1
+pkgrel=1.2
+# 1.1 mit intern virto / files removed
+# 1.2 external virto
 pkgdesc='The Kerberos network authentication system'
 url='https://web.mit.edu/kerberos/'
 arch=('x86_64')
 license=('custom')
-depends=('glibc' 'e2fsprogs' 'libldap' 'keyutils'
-         libkeyutils.so libss.so libcom_err.so)
+depends=('glibc' 'e2fsprogs' 'libldap' 'keyutils' 'libverto-module-base'
+         libkeyutils.so libss.so libcom_err.so libverto.so)
+#depends=('glibc' 'e2fsprogs' 'libldap' 'keyutils'
+#         libkeyutils.so libss.so libcom_err.so)
 makedepends=('perl')
 provides=(
   libgssapi_krb5.so
@@ -22,7 +26,6 @@ provides=(
   libkrad.so
   libkrb5.so
   libkrb5support.so
-  libverto.so
 )
 backup=(
   'etc/krb5.conf'
@@ -72,7 +75,7 @@ build() {
                --without-tcl \
                --enable-dns-for-realm \
                --with-ldap \
-               --without-system-verto
+               --with-system-verto
    make
 }
 
@@ -95,6 +98,11 @@ package() {
    # systemd stuff
    install -Dm 644 "${srcdir}"/krb5-{kadmind.service,kdc.service,kpropd.service,kpropd@.service,kpropd.socket} \
       -t "${pkgdir}/usr/lib/systemd/system"
+
+#rm ${pkgdir}/usr/include/verto-module.h
+#rm ${pkgdir}/usr/include/verto.h
+#rm ${pkgdir}/usr/lib/libverto.so*
+
 }
 
 # vim: ts=2 sw=2 et:
