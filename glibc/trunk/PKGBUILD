@@ -27,7 +27,7 @@ validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
 b2sums=('SKIP'
         '46d533d25c7a2ce4ae75d452eee7ebb8e3ce4d191af9be3daa43718b78cb81d33cfd8046a117a15d87de9f5e940448c66005b0490515bf731c9e4691c53908d6'
-        '1f6d927b4972220b1c00abee5329c5d6bc01ed5bee57b20db0c7d7433292f7d666b02baf9968267f8e378b1f3bb273e8eef0ccbf22d21400ac36949d7615a474'
+        '04fbb3b0b28705f41ccc6c15ed5532faf0105370f22133a2b49867e790df0491f5a1255220ff6ebab91a462f088d0cf299491b3eb8ea53534cb8638a213e46e3'
         '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
         'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
         '214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678'
@@ -115,6 +115,9 @@ build() {
   echo "CFLAGS += -Wp,-D_FORTIFY_SOURCE=2" >> configparms
   make -O
 
+  # pregenerate C.UTF-8 locale until it is built into glibc
+  # (https://sourceware.org/glibc/wiki/Proposals/C.UTF-8, FS#74864)
+  locale/localedef -c -f ../glibc/localedata/charmaps/UTF-8 -i ../glibc/localedata/locales/C ../C.UTF-8/
 }
 
 # Credits for skip_test() and check() @allanmcrae
@@ -181,6 +184,11 @@ package_glibc() {
   install -m644 "$srcdir/locale.gen.txt" "$pkgdir/etc/locale.gen"
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
     "$srcdir/glibc/localedata/SUPPORTED" >> "$pkgdir/etc/locale.gen"
+
+  # install C.UTF-8 so that it is always available
+  install -dm755 "$pkgdir/usr/lib/locale"
+  cp -r "$srcdir/C.UTF-8" -t "$pkgdir/usr/lib/locale"
+  sed -i '/#C\.UTF-8 /d' "$pkgdir/etc/locale.gen"
 
   # Provide tracing probes to libstdc++ for exceptions, possibly for other
   # libraries too. Useful for gdb's catch command.
