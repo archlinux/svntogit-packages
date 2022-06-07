@@ -3,14 +3,14 @@
 
 pkgname=directx-headers
 pkgdesc="DirectX headers for using D3D12"
-pkgver=1.600.10
+pkgver=1.602.0
 pkgrel=1
 arch=('x86_64')
 makedepends=('meson')
 url="https://github.com/microsoft/DirectX-Headers"
 license=('MIT')
 source=(directx-headers-${pkgver}.tar.gz::https://github.com/microsoft/DirectX-Headers/archive/refs/tags/v${pkgver}.tar.gz)
-sha256sums=('dfd022754b666df1e2a920f1799c454f284d2425c147a07a8cfec30d798471fe')
+sha256sums=('3f1354c3ae603afb8e4afc5e5808a548814c99dfe186f95e9f3949a7bdbfd1d7')
 
 build() {
   # LTO breaks mesa...
