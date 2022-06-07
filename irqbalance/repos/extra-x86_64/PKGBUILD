@@ -3,8 +3,8 @@
 # Contributor: Martin Striz <ms@poruba.net>
 
 pkgname=irqbalance
-pkgver=1.8.0
-pkgrel=2
+pkgver=1.9.0
+pkgrel=1
 pkgdesc="IRQ balancing daemon for SMP systems"
 arch=(x86_64)
 url="https://github.com/irqbalance/irqbalance"
@@ -13,31 +13,29 @@ backup=(etc/$pkgname.env)
 depends=(glibc)
 makedepends=(glib2 libcap-ng ncurses numactl systemd systemd-libs)
 options=(debug)
-source=(
-  $pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz
-  $pkgname-1.8.0-printf_werror_format_security.patch::https://github.com/Irqbalance/irqbalance/commit/f8bdd0e64284d841544fd3ebe22f4652902ba8d2.patch
-)
-sha512sums=('3d757198dbe680b010ed9233d73cbf3b4a150e6b07ef97d3e94f5fa0472a22b0b3800868634340fb413a18683ff95ff6a8f7fa51ace65d870651336479e32740'
-            '0cb423b9be08c848688cbcbf9ab5c8a6dd4de93c21178e663c691cbf3b9640f86cefc3163a9bbf8abab0d1d29ceaf8e6e769156eddbde571be0d0797a4621b7f')
-b2sums=('0181ee57c4ddbdb55e1529cfd7da4b875320eff65cb606f925f0b4f4243b51e1349d4aba38690a78d7deab6d3f55ae8d6c45af44a904f03d7127678202f288db'
-        '13cd26d8ce73fb5c0e0d3c75c70a084164f010013ee6fcef69795b82333ce5ecf8101b883e7a5ff60cb2393c56a68e463291e2ec2186d7cc4d6603f3ebce86da')
+source=($pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz)
+sha512sums=('878977da5eff18e53bdceeaa4aca952f73ba8b03eb028cf176816af971ffc65f0b1f1bb3a68e3a2502491895cc2b9438652dc97d5696232bb2f64860109e9a24')
+b2sums=('11df51b03a473da10340c0c9ca9a28b3d9f9ed81e202e434b135a4be1cf54bc5558b33a4a922eba89bdd8cebbd6d3448527507fa72f03c4ff494ae83d513854e')
 
 prepare() {
-  # fix issues with -Werror=format-security: https://bugs.archlinux.org/task/74485
-  patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-1.8.0-printf_werror_format_security.patch
+  # fix location of configuration and binary in service
+  sed -e 's|/path/to/|/etc/|g;s|/usr/sbin|/usr/bin|g' -i $pkgname-$pkgver/misc/$pkgname.service
 
   cd $pkgname-$pkgver
-  # fix location of configuration and binary in service
-  sed -e 's|/path/to/|/etc/|g;s|/usr/sbin|/usr/bin|g' -i misc/$pkgname.service
   autoreconf -fiv
 }
 
 build() {
   cd $pkgname-$pkgver
-  ./configure --prefix=/usr \
-              --sbindir=/usr/bin \
-              --with-systemd
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --with-systemd
   make
+}
+
+check() {
+  make -k check -C $pkgname-$pkgver
 }
 
 package() {
