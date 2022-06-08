@@ -83,6 +83,7 @@ _backports=(
 )
 
 _configure_options=(
+	PACKAGE_VERSION="${epoch}:${pkgver}-${pkgrel}"
 	FREETYPE="pkg-config freetype2"
 	BUILD_FREETYPE="pkg-config freetype2"
 	--enable-mm-debug
