@@ -18,11 +18,11 @@ _GRUB_EMU_BUILD="0"
 pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
-_tag='53c5000739db114c229fe69ec3d4b76b92441098' # git rev-parse grub-${_pkgver}
+_commit='2f4430cc0a44fd8c8aa7aee5c51887667ad3d6c3'
 _unifont_ver='14.0.04'
-_pkgver=2.06
+_pkgver=2.06.r261.g2f4430cc0
 pkgver=${_pkgver/-/}
-pkgrel=5
+pkgrel=1
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -57,7 +57,7 @@ validpgpkeys=('E53D497F3FA42AD8C9B4D1E835A93B74E82E4209'  # Vladimir 'phcoder' S
               'BE5C23209ACDDACEB20DB0A28C8189F1988C2166'  # Daniel Kiper <dkiper@net-space.pl>
               '95D2E9AB8740D8046387FD151A09227B1F435A33') # Paul Hardy <unifoundry@unifoundry.com>
 
-source=("git+https://git.savannah.gnu.org/git/grub.git#tag=${_tag}?signed"
+source=("git+https://git.savannah.gnu.org/git/grub.git#commit=${_commit}"
         'git+https://git.savannah.gnu.org/git/gnulib.git'
         "https://ftp.gnu.org/gnu/unifont/unifont-${_unifont_ver}/unifont-${_unifont_ver}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
@@ -75,11 +75,6 @@ sha256sums=('SKIP'
             '98b23d41e223bdc0a6e20bdcb3aa77e642f29b64081b1fd2f575314172fc89df')
 
 _backports=(
-	# fs/xfs: Fix unreadable filesystem with v4 superblock
-	'a4b495520e4dc41a896a8b916a64eda9970c50ea'
-
-	# fs/btrfs: Use full btrfs bootloader area
-	'b0f06a81c6f31b6fa20be67a96b6683bba8210c9'
 )
 
 _configure_options=(
