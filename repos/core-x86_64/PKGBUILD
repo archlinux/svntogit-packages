@@ -5,15 +5,15 @@
 
 pkgname=zstd
 pkgver=1.5.2
-pkgrel=3
+pkgrel=5
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
 license=(BSD GPL2)
 depends=(glibc gcc-libs zlib xz lz4)
-makedepends=(gtest)
+makedepends=(cmake gtest ninja)
 provides=(libzstd.so)
-options=(debug)
+options=(debug staticlibs)
 source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst{,.sig})
 sha256sums=('3ea06164971edec7caa2045a1932d757c1815858e4c2b68c7ef812647535c23f'
             'SKIP')
@@ -22,24 +22,24 @@ b2sums=('513e4526a92bcb59416b3457d186a30e554f9e0cf21d7114eb3e9fbcbd9d662c8d95cf0
 validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
 
 build() {
-  cd ${pkgname}-${pkgver}
-  # Set PREFIX, as libzstd.pc is otherwise generated with -L/usr/local
-  make PREFIX=/usr
-  make -C contrib/pzstd
+  cmake -S ${pkgname}-${pkgver}/build/cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DZSTD_BUILD_CONTRIB=ON \
+    -DZSTD_BUILD_TESTS=ON
+  cmake --build build
 }
 
 check() {
-  cd ${pkgname}-${pkgver}
-  make check
-  make -C contrib/pzstd test
+  cd build/tests
+  ctest
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
-  make PREFIX=/usr DESTDIR="${pkgdir}" install
+  DESTDIR="${pkgdir}" cmake --install build
   ln -sf /usr/bin/zstd "${pkgdir}/usr/bin/zstdmt"
-  install -Dm 755 contrib/pzstd/pzstd -t "${pkgdir}/usr/bin"
-  install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 ${pkgname}-${pkgver}/LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 # vim: ts=2 sw=2 et:
