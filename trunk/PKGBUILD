@@ -1,6 +1,6 @@
 # Maintainer: Laurent Carlier <lordheavym@gmail.com>
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=mesa
@@ -12,7 +12,7 @@ arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
              'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
-             'valgrind' 'glslang' 'vulkan-icd-loader' 'directx-headers' 'cmake' 'meson')
+             'valgrind' 'glslang' 'vulkan-icd-loader' 'directx-headers' 'systemd' 'cmake' 'meson')
 url="https://www.mesa3d.org/"
 license=('custom')
 options=('debug')
@@ -108,7 +108,7 @@ package_vulkan-mesa-layers() {
 
 package_opencl-mesa() {
   pkgdesc="OpenCL support for AMD/ATI Radeon mesa drivers"
-  depends=('libdrm' 'libclc' 'clang')
+  depends=('libdrm' 'libclc' 'clang' 'expat')
   optdepends=('opencl-headers: headers necessary for OpenCL development')
   provides=('opencl-driver')
 
@@ -121,7 +121,7 @@ package_opencl-mesa() {
 
 package_vulkan-intel() {
   pkgdesc="Intel's Vulkan mesa driver"
-  depends=('wayland' 'libx11' 'libxshmfence' 'libdrm' 'zstd')
+  depends=('wayland' 'libx11' 'libxshmfence' 'libdrm' 'zstd' 'systemd-libs')
   optdepends=('vulkan-mesa-layers: additional vulkan layers')
   provides=('vulkan-driver')
 
@@ -133,7 +133,7 @@ package_vulkan-intel() {
 
 package_vulkan-radeon() {
   pkgdesc="Radeon's Vulkan mesa driver"
-  depends=('wayland' 'libx11' 'libxshmfence' 'libelf' 'libdrm' 'llvm-libs')
+  depends=('wayland' 'libx11' 'libxshmfence' 'libelf' 'libdrm' 'llvm-libs' 'systemd-libs')
   optdepends=('vulkan-mesa-layers: additional vulkan layers')
   provides=('vulkan-driver')
 
@@ -146,7 +146,7 @@ package_vulkan-radeon() {
 
 package_vulkan-swrast() {
   pkgdesc="Vulkan software rasteriser driver"
-  depends=('wayland' 'libx11' 'libxshmfence' 'libdrm' 'zstd' 'llvm-libs')
+  depends=('wayland' 'libx11' 'libxshmfence' 'libdrm' 'zstd' 'llvm-libs' 'systemd-libs' 'libunwind')
   optdepends=('vulkan-mesa-layers: additional vulkan layers')
   conflicts=('vulkan-mesa')
   replaces=('vulkan-mesa')
