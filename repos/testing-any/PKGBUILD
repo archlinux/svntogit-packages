@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=60.8.0
+pkgver=60.9.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -20,7 +20,7 @@ checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pi
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('7a8b1b821185743d54820a389ea5bf14523271cbfea69ea134ce1e6c5e71ddca8c5cda8120f3e766e5d3b9ec98561343406bdbcf50d240c325e8f8e00e17425a')
+sha512sums=('8aadee72eac8f2cac0b15b365cd808c9f7f84fce34f96848a3e382a4a3dc6fcaf0a69e0be4c6f8ecfcc7f4422ee3b2d72cb66838cec3dd027710454a03d6ce58')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -36,9 +36,10 @@ prepare() {
   for _module in setuptools pkg_resources '' ; do
       find setuptools-$pkgver -name \*.py -exec sed -i \
           -e 's/from '$_module.extern' import/import/' \
-          -e 's/from '$_module.extern'./from /' \
-          -e 's/import '$_module.extern'./import /' \
+          -e 's/from '$_module.extern'\./from /' \
+          -e 's/import '$_module.extern'\./import /' \
           -e "s/__import__('$_module.extern./__import__('/" \
+          -e 's/from \.\.extern\./from /' \
           {} +
   done
 
