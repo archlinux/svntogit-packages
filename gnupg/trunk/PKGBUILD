@@ -44,7 +44,7 @@ sha256sums=('340bc255938971e6e729b3d9956fa2ef4db8215d77693bf300df2bb302498690'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
 
-install=install
+install=$pkgname.install
 
 prepare() {
   cd "${srcdir}/${pkgname}-${pkgver}"
