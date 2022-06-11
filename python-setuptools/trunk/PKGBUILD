@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=60.10.0
+pkgver=61.0.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -11,20 +11,28 @@ arch=('any')
 license=('PSF')
 url="https://pypi.org/project/setuptools/"
 depends=('python-appdirs' 'python-jaraco.text' 'python-more-itertools' 'python-nspektr'
-         'python-ordered-set' 'python-packaging' 'python-pyparsing')
+         'python-ordered-set' 'python-packaging' 'python-pyparsing' 'python-tomli'
+         'python-validate-pyproject')
 makedepends=('git' 'python-setuptools')
 checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip' 'python-pip-run'
               'python-pytest-fixture-config' 'python-pytest-flake8' 'python-pytest-virtualenv'
-              'python-wheel' 'python-paver' 'python-pytest-cov' 'python-sphinx' 'python-build')
+              'python-wheel' 'python-paver' 'python-pytest-cov' 'python-sphinx' 'python-build'
+              'python-ini2toml' 'python-tomli-w')
 provides=('python-distribute')
 replaces=('python-distribute')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz")
-sha512sums=('c8122566339d397559e1719d1ba870622442fd6489d3b7cc55cfa1e42e8526f917b7930e8359b7b9795fbc324237796ca776605523ddb50b0605a24d063e8117')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
+        system-validate-pyproject.patch)
+sha512sums=('e02390b9b4b962693a37f6918c615700cb836f312b255822b08b20387cb61e9533995f864c5b854d46abf48e5ffe3bcc1bd1e944813f1a0faaf553df6f885d10'
+            '678c1f4bfc012c5615691433b9e329a4dd363c2b31e70620ce073bab3efe925437bf6f41c12ad48a8042e37ea6f8f7a25198afa482680ebd1505c0fc5bc30927')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  rm -r setuptools-$pkgver/{pkg_resources,setuptools}/{extern,_vendor}
+  cd setuptools-$pkgver
+
+  patch -p1 -i ../system-validate-pyproject.patch
+
+  rm -r {pkg_resources,setuptools}/{extern,_vendor}
 
   # Upstream devendoring logic is badly broken, see:
   # https://bugs.archlinux.org/task/58670
@@ -33,7 +41,7 @@ prepare() {
   # The simplest fix is to simply rewrite import paths to use the canonical
   # location in the first place
   for _module in setuptools pkg_resources '' ; do
-      find setuptools-$pkgver -name \*.py -exec sed -i \
+      find . -name \*.py -exec sed -i \
           -e 's/from '$_module.extern' import/import/' \
           -e 's/from '$_module.extern'\./from /' \
           -e 's/import '$_module.extern'\./import /' \
@@ -45,20 +53,9 @@ prepare() {
   # Remove post-release tag since we are using stable tags
   sed -e '/tag_build = .post/d' \
       -e '/tag_date = 1/d' \
-      -i setuptools-$pkgver/setup.cfg
+      -i setup.cfg
 
-  # 'Clean' installation is expected to fail since we removed bundled packages
-  sed -i '/^def test_clean_env_install/i @pytest.mark.xfail' setuptools-$pkgver/setuptools/tests/test_virtualenv.py
-
-  # Tests failed. Importing an unbundled new setuptools in a virtualenv does not work, but this won't
-  # affect normal virtualenv usage (which don't have to import the unbundled setuptools in *current*
-  # dir.
-  sed -e '/^def test_pip_upgrade_from_source/i @pytest.mark.xfail' \
-      -e '/^def test_test_command_install_requirements/i @pytest.mark.xfail' \
-      -e '/^def test_no_missing_dependencies/i @pytest.mark.xfail' \
-      -i setuptools-$pkgver/setuptools/tests/test_virtualenv.py
-  
-  cd "$srcdir"/setuptools-$pkgver
+  # Fix shebang
   sed -i -e "s|^#\!.*/usr/bin/env python|#!/usr/bin/env python3|" setuptools/command/easy_install.py
 }
 
@@ -78,7 +75,14 @@ check() { (
   SETUPTOOLS_USE_DISTUTILS=stdlib python -m pytest \
     --deselect setuptools/tests/test_distutils_adoption.py \
     --deselect setuptools/tests/integration/test_pip_install_sdist.py \
-    --deselect setuptools/tests/test_setuptools.py::test_its_own_wheel_does_not_contain_tests
+    --deselect setuptools/tests/test_setuptools.py::test_its_own_wheel_does_not_contain_tests \
+    --deselect setuptools/tests/test_virtualenv.py \
+    --deselect "setuptools/tests/test_editable_install.py::test_editable_with_pyproject[__import__('setuptools').setup()]" \
+    --deselect setuptools/tests/test_config_discovery.py::TestDiscoverPackagesAndPyModules::test_project \
+    --deselect setuptools/tests/test_config_discovery.py::TestNoConfig::test_build_with_discovered_name \
+    --deselect setuptools/tests/test_config_discovery.py::TestWithAttrDirective::test_setupcfg_metadata \
+    --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::test_apply_pyproject_equivalent_to_setupcfg \
+    --deselect setuptools/tests/config/test_pyprojecttoml.py::test_invalid_example
 )}
 
 package() {
