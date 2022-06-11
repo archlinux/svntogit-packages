@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=61.1.1
+pkgver=61.2.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -22,7 +22,7 @@ provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('ec595dec22380277a8eedf20df2dab868634c8506dc05f72dc1af48a371ba011213c8d4be4178c6842ad368d713a5a5e30ce1a97b8e529abfbf1e03470718eef'
+sha512sums=('eec787039223a65849bb68c9ea2ddcb4a3502420b09db03be0845c85eed88aefe2cde9e478020142bb2ecb90b54c37790c4ae26a648bbb3b43e002dea2ac925b'
             '678c1f4bfc012c5615691433b9e329a4dd363c2b31e70620ce073bab3efe925437bf6f41c12ad48a8042e37ea6f8f7a25198afa482680ebd1505c0fc5bc30927')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
@@ -78,12 +78,8 @@ check() { (
     --deselect setuptools/tests/test_setuptools.py::test_its_own_wheel_does_not_contain_tests \
     --deselect setuptools/tests/test_virtualenv.py \
     --deselect "setuptools/tests/test_editable_install.py::test_editable_with_pyproject[__import__('setuptools').setup()]" \
-    --deselect setuptools/tests/test_config_discovery.py::TestDiscoverPackagesAndPyModules::test_project \
-    --deselect setuptools/tests/test_config_discovery.py::TestNoConfig::test_build_with_discovered_name \
-    --deselect setuptools/tests/test_config_discovery.py::TestWithAttrDirective::test_setupcfg_metadata \
     --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::test_apply_pyproject_equivalent_to_setupcfg \
-    --deselect setuptools/tests/config/test_pyprojecttoml.py::test_invalid_example \
-    --deselect setuptools/tests/test_easy_install.py::TestInstallRequires::test_setup_install_includes_dependencies
+    --deselect setuptools/tests/config/test_pyprojecttoml.py::test_invalid_example
 )}
 
 package() {
