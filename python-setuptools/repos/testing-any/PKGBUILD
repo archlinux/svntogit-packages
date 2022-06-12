@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=61.2.0
+pkgver=61.3.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -22,8 +22,8 @@ provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('eec787039223a65849bb68c9ea2ddcb4a3502420b09db03be0845c85eed88aefe2cde9e478020142bb2ecb90b54c37790c4ae26a648bbb3b43e002dea2ac925b'
-            '678c1f4bfc012c5615691433b9e329a4dd363c2b31e70620ce073bab3efe925437bf6f41c12ad48a8042e37ea6f8f7a25198afa482680ebd1505c0fc5bc30927')
+sha512sums=('35e2b848cf79e577b8c469562cb68a80b27d42d2d9c1c94f84fea9beb85e2db0796ed64d414add67a404d801c4f4e6cd489a72153de4dc8ed8b45fab24c28fd9'
+            '50495062093b1b6902484c384abe073896e4f45c5768741582e178014367f186831711a72a8a987e7bacafe96d871161fc07c686dd92c6886de19302f6a10b56')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -32,7 +32,7 @@ prepare() {
 
   patch -p1 -i ../system-validate-pyproject.patch
 
-  rm -r {pkg_resources,setuptools}/{extern,_vendor}
+  rm -r {pkg_resources,setuptools}/{extern,_vendor} setuptools/config/_validate_pyproject
 
   # Upstream devendoring logic is badly broken, see:
   # https://bugs.archlinux.org/task/58670

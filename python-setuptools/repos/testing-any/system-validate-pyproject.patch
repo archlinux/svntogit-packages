@@ -1,21 +1,31 @@
 diff --git a/setuptools/config/pyprojecttoml.py b/setuptools/config/pyprojecttoml.py
-index bc76b111..886c9747 100644
+index d4024956..2c3bd6bf 100644
 --- a/setuptools/config/pyprojecttoml.py
 +++ b/setuptools/config/pyprojecttoml.py
-@@ -26,10 +26,14 @@ def load_file(filepath: _Path) -> dict:
+@@ -27,16 +27,22 @@ def load_file(filepath: _Path) -> dict:
  
  
- def validate(config: dict, filepath: _Path):
--    from setuptools.extern._validate_pyproject import validate as _validate
-+    import validate_pyproject.api, validate_pyproject.cli, validate_pyproject.plugins
+ def validate(config: dict, filepath: _Path) -> bool:
+-    from . import _validate_pyproject as validator
++    import validate_pyproject.api, validate_pyproject.errors, validate_pyproject.cli, validate_pyproject.plugins
+ 
+-    trove_classifier = validator.FORMAT_FUNCTIONS.get("trove-classifier")
++    trove_classifier = validate_pyproject.api.FORMAT_FUNCTIONS.get("trove-classifier")
+     if hasattr(trove_classifier, "_disable_download"):
+         # Improve reproducibility by default. See issue 31 for validate-pyproject.
+         trove_classifier._disable_download()  # type: ignore
+ 
 +    plugins = validate_pyproject.plugins.list_from_entry_points()
 +    validator = validate_pyproject.api.Validator(
-+        validate_pyproject.cli.select_plugins(plugins, ('setuptools', 'distutils'), ())
++        validate_pyproject.cli.select_plugins(plugins, ('setuptools', 'distutils'), ()),
++        validate_pyproject.api.FORMAT_FUNCTIONS,
 +    )
- 
++
      try:
--        return _validate(config)
+-        return validator.validate(config)
+-    except validator.ValidationError as ex:
 +        return validator(config)
-     except Exception as ex:
-         if ex.__class__.__name__ != "ValidationError":
-             # Workaround for the fact that `extern` can duplicate imports
++    except validate_pyproject.errors.ValidationError as ex:
+         _logger.error(f"configuration error: {ex.summary}")  # type: ignore
+         _logger.debug(ex.details)  # type: ignore
+         error = ValueError(f"invalid pyproject.toml config: {ex.name}")  # type: ignore
