@@ -4,7 +4,7 @@
 pkgbase=e2fsprogs
 pkgname=('e2fsprogs' 'fuse2fs')
 pkgver=1.46.5
-pkgrel=3
+pkgrel=4
 pkgdesc='Ext2/3/4 filesystem utilities'
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
@@ -67,8 +67,8 @@ package_e2fsprogs() {
   sed -i -e 's/^AWK=.*/AWK=awk/' "${pkgdir}/usr/bin/compile_et"
 
   # remove references to build directory
-  sed -i -e 's#^SS_DIR=.*#SS_DIR="/usr/share/ss"#' "${pkgdir}/usr/bin/mk_cmds"
-  sed -i -e 's#^ET_DIR=.*#ET_DIR="/usr/share/et"#' "${pkgdir}/usr/bin/compile_et"
+  sed -i -e 's#^DIR=.*#DIR="/usr/share/ss"#' "${pkgdir}/usr/bin/mk_cmds"
+  sed -i -e 's#^DIR=.*#DIR="/usr/share/et"#' "${pkgdir}/usr/bin/compile_et"
 
   # remove static libraries with a shared counterpart
   rm "${pkgdir}"/usr/lib/lib{com_err,e2p,ext2fs,ss}.a
