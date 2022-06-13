@@ -49,7 +49,7 @@ build() {
 package_e2fsprogs() {
   depends=('sh' 'util-linux-libs')
   optdepends=('lvm2: for e2scrub'
-              'util-linux:for e2scrub'
+              'util-linux: for e2scrub'
               'smtp-forwarder: for e2scrub_fail script')
   provides=('libcom_err.so'
             'libe2p.so'
