@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=61.3.0
+pkgver=61.3.1
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -22,7 +22,7 @@ provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('35e2b848cf79e577b8c469562cb68a80b27d42d2d9c1c94f84fea9beb85e2db0796ed64d414add67a404d801c4f4e6cd489a72153de4dc8ed8b45fab24c28fd9'
+sha512sums=('33569c80465e6465871276e1923d165a1ca82599654f8375d5280f9b2ef48f227c79e457b9462ac575a82287c997b6078b496cb606134cc67a3e5e906cc2e5e0'
             '50495062093b1b6902484c384abe073896e4f45c5768741582e178014367f186831711a72a8a987e7bacafe96d871161fc07c686dd92c6886de19302f6a10b56')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
@@ -72,12 +72,16 @@ check() { (
   export PYTHONDONTWRITEBYTECODE=1
 
   cd setuptools-$pkgver
-  SETUPTOOLS_USE_DISTUTILS=stdlib python -m pytest \
-    --deselect setuptools/tests/test_distutils_adoption.py \
+  # 1-7: skipping all tests using "setuptools_sdist", "setuptools_wheel" (or "venv" which uses the latter)
+  # 8-10: subtle difference introduced by devendoring
+  PRE_BUILT_SETUPTOOLS_SDIST="$PWD"/build/lib python -m pytest \
     --deselect setuptools/tests/integration/test_pip_install_sdist.py \
+    --deselect setuptools/tests/test_distutils_adoption.py \
     --deselect setuptools/tests/test_setuptools.py::test_its_own_wheel_does_not_contain_tests \
     --deselect setuptools/tests/test_virtualenv.py \
-    --deselect "setuptools/tests/test_editable_install.py::test_editable_with_pyproject[__import__('setuptools').setup()]" \
+    --deselect setuptools/tests/test_editable_install.py::test_editable_with_pyproject \
+    --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::TestMeta::test_example_file_in_sdist \
+    --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::TestMeta::test_example_file_not_in_wheel \
     --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::test_apply_pyproject_equivalent_to_setupcfg \
     --deselect setuptools/tests/config/test_pyprojecttoml.py::test_invalid_example
 )}
