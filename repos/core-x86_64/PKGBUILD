@@ -1,7 +1,7 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=pciutils
 pkgver=3.8.0
-pkgrel=1
+pkgrel=2
 pkgdesc="PCI bus configuration space access library and tools"
 arch=(x86_64)
 license=('GPL2')
@@ -28,6 +28,5 @@ build() {
 package() {
   cd $pkgname-$pkgver
   make SHARED=yes PREFIX=/usr SBINDIR=/usr/bin SHAREDIR=/usr/share/hwdata MANDIR=/usr/share/man DESTDIR="${pkgdir}" install install-lib
-  # this is now supplied by the hwids package
-  rm -rf "$pkgdir"/usr/{sbin/update-pciids,share/{man/man8/update-pciids.8,hwdata}}
+  rm -rf "$pkgdir"/usr/share/hwdata
 }
