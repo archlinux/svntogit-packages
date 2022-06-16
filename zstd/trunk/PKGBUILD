@@ -5,7 +5,7 @@
 
 pkgname=zstd
 pkgver=1.5.2
-pkgrel=5
+pkgrel=6
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
@@ -22,22 +22,35 @@ b2sums=('513e4526a92bcb59416b3457d186a30e554f9e0cf21d7114eb3e9fbcbd9d662c8d95cf0
 validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
 
 build() {
-  cmake -S ${pkgname}-${pkgver}/build/cmake -B build -G Ninja \
+  export CFLAGS+=' -ffat-lto-objects'
+  export CXXFLAGS+=' -ffat-lto-objects'
+  cmake -S ${pkgname}-${pkgver}/build/cmake -B build-shared -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INSTALL_LIBDIR=lib \
     -DZSTD_BUILD_CONTRIB=ON \
-    -DZSTD_BUILD_TESTS=ON
-  cmake --build build
+    -DZSTD_BUILD_STATIC=OFF \
+    -DZSTD_BUILD_TESTS=OFF \
+    -DZSTD_PROGRAMS_LINK_SHARED=ON
+  cmake --build build-shared
+  cmake -S ${pkgname}-${pkgver}/build/cmake -B build-static -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DZSTD_BUILD_CONTRIB=ON \
+    -DZSTD_BUILD_STATIC=ON \
+    -DZSTD_BUILD_TESTS=ON \
+    -DZSTD_PROGRAMS_LINK_SHARED=OFF
+  cmake --build build-static
 }
 
 check() {
-  cd build/tests
+  cd build-static/tests
   ctest
 }
 
 package() {
-  DESTDIR="${pkgdir}" cmake --install build
+  DESTDIR="${pkgdir}" cmake --install build-shared
   ln -sf /usr/bin/zstd "${pkgdir}/usr/bin/zstdmt"
   install -Dm 644 ${pkgname}-${pkgver}/LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
