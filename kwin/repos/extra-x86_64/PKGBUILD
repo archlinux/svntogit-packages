@@ -3,20 +3,21 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=kwin
-pkgver=5.24.5
-pkgrel=2
+pkgver=5.25.0
+pkgrel=1
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
 license=(LGPL)
-depends=(kscreenlocker xcb-util-cursor plasma-framework kcmutils kwayland-server breeze
-         pipewire-session-manager libqaccessibilityclient lcms2)
-makedepends=(extra-cmake-modules qt5-tools kdoctools krunner)
+depends=(kscreenlocker xcb-util-cursor plasma-framework kcmutils breeze
+         pipewire-session-manager libqaccessibilityclient lcms2 libxcvt)
+makedepends=(extra-cmake-modules qt5-tools kdoctools krunner wayland-protocols plasma-wayland-protocols python)
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
+replaces=(kwayland-server)
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig})
 install=$pkgname.install
-sha256sums=('f35e15254cebeb8afc5eae1c694a603e04097fe3e7e0033a5f5fc255835eaf82'
+sha256sums=('5175c2532a84f234e6acb206de98b2cf2f3654ea5afd694061901c2679fd280f'
             'SKIP')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
