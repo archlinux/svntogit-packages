@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=5.18.5.hardened1
-pkgrel=1
+pkgrel=2
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -21,6 +21,7 @@ _srctag=${pkgver%.*}-${pkgver##*.}
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${_srctag}/${pkgbase}-${_srctag}.patch{,.sig}
+  ALSA-memalloc-Drop-x86-specific-hack-for-WC-allocations.patch::https://lore.kernel.org/all/87bkur1nil.wl-tiwai@suse.de/raw
   config         # the main kernel config file
 )
 validpgpkeys=(
@@ -32,6 +33,7 @@ sha256sums=('9c3731d405994f9cd3a1bb72e83140735831b19c7cec18e0d7a8f3046fa034e7'
             'SKIP'
             '9ae27643645ebd14a27ed9990ba0accf0251432394ce584c673fa77bb4dffb78'
             'SKIP'
+            '5e59f0f2fa7afaacbade24804eb5e0d9ed8fdb6015450023a11e5d1ce6e7df3c'
             '095dd8157c9597ec8c3d1f7c4b62225404280af33a8f48ae41c80627632203d7')
 
 export KBUILD_BUILD_HOST=archlinux
