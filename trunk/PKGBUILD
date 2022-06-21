@@ -1,31 +1,48 @@
-# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Jason Chu <jason@archlinux.org>
 
 pkgname=speex
-pkgver=1.2.0
-pkgrel=3
+pkgver=1.2.1
+pkgrel=1
 pkgdesc="A free codec for free speech"
+url="https://www.speex.org/"
 arch=(x86_64)
-url="https://speex.org/"
 license=(BSD)
-depends=(libogg speexdsp)
-source=(https://downloads.us.xiph.org/releases/$pkgname/$pkgname-$pkgver.tar.gz)
-sha256sums=('eaae8af0ac742dc7d542c9439ac72f1f385ce838392dc849cae4536af9210094')
+depends=(gcc-libs libogg speexdsp)
+makedepends=(git)
+options=(debug)
+_commit=5dceaaf3e23ee7fd17c80cb5f02a838fd6c18e01  # tags/Speex-1.2.1^0
+source=("git+https://gitlab.xiph.org/xiph/speex.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd speex
+  git describe --tags | sed 's/^Speex-//;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd speex
+  ./autogen.sh
+}
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var --disable-static \
-    --enable-binaries # Must be given or configure won't use pkg-config correctly
+  cd speex
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --disable-static
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 check() {
-  cd $pkgname-$pkgver
+  cd speex
   make -k check
 }
 
 package() {
-  cd $pkgname-$pkgver
+  depends+=(libogg.so libspeexdsp.so)
+  provides+=(libspeex.so)
+
+  cd speex
   make DESTDIR="$pkgdir" install
-  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
 }
