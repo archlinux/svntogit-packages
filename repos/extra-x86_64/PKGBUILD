@@ -2,10 +2,10 @@
 # Contributor: Christoph Zeiler <archNOSPAM_at_moonblade.dot.org>
 
 pkgbase=bullet
-pkgname=('bullet' 'bullet-docs' 'python-pybullet')
+pkgname=('bullet' 'bullet-dp' 'bullet-docs' 'python-pybullet')
 pkgver=3.24
 _pkgver=3.24
-pkgrel=1
+pkgrel=2
 pkgdesc="A 3D Collision Detection and Rigid Body Dynamics Library for games and animation"
 arch=('x86_64')
 url="http://www.bulletphysics.com/Bullet/"
@@ -22,8 +22,9 @@ prepare() {
 }
 
 build() {
-  cd bullet3-${_pkgver}
+  cp -r bullet3-${_pkgver} bullet3-${_pkgver}-dp
 
+  cd bullet3-${_pkgver}
   cmake \
       -Bbuild \
       -GNinja \
@@ -35,22 +36,33 @@ build() {
       -DBUILD_PYBULLET_NUMPY=ON \
       -DBUILD_OPENGL3_DEMOS=ON \
       -DCMAKE_BUILD_TYPE=Release \
+      -DBULLET2_MULTITHREADING=ON \
       -DCMAKE_SKIP_RPATH=YES
-
   ninja -C build
 
+  # For Python and docs it doesn't matter whether we build multithreaded or not.
   python setup.py build
   doxygen
+
+  cd ../bullet3-${_pkgver}-dp
+  cmake \
+      -Bbuild \
+      -GNinja \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DBUILD_SHARED_LIBS=1 \
+      -DINSTALL_LIBS=1 \
+      -DINSTALL_EXTRA_LIBS=1 \
+      -DBUILD_PYBULLET=ON \
+      -DBUILD_PYBULLET_NUMPY=ON \
+      -DBUILD_OPENGL3_DEMOS=ON \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBULLET2_MULTITHREADING=ON \
+      -DUSE_DOUBLE_PRECISION=ON \
+      -DCMAKE_SKIP_RPATH=YES
+  ninja -C build
 }
 
-package_bullet() {
-  optdepends=('glu: for the example browser'
-              'python: python bindings'
-              'python-numpy: python bindings'
-              'bullet-docs: documentation')
-
-  cd bullet3-${_pkgver}
-
+_package() {
   DESTDIR="${pkgdir}" ninja -C build install
 
   cd build
@@ -63,7 +75,32 @@ package_bullet() {
   install -Dm755 examples/ExampleBrowser/App_ExampleBrowser "${pkgdir}"/opt/bullet/App_ExampleBrowser
   cp -r data "${pkgdir}"/opt/bullet/
 
-  install -Dm644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgbase}/LICENSE
+  install -Dm644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
+
+package_bullet() {
+  optdepends=('glu: for the example browser'
+              'python: python bindings'
+              'python-numpy: python bindings'
+              'bullet-docs: documentation')
+
+  cd bullet3-${_pkgver}
+
+  _package
+}
+
+package_bullet-dp() {
+  pkgdesc="A 3D Collision Detection and Rigid Body Dynamics Library for games and animation (double precision)"
+  conflicts=("bullet")
+  provides=("bullet")
+  optdepends=('glu: for the example browser'
+              'python: python bindings'
+              'python-numpy: python bindings'
+              'bullet-docs: documentation')
+
+  cd bullet3-${_pkgver}-dp
+
+  _package
 }
 
 package_python-pybullet() {
