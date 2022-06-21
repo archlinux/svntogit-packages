@@ -2,15 +2,15 @@
 
 pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
-pkgver=20220502
-_commit=c5481f3a1b57d54190a4e7881103033fbbbcec0c
-pkgrel=3
+pkgver=20220607
+_commit=c971829a87e7920f960e7277c3dafd9bedd3c601
+pkgrel=1
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
-url='https://www.google.com/get/noto/'
+url='https://fonts.google.com/noto'
 license=(custom:SIL)
 makedepends=(git python-fonttools)
-source=(git+https://github.com/googlefonts/noto-fonts#commit=$_commit
+source=(git+https://github.com/notofonts/noto-fonts#commit=$_commit
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
         46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
 sha256sums=('SKIP'
