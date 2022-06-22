@@ -9,14 +9,14 @@
 pkgbase=qtcreator
 pkgname=(qtcreator qtcreator-devel)
 pkgver=7.0.2
-_clangver=13.0.1
-pkgrel=2
+_clangver=14.0.5
+pkgrel=3
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3)
 depends=(qt6-tools qt6-svg qt6-quick3d qt6-webengine qt6-serialport qt6-shadertools qt6-5compat
-         clang=$_clangver clazy yaml-cpp) # syntax-highlighting
+         clang=$_clangver clazy yaml-cpp litehtml) # syntax-highlighting
 makedepends=(cmake llvm python)
 optdepends=('qt6-doc: integrated Qt documentation'
             'qt6-examples: welcome page examples'
