@@ -8,13 +8,13 @@ pkgbase=rust
 pkgname=(rust lib32-rust-libs rust-musl rust-wasm rust-src)
 epoch=1
 pkgver=1.61.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Systems programming language focused on safety, speed and concurrency"
 url=https://www.rust-lang.org/
 arch=(x86_64)
 license=(MIT Apache)
 options=(!emptydirs !strip !lto)
-_llvm_ver=13.0.1
+_llvm_ver=14.0.5
 depends=(gcc-libs llvm-libs curl libssh2 gcc)
 makedepends=(rust "llvm=$_llvm_ver" libffi lib32-gcc-libs perl python cmake musl
              ninja wasi-libc lld)
@@ -29,7 +29,7 @@ source=(
 )
 sha256sums=('ad0b4351675aa9abdf4c7e066613bd274c4391c5506db152983426376101daed'
             'SKIP'
-            '7b33955031f9a9c5d63077dedb0f99d77e4e7c996266952c1cec55626dca5dfc'
+            '5235e48331a658df40f99dd1baca93b9622b917e62dc5e328883078ff8d23ca2'
             'SKIP'
             'c901a9bb036c29ca092f7dbc8b447efdd9aa1044a902a88f9d024cb22681dc19'
             '60c6dfc100d292284af2187cfefc1d0d928139ca557d27bc6bef88edefccff70'
