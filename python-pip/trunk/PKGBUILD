@@ -1,94 +1,135 @@
-# Maintainer: Dan McGee <dan@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Dan McGee <dan@archlinux.org>
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 # Contributor: Sebastien Binet <binet@lblbox>
 
+_name=pip
 pkgname=python-pip
-pkgver=21.0
+pkgver=22.1.2
 pkgrel=1
 pkgdesc="The PyPA recommended tool for installing Python packages"
 url="https://pip.pypa.io/"
-arch=('any')
-license=('MIT')
-_deps=('appdirs' 'cachecontrol' 'colorama' 'contextlib2' 'distlib' 'distro' 'html5lib'
-       'packaging' 'pep517' 'progress' 'requests' 'retrying' 'resolvelib' 'setuptools' 'six' 'toml'
-       # add these until https://github.com/pypa/pip/issues/5354#issuecomment-672678167 is resolved
-       'pyopenssl')
-depends=("${_deps[@]/#/python-}")
-makedepends=("${_deps[@]/#/python-}" 'python-sphinx'
-             'python-sphinx-inline-tabs' 'python-sphinxcontrib-towncrier')
-checkdepends=('python-pytest-runner' 'python-scripttest' 'python-virtualenv' 'python-pretend'
-              'python-yaml' 'python-mock' 'python-freezegun' 'python-cryptography' 'python-pip'
-              'python-wheel' 'python-werkzeug' 'python-csv23' 'git' 'subversion')
-source=("pip-${pkgver}.tar.gz::https://github.com/pypa/pip/archive/${pkgver}.tar.gz"
-        resolvelib-0.5.5.patch)
-sha512sums=('ac77a7204423f1fdc3a4d328dab1860258efccde0123cff3217f357637c4ce3d85772ab81a230122ff813be2cfa40f2862e5d499390289efe1dcde3a31a42264'
-            'f339a20e965c583c1dc741d9fff90749aab049d591f0ac974e2187d4f41842661802b96266e8e35454b65d61d65c337a770d58b81119af07483fde0eda48001b')
+arch=(any)
+license=(MIT)
+# packages required to devendor pip: https://github.com/pypa/pip/tree/main/src/pip/_vendor
+_vendored=(
+  python-cachecontrol
+  python-certifi
+  python-chardet
+  python-colorama
+  python-distlib
+  python-distro
+  python-html5lib
+  python-idna
+  python-msgpack
+  python-packaging
+  python-pep517
+  python-platformdirs
+  python-pygments
+  python-pyparsing
+  python-requests
+  python-resolvelib
+  python-rich
+  python-setuptools
+  python-six
+  python-tenacity
+  python-tomli
+  python-typing-extensions
+  python-urllib3
+  python-webencodings
+)
+# add these until https://github.com/pypa/pip/issues/5354#issuecomment-672678167 is resolved
+_vendored_optional=(
+  python-pyopenssl
+)
+depends=("${_vendored[@]}" "${_vendored_optional[@]}")
+makedepends=(
+  python-build
+  python-installer
+  python-myst-parser
+  python-setuptools
+  python-sphinx
+  python-sphinx-copybutton
+  python-sphinx-inline-tabs
+  python-sphinxcontrib-towncrier
+  python-wheel
+)
+checkdepends=(
+  git
+  python-cryptography
+  python-freezegun
+  python-pytest
+  python-pytest-rerunfailures
+  python-pytest-xdist
+  python-scripttest
+  python-setuptools
+  python-tomli-w
+  python-virtualenv
+  python-werkzeug
+  python-wheel
+  subversion
+)
+source=(
+  $_name-$pkgver.tar.gz::https://github.com/pypa/$_name/archive/$pkgver.tar.gz
+  $_name-22.1.2-devendor.patch
+  $_name-22.1.2-devendor_imports.patch
+)
+sha512sums=('7dd13150023f1cca8f5e01da7688ae418b5d0b36364efcfc15374a5147c7cabd46ff1d34e6499bc8e182dc0d34a366f5fe21d8ab4de4d112d269a97200401305'
+            '90f07252786d765c8ba7ce12915ed9434d3696addb8e5cfff298f280b9f499ad6836a158c9f515a51fc7373f1a77b9eb550b7855609114b041aa7bc5b2b821ae'
+            '5abdd74c505f649e381c807607c98edeab45671ca48bb7d99fc85d35191bbe7addbcadb4b833d8851095896433a8860a703c80e120a15038afb234448cea514d')
+b2sums=('f709f8977d467d5a3170884bb75cd2f74a2f40801ae02a3725d442e18e4073f9c4a39cd1c9d2ce3949eb888be69d151f67d0cf2d0cbad7e2ec1ec6e78150b5c7'
+        '892455034738c6c7a74cd7c136c0650f9c4eb54dd4708cf43d2e17ecbd9904adb567c9c3d5a05865048645ad3aac65406a82d23af43fd3889d9290b66d89ead5'
+        '256b5cc8b0f91265965ca90f443033f540fc698fca981cc9b30fbba60fcc9a82b2f7acfabb807db0911677f5a50ad3387879adf6ee21b6029cad47ed2abe7ebd')
 
 shopt -s extglob
 prepare() {
-  cd pip-$pkgver
+  # set DEBUNDLED to True
+  patch -Np1 -d $_name-$pkgver -i ../$_name-22.1.2-devendor.patch
+  # add missing imports for rich for devendoring: https://github.com/pypa/pip/pull/11211
+  patch -Np1 -d $_name-$pkgver -i ../$_name-22.1.2-devendor_imports.patch
 
-  # Backported from:
-  # https://github.com/pypa/pip/commit/0d39ae9734d054c25e48e2da7ddb76545e5de330
-  patch -p1 -i ../resolvelib-0.5.5.patch
-
-  # Remove certifi usage
-  sed -i 's|from pip._vendor.certifi import where|where = lambda: "/etc/ssl/certs/ca-certificates.crt"|' src/pip/_internal/commands/debug.py
-
-  rm -rf src/pip/_vendor/!(__init__.py)
-  sed -i -e 's/DEBUNDLED = False/DEBUNDLED = True/' \
-            src/pip/_vendor/__init__.py
+  # remove vendored files, except __init__.py
+  rm -frv $_name-$pkgver/src/pip/_vendor/!(__init__.py)
+  shopt -u extglob
 }
 
 build() {
-  cd pip-$pkgver
+  cd $_name-$pkgver
 
-  python setup.py build
+  python -m build --wheel --no-isolation
 
   cd docs/
-  PYTHONPATH="$srcdir/pip-$pkgver/src/" python pip_sphinxext.py
-  PYTHONPATH="$srcdir/pip-$pkgver/src/" sphinx-build -W -b man -d build/doctrees/man man build/man -c html
-  mkdir -p build/man-pip2
-  cd build/man
-  for manfile in *; do
-    sed 's/pip/pip2/g;s/PIP/PIP2/g' $manfile > ../man-pip2/${manfile/pip/pip2}
-  done
+  PYTHONPATH="$srcdir/$_name-$pkgver/src/" python pip_sphinxext.py
+  PYTHONPATH="$srcdir/$_name-$pkgver/src/" sphinx-build -b man -d build/doctrees/man man build/man -c html
 }
 
 check() {
-  cd "$srcdir"/pip-$pkgver
-  pip wheel -w tests/data/common_wheels -r tools/requirements/tests-common_wheels.txt
-  python setup.py install --root="$PWD/tmp_install" --optimize=1
-  # appdirs: https://github.com/pypa/pip/issues/7784
-  # build_env: TODO weird looking errors
-  # virtualenv: https://github.com/pypa/pip/issues/8273
-  PYTHONPATH="$PWD/tmp_install/usr/lib/python3.10/site-packages" PATH="$PWD/tmp_install/usr/bin:$PATH" \
-    python -m pytest -m unit --junit-xml=junit/unit-test.xml --deselect tests/unit/test_appdirs.py::TestSiteConfigDirs::test_site_config_dirs_linux \
-                                                             --deselect tests/unit/test_appdirs.py::TestSiteConfigDirs::test_site_config_dirs_linux_override \
-                                                             --deselect tests/unit/test_appdirs.py::TestSiteConfigDirs::test_site_config_dirs_linux_empty \
-                                                             --deselect tests/unit/test_appdirs.py::TestUserDataDir::test_user_data_dir_osx \
-                                                             --deselect tests/unit/test_appdirs.py::TestUserConfigDir::test_user_config_dir_osx \
-                                                             --deselect tests/unit/test_build_env.py::test_build_env_requirements_check \
-                                                             --deselect tests/unit/test_build_env.py::test_build_env_overlay_prefix_has_priority \
-                                                             --deselect tests/unit/test_build_env.py::test_build_env_isolation \
-                                                             --deselect tests/unit/test_build_env.py::test_build_env_allow_only_one_install \
-                                                             --deselect tests/unit/test_direct_url_helpers.py::test_from_link_vcs_with_source_dir_obtains_commit_id \
-                                                             --deselect tests/unit/test_direct_url_helpers.py::test_from_link_vcs_without_source_dir \
-                                                             --deselect tests/unit/test_wheel_builder.py::test_should_cache_git_sha \
-                                                             --deselect tests/unit/resolution_resolvelib/test_requirement.py::test_new_resolver_full_resolve
+  local _site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  local _deselected=(
+    # deselect tests that would require python-pip in checkdepends (may or may not work due to devendored dependencies when python-pip is updated)
+    --deselect tests/unit/test_direct_url_helpers.py::test_from_link_vcs_with_source_dir_obtains_commit_id
+    --deselect tests/unit/test_direct_url_helpers.py::test_from_link_vcs_without_source_dir
+    --deselect tests/unit/test_wheel_builder.py::test_should_cache_git_sha
+  )
+
+  cd $_name-$pkgver
+  # install to temporary location
+  python -m installer --destdir=test_dir dist/*.whl
+  export PYTHONPATH="test_dir/$_site_packages:$PYTHONPATH"
+  pytest -vv -m unit "${_deselected[@]}"
 }
 
 package() {
-  cd pip-$pkgver
-  python setup.py install --prefix=/usr --root="$pkgdir"
+  local _site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
 
-  install -D -m644 LICENSE.txt \
-	  "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  cd $_name-$pkgver
+  python -m installer --destdir="$pkgdir" dist/*.whl
 
-  install -Dm644 -t "$pkgdir"/usr/share/man/man1 docs/build/man/*
+  install -vDm 644 LICENSE.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -vDm 644 docs/build/man/*.1 -t "$pkgdir/usr/share/man/man1/"
 
-  PYTHONPATH="$pkgdir"/usr/lib/python3.10/site-packages "$pkgdir"/usr/bin/pip completion --bash \
-    | install -Dm644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip
-  PYTHONPATH="$pkgdir"/usr/lib/python3.10/site-packages "$pkgdir"/usr/bin/pip completion --fish \
-    | install -Dm644 /dev/stdin "$pkgdir"/usr/share/fish/vendor_completions.d/pip.fish
+  # NOTE: zsh completion does not work: https://bugs.archlinux.org/task/65349#comment187166
+  PYTHONPATH="$pkgdir/$_site_packages" "$pkgdir"/usr/bin/pip completion --bash | install -vDm 644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip
+  PYTHONPATH="$pkgdir/$_site_packages" "$pkgdir"/usr/bin/pip completion --fish | install -vDm 644 /dev/stdin "$pkgdir"/usr/share/fish/vendor_completions.d/pip.fish
 }
