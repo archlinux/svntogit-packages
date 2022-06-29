@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.18.7.hardened1
+pkgver=5.18.8.hardened1
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -21,7 +21,6 @@ _srctag=${pkgver%.*}-${pkgver##*.}
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${_srctag}/${pkgbase}-${_srctag}.patch{,.sig}
-  ALSA-memalloc-Drop-x86-specific-hack-for-WC-allocations.patch::https://lore.kernel.org/all/87bkur1nil.wl-tiwai@suse.de/raw
   config         # the main kernel config file
 )
 validpgpkeys=(
@@ -29,12 +28,11 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('a1a2d064bf5a1f02021f66931237ec3d2920994d49910d27d3fe581e2e21525b'
+sha256sums=('0823eb05dba001cf9e2560a76dfa4d81c854e1dcfbfb25cc73ba64cd7e900a36'
             'SKIP'
-            '2421c1f10d96b618512e4a81d8ee2ad228508db662fd32df04b84c94ca9bba20'
+            '621301fd49ff80a25fd2896df33e10597d2f3ad2d546e1b0ea5491455d081ec4'
             'SKIP'
-            '5e59f0f2fa7afaacbade24804eb5e0d9ed8fdb6015450023a11e5d1ce6e7df3c'
-            '6c5e71426fc24b3c9b6cfd646fffcb7e6071763e9c7cfa5102cbf12ffaa164e0')
+            'b98b40254e35c35c58bd29bbf4c46d269d6ba9c4f43a7a858efd7ec7ca6d1a3f')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
