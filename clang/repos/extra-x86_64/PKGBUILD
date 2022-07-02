@@ -2,14 +2,14 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=clang
-pkgver=13.0.1
-pkgrel=2
+pkgver=14.0.6
+pkgrel=1
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
 url="https://clang.llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 depends=('llvm-libs' 'gcc' 'compiler-rt')
-makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'python-recommonmark')
 optdepends=('openmp: OpenMP support in clang with -fopenmp'
             'python: for scan-view and git-clang-format'
             'llvm: referenced by some clang headers')
@@ -17,21 +17,19 @@ provides=("clang-analyzer=$pkgver" "clang-tools-extra=$pkgver")
 conflicts=('clang-analyzer' 'clang-tools-extra')
 replaces=('clang-analyzer' 'clang-tools-extra')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
-source=($_source_base/$pkgname-$pkgver.src.tar.xz{,.sig}
+source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
         $_source_base/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
         $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
-        fix-scan-build-py-executable-lookup-path.patch
-        strip-exception-specifications-in-CFI-type-names.patch
-        enable-SSP-and-PIE-by-default.patch)
-sha256sums=('787a9e2d99f5c8720aa1773e4be009461cd30d3bd40fdd24591e473467c917c9'
+        clang-tidy-fix-standalone-build.patch
+        enable-fstack-protector-strong-by-default.patch)
+sha256sums=('2b5847b6a63118b9efe5c85548363c81ffe096b66c3b3675e953e26342ae4031'
             'SKIP'
-            'cc2bc8598848513fa2257a270083e986fd61048347eccf1d801926ea709392d0'
+            '7cf3b8ff56c65c4d1eae3c56883fc4a6cbc3ff9f3a1530a74d66e45d27271866'
             'SKIP'
-            'ec6b80d82c384acad2dc192903a6cf2cdbaffb889b84bfb98da9d71e630fc834'
+            '050922ecaaca5781fdf6631ea92bc715183f202f9d2f15147226f023414f619a'
             'SKIP'
-            '578b960121c42b8db80566dcb51558409d04455b618cdd608e41b35ded36c13e'
-            '3f4a2784a4c2b2df13e03beb0b66d5805c520f2b9f16ff76e0557daeb284c8fa'
-            '67706047fc93a2e79185d344bdac48219ce042c55ddb9b9397bc98db2153ba58')
+            '081a7ebc1ae524b13fc6be3dc73feb2c9eb7cf4b99f7f13d9ed37a688311f58a'
+            '7a9ce949579a3b02d4b91b6835c4fb45adc5f743007572fb0e28e6433e48f3a5')
 validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
 validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
@@ -58,13 +56,13 @@ _get_distribution_components() {
 }
 
 prepare() {
-  cd "$srcdir/$pkgname-$pkgver.src"
+  cd clang-$pkgver.src
   mkdir build
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
-  patch -Np2 -i ../enable-SSP-and-PIE-by-default.patch
+  patch -Np2 -i ../enable-fstack-protector-strong-by-default.patch
 
-  patch -Np2 -i ../fix-scan-build-py-executable-lookup-path.patch
-  patch -Np2 -i ../strip-exception-specifications-in-CFI-type-names.patch
+  # https://github.com/llvm/llvm-project/issues/54116
+  patch -Np0 -i ../clang-tidy-fix-standalone-build.patch
 
   # Attempt to convert script to Python 3
   2to3 -wn --no-diffs \
@@ -72,23 +70,25 @@ prepare() {
 }
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver.src/build"
+  cd clang-$pkgver.src/build
 
   local cmake_args=(
     -G Ninja
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_DOCDIR=share/doc
     -DCMAKE_SKIP_RPATH=ON
-    -DLLVM_LINK_LLVM_DYLIB=ON
+    -DCLANG_DEFAULT_PIE_ON_LINUX=ON
     -DCLANG_LINK_CLANG_DYLIB=ON
-    -DLLVM_ENABLE_RTTI=ON
-    -DLLVM_BUILD_TESTS=ON
-    -DLLVM_INCLUDE_DOCS=ON
     -DLLVM_BUILD_DOCS=ON
+    -DLLVM_BUILD_TESTS=ON
+    -DLLVM_ENABLE_RTTI=ON
     -DLLVM_ENABLE_SPHINX=ON
-    -DSPHINX_WARNINGS_AS_ERRORS=OFF
     -DLLVM_EXTERNAL_LIT=/usr/bin/lit
+    -DLLVM_INCLUDE_DOCS=ON
+    -DLLVM_LINK_LLVM_DYLIB=ON
     -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+    -DSPHINX_WARNINGS_AS_ERRORS=OFF
   )
 
   cmake .. "${cmake_args[@]}"
@@ -101,7 +101,7 @@ build() {
 }
 
 check() {
-  cd "$srcdir/$pkgname-$pkgver.src/build"
+  cd clang-$pkgver.src/build
   LD_LIBRARY_PATH=$PWD/lib ninja check-clang{,-tools}
 }
 
@@ -112,7 +112,7 @@ _python_optimize() {
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver.src/build"
+  cd clang-$pkgver.src/build
 
   DESTDIR="$pkgdir" ninja install-distribution
   install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
