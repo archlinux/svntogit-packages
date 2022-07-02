@@ -17,8 +17,7 @@ source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
 sha256sums=('050922ecaaca5781fdf6631ea92bc715183f202f9d2f15147226f023414f619a'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
-validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
-validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 prepare() {
   cd llvm-$pkgver.src
