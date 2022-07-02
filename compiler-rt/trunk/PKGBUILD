@@ -17,8 +17,7 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/compiler-rt-$pkgver.src.tar.xz{,.sig})
 sha256sums=('88df303840ca8fbff944e15e61c141226fe79f5d2b8e89fb024264d77841a02e'
             'SKIP')
-validpgpkeys+=('B6C8F98282B944E3B0D5C2530FC3042E345AD05D') # Hans Wennborg <hans@chromium.org>
-validpgpkeys+=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 prepare() {
   cd compiler-rt-$pkgver.src
