@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.72.2
+pkgver=2.72.3
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -14,7 +14,7 @@ makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus)
 checkdepends=(desktop-file-utils)
 options=(debug)
-_commit=a2e950a0210012bd5aa29a6617dfb9d3c8b7a867  # tags/2.72.2^0
+_commit=dce30492f6087a8e1e288f1706d41142b74ca1ff  # tags/2.72.3^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
         glib-compile-schemas.hook gio-querymodules.{hook,script})
