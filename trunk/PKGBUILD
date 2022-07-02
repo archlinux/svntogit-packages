@@ -36,8 +36,7 @@ sha256sums=('7d0878809b64d206825acae3eb7f60afb2212d81e3de1adf4c11c6032b36c027'
             'ae69ccf45641064c950d8f8cabf74858e0c33f3ddc069930a994d7bf327c3215'
             '26bf232d144b81a303ed91f6a331ddf004c5d9fefd41a11e36b61812a34459aa')
 validpgpkeys=(108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
-              474E22316ABF4785A88C6E8EA2C794A986419D8A  # Tom Stellard <tstellar@redhat.com>
-              B6C8F98282B944E3B0D5C2530FC3042E345AD05D) # Hans Wennborg <hans@chromium.org>
+              474E22316ABF4785A88C6E8EA2C794A986419D8A) # Tom Stellard <tstellar@redhat.com>
 
 prepare() {
   cd rustc-$pkgver-src
