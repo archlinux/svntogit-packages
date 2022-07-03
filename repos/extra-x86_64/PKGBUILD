@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=42.2
+pkgver=42.3
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -23,7 +23,7 @@ optdepends=('gnome-control-center: System settings'
             'gst-plugin-pipewire: Screen recording')
 groups=(gnome)
 options=(debug)
-_commit=c6a0f4ae7f05511db2a91174885041fb793f2422  # tags/42.2^0
+_commit=ad1970146066b10a0193fc151b991cc8b2bdfcf8  # tags/42.3^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
