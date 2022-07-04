@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=42.3
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -36,6 +36,9 @@ pkgver() {
 
 prepare() {
   cd gnome-shell
+
+  # https://bugs.archlinux.org/task/75234
+  git cherry-pick -n eff23a87c36a6a96c9abab09ab27a4bb35ab1b1f
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
