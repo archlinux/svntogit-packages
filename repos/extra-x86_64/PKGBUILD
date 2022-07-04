@@ -2,8 +2,8 @@
 # Contributor: lilydjwg <lilydjwg@gmail.com>
 
 pkgname=python-cffi
-pkgver=1.15.0
-pkgrel=3
+pkgver=1.15.1
+pkgrel=1
 pkgdesc="Foreign Function Interface for Python calling C code"
 arch=('x86_64')
 url="https://cffi.readthedocs.org/"
@@ -12,7 +12,7 @@ depends=('python-pycparser')
 makedepends=('python-setuptools')
 checkdepends=('python-pytest-runner')
 source=("https://foss.heptapod.net/pypy/cffi/-/archive/v$pkgver/cffi-v$pkgver.tar.bz2")
-sha512sums=('c8a0a061905d133770a06d4c4fd0158a104a04a88f1c9367160e8c1e1d2153af903aaa8dcb3cc3e252f02c6d6a8e11240bf5b82c490281d6ce8f8e21d59afa93')
+sha512sums=('4505c1e3206b66fbdf06ba39be6daac14a35f7148cef3156bb2015792cb59c004ea13fe7c7514feb35ecc5e7526a88fc0b3036ae84fd146a0a3b55bc676e8e51')
 
 build() {
   cd "$srcdir"/cffi-v$pkgver
