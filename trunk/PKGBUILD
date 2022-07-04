@@ -9,39 +9,34 @@
 
 pkgbase='protobuf'
 pkgname=('protobuf' 'python-protobuf')
-pkgver=21.1
-_pkgver=3.$pkgver
+pkgver=21.2
 pkgrel=1
 pkgdesc="Protocol Buffers - Google's data interchange format"
 arch=('x86_64')
 url='https://developers.google.com/protocol-buffers/'
 license=('BSD')
 depends=('gcc-libs' 'glibc' 'zlib')
-makedepends=('unzip' 'python-setuptools')
-source=("https://github.com/protocolbuffers/$pkgname/releases/download/v$pkgver/$pkgname-all-$pkgver.tar.gz")
-sha512sums=('dad30603c9070bcc7121f7d32b0945ea28fabfed8ae0562735318a0123526bd612fea82761246a9de1b8ae5fe483dc91d69f721be6a055f03e4895151905f8e5')
-
-prepare() {
-  cd "$pkgbase-$_pkgver"
-  autoreconf -vfi
-
-# Don't fail tests on deprecation warnings
-  sed -e "/DeprecationWarning/d" -i python/google/protobuf/internal/*test.py
-}
+makedepends=('python-setuptools' 'cmake' 'gtest')
+source=(https://github.com/protocolbuffers/protobuf/archive/v$pkgver/$pkgname-$pkgver.tar.gz)
+sha512sums=('7f98cd6a57795c80c619f40d85010fac66daad67fa78c82ce4439a6f882c8f1cccd05e2c2d7851b30c7753d657d9738415cb462ea9dd02fb87a5b6011f234e37')
 
 build() {
-  cd "$pkgbase-$_pkgver"
-  ./configure --prefix=/usr
-  make
-  cd python
+  cmake -B build -S $pkgbase-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -Dprotobuf_USE_EXTERNAL_GTEST=ON \
+    -Dprotobuf_BUILD_SHARED_LIBS=ON
+  cmake --build build
+
+  ln -rs build $pkgbase-$pkgver/src/.libs
+  cd $pkgbase-$pkgver/python
+  PROTOC="$srcdir"/build/protoc \
   python setup.py build --cpp_implementation
 }
 
 check() {
-  cd "$pkgbase-$_pkgver"
-  make check
+  cmake --build build --target check
 
-  cd python
+  cd $pkgbase-$pkgver/python
   python setup.py test
 }
 
@@ -49,9 +44,9 @@ package_protobuf() {
   replaces=('protobuf-cpp')
   provides=('libprotoc.so' 'libprotobuf.so' 'libprotobuf-lite.so')
 
-  cd "$pkgbase-$_pkgver"
-  make DESTDIR="$pkgdir" install
+  DESTDIR="$pkgdir" cmake --install build
 
+  cd $pkgbase-$pkgver
   install -vDm 644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
   install -vDm 644 editors/protobuf-mode.el \
     -t "$pkgdir/usr/share/emacs/site-lisp/"
@@ -64,7 +59,7 @@ package_python-protobuf() {
   depends=('python' 'python-six' "protobuf=$pkgver")
 
   local python_version=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-  cd "$pkgbase-$_pkgver"
+  cd "$pkgbase-$pkgver"
   (
     cd python
     PYTHONPATH="$PWD/build/lib.linux-$CARCH-${python_version}:PYTHONPATH" \
