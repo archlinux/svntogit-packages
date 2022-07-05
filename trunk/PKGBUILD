@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=42.3
-pkgrel=2
+pkgver=42.3.1
+pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -23,7 +23,7 @@ optdepends=('gnome-control-center: System settings'
             'gst-plugin-pipewire: Screen recording')
 groups=(gnome)
 options=(debug)
-_commit=ad1970146066b10a0193fc151b991cc8b2bdfcf8  # tags/42.3^0
+_commit=ed602bdc0f28f1547a2c39d1d7889aa25ea1677a  # tags/41.3.1^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
@@ -36,9 +36,6 @@ pkgver() {
 
 prepare() {
   cd gnome-shell
-
-  # https://bugs.archlinux.org/task/75234
-  git cherry-pick -n eff23a87c36a6a96c9abab09ab27a4bb35ab1b1f
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
