@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=102.0
+pkgver=102.0.1
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -22,10 +22,11 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'xdg-desktop-portal: Screensharing with Wayland')
 options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
-        zstandard-0.18.0.diff
+        cbindgen-0.24.0.diff zstandard-0.18.0.diff
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('01797f04bd8d65f4c7f628d7ce832bf52a0874433886e4d0d78ef33c1ca66abf'
+sha256sums=('7bba6ffd6e8e42d5c38aa2a453f5fa30dfc9ef150f2175aa0625edb68fddae70'
             'SKIP'
+            '4628d136c3beada292e83cd8e89502cac4aa3836851b34259a665582a7713978'
             'a6857ad2f2e2091c6c4fdcde21a59fbeb0138914c0e126df64b50a5af5ff63be'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
@@ -46,6 +47,9 @@ _mozilla_api_key=e05d56db0a694edc8b5aaebda3f2db6a
 prepare() {
   mkdir mozbuild
   cd firefox-$pkgver
+
+  # Unbreak build with cbindgen 0.24.0
+  patch -Np1 -i ../cbindgen-0.24.0.diff
 
   # Unbreak build with python-zstandard 0.18.0
   patch -Np1 -i ../zstandard-0.18.0.diff
