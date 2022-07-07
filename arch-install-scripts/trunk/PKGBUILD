@@ -4,12 +4,12 @@
 
 pkgname=arch-install-scripts
 pkgver=25
-pkgrel=1
+pkgrel=2
 pkgdesc="Scripts to aid in installing Arch Linux"
 arch=('any')
 url="https://github.com/archlinux/arch-install-scripts"
 license=('GPL2')
-depends=('awk' 'bash' 'coreutils' 'pacman' 'util-linux')
+depends=('awk' 'bash' 'coreutils' 'grep' 'pacman' 'util-linux')
 makedepends=('asciidoc' 'git')
 source=("git+https://github.com/archlinux/arch-install-scripts#tag=v${pkgver}?signed")
 validpgpkeys=(
