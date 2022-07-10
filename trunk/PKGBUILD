@@ -4,18 +4,23 @@
 pkgbase=flac
 pkgname=('flac' 'flac-doc')
 pkgver=1.3.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Free Lossless Audio Codec'
 url='https://xiph.org/flac/'
 arch=('x86_64')
 license=('BSD' 'GPL')
 depends=('gcc-libs' 'libogg')
 makedepends=('nasm' 'doxygen' 'cmake' 'ninja')
-source=(https://downloads.xiph.org/releases/flac/flac-${pkgver}.tar.xz)
-sha512sums=('4a626e8a1bd126e234c0e5061e3b46f3a27c2065fdfa228fd8cf00d3c7fa2c05fafb5cec36acce7bfce4914bfd7db0b2a27ee15decf2d8c4caad630f62d44ec9')
+source=(https://downloads.xiph.org/releases/flac/flac-${pkgver}.tar.xz
+        https://github.com/xiph/flac/commit/b171e767e282909d3f4ef4b7d7fcb9b7d7987ff5.patch)
+sha512sums=('4a626e8a1bd126e234c0e5061e3b46f3a27c2065fdfa228fd8cf00d3c7fa2c05fafb5cec36acce7bfce4914bfd7db0b2a27ee15decf2d8c4caad630f62d44ec9'
+            '9cfe6b3098f119f2db851d73cebaebc9423cacaefd6555857e7453d63e61e6f7241b4b8e9621e87622498cc6f56ee29cfd4df2a19334f1ffb29b9c27c3bfa312')
 
 prepare() {
   cd flac-${pkgver}
+
+  # https://bugs.archlinux.org/task/74895
+  patch -Np1 -i ../b171e767e282909d3f4ef4b7d7fcb9b7d7987ff5.patch
 }
 
 build() {
