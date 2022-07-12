@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.18.10.hardened1
+pkgver=5.18.11.hardened1
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -28,11 +28,11 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('f99e3d01dbb8ee6fe765d9cb2b2e073afd2dc581c0d3979751c862745d73dee3'
+sha256sums=('e20d8e54a782f7079b22762e8ee8adec0d08351b1083553adb2d6885ad1815af'
             'SKIP'
-            '4c526cf3e3823db8dff44b2b1f15a1d0e52ce59b366034720f5e0010e0227f99'
+            '547a2ff9ae9394b6d8258a42383f1d4415d59811128da8ffb803673d46e2e8a5'
             'SKIP'
-            'b46ed7eb55f04a9cb7d4053adf7b182bfda4d4cabcee4a5078b348868b7d43d6')
+            '2edb316c433ec8a244078c857eca8edd54a40decfdb7263d6d2151f0d633d2cd')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -66,8 +66,7 @@ prepare() {
 
 build() {
   cd $_srcname
-  make all
-  make htmldocs
+  make htmldocs all
 }
 
 _package() {
