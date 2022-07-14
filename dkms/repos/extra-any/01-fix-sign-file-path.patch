@@ -1,0 +1,85 @@
+From 40a9472eeae0d00f6fb33b5339abc2fc21db0368 Mon Sep 17 00:00:00 2001
+From: Maximiliano Curia <maxy@gnuservers.com.ar>
+Date: Sat, 2 Jul 2022 12:33:53 +0200
+Subject: [PATCH 1/2] Look for sign-file regardless
+
+Fix #229
+---
+ dkms.in | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/dkms.in b/dkms.in
+index ba312c3..d47c343 100644
+--- a/dkms.in
++++ b/dkms.in
+@@ -866,11 +866,12 @@ prepare_signing()
+             ubuntu* )
+                 sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
+                 ;;
+-            fedora* | rhel* | ovm*)
+-                sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
+-                ;;
+             * )
+-                echo "Binary sign-file not found, module won't be signed"
++                if [ -f "/lib/modules/$kernelver/build/scripts/sign-file" ]; then
++                    sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
++                else
++                    echo "Binary sign-file not found, module won't be signed"
++                fi
+                 ;;
+         esac
+     fi
+@@ -912,6 +913,11 @@ prepare_signing()
+             ;;
+         *)
+ 
++            if [ ! "${sign_file}" ]; then
++                do_signing=0
++                return
++            fi
++
+             if [ ! -f $mok_signing_key ] || [ ! -f $mok_certificate ]; then
+                 echo "Certificate or key are missing, generating self signed certificate for MOK..."
+                 openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
+
+From 34bd2326082e44d2cbb6a81a363d4c676540bc72 Mon Sep 17 00:00:00 2001
+From: Maximiliano Curia <maxy@gnuservers.com.ar>
+Date: Sun, 3 Jul 2022 23:26:43 +0200
+Subject: [PATCH 2/2] Delay the file existance check
+
+Use bash internal test to avoid a fork, and replace the string check for
+a executable check.
+
+We also don't need to set do_signing to 0
+---
+ dkms.in | 10 +++-------
+ 1 file changed, 3 insertions(+), 7 deletions(-)
+
+diff --git a/dkms.in b/dkms.in
+index d47c343..be2f717 100644
+--- a/dkms.in
++++ b/dkms.in
+@@ -867,11 +867,7 @@ prepare_signing()
+                 sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
+                 ;;
+             * )
+-                if [ -f "/lib/modules/$kernelver/build/scripts/sign-file" ]; then
+-                    sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
+-                else
+-                    echo "Binary sign-file not found, module won't be signed"
+-                fi
++                sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
+                 ;;
+         esac
+     fi
+@@ -913,8 +909,8 @@ prepare_signing()
+             ;;
+         *)
+ 
+-            if [ ! "${sign_file}" ]; then
+-                do_signing=0
++            if [[ ! -f "${sign_file}" || ! -x "${sign_file}" ]]; then
++                echo "Binary sign-file not found, module won't be signed"
+                 return
+             fi
+ 
