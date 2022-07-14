@@ -22,7 +22,6 @@ optdepends=('tk: for the hgk GUI')
 
 backup=(etc/mercurial/hgrc)
 validpgpkeys=(2BCCE14F5C6725AA2EA8AEB7B9C9DC824AA5BDD5
-              3A8155163D0E20A530FCB78647A67FFAA346AACE
               EB851395B4223EE2F7BA0B28DA54740BF08732BA
               818D87CD1AC180C394C86E633A33DE460D9EC39F  # Pulkit Goyal <7895pulkit@gmail.com>
               1F66F8CDF654E905C11DA061A11E01CD0E05D956) # Raphaël Gomès <alphare@raphaelgomes.dev>
