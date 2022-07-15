@@ -78,6 +78,7 @@ build() {
       --mandir=/usr/share/man
       --infodir=/usr/share/info
       --with-bugurl=https://bugs.archlinux.org/
+      --with-build-config=bootstrap-lto
       --with-linker-hash-style=gnu
       --with-system-zlib
       --enable-__cxa_atexit
@@ -88,6 +89,7 @@ build() {
       --enable-default-ssp
       --enable-gnu-indirect-function
       --enable-gnu-unique-object
+      --enable-link-serialization=1
       --enable-linker-build-id
       --enable-lto
       --enable-multilib
@@ -97,8 +99,6 @@ build() {
       --disable-libssp
       --disable-libstdcxx-pch
       --disable-werror
-      --with-build-config=bootstrap-lto
-      --enable-link-serialization=1
   )
 
   cd gcc-build
