@@ -1,20 +1,18 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
-pkgname=gcr
-pkgver=3.41.0
-pkgrel=2
+pkgbase=gcr
+pkgname=(gcr gcr-docs)
+pkgver=3.41.1
+pkgrel=1
 pkgdesc="A library for bits of crypto UI and parsing"
 url="https://gitlab.gnome.org/GNOME/gcr"
 arch=(x86_64)
 license=(GPL2)
 depends=(gtk3 libgcrypt p11-kit openssh libsecret)
-makedepends=(gobject-introspection vala libxslt git gtk-doc meson)
-provides=(libgck-1.so libgcr-{base,ui}-3.so)
-backup=(etc/security/limits.d/10-gcr.conf)
-install=gcr.install
+makedepends=(gobject-introspection vala libxslt git gi-docgen meson)
 options=(debug)
-_commit=f5026a8c9c7d78372b3efeca3412b0e40011ce11  # tags/3.41.0^0
+_commit=664f8d8619cc6d661bd863107824efbac383a9bf  # tags/3.41.1^0
 source=("git+https://gitlab.gnome.org/GNOME/gcr.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -25,9 +23,6 @@ pkgver() {
 
 prepare() {
   cd gcr
-
-  # Fix build
-  git cherry-pick -n b3ca1d02bb0148ca787ac4aead164d7c8ce2c4d8
 }
 
 build() {
@@ -40,7 +35,11 @@ check() {
   dbus-run-session meson test -C build --print-errorlogs || :
 }
 
-package() {
+package_gcr() {
+  provides=(libgck-1.so libgcr-{base,ui}-3.so)
+  backup=(etc/security/limits.d/10-gcr.conf)
+  install=gcr.install
+
   meson install -C build --destdir "$pkgdir"
 
   # gcr wants to lock some memory to prevent swapping out private keys
@@ -49,6 +48,16 @@ package() {
   install -Dm644 /dev/stdin "$pkgdir/etc/security/limits.d/10-gcr.conf" <<END
 @users - memlock 1024
 END
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
 }
 
-# vim:set ts=2 sw=2 et:
+package_gcr-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
