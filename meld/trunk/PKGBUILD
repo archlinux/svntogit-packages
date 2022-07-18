@@ -4,35 +4,39 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=meld
-pkgver=3.20.4
-pkgrel=2
+pkgver=3.21.2
+pkgrel=1
 pkgdesc="Compare files, directories and working copies"
 url="https://meldmerge.org/"
 license=(GPL)
 arch=(any)
-depends=(python-gobject python-cairo gtksourceview3 gsettings-desktop-schemas dconf)
-makedepends=(intltool yelp-tools git)
-_commit=b3810b9407263adc1cb6bbd83448794b9e9957b2  # tags/3.20.4^0
+depends=(python-gobject python-cairo gtksourceview4 gsettings-desktop-schemas
+         dconf)
+makedepends=(meson yelp-tools git)
+_commit=29f751b10d5eb661878f416a0dc3b424442b0521  # tags/3.21.2^0
 source=("git+https://gitlab.gnome.org/GNOME/meld.git#commit=$_commit")
-sha1sums=('SKIP')
+sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/-/+/g'
+  cd meld
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd meld
 }
 
 build() {
-  cd $pkgname
-  python setup.py build
+  arch-meson meld build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd $pkgname
-  # using --skip-build breaks install
-  python setup.py --no-update-icon-cache --no-compile-schemas \
-    install --prefix=/usr --root="$pkgdir" --optimize=1
+  meson install -C build --destdir "$pkgdir"
+  python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
 }
