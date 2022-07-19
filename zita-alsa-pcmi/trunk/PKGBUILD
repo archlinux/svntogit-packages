@@ -2,7 +2,7 @@
 # Contributor: speps <speps at aur dot archlinux dot org>
 
 pkgname=zita-alsa-pcmi
-pkgver=0.4.0
+pkgver=0.5.1
 pkgrel=1
 pkgdesc="The successor of clalsadrv, provides easy access to ALSA PCM devices."
 arch=(x86_64)
@@ -11,41 +11,34 @@ license=(GPL3)
 depends=(gcc-libs glibc)
 makedepends=(alsa-lib)
 provides=(libzita-alsa-pcmi.so)
-source=("https://kokkinizita.linuxaudio.org/linuxaudio/downloads/$pkgname-$pkgver.tar.bz2")
-sha512sums=('e06ae18e657d75b354c7269fcf1a4ae56241e3efbb182c7a64611855a49e086028d4f9bd91a6bbe8da2a64357ab7190d6e0dc5ae38dc9c3457fc8ce256930a50')
-b2sums=('16e4adb9e531e70528b6128997a2b899036e21bd00aed24ad257c1247c08b59f6a33c30b1d3ae22c29893fadb31af84fc3b336b405dc50c39b9ef6c9b2a90beb')
+options=(debug)
+source=(
+  https://kokkinizita.linuxaudio.org/linuxaudio/downloads/$pkgname-$pkgver.tar.bz2
+  $pkgname-0.5.1-apps_makefile.patch
+  $pkgname-0.5.1-source_makefile.patch
+)
+sha512sums=('afa0751ef4e510bdc2603d52bdb921cbf8b0a8372bdcae77dd9ba5b4790c08a0a510b9a9e2240bd9ee7ce23163125bd44556621bbb9312c8ab5f82780b648c22'
+            '283430c8b3aa8e8e436b4ed875282b5f5247410e6b391e2ca4106624db41bff44f186e2a274be8a915bef5efb46d8a104fddc4cdf4abfccdfe63cec170c1f3e0'
+            '7992478d1c786f8b84bdb17ad2c11af5e3bfa5bbf802c28c1c2524967d670509e0db2fac7dd174c9dcb3a3463d02fbcfaecaa8144d72336042b02cecf156542f')
+b2sums=('7ea5980939ebdcb25b88cc15ff10037adbb328128174d6d6ee243dae1be6305d5967c8c53b15ac37739abb168b2fd24ec2349eba82c9452cc178c39e8a204c59'
+        '8a370033fa8f50b4fd494091f70acd6f75df12230a6035e12efa263cb369071b06b7e6024141cad511371db8a5d47daf57cbdd3ba427db78d4d12df5ec41cf87'
+        'eee76b79eb7e7d388b12031829bbd45c28afbc51aa63d23de919b42f32b63976bc5f07f916ffdad62264c657ff1571ade485b8050fcbadc2db7a71fc8ea3ccea')
 
 prepare() {
-  cd "$pkgname-$pkgver"
-  # remove optimization
-  # call ldconfig in local context
-  sed -e '/native/d' \
-      -e 's/ldconfig/& -N $(DESTDIR)\/$(LIBDIR)/' \
-      -i source/Makefile
-  # fix use of BINDIR without preceeding DESTDIR
-  sed -e 's/\ $(BINDIR)/\ $(DESTDIR)$(BINDIR)/' \
-      -i apps/Makefile
+  patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-0.5.1-apps_makefile.patch
+  patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-0.5.1-source_makefile.patch
 }
 
 build() {
-  cd "$pkgname-$pkgver"
-  make -C source
-  # create lib link for building apps
-  ln -sv lib$pkgname.so.$pkgver source/lib$pkgname.so
-  CXXFLAGS+=" -I../source" \
-  LDFLAGS+=" -L../source" \
-  make -C apps
-  rm -v source/lib$pkgname.so
+  make -C $pkgname-$pkgver/source
+  make -C $pkgname-$pkgver/apps
 }
 
 package() {
   depends+=(libasound.so)
 
-  cd "$pkgname-$pkgver"
-  # libs
-  make -C source DESTDIR="$pkgdir/" PREFIX=/usr SUFFIX="" install
-  install -vDm 644 {AUTHORS,README} -t "${pkgdir}/usr/share/doc/${pkgname}"
-  # apps
-  make -C apps DESTDIR="$pkgdir/" PREFIX=/usr install
+  make -C $pkgname-$pkgver/source DESTDIR="$pkgdir/" PREFIX=/usr SUFFIX="" install
+  make -C $pkgname-$pkgver/apps DESTDIR="$pkgdir/" PREFIX=/usr install
+  install -vDm 644 $pkgname-$pkgver/{AUTHORS,README} -t "$pkgdir/usr/share/doc/$pkgname/"
 }
 # vim:set ts=2 sw=2 et:
