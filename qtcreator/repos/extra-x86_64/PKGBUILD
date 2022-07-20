@@ -8,9 +8,9 @@
 
 pkgbase=qtcreator
 pkgname=(qtcreator qtcreator-devel)
-pkgver=7.0.2
+pkgver=8.0.0
 _clangver=14.0.6
-pkgrel=4
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -29,15 +29,9 @@ optdepends=('qt6-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer'
             'mlocate: locator filter')
-source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz
-        QTCREATORBUG-27096.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=449334e4)
-sha256sums=('14dee285aa3aa56fb25ccbd7587382fb6cb05ae99a1a30237f0a0bbef3ceff7a'
-            '31d970420ddb32b2c51355a2a3929bb48021c8c5c25614fffaeafe19ad8a61f6')
+source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz)
+sha256sums=('323640f96c76d199fe5bf7b02cbf2dd1a3b6489ab7cc0adeaad3957d8dc96f17')
 options=(docs debug)
-
-prepare() {
-  patch -d qt-creator-opensource-src-$pkgver -p1 < QTCREATORBUG-27096.patch # Fix crash if language client crashes
-}
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
@@ -46,7 +40,8 @@ build() {
     -DWITH_DOCS=ON \
     -DBUILD_DEVELOPER_DOCS=ON \
     -DBUILD_QBS=OFF \
-    -DQTC_CLANG_BUILDMODE_MATCH=ON
+    -DQTC_CLANG_BUILDMODE_MATCH=ON \
+    -DCLANGTOOLING_LINK_CLANG_DYLIB=ON
   cmake --build build
   cmake --build build --target docs
 }
