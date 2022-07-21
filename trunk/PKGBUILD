@@ -7,7 +7,7 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go lto-dump libgccjit)
+pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
 pkgver=12.1.0
 _majorver=${pkgver%%.*}
 pkgrel=2
@@ -19,6 +19,7 @@ makedepends=(
   binutils
   doxygen
   gcc-ada
+  gcc-d
   git
   lib32-glibc
   lib32-gcc-libs
@@ -111,7 +112,7 @@ build() {
   CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
 
   "$srcdir/gcc/configure" \
-    --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++ \
+    --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
     --enable-bootstrap \
     "${_confflags[@]:?_confflags unset}"
 
@@ -148,6 +149,9 @@ build() {
 check() {
   cd gcc-build
 
+  # disable libphobos test to avoid segfaults
+  sed -i '/maybe-check-target-libphobos \\/d' Makefile
+
   # do not abort on error as some are "expected"
   make -O -k check || true
   "$srcdir/gcc/contrib/test_summary"
@@ -157,9 +161,9 @@ package_gcc-libs() {
   pkgdesc='Runtime libraries shipped by GCC'
   depends=('glibc>=2.27')
   options=(!emptydirs !strip)
-  provides=($pkgname-multilib libgo.so libgfortran.so
+  provides=($pkgname-multilib libgo.so libgfortran.so libgphobos.so
             libubsan.so libasan.so libtsan.so liblsan.so)
-  replaces=($pkgname-multilib)
+  replaces=($pkgname-multilib libgphobos)
 
   cd gcc-build
   make -C $CHOST/libgcc DESTDIR="$pkgdir" install-shared
@@ -179,6 +183,10 @@ package_gcc-libs() {
 
   make -C $CHOST/libobjc DESTDIR="$pkgdir" install-libs
   make -C $CHOST/libstdc++-v3/po DESTDIR="$pkgdir" install
+
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -rf "$pkgdir"/$_libdir/include/d/
+  rm -f "$pkgdir"/usr/lib/libgphobos.spec
 
   for lib in libgomp \
              libitm \
@@ -250,8 +258,8 @@ package_gcc() {
   make -C $CHOST/32/libsanitizer/asan DESTDIR="$pkgdir" install-nodist_toolexeclibHEADERS
 
   make -C gcc DESTDIR="$pkgdir" install-man install-info
-  rm "$pkgdir"/usr/share/man/man1/{gccgo,gfortran,lto-dump}.1
-  rm "$pkgdir"/usr/share/info/{gccgo,gfortran,gnat-style,gnat_rm,gnat_ugn}.info
+  rm "$pkgdir"/usr/share/man/man1/{gccgo,gfortran,lto-dump,gdc}.1
+  rm "$pkgdir"/usr/share/info/{gccgo,gfortran,gnat-style,gnat_rm,gnat_ugn,gdc}.info
 
   make -C libcpp DESTDIR="$pkgdir" install
   make -C gcc DESTDIR="$pkgdir" install-po
@@ -406,12 +414,38 @@ package_lib32-gcc-libs() {
 
   make -C $CHOST/32/libobjc DESTDIR="$pkgdir" install-libs
 
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -f "$pkgdir"/usr/lib32/libgphobos.spec
+
   # remove files provided by gcc-libs
   rm -rf "$pkgdir"/usr/lib
 
   # Install Runtime Library Exception
   install -Dm644 "$srcdir/gcc/COPYING.RUNTIME" \
     "$pkgdir/usr/share/licenses/lib32-gcc-libs/RUNTIME.LIBRARY.EXCEPTION"
+}
+
+package_gcc-d() {
+  pkgdesc="D frontend for GCC"
+  depends=("gcc=$pkgver-$pkgrel" libisl.so)
+  provides=(gdc)
+  replaces=(gdc)
+  options=(staticlibs debug)
+
+  cd gcc-build
+  make -C gcc DESTDIR="$pkgdir" d.install-{common,man,info}
+
+  install -Dm755 gcc/gdc "$pkgdir"/usr/bin/gdc
+  install -Dm755 gcc/d21 "$pkgdir"/"$_libdir"/d21
+
+  make -C $CHOST/libphobos DESTDIR="$pkgdir" install
+  rm -f "$pkgdir/usr/lib/"lib{gphobos,gdruntime}.so*
+  rm -f "$pkgdir/usr/lib32/"lib{gphobos,gdruntime}.so*
+
+  # Install Runtime Library Exception
+  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+    "$pkgdir/usr/share/licenses/$pkgname/"
 }
 
 package_lto-dump() {
