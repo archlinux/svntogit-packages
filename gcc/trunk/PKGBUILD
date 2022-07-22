@@ -10,7 +10,7 @@
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
 pkgver=12.1.0
 _majorver=${pkgver%%.*}
-pkgrel=2
+pkgrel=3
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL3 LGPL FDL custom)
