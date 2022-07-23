@@ -1,36 +1,43 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
-# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=appstream-glib
-pkgver=0.7.18
-pkgrel=2
+pkgver=0.8.0
+pkgrel=1
 pkgdesc="Objects and methods for reading and writing AppStream metadata"
 url="https://people.freedesktop.org/~hughsient/appstream-glib/"
 arch=(x86_64)
 license=(LGPL)
-depends=(gtk3 libyaml pacman gcab libsoup libstemmer)
+depends=(gtk3 libyaml pacman gcab curl libstemmer)
 makedepends=(gobject-introspection gtk-doc git gperf meson)
 provides=(appdata-tools libappstream-glib.so)
 conflicts=(appdata-tools)
 replaces=(appdata-tools)
-_commit=705e8e2061e9c9ef741792b1de56c6529fb57082  # tags/appstream_glib_0_7_18^0
+options=(debug)
+_commit=fc9f22621846b0411173be176f06ea7c7a60b172  # tags/appstream_glib_0_8_0^0
 source=("git+https://github.com/hughsie/appstream-glib#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
   cd $pkgname
-  git describe --tags | sed 's/^appstream_glib_//;s/_/./g;s/-/+/g'
+  git describe --tags | sed 's/^appstream_glib_//;s/_/./g;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd $pkgname
+
+  # https://github.com/hughsie/appstream-glib/issues/445
+  git cherry-pick -n 3870226a3585 8d3964003275 674490bd54ff
 }
 
 build() {
-  arch-meson $pkgname build \
-    -D alpm=true \
-    -D gtk-doc=true \
+  local meson_options=(
+    -D alpm=true
+    -D gtk-doc=true
     -D rpm=false
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
   meson compile -C build
 }
 
@@ -39,5 +46,7 @@ check() {
 }
 
 package() {
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 }
+
+# vim:set sw=2 sts=-1 et:
