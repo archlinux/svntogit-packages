@@ -4,12 +4,14 @@
 pkgname=archlinux-keyring
 _tag='ff4e031beb113fba80d2a08da1c21624bbb7ba84' # git rev-parse ${pkgver}
 pkgver=20220713
-pkgrel=1
+pkgrel=2
 pkgdesc='Arch Linux PGP keyring'
 arch=('any')
 url='https://gitlab.archlinux.org/archlinux/archlinux-keyring/'
 license=('GPL3')
+groups=('base-devel')
 install=$pkgname.install
+depends=('pacman')
 makedepends=('git' 'python' 'sequoia-sq')
 checkdepends=('python-coverage' 'python-pytest')
 source=("archlinux-keyring::git+https://gitlab.archlinux.org/archlinux/archlinux-keyring.git#tag=${_tag}?signed")
