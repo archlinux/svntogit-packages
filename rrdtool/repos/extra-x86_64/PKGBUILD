@@ -1,8 +1,8 @@
 # Maintainer: Eric Bélanger <eric@archlinux.org>
 
 pkgname=rrdtool
-pkgver=1.7.2
-pkgrel=11
+pkgver=1.8.0
+pkgrel=1
 pkgdesc="Data logging and graphing application"
 arch=('x86_64')
 url="https://www.rrdtool.org"
@@ -16,7 +16,7 @@ optdepends=('perl: to use corresponding binding'
             'lua51: to use corresponding binding')
 options=('!emptydirs' '!makeflags')
 source=(https://github.com/oetiker/rrdtool-1.x/releases/download/v$pkgver/rrdtool-$pkgver.tar.gz)
-sha256sums=('a199faeb7eff7cafc46fac253e682d833d08932f3db93a550a4a5af180ca58db')
+sha256sums=('bd37614137d7a8dc523359648eb2a81631a34fd91a82ed5581916a52c08433f4')
 
 prepare() {
   cd ${pkgname}-${pkgver}
