@@ -3,8 +3,8 @@
 # Contributor: Dave Reisner <dreisner@archlinux.org>
 
 pkgname=arch-install-scripts
-pkgver=25
-pkgrel=2
+pkgver=26
+pkgrel=1
 pkgdesc="Scripts to aid in installing Arch Linux"
 arch=('any')
 url="https://github.com/archlinux/arch-install-scripts"
