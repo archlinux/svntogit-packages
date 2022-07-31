@@ -2,31 +2,31 @@
 # Contributor: Tobias Roettger <toroettg@gmail.com>
 
 pkgname=python-platformdirs
-pkgver=2.5.1
+pkgver=2.5.2
 pkgrel=1
 pkgdesc='A small Python module for determining appropriate platform-specific dirs, e.g. a "user data dir"'
 arch=('any')
 url="https://github.com/platformdirs/platformdirs"
 license=('MIT')
-depends=('python')
-makedepends=('python-setuptools-scm')
+depends=('python-typing_extensions')
+makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-vcs')
 checkdepends=('python-pytest-mock')
 source=("https://pypi.io/packages/source/p/platformdirs/platformdirs-$pkgver.tar.gz")
-sha512sums=('44e31df3f76475de2db4ca0e998d0540b87d7eb514fa139b80f26c2217bf7040d725ea1b89751f8660f0c41a59f63a9efc8c70919d0db8a1ce479821c7051e73')
+sha512sums=('b0b0dee3ac4176e64f302b3d34e253b2e33784160051b9dafb563962e597df75f2c9f714c050d5bdeb1769a1f56c2878a47e9a42361596e287ae7b2afe870370')
 
 build() {
   cd "$srcdir"/platformdirs-$pkgver
-  python setup.py build
+  python -m build --wheel --no-isolation
 }
 
 check() {
   cd "$srcdir"/platformdirs-$pkgver
-  PYTHONPATH="$PWD"/build/lib pytest
+  PYTHONPATH="$PWD"/src pytest
 }
 
 package() {
   cd platformdirs-$pkgver
-  python setup.py install --root="$pkgdir/" --optimize=1
+  python -m installer --destdir="$pkgdir/" dist/*.whl
   install -Dm644 LICENSE.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
 
