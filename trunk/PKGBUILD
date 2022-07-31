@@ -2,7 +2,7 @@
 # Contributor: Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
 
 pkgname=python-requests
-pkgver=2.27.1
+pkgver=2.28.1
 pkgrel=1
 pkgdesc="Python HTTP for Humans"
 arch=('any')
@@ -14,7 +14,7 @@ checkdepends=('python-pytest-httpbin' 'python-pytest-mock' 'python-pysocks' 'pyt
 optdepends=('python-pysocks: SOCKS proxy support')
 source=("https://github.com/psf/requests/archive/v$pkgver/$pkgname-$pkgver.tar.gz"
         certs.patch)
-sha512sums=('191f8e0d566d541ab4e0c17bc9a637eb79e841605f6bbb9a0e559bd7bf0f00a71be99e21fa5b5431b9d49cb4a64debd0d7083658f98b723cf976833bb685cb9a'
+sha512sums=('caed2d08340c79af9448eefaa1df796f9112a7c8da30b218d5f342326a9629d95928c0978b9600e4bd7f56a297ef41afb088af390738be431b91b8c7429e741b'
             '424a3bb01b23409284f6c9cd2bc22d92df31b85cfd96e1d1b16b5d68adeca670dfed4fff7977d8b10980102b0f780eacc465431021fcd661f3a17168a02a39a3')
 
 prepare() {
