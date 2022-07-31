@@ -72,7 +72,7 @@ package_util-linux() {
 
   cd "${pkgbase}-${_realver}"
 
-  make DESTDIR="${pkgdir}" install
+  make DESTDIR="${pkgdir}" usrsbin_execdir=/usr/bin install
 
   # setuid chfn and chsh
   chmod 4755 "${pkgdir}"/usr/bin/{newgrp,ch{sh,fn}}
@@ -88,12 +88,6 @@ package_util-linux() {
 
   # TODO(dreisner): offer this upstream?
   sed -i '/ListenStream/ aRuntimeDirectory=uuidd' "${pkgdir}/usr/lib/systemd/system/uuidd.socket"
-
-  # adjust for usrmove
-  # TODO(dreisner): fix configure.ac upstream so that this isn't needed
-  cd "${pkgdir}"
-  mv usr/sbin/* usr/bin
-  rmdir usr/sbin
 
   ### runtime libs are shipped as part of util-linux-libs
   rm "${pkgdir}"/usr/lib/lib*.{a,so}*
