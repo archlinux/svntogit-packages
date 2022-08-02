@@ -6,7 +6,7 @@
 pkgname=mpfr
 _pkgver=4.1.0
 _patchver=13
-pkgrel=2
+pkgrel=3
 pkgver=${_pkgver}.p${_patchver}
 pkgdesc='Multiple-precision floating-point library'
 arch=(x86_64)
