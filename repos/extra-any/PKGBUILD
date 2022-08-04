@@ -6,7 +6,7 @@ _openssl_ver=1.1.1o
 pkgbase=edk2
 pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
 pkgver=202205
-pkgrel=1
+pkgrel=2
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -21,6 +21,7 @@ source=(
   50-edk2-ovmf-x86_64-secure.json
   60-edk2-ovmf-i386.json
   60-edk2-ovmf-x86_64.json
+  60-edk2-ovmf-microvm.json
   60-edk2-armvirt-aarch64.json
   70-edk2-ovmf-i386-csm.json
   70-edk2-ovmf-x86_64-csm.json
@@ -37,6 +38,7 @@ sha512sums=('0a0d0a8ad7cf23d77d9a6590ccf15e165224c1172e702e61efbf5056b7b62a78ac6
             '3e10bdc9ad13aadbd4111230fb8f37d5f16306aeb7bce2af5ec31c1e2b5adea26d5875cd0d7070ea82eca7546ecbacc8c195ed68425428bf6d2533b58e307b2d'
             '56d0bffd6dd7be79709f66bcfba2112e8ef6208de9b5018e90251e3ba68b37f9d911f0bd5a03987b49bb19bd0d62f7fa9ac3ca9f234e80ada3c4dbdd619705b9'
             '04b4c86f5afeab6170ad1b7b9937fa775a920c78719a33b213f7f8924e4e905709335307c38b8d5d9c127dd8c7000ddbe740b77f1ddfb68035819b7b4cf2b1e4'
+            '31874507e67e1332f678f6f4b10b9f893cef6bafb1db2ac781ea7bfded31a23a84c485b6df43699aaf6c4c7a5a30e024031ffd2b52ede104eedc7c8725e2b5d6'
             '6d2799171058b45ff4205441ad222893ebe2fce5c5c71c9c52c97efc95e4cad65d66d390b6a554ce7a2ce505ceba7431d18f79f2c2c1101addccee55141d4a66'
             '4ee69302de1cec37e4bf4c6a5525d887392f8f733ae8a95a54021f6531741e95baef31da1538b45667a1b198cbbab3069678169069f9ba8db641d603ebb3735b'
             '77e23f0c116ae5a087553edb2754df172b2c4fe5bc346356abe0e1f2acfb41a346d06d87b0569102ca4ac9356e189198c0c74476cb35f1b62773a956cb6a1e04'
@@ -52,6 +54,7 @@ b2sums=('27e5d3436ce8c4f9dc406651940211009dff483cece51a939afee26e16ae1c083e0a4e2
         'f6aaccf4b5a070b05e8eb58d5df60c8798d9b9de2f9febf1417a1ae178431be9a69890a7107d3ca100a439551b4949b937ba400ac36bb9eebaf7e1fdb61dc9d3'
         '891719a70d14f29f6ec9e9cfe83cbf48abb5aedfaf5a3a02efaf9cf1dcca0c14f42f8e4486425df12c72001d7811b0f6030520bad2d83b4885f13d110ab2ae0f'
         '899ecf699815216984905a7abdd3385890c6309f3ef7813778bedf63c15d42ab12c59532d45033a11838f990744417100eb13048b53cee5cdf46440af61b475d'
+        '271322de65313b310a390ea9148640eb065c71b4edcab8aa675f8dbdfbbfa961950994d47213e22f05aa093895d180b840627a15d324252323986596f5c9f067'
         'e61378139f2da0d4185e67436d87a023600a075b4258234e818fe7f591bdb5d363713d29d250263df6074f5d37deed269c067983ee6bd322f2f7d0ee710bc452'
         '8c211a1bbef20ff361c53735b91cc05660f9d94e7d8a937d903c061a1ec9c96ec2c37f0ef5e954cd4aac7f7962489f5a7a0507e44c781a7671211a9530dccb5b'
         '7f48bb1747c732c597a749c851a6cac46de844c1727f3d5edca35249df845a0f578780e8bcda7d86ad2c4a62a9a2a0bc7e1cfab9b7b93d7b5415bb5817d73346'
@@ -155,6 +158,12 @@ build() {
       mv -v Build/Ovmf{Ia32,IA32}
     fi
     if [[ "$_arch" == X64 ]]; then
+      echo "Building ovmf ($_arch) with microvm support"
+      OvmfPkg/build.sh -p OvmfPkg/Microvm/Microvm$_arch.dsc \
+                       -a "$_arch" \
+                       "${_common_args[@]}" \
+                       "${_efi_args[@]}" \
+                       "${_x86_args[@]}"
       echo "Building ovmf ($_arch) with secure boot support"
       OvmfPkg/build.sh -p OvmfPkg/OvmfPkgIa32X64.dsc \
                        -a IA32 -a "$_arch" \
@@ -258,12 +267,13 @@ package_edk2-ovmf() {
       continue
     else
       # installing OVMF.fd for xen: https://bugs.archlinux.org/task/58635
-      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}"
-      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}"
-      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}"
+      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
+      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
+      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
       install -vDm 644 Build/Ovmf$_arch-csm/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgname/${_arch,,}/OVMF_CODE.csm.fd"
       if [[ "${_arch}" == 'X64' ]]; then
         install -vDm 644 Build/Ovmf3264-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgname/${_arch,,}/OVMF_CODE.secboot.fd"
+        install -vDm 644 Build/MicrovmX64/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
       else
         install -vDm 644 Build/Ovmf$_arch-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgname/${_arch,,}/OVMF_CODE.secboot.fd"
       fi
