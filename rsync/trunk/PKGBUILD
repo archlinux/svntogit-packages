@@ -3,7 +3,7 @@
 pkgname=rsync
 _tag='db2a0aed76cfedeb87179017167c29cc2ab7a1e8' # git rev-parse v${pkgver}
 pkgver=3.2.4
-pkgrel=1
+pkgrel=2
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
 url='https://rsync.samba.org/'
@@ -18,6 +18,12 @@ source=("git+https://github.com/WayneD/rsync#tag=${_tag}?signed"
         'rsyncd.conf')
 sha256sums=('SKIP'
             '733ccb571721433c3a6262c58b658253ca6553bec79c2bdd0011810bb4f2156b')
+
+prepare() {
+	cd "$srcdir/rsync"
+
+	git show 'b7231c7d02cfb65d291af74ff66e7d8c507ee871' | git apply --exclude='rsync.1.md'
+}
 
 build() {
 	cd "$srcdir/rsync"
