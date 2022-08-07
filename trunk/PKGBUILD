@@ -1,3 +1,4 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
 # Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
 # Contributor: Gaetan Bisson <bisson@archlinux.org>
@@ -80,6 +81,10 @@ check() {
 }
 
 package() {
+  local units=({dirmngr,gpg-agent{,-{browser,extra,ssh}}}.socket)
+  local socket_target_dir="$pkgdir/usr/lib/systemd/user/sockets.target.wants/"
+  local unit
+
   cd "${srcdir}/${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
   ln -s gpg "${pkgdir}"/usr/bin/gpg2
@@ -87,6 +92,11 @@ package() {
 
   install -Dm 644 doc/examples/systemd-user/*.* -t "${pkgdir}/usr/lib/systemd/user"
   install -Dm 644 COPYING.{CC0,other} -t "${pkgdir}/usr/share/licenses/$pkgname/"
+
+  install -vdm 755 "$socket_target_dir"
+  for unit in "${units[@]}"; do
+    ln -sv "../$unit" "$socket_target_dir$unit"
+  done
 }
 
 # vim: ts=2 sw=2 et:
