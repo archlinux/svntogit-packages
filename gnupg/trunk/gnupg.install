@@ -1,31 +1,17 @@
-_global_units() {
-  _units=(dirmngr.socket gpg-agent.socket gpg-agent-{browser,extra,ssh}.socket)
-  _dir=/etc/systemd/user/sockets.target.wants
-
-  case $1 in
-    enable)
-      mkdir -p $_dir
-      for _u in "${_units[@]}"; do
-        ln -sf /usr/lib/systemd/user/$_u $_dir/$_u
-      done
-      ;;
-    disable)
-      for _u in "${_units[@]}"; do
-        rm -f $_dir/$_u
-      done
-      rmdir -p --ignore-fail-on-non-empty $_dir
-      ;;
-  esac
-}
-
 post_install() {
-  # See FS#42798 and FS#47371
+  # run dirmngr once to create /root/.gnupg
+  # https://bugs.archlinux.org/task/47371
+  # https://bugs.archlinux.org/task/42798
   dirmngr </dev/null &>/dev/null
-
-  # Let systemd supervise daemons by default
-  _global_units enable
 }
 
-pre_remove() {
-  _global_units disable
+post_upgrade() {
+  local unit
+
+  if (( $(vercmp "$2" '2.2.36-2') < 0)); then
+    for unit in {dirmngr,gpg-agent{,-{browser,extra,ssh}}}.socket; do
+      rm -f "/etc/systemd/user/sockets.target.wants/$unit"
+    done
+    printf "NOTE: GnuPG's systemd sockets are now enabled in the vendor location /usr/lib/systemd/user/!\n"
+  fi
 }
