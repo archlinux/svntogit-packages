@@ -2,8 +2,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='069e2b0ddd3a1b5bcff48530be165c56117d7134' # git rev-parse v${_tag_name}
-_tag_name=251.3
+_tag='46cf27a20eb6fb676ac987533415d499b77dd0af' # git rev-parse v${_tag_name}
+_tag_name=251.4
 pkgver="${_tag_name/-/}"
 pkgrel=1
 arch=('x86_64')
@@ -61,13 +61,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # glibc: Remove #include <linux/fs.h> to resolve fsconfig_command/mount_attr conflict with glibc 2.36
-  '3657d3a01c7e25ff86d7a4642065b367c4ff7484'
-  # home: drop conflicted headers
-  '0a58cd00454cc7b57b04f3a4a334584d743d7f7a'
-
-  # Do not fail EFI build with newer binutils
-  'b0e5bf0451a6bc94e6e7b2a1de668b75c63f38c8'
 )
 
 _reverts=(
