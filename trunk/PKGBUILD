@@ -61,6 +61,13 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
+  # glibc: Remove #include <linux/fs.h> to resolve fsconfig_command/mount_attr conflict with glibc 2.36
+  '3657d3a01c7e25ff86d7a4642065b367c4ff7484'
+  # home: drop conflicted headers
+  '0a58cd00454cc7b57b04f3a4a334584d743d7f7a'
+
+  # Do not fail EFI build with newer binutils
+  'b0e5bf0451a6bc94e6e7b2a1de668b75c63f38c8'
 )
 
 _reverts=(
