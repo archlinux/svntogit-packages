@@ -2,8 +2,8 @@
 
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
-pkgver=4.13.1
-pkgrel=3
+pkgver=4.14.0
+pkgrel=1
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
 license=('LGPL2.1' 'custom: QPL-1.0')
@@ -11,7 +11,7 @@ url="https://caml.inria.fr/"
 makedepends=('ncurses>=5.6-7')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
 source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
-sha512sums=('3f5f831b31fc83a281395f8461c6b074c92c648e33f55d66b6439e208e20e000e1e17b7c2d05bd5aabf3b3a622f28e64e5b9be8a1b327b505cc6aa56eadd0161')
+sha512sums=('0fae5b8752ce900bc69f71ebdc82faa588272fd3dce6795aa03467e89e1e376f127a288221761e353191fb5941b563e183098c0c74b18374aa0ca1c8e0715e97')
 options=('!makeflags' '!emptydirs' 'staticlibs')
 
 
@@ -20,7 +20,7 @@ build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   CFLAGS+=' -ffat-lto-objects'
   CXXFLAGS+=' -ffat-lto-objects'
-  ./configure --prefix /usr --mandir /usr/share/man --disable-force-safe-string
+  ./configure --prefix /usr --mandir /usr/share/man --disable-force-safe-string --enable-frame-pointers
   make --debug=v world.opt
 }
 
