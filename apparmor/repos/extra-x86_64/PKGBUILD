@@ -1,7 +1,7 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 pkgname=apparmor
-pkgver=3.0.6
+pkgver=3.0.7
 pkgrel=1
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=(x86_64)
@@ -25,24 +25,15 @@ backup=(
   etc/apparmor/severity.db
 )
 options=(debug)
-source=(
-  https://launchpad.net/$pkgname/${pkgver%.[0-9]}/$pkgver/+download/$pkgname-$pkgver.tar.gz{,.asc}
-  $pkgname-3.0.6-python.patch
-)
-sha512sums=('e200b4d7f2214ac8d3c7fff57ccbaf2c4f5e3831c75287add974c7c3cd5cb70d632cda16043396b11b77ab661b097a3904c7851da79920b0caee13abc885dbef'
-            'SKIP'
-            'afea70b4406e948bce5cdd8b8d62d0dc9d30bca3861545a5a463ba2909c08f1110cb0c638d9f871c8e4451a22015ce037ca829c789a916175d32c7d9cfbf2232')
-b2sums=('6809f77d75283033971009d460476d0357344241f209d3d1eb9322d819182dc4196e12a070735196ef0e56a84dc3cf8c1786f9cf4615ed1b69b2d72a041ffbc4'
-        'SKIP'
-        '689038f910155d23a196a612e992d5e841de352305fab1e2b22d3efebaa31978d2bfdd999bfbd58db46e6dd68dcfd4e86a256fa87fe55ebd0f53067e004811f4')
+source=(https://launchpad.net/$pkgname/${pkgver%.[0-9]}/$pkgver/+download/$pkgname-$pkgver.tar.gz{,.asc})
+sha512sums=('6a3ba96dddcab623b91488eac21eba9441be437c3cd4e2c265fa6fa6711eb121340aec17710756809ded9b734e89d0ee2919ef1bff27343fb31c5cfaa33a77ed'
+            'SKIP')
+b2sums=('340e8fc40f33b45f4e5d253bbaa3d48573da86a2d75220440d3ba5f80e8eacf47bfffdd3a305d3a99cd78a9fb2f6ee9cd2181e66c8e43549491c9fe07e609b42'
+        'SKIP')
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB') # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 _core_perl="/usr/bin/core_perl"
 
 prepare() {
-  # fix issues with python-setuptools version detection: https://gitlab.com/apparmor/apparmor/-/issues/259
-  # and hardcoded LDPATH/ PYTHONPATH https://gitlab.com/apparmor/apparmor/-/issues/39
-  patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-3.0.6-python.patch
-
   cd $pkgname-$pkgver/libraries/libapparmor/
   autoreconf -fiv
 }
