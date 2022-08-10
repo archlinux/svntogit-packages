@@ -6,7 +6,7 @@ pkgbase=qemu
 pkgname=(
   qemu-common
   qemu-audio-{alsa,dbus,jack,oss,pa,sdl,spice}
-  qemu-block-{curl,dmg,gluster,iscsi,nfs,rbd,ssh}
+  qemu-block-{curl,dmg,gluster,iscsi,nfs,ssh}
   qemu-chardev-{baum,spice}
   qemu-docs
   qemu-guest-agent
@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.0.0
-pkgrel=11
+pkgrel=12
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -43,7 +43,6 @@ makedepends=(
   brltty
   bzip2
   cairo
-  ceph
   curl
   dtc
   fuse3
@@ -172,7 +171,6 @@ _qemu_optdepends=(
   'qemu-block-gluster: for Gluster block driver'
   'qemu-block-iscsi: for iSCSI block driver'
   'qemu-block-nfs: for NFS block driver'
-  'qemu-block-rbd: for Ceph/RBD block driver'
   'qemu-block-ssh: for SSH block driver'
   'qemu-chardev-baum: for Baum chardev driver'
   'qemu-chardev-spice: for spice chardev driver'
@@ -361,7 +359,6 @@ package_qemu-common() {
     _pick qemu-block-gluster usr/lib/qemu/block-gluster.so
     _pick qemu-block-iscsi usr/lib/qemu/block-iscsi.so
     _pick qemu-block-nfs usr/lib/qemu/block-nfs.so
-    _pick qemu-block-rbd usr/lib/qemu/block-rbd.so
     _pick qemu-block-ssh usr/lib/qemu/block-ssh.so
 
     _pick qemu-chardev-baum usr/lib/qemu/chardev-baum.so
@@ -572,12 +569,6 @@ package_qemu-block-iscsi() {
 package_qemu-block-nfs() {
   pkgdesc="QEMU NFS block driver"
   depends=(gcc-libs glibc libnfs qemu-common)
-  mv -v $pkgname/* "$pkgdir"
-}
-
-package_qemu-block-rbd() {
-  pkgdesc="QEMU Ceph/RBD block driver"
-  depends=(ceph-libs glibc qemu-common)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -998,7 +989,7 @@ package_qemu-full() {
   depends=(
     qemu-common
     qemu-audio-{alsa,dbus,jack,oss,pa,sdl,spice}
-    qemu-block-{curl,dmg,gluster,iscsi,nfs,rbd,ssh}
+    qemu-block-{curl,dmg,gluster,iscsi,nfs,ssh}
     qemu-chardev-{baum,spice}
     qemu-docs
     qemu-hw-display-{qxl,virtio-{gpu{,-{gl,pci,pci-gl}},vga{,-gl}}}
