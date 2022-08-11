@@ -116,8 +116,8 @@ build() {
   make -O
 
   # pregenerate C.UTF-8 locale until it is built into glibc
-  # (https://sourceware.org/glibc/wiki/Proposals/C.UTF-8, FS#74864)
-  locale/localedef -c -f ../glibc/localedata/charmaps/UTF-8 -i ../glibc/localedata/locales/C ../C.UTF-8/
+  # (https://sourceware.org/glibc/wiki/Proposals/C.UTF-8, FS#74864)-
+  elf/ld.so --library-path "$PWD" locale/localedef -c -f ../glibc/localedata/charmaps/UTF-8 -i ../glibc/localedata/locales/C ../C.UTF-8/
 }
 
 # Credits for skip_test() and check() @allanmcrae
