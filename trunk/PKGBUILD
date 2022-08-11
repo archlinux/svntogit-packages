@@ -123,9 +123,9 @@ build() {
 # Credits for skip_test() and check() @allanmcrae
 # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/glibc/PKGBUILD
 skip_test() {
-  test=$1
-  file=$2
-  sed -i "s/\b$test\b//" $srcdir/glibc/$file
+  test=${1}
+  file=${2}
+  sed -i "s/\b${test}\b//" "${srcdir}"/glibc/${file}
 }
 
 check() {
