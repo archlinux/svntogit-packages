@@ -14,14 +14,19 @@ makedepends=('llvm' 'cmake' 'ninja' 'python')
 makedepends_x86_64=('lib32-gcc-libs')
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
-source=($_source_base/compiler-rt-$pkgver.src.tar.xz{,.sig})
+source=($_source_base/compiler-rt-$pkgver.src.tar.xz{,.sig}
+        remove-include-linux-fs.h.patch)
 sha256sums=('88df303840ca8fbff944e15e61c141226fe79f5d2b8e89fb024264d77841a02e'
-            'SKIP')
+            'SKIP'
+            '34ed866e313e4580130a50118a4410d36fa0159123982521b6ef049439fc32ad')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 prepare() {
   cd compiler-rt-$pkgver.src
   mkdir build
+
+  # https://github.com/llvm/llvm-project/issues/56421
+  patch -Np2 -i ../remove-include-linux-fs.h.patch
 }
 
 build() {
