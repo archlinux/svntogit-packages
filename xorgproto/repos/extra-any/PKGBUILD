@@ -3,7 +3,7 @@
 # When releasing a xorgproto version with updated keysyms, rebuild libx11
 
 pkgname=xorgproto
-pkgver=2022.1
+pkgver=2022.2
 pkgrel=1
 pkgdesc="combined X.Org X11 Protocol headers"
 arch=('any')
@@ -11,8 +11,8 @@ url="https://xorg.freedesktop.org/"
 license=('custom')
 makedepends=('xorg-util-macros' 'meson')
 checkdepends=('python-libevdev')
-source=(https://xorg.freedesktop.org/archive/individual/proto/$pkgname-$pkgver.tar.bz2{,.sig})
-sha512sums=('add275a9c0d005053f31fdca6da009142792a3c7e2cd4b56da93eed3a397adf52d91c441ff6455959b87559f402eb9f46fdd8932e951c7d2d96623975391202a'
+source=(https://xorg.freedesktop.org/archive/individual/proto/$pkgname-$pkgver.tar.xz{,.sig})
+sha512sums=('8e6108110600d076a94cc6d0e465b2e9adfbbe8d7e6b75fae9c5262d99dc6074ab1ed561a74d6d451f00f5b7af9f507a6317be9c0770efeed9e60b64beb7a1c9'
             'SKIP')
 validpgpkeys=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # "Peter Hutterer (Who-T) <office@who-t.net>"
 #validpgpkeys=('FD0004A26EADFE43A4C3F249C6F7AE200374452D') # "Povilas Kanapickas <povilas@radix.lt>"
