@@ -3,7 +3,7 @@
 # Contributor: Anatol Pomozov <anatol dot pomozov at gmail>
 
 pkgname=meson
-pkgver=0.63.0
+pkgver=0.63.1
 pkgrel=1
 pkgdesc='High productivity build system'
 url='https://mesonbuild.com/'
@@ -19,9 +19,9 @@ checkdepends=('gcc-objc' 'vala' 'rust' 'gcc-fortran' 'mono' 'boost' 'qt5-base' '
 source=(https://github.com/mesonbuild/meson/releases/download/${pkgver}/meson-${pkgver}.tar.gz{,.asc}
         0001-Skip-broken-tests.patch
         arch-meson)
-sha512sums=('8d427261bb42d2bd1da7d4f7b5f53908044aa2cea6d020fb320b0ab9d9848e17cf28deb12ae6dc139807f9e377db0c8a546561e94301216b634bd77703f17cea'
+sha512sums=('25f96e18bcdbb6346c44d9f8e63035d6cb3d8f781cf43ac5530ddd6f8090f4d16d192f8d331240154602e92b498b410fabb1381dc5f39db1dfb9da05a964d44e'
             'SKIP'
-            'd94c5b102835704e38ae778f0d420b30b4acf64f4321304ad63472a3fb044fcdc2fcb18edf47e239678534e107b6b892ee5328f0840d6649e10201bcf072e8f8'
+            'b59d90b5466fcf877969a49982308b1c89f0f4521e4d3774a4531bb2c0093f46b5ea2ef569e32984632e6f9c7e91328bc3511978427b553ed8c97a64a52b79ff'
             'f451f8a7ef9cf1dd724c2ce20bb85a3f1611b87b2e7a17ef0fdbe8ab82a67389f818ea30a5adfe8413143e4eac77ea2e0b8234b5b2466b41a892e2bd0435376c')
 validpgpkeys=('19E2D6D9B46D8DAA6288F877C24E631BABB1FE70') # Jussi Pakkanen <jpakkane@gmail.com>
 
@@ -55,4 +55,4 @@ package() {
   install -D ../arch-meson -t "${pkgdir}/usr/bin"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
