@@ -1,0 +1,65 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnutls
+pkgver=3.7.7
+pkgrel=2
+pkgdesc="A library which provides a secure layer over a reliable transport layer"
+arch=('x86_64')
+license=('GPL3' 'LGPL2.1')
+url="https://www.gnutls.org/"
+options=('!zipman' 'debug')
+depends=('gcc-libs' 'libtasn1' 'readline' 'zlib' 'nettle' 'p11-kit' 'libidn2'
+         'libidn2.so' 'libunistring' 'brotli')
+makedepends=('tpm2-tss')
+checkdepends=('net-tools' 'tpm2-tools')
+optdepends=('guile: for use with Guile bindings'
+            'tpm2-tss: support for TPM2 wrapped keys'
+            'zstd: for compression support')
+source=(https://www.gnupg.org/ftp/gcrypt/gnutls/v3.7/${pkgname}-${pkgver}.tar.xz{,.sig}
+        0001-fix-avx-detection.patch)
+sha256sums=('be9143d0d58eab64dba9b77114aaafac529b6c0d7e81de6bdf1c9b59027d2106'
+            'SKIP'
+            '250c13305115001cfc52e0a65e5bfb62e53b6697cfb1ee30a8a24da9181c63da')
+#validpgpkeys=('462225C3B46F34879FC8496CD605848ED7E69871') # "Daiki Ueno <ueno@unixuser.org>"
+validpgpkeys=('5D46CB0F763405A7053556F47A75A648B3F9220C') # "Zoltan Fridrich <zfridric@redhat.com>"
+
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  # FS#75613 / https://gitlab.com/gnutls/gnutls/-/merge_requests/1631
+  patch -Np1 -i ../0001-fix-avx-detection.patch
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+	--disable-static \
+	--with-idn \
+	--with-brotli \
+	--with-zstd \
+	--with-tpm2 \
+	--enable-openssl-compatibility \
+	--enable-guile --with-guile-site-dir=no \
+	--with-default-trust-store-pkcs11="pkcs11:"
+#	--enable-ktls \ # breaks testsuite
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  # disable parallel tests:
+  # FAIL: serv-udp.sh
+  make -j1 check
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+
+  # lots of .png files are put into infodir and are gzipped by makepkg! this needs to be fixed by using !zipman
+  # gzip -9 all files in infodir and manpages manually
+  find "$pkgdir/usr/share/info" -name '*.info*' -exec gzip -n -9 {} \;
+  find "$pkgdir/usr/share/man" -exec gzip -n -9 {} \;
+}
