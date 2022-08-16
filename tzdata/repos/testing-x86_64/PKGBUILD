@@ -1,0 +1,51 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=tzdata
+pkgver=2022c
+_tzcode=2022c
+_tzdata=2022c
+pkgrel=1
+pkgdesc="Sources for time zone and daylight saving time data"
+arch=('x86_64')
+url="https://www.iana.org/time-zones"
+license=('custom: public domain')
+options=('!emptydirs')
+source=(https://www.iana.org/time-zones/repository/releases/tzcode${_tzcode}.tar.gz{,.asc}
+        https://www.iana.org/time-zones/repository/releases/${pkgname}${_tzdata}.tar.gz{,.asc})
+sha512sums=('3373fa16a12007415c3dc3a75c4a0d61d6ae54968eeecedcdf4bcfd7f554020a15c4687dde107b90462b75d848eebe1e200c33322ebe0d3f1ad11bc769cade06'
+            'SKIP'
+            'e2ae92abac6d87ce4ab4ba9012e868e1791b842e083293489debc0c671b9cf135b5b70426dacb6dbebbf6eba24463205225ae45bb7df891a086b25475f85ee0b'
+            'SKIP')
+validpgpkeys=('7E3792A9D8ACF7D633BC1588ED97E90E62AA7E34') # Paul Eggert <eggert@cs.ucla.edu>
+
+_timezones=('africa' 'antarctica' 'asia' 'australasia'
+           'europe' 'northamerica' 'southamerica'
+           'etcetera' 'backward' 'factory')
+
+prepare() {
+  sed -i "s:sbin:bin:g" Makefile
+}
+
+build() {
+  make LFLAGS="${LDFLAGS} ${LTOFLAGS}"
+}
+
+package() {
+  cd "${srcdir}"
+  # install tzcode stuff
+  make DESTDIR="${pkgdir}" install
+
+  # install tzdata stuff
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo ${_timezones[@]}
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo/posix ${_timezones[@]}
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo/right -L leapseconds ${_timezones[@]}
+  # This creates the posixrules file. We use New York because POSIX requires the daylight savings time rules to be in accordance with US rules.   
+  ./zic -b fat -d "${pkgdir}"/usr/share/zoneinfo -p America/New_York
+  install -m644 -t "${pkgdir}"/usr/share/zoneinfo iso3166.tab leap-seconds.list zone1970.tab zone.tab SECURITY # zone.tab is depricated and will go soon
+  
+  # cleanup
+  rm "${pkgdir}/etc/localtime"
+
+  # install license
+  install -Dm644 LICENSE "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
