@@ -607,7 +607,7 @@ package_qemu-guest-agent() {
   install -vDm 644 $pkgbase-$pkgver/contrib/systemd/$pkgname.service -t "$pkgdir/usr/lib/systemd/system/"
   install -vDm 644 99-$pkgname.rules -t "$pkgdir/usr/lib/udev/rules.d/"
   install -vDm 644 $pkgbase-ga.conf -t "$pkgdir/etc/$pkgbase/"
-  install -vDm 644 $pkgbase-$pkgver/scripts/$pkgname/fsfreeze-hook -t "$pkgdir/etc/$pkgbase/"
+  install -vDm 755 $pkgbase-$pkgver/scripts/$pkgname/fsfreeze-hook -t "$pkgdir/etc/$pkgbase/"
   install -vdm 755 "$pkgdir/etc/$pkgbase/fsfreeze-hook.d"
 }
 
