@@ -2,7 +2,7 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=libgnomekbd
-pkgver=3.26.1+r5+g54da436
+pkgver=3.28.0
 pkgrel=1
 epoch=1
 pkgdesc="Keyboard management library"
@@ -10,12 +10,14 @@ url="https://gitlab.gnome.org/GNOME/libgnomekbd"
 arch=(x86_64)
 license=(LGPL)
 depends=(libxklavier gtk3 dconf)
-makedepends=(gobject-introspection git)
+makedepends=(gobject-introspection git meson)
 provides=(libgnomekbd{,ui}.so)
 options=(debug)
-_commit=54da436258d79b683f57dfadf787bdf56ca58576  # master
-source=("git+https://gitlab.gnome.org/GNOME/libgnomekbd.git#commit=$_commit")
-sha256sums=('SKIP')
+_commit=358fcc6570d5910a5cedae2dbb3be58519ec1876  # tags/3.28.0^0
+source=("git+https://gitlab.gnome.org/GNOME/libgnomekbd.git#commit=$_commit"
+        meson.diff)
+sha256sums=('SKIP'
+            '2d78355197d67758dc853d42f165ee03aa1c88d7a1c5a263c24da725836226b4')
 
 pkgver() {
   cd $pkgname
@@ -24,20 +26,22 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  NOCONFIGURE=1 ./autogen.sh
+
+  # Fixes for meson build
+  git apply -3 ../meson.diff
 }
 
 build() {
-  cd "$pkgname"
-  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
-      --disable-schemas-compile --disable-static
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-  make
+  arch-meson $pkgname build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 package() {
-  cd "$pkgname"
-  make DESTDIR="$pkgdir" install
+  meson install -C build --destdir "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
