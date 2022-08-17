@@ -271,7 +271,6 @@ build() {
       --enable-slirp=system \
       --enable-tpm \
       --smbd=/usr/bin/smbd \
-      --tls-priority=@QEMU,SYSTEM \
       --with-coroutine=ucontext
     ninja
   )
