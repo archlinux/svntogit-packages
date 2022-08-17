@@ -293,6 +293,10 @@ package_qemu-common() {
   license+=(BSD MIT)
   depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so hicolor-icon-theme libcap-ng libcap-ng.so)
   install=$pkgname.install
+  backup=(
+    etc/$pkgbase/bridge.conf
+    etc/sasl2/$pkgbase.conf
+  )
   options=(!strip)
 
   meson install -C build --destdir "$pkgdir"
