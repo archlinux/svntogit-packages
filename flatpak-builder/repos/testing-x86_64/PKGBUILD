@@ -1,0 +1,64 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=flatpak-builder
+pkgver=1.2.2
+pkgrel=2
+pkgdesc="Tool to build flatpaks from source"
+url="https://flatpak.org"
+arch=(x86_64)
+license=(LGPL)
+depends=(flatpak binutils elfutils unzip tar git bzr patch rpmextract cpio
+         appstream-glib)
+makedepends=(gobject-introspection git docbook-xsl xmlto)
+checkdepends=(valgrind)
+replaces=('flatpak<0.9.10')
+options=(debug)
+_commit=4e9fb6a3e6c405f10797f12cc5c8c0a6ce99282d  # tags/1.2.2^0
+source=("git+https://github.com/flatpak/flatpak-builder#commit=$_commit"
+        "git+https://gitlab.gnome.org/GNOME/libglnx.git"
+        "git+https://sourceware.org/git/debugedit.git")
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git submodule set-url libglnx "$srcdir/libglnx"
+  git submodule set-url debugedit "$srcdir/debugedit"
+  git submodule update
+
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --sbindir=/usr/bin \
+    --libexecdir=/usr/lib \
+    --disable-static
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+
+  make
+}
+
+check() {
+  cd $pkgname
+  make -k check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
