@@ -3,23 +3,23 @@
 
 pkgname=python-pyelftools
 _pkgname=pyelftools
-pkgver=0.28
+pkgver=0.29
 pkgrel=1
 pkgdesc='Python library for analyzing ELF files and DWARF debugging information'
 url='https://github.com/eliben/pyelftools'
 arch=('any')
 license=('custom:Public Domain')
-makedepends=('python' 'python-setuptools')
 depends=('python')
+makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
 options=('!strip')
 source=(https://github.com/eliben/${_pkgname}/archive/v${pkgver}/${_pkgname}-${pkgver}.tar.gz)
-sha512sums=('005163a53fe12baad0998d60d531e3ce4201236b7b042e3c28d7e68f9c40586f94a2576be6918be991a3bf464f2ca55700c0475a6e8c7b05b4342a6f5bbf3354')
-b2sums=('87dad42d87b9d3de2382e21d6f7115fb24e420e262735d4bd73c4e3a325d10b69c6eab5d73ff999811633d6a024c22c15ad65be637339f0c609378d54926f747')
+sha512sums=('0eba3b029a734abe9f8df92cd58bc967f10bf9f61c3a419bdbc5e637200844dddd947bcb485e8ebbe2eeaa7f7e91efc6500316af51aace1db051a658cf61153e')
+b2sums=('441260492f8cd512445249700a79f1d823ef96f6213ab9183e17160b76efe51493c28d2ae8ecea79acf45e78987b4c24940441e9bc0a3deaeda0ee4fb72b58c3')
 
 
 build() {
   cd ${_pkgname}-${pkgver}
-  python setup.py build
+  python -m build --wheel --no-isolation
 }
 
 check() {
@@ -35,7 +35,7 @@ check() {
 
 package() {
   cd ${_pkgname}-${pkgver}
-  python setup.py install -O1 --root="${pkgdir}" --skip-build
+  python -m installer --destdir="${pkgdir}" dist/*.whl
   install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
   install -Dm 644 README.rst CHANGES -t "${pkgdir}/usr/share/doc/${pkgname}"
   cp -r examples "${pkgdir}/usr/share/doc/${pkgname}"
