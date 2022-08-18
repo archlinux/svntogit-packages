@@ -2,7 +2,7 @@
 # Contributor: lod <aur@cyber-anlage.de>
 
 pkgname=amdvlk
-pkgver=2022.Q3.1
+pkgver=2022.Q3.3
 pkgrel=1
 pkgdesc="AMD's standalone Vulkan driver"
 arch=(x86_64)
@@ -10,10 +10,11 @@ url="https://github.com/GPUOpen-Drivers"
 license=('MIT')
 provides=('vulkan-driver')
 makedepends=('perl-xml-xpath' 'python' 'wayland' 'libxrandr' 'xorg-server-devel' 'cmake' 'ninja' 'git')
-makedepends+=('clang' 'lld')
 options=('!lto')
-source=("https://github.com/GPUOpen-Drivers/AMDVLK/archive/v-${pkgver}.tar.gz")
-sha256sums=('fc1a26cbd3aacd197d17025836fdbbf29a9529af54937c3bfabd58ab86c3d2b3')
+source=("https://github.com/GPUOpen-Drivers/AMDVLK/archive/v-${pkgver}.tar.gz"
+        pal.patch)
+sha256sums=('9efa194cf0572f09a66dcd74dd771a8b12a97f85e1f0905ee6d2bf8025a5abfd'
+            '4953f94566c14c51b82bf7e1c60612f4dac3fd35a0c6da31c8460ee3df69de4c')
             
 prepare() {
   local nrepos path name revision
@@ -31,21 +32,18 @@ prepare() {
       popd
     (( nrepos-- ))
   done
+  
+  # https://github.com/GPUOpen-Drivers/pal/issues/89
+  cd pal
+  patch -Np1 -i ../pal.patch
 }
 
 build() {
   cd ${srcdir}/spvgen/external
   python fetch_external_sources.py
 
-  # use lld and clang to fix linking error
-  # https://github.com/GPUOpen-Drivers/llpc/issues/1645
   cd ${srcdir}/xgl
   cmake -H. -Bbuilds/Release64 \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DLLVM_USE_LINKER=lld \
-    -DCMAKE_EXE_LINKER_FLAGS='-fuse-ld=lld' \
-    -DCMAKE_SHARED_LINKER_FLAGS='-fuse-ld=lld' \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_WAYLAND_SUPPORT=On \
     -G Ninja
