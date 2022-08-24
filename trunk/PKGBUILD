@@ -7,7 +7,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.36
+pkgver=2.2.37
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
@@ -32,14 +32,11 @@ validpgpkeys=(
 )
 source=(
   "https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
-  # https://bugs.archlinux.org/task/74423 https://dev.gnupg.org/T5935
-  'gnupg-2.2.35-scd-dont-inhibit-ssh-authentication.patch::https://git.gnupg.org/cgi-bin/gitweb.cgi?p=gnupg.git;a=patch;h=e8fb8e2b3e66d5ea8a3dc90afdc14611abf2c3da'
   'drop-import-clean.patch'
   'avoid-beta-warning.patch'
 )
-sha256sums=('bdfe783810fceca9703b9e811817acca63ee9ef0174e616598e8ea6590aa4c9c'
+sha256sums=('95f8928b4a21890658660c2c10db63a765286864612e7581932b5c3d16aca871'
             'SKIP'
-            '1b7611a24e813429e56a7d0855c59d33109cb1b59b3586a3dd35935909a493e5'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
 
