@@ -5,7 +5,7 @@
 
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python-urllib3-doc)
-pkgver=1.26.11
+pkgver=1.26.12
 pkgrel=1
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
@@ -18,7 +18,7 @@ makedepends=('python-setuptools' 'python-sphinx' 'python-ndg-httpsclient'
 checkdepends=('python-pytest-runner' 'python-tornado' 'python-nose' 'python-psutil' 'python-trustme'
               'python-gcp-devrel-py-tools' 'python-flaky' 'python-dateutil')
 source=("https://github.com/urllib3/urllib3/archive/$pkgver/$pkgbase-$pkgver.tar.gz")
-sha512sums=('10d98a45ee909ac48b1cd2fd3cec0a0e8b14c64b600347105973d70aaecdf8df982cb8473bfe0d7bfdcafaa73c6074e46821962d0d6d0ecb70d7f1fadde7962b')
+sha512sums=('71b4b14782d336a3fc187bb82197be02f06acfca06569e4ae2b73edb64cde2f30fded65eb36a9cbac6172e7c90a49f6d2283c6b9cb27f215e111ae49cf41850f')
 
 build() {
   cd urllib3-$pkgver
