@@ -1,0 +1,43 @@
+diff --git i/python/libxml.c w/python/libxml.c
+index e071e824..9d476f4f 100644
+--- i/python/libxml.c
++++ w/python/libxml.c
+@@ -1621,28 +1621,37 @@ libxml_xmlErrorFuncHandler(ATTRIBUTE_UNUSED void *ctx, const char *msg,
+     PyObject *message;
+     PyObject *result;
+     char str[1000];
++    unsigned char *ptr = (unsigned char *)str;
+ 
+ #ifdef DEBUG_ERROR
+     printf("libxml_xmlErrorFuncHandler(%p, %s, ...) called\n", ctx, msg);
+ #endif
+ 
+ 
+     if (libxml_xmlPythonErrorFuncHandler == NULL) {
+         va_start(ap, msg);
+         vfprintf(stderr, msg, ap);
+         va_end(ap);
+     } else {
+         va_start(ap, msg);
+         if (vsnprintf(str, 999, msg, ap) >= 998)
+ 	    str[999] = 0;
+         va_end(ap);
+ 
++#if PY_MAJOR_VERSION >= 3
++        /* Ensure the error string doesn't start at UTF8 continuation. */
++        while (*ptr && (*ptr & 0xc0) == 0x80)
++            ptr++;
++#endif
++
+         list = PyTuple_New(2);
+         PyTuple_SetItem(list, 0, libxml_xmlPythonErrorFuncCtxt);
+         Py_XINCREF(libxml_xmlPythonErrorFuncCtxt);
+-        message = libxml_charPtrConstWrap(str);
++        message = libxml_charPtrConstWrap(ptr);
+         PyTuple_SetItem(list, 1, message);
+         result = PyEval_CallObject(libxml_xmlPythonErrorFuncHandler, list);
++        /* Forget any errors caused in the error handler. */
++        PyErr_Clear();
+         Py_XDECREF(list);
+         Py_XDECREF(result);
+     }
