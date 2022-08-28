@@ -4,7 +4,7 @@
 # Contributor: Dave Reisner <d@falconindy.com>
 
 pkgname=libgit2
-pkgver=1.4.4
+pkgver=1.5.0
 pkgrel=1
 epoch=1
 pkgdesc="A linkable library for Git"
@@ -17,17 +17,17 @@ provides=(libgit2.so)
 options=(debug)
 source=(
   $pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz
-  $pkgname-1.2.0-remove_http-parse_incompatible_tests.patch
+  $pkgname-1.5.0-remove_http-parse_incompatible_tests.patch
 )
-sha512sums=('8f4cc43de9b92866ac12e01613efe0ff808deca29ff82b6da98a38c814bb711ff3133145d0219210af7015955fbe381be6f1cb98915811d3c37e92b01eb522e9'
-            '01bf3a960b2e6d441017af363bff267bd1513915ebefda95012d7feb38f7020778ea0908664cc479da82f441a4dd2788772005006a9c19e87cfc234268dc3785')
-b2sums=('2668e351521e1cd9d2998c45c65e2a8c30f3436d94f86ebaa10382d01afb136bbde28c71d359fb57757ebbd44b1cef1bacd302023d0803a23697aee10f03ebac'
-        'e725fb41c9bdfd9952693c9c47be90c10a16a78ab91f80e74c40c5510a83325575ce95674a2e21282e9c300f2bc8d430c896fa379ef744b8a8a912729fa88827')
+sha512sums=('7a32b27cd32bd03ce7be6c127317f82a4ac6f16615c3234699676781f4858d057edb0410b2fe36fd2e634b00748a8b0be17f23809e09a7602ba48185134300f7'
+            'f9bb9ad7eb0f43003f5f72c81575ef5751b893fdf257d888b56818ee2c136b496b7cf72627a53dbd01319e33d0dd373e9d6df887360f7bec367419ef0c7ab711')
+b2sums=('4108de0e8fc6a02e4172f47cb69cdfe8c85a0a72235432ca58b02d94e0bcb8390caf0c710060772551cc3a392291778ae14b561256c6d88058d0ae5a277f2fbf'
+        'b3c2386ba84664318573e5c24797d28db914d60782397d8b39a21b54b4fb19502945fa8fcc0d8bbe8949349b5ec705d3e1345b0cbbb51b7d9631fec922f3ac41')
 
 prepare() {
   # remove tests that are only compatible with the (modified) vendored version
   # of http-parser, but not with upstream http-parser
-  patch -d $pkgname-$pkgver -Np1 -i ../$pkgname-1.2.0-remove_http-parse_incompatible_tests.patch
+  patch -d $pkgname-$pkgver -Np1 -i ../$pkgname-1.5.0-remove_http-parse_incompatible_tests.patch
 }
 
 build() {
@@ -39,16 +39,17 @@ build() {
         -Wno-dev \
         -B build \
         -S $pkgname-$pkgver
-  make VERBOSE=1 -C build
+  cmake --build build
 }
 
 check() {
-  make VERBOSE=1 test -C build
+  # NOTE: disable tests requiring the internet and relying on non-existent resources
+  ctest --test-dir build --output-on-failure -E "invasive|online"
 }
 
 package() {
   depends+=(libssh2.so)
 
-  make VERBOSE=1 DESTDIR="$pkgdir" install -C build
+  DESTDIR="$pkgdir" cmake --install build
   install -vDm 644 $pkgname-$pkgver/{AUTHORS,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
 }
