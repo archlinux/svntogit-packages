@@ -4,8 +4,8 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=5.18.19.hardened1
-pkgrel=2
+pkgver=5.19.5.hardened1
+pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -28,11 +28,11 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak
 )
-sha256sums=('dff09b251712fb3b387cb4e0f7b097c0ef3c7b6eb7f94a8c9aee6cc023fc88d5'
+sha256sums=('8c3f1cc4f93e50056bb0a8c15a41a8eb6acc7fd71bff6de60b1ef8c4532537bd'
             'SKIP'
-            '0c6dae9999ce58a459d51a596de76e7d92f87e3cedca49003c2853b40231c1e0'
+            'a40cdda0768cd23fba299d86793739d2643e82cb5f8c4f5fb0edae6a7a6bdfb8'
             'SKIP'
-            'a0d841868cd0435e478717188c2e4f8cfc5f7dc7eef046a832829ef7735adf39')
+            'd5bb723cb52c2bb10d4f9845c3436fa6f8ef30e8d11a461f335f9b0db83885b0')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -75,7 +75,7 @@ _package() {
   optdepends=('wireless-regdb: to set the correct wireless channels of your country'
               'linux-firmware: firmware images needed for some devices'
               'usbctl: deny_new_usb control')
-  provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE)
+  provides=(VIRTUALBOX-GUEST-MODULES WIREGUARD-MODULE KSMBD-MODULE)
 
   cd $_srcname
   local kernver="$(<version)"
