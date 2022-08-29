@@ -1,20 +1,20 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-attrs
-pkgver=21.4.0
+pkgver=22.1.0
 pkgrel=1
 pkgdesc="Attributes without boilerplate."
 arch=('any')
 license=('MIT')
-url="https://attrs.readthedocs.org/"
+url="https://www.attrs.org"
 depends=('python')
 makedepends=('python-setuptools')
 checkdepends=('python-pytest' 'python-cloudpickle' 'python-hypothesis' 'python-zope-interface')
 source=("https://pypi.io/packages/source/a/attrs/attrs-$pkgver.tar.gz")
-sha512sums=('5a52776eb505c8a354912fa037a9710e49830fa6ad37272cb6d8c3298f4179a5b237e36cd7db3b1c9af19fbf0194ad6b83c3db9a473f9349769180073273ba65')
+sha512sums=('447637bc82b31d565479e364869b996eaf7b67e526ad97f79ba1c27f287bbb25a2c40663e35437bc19037f605fac9322bd35f303f2769f0eb2ee673900551885')
 
 build() {
-  cd "$srcdir"/attrs-$pkgver
+  cd attrs-$pkgver
   python setup.py build
 }
 
@@ -26,5 +26,5 @@ check() {
 package() {
   cd attrs-$pkgver
   python setup.py install --root="$pkgdir" --optimize=1 --skip-build
-  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
