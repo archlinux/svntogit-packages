@@ -78,8 +78,6 @@ _backports=(
 )
 
 _reverts=(
-  # efi: Don't display a uefi-firmware entry if it's not supported
-  '26031d3b101648352e4e427f04bf69d320088e77'
 )
 
 _configure_options=(
