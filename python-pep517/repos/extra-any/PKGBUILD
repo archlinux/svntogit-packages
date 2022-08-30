@@ -1,41 +1,42 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-pep517
-pkgver=0.12.0
-pkgrel=4
+pkgver=0.13.0
+pkgrel=1
 pkgdesc="Wrappers to build Python packages using PEP 517 hooks"
 arch=('any')
 license=('MIT')
 url="https://github.com/takluyver/pep517"
 depends=('python-tomli')
-makedepends=('python-setuptools')
-checkdepends=('python-mock' 'python-pytest-flake8' 'python-testpath' 'python-pip' 'python-flit-core')
+makedepends=('python-build' 'python-flit-core' 'python-installer')
+checkdepends=('python-mock' 'python-pytest' 'python-testpath' 'python-pip')
 source=("https://pypi.io/packages/source/p/pep517/pep517-$pkgver.tar.gz")
-sha512sums=('5af1fd2e35414d2a91104c967c48e554c9f838d598e14bc55f9a824c16ba484c817a90065b6734568fc77660bd85b309347392774fb4d54dd969dab8680768e7')
+sha512sums=('110c62441e0084cb2f0b7310ec2d7bb3e08615d65efbeb84eab953ec21600fc4242ef8611f9cdf74a936c1f9e389f4379d165bb5c7a8bd9efe50ee53c1b8d4e1')
 
 prepare() {
+  cd pep517-$pkgver
   # Copied from openSUSE: 
   # Remove what appears to be overly cautious flag
   # that causes tests to require internet, both here
   # and the test suites of any dependencies. Tracking at:
   # https://github.com/pypa/pep517/issues/101
-  sed -i "s/ '--ignore-installed',//" pep517-$pkgver/pep517/envbuild.py
+  sed -i "s/ '--ignore-installed',//" pep517/envbuild.py
+
+  sed -i '/--flake8/d' pytest.ini
 }
 
 build() {
-  cd "$srcdir"/pep517-$pkgver
-  python setup.py build
+  cd pep517-$pkgver
+  python -m build --wheel --no-isolation
 }
 
 check() {
   cd pep517-$pkgver
-  # setup.py: https://github.com/pypa/pep517/issues/35
-  # tests/test_meta.py::test_classic_package: error in pip install command
-  pytest --deselect setup.py --deselect tests/test_meta.py::test_classic_package
+  pytest
 }
 
 package() {
   cd pep517-$pkgver
-  python setup.py install --root="$pkgdir" --optimize=1 --skip-build
-  install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+  python -m installer --destdir="$pkgdir/" dist/*.whl
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
