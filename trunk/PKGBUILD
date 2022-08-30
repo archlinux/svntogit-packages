@@ -2,31 +2,31 @@
 # Contributor: Tobias Roettger <toroettg@gmail.com>
 
 pkgname=python-ordered-set
-pkgver=4.0.2
-pkgrel=6
+pkgver=4.1.0
+pkgrel=1
 pkgdesc='A MutableSet that remembers its order, so that every entry has an index'
 arch=('any')
-url="https://github.com/LuminosoInsight/ordered-set"
+url="https://github.com/rspeer/ordered-set"
 license=('MIT')
 depends=('python')
-makedepends=('python-setuptools')
+makedepends=('python-build' 'python-flit-core' 'python-installer')
 checkdepends=('python-pytest')
 source=("https://pypi.io/packages/source/o/ordered-set/ordered-set-$pkgver.tar.gz")
-md5sums=('5d88f3870c32d4868b28c8fe833f7e74')
+sha512sums=('f12d19f7d9cf0ebcc414d97798f0959ff69a77146839cc6a9067c864f9e0be795795c4d648f736fd7448ddf89666ce37f23e7380d1c9b1678a4787961e4e1e79')
 
 build() {
   cd ordered-set-$pkgver
-  python setup.py build
+  python -m build --wheel --no-isolation
 }
 
 check() {
   cd ordered-set-$pkgver
-  pytest --doctest-modules test.py ordered_set.py README.md --doctest-glob=README.md --ignore=setup.py
+  pytest
 }
 
 package() {
   cd ordered-set-$pkgver
-  python setup.py install --root="$pkgdir/" --optimize=1
+  python -m installer --destdir="$pkgdir/" dist/*.whl
   install -Dm644 MIT-LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
 
