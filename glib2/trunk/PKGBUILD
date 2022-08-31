@@ -46,8 +46,8 @@ build() {
     --default-library both \
     -D glib_debug=disabled \
     -D selinux=disabled \
-    -D man=true \
     -D sysprof=enabled \
+    -D man=true \
     -D gtk_doc=true
   meson compile -C build
 }
