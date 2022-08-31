@@ -13,7 +13,7 @@ depends=(pcre libffi util-linux-libs zlib libsysprof-capture)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus)
 checkdepends=(desktop-file-utils)
-options=('debug' 'staticlibs')
+options=(debug staticlibs)
 _commit=dce30492f6087a8e1e288f1706d41142b74ca1ff  # tags/2.72.3^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
