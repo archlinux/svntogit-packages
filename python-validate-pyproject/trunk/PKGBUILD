@@ -1,17 +1,17 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-validate-pyproject
-pkgver=0.9
+pkgver=0.10
 pkgrel=1
 pkgdesc="Validation library and CLI tool for checking on 'pyproject.toml' files using JSON Schema"
 url="https://github.com/abravalheri/validate-pyproject"
 license=('MPL')
 arch=('any')
 depends=('python-packaging' 'python-trove-classifiers' 'python-tomli')
-makedepends=('python-setuptools-scm')
-checkdepends=('python-pytest-cov')
+makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools-scm')
+checkdepends=('python-pytest')
 source=("https://github.com/abravalheri/validate-pyproject/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('6928041c4c86b40a4999ed86ede53d6bb397612ef2372bdeb11f0efd86c178bd092c2e13d46e5ede8ff499dfd0dd4d47dab6441762a7d2ae257e19a909f28609')
+sha512sums=('a77cf65f844ef922e8311e3226d099f4a2a293006b8a614779a90e24de8b578c187a3faf6a1351eaf10f2084bcd6c5746549b7de1b25b165734626e84eb0feb0')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -20,6 +20,8 @@ prepare() {
 
   # Upstream author only supports VCS builds
   echo "recursive-include src *.template *.json LICENSE LICENSE.*" > MANIFEST.in
+
+  sed -i '/--cov/d' setup.cfg
 
   # Devendor fastjsonschema
   # Disabled: functional differences due to changes in vendored copy
@@ -34,18 +36,18 @@ prepare() {
 
 build() {
   cd validate-pyproject-$pkgver
-  python setup.py build
+  python -m build -wn
 }
 
 check() {
   cd validate-pyproject-$pkgver
-  python setup.py install --root="$PWD/tmp_install" --optimize=1
+  python -m installer --destdir=tmp_install dist/*.whl
   PYTHONPATH="$PWD/tmp_install/usr/lib/python3.10/site-packages:$PYTHONPATH" pytest --doctest-modules --ignore src/validate_pyproject/_vendor src
-  # Deselected tests require a installed validate-pyproject
+  # Deselected tests requiring a installed validate-pyproject
   PYTHONPATH="$PWD/tmp_install/usr/lib/python3.10/site-packages:$PYTHONPATH" pytest --deselect tests/test_pre_compile.py --deselect tests/test_vendoring.py
 }
 
 package() {
   cd validate-pyproject-$pkgver
-  python setup.py install --root="$pkgdir" --optimize=1
+  python -m installer --destdir="$pkgdir" dist/*.whl
 }
