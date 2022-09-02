@@ -7,7 +7,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.37
+pkgver=2.2.38
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 url='https://www.gnupg.org/'
@@ -35,10 +35,14 @@ source=(
   'drop-import-clean.patch'
   'avoid-beta-warning.patch'
 )
-sha256sums=('95f8928b4a21890658660c2c10db63a765286864612e7581932b5c3d16aca871'
+sha256sums=('f02bd9853ea25d7bc3051a5725fb8b455f2481cffb498c707b78cf4380fe97ea'
             'SKIP'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
+b2sums=('249fd6502a1607d1881fd97e4a97a1a3557da26929b67424bafcf29b5ef1588c9295347c5be497a8485dd61755bfe40b4f0232e0f1f67d2517c69613c6080da1'
+        'SKIP'
+        'd598015e7f27b27840667d1656c083b4ad85d6acdd312e9929854067313a5f28415ee7eecf4d84a4b8da0385b667aaa01a9743461f5c785402a56c238274e376'
+        '7ea069e81e2d91a3154bcb62516b4b599f34596de277f95ad1ccaba73869c4f84f94f063b65026ba0bc8a72c0fd8e8e182b82346964f67ea78166b6399c923c5')
 
 install=$pkgname.install
 
