@@ -22,7 +22,7 @@ _commit='d9b4638c50b16d4722e66d334e2c1a674b4a45cc'
 _pkgver=2.06.r322.gd9b4638c5
 _unifont_ver='14.0.04'
 pkgver=${_pkgver/-/}
-pkgrel=3
+pkgrel=4
 url='https://www.gnu.org/software/grub/'
 arch=('x86_64')
 license=('GPL3')
@@ -62,6 +62,7 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#commit=${_commit}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_unifont_ver}/unifont-${_unifont_ver}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
         '0002-10_linux-detect-archlinux-initramfs.patch'
+        '0003-kern-efi-mm-increase-default-heap-size.patch'
         'grub.default'
         'sbat.csv')
 
@@ -71,6 +72,7 @@ sha256sums=('SKIP'
             'SKIP'
             '5dee6628c48eef79812bb9e86ee772068d85e7fcebbd2b2b8d1e19d24eda9dab'
             '8488aec30a93e8fe66c23ef8c23aefda39c38389530e9e73ba3fbcc8315d244d'
+            '5529b5ef0cc735106b39b27329a6d1360323195cc2e75148d323ec0e681ed398'
             'c17bf255a41103f6b71a1710afc7e9addaebc578bcf51a48845e227b2f651682'
             '98b23d41e223bdc0a6e20bdcb3aa77e642f29b64081b1fd2f575314172fc89df')
 
@@ -123,10 +125,13 @@ prepare() {
 
 	echo "Patch to enable GRUB_COLOR_* variables in grub-mkconfig..."
 	## Based on http://lists.gnu.org/archive/html/grub-devel/2012-02/msg00021.html
-        patch -Np1 -i "${srcdir}/0001-00_header-add-GRUB_COLOR_-variables.patch"
+	patch -Np1 -i "${srcdir}/0001-00_header-add-GRUB_COLOR_-variables.patch"
 
 	echo "Patch to detect of Arch Linux initramfs images by grub-mkconfig..."
-        patch -Np1 -i "${srcdir}/0002-10_linux-detect-archlinux-initramfs.patch"
+	patch -Np1 -i "${srcdir}/0002-10_linux-detect-archlinux-initramfs.patch"
+
+	echo "Patch to increase default heap size..."
+	patch -Np1 -i "${srcdir}/0003-kern-efi-mm-increase-default-heap-size.patch"
 
 	echo "Fix DejaVuSans.ttf location so that grub-mkfont can create *.pf2 files for starfield theme..."
 	sed 's|/usr/share/fonts/dejavu|/usr/share/fonts/dejavu /usr/share/fonts/TTF|g' -i "configure.ac"
