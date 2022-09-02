@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=62.3.3
+pkgver=62.3.4
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -15,14 +15,13 @@ depends=('python-appdirs' 'python-jaraco.text' 'python-more-itertools' 'python-n
          'python-validate-pyproject')
 makedepends=('git' 'python-setuptools')
 checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip' 'python-pip-run'
-              'python-pytest-fixture-config' 'python-pytest-flake8' 'python-pytest-virtualenv'
-              'python-wheel' 'python-paver' 'python-pytest-cov' 'python-sphinx' 'python-build'
-              'python-ini2toml' 'python-tomli-w')
+              'python-pytest-fixture-config' 'python-pytest-virtualenv' 'python-wheel'
+              'python-paver' 'python-sphinx' 'python-build' 'python-ini2toml' 'python-tomli-w')
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('90d4bf5b8ec9f443239286482e83b87e6514128e74193ad79edf01d1b0adfc25f6b886803a53b6774780ad1079bef604a1f2e815d68ece970ed463a18b86a7f0'
+sha512sums=('3a94fe9e359111b17c3e2ec904485f4be86533728a55db41e9ae44df3eaa6857f5cc8607316fa986b92f59c63ad623586c783815911c809340a802850f6d3ab0'
             '50495062093b1b6902484c384abe073896e4f45c5768741582e178014367f186831711a72a8a987e7bacafe96d871161fc07c686dd92c6886de19302f6a10b56')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
