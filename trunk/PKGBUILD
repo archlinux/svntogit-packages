@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.72.3
-pkgrel=2
+pkgrel=3
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -38,8 +38,9 @@ prepare() {
 
 build() {
   # Produce more debug info: GLib has a lot of useful macros
-  CFLAGS+=' -g3'
-  CXXFLAGS+=' -g3'
+  # use fat LTO objects for static libraries
+  CFLAGS+=' -ffat-lto-objects -g3'
+  CXXFLAGS+=' -ffat-lto-objects -g3'
 
   CFLAGS+=" -DG_DISABLE_CAST_CHECKS"
   arch-meson glib build \
