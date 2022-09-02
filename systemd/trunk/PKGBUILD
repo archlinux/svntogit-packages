@@ -189,7 +189,7 @@ package_systemd() {
           etc/udev/udev.conf)
   install=systemd.install
 
-  DESTDIR="$pkgdir" meson install -C build
+  meson install -C build --destdir "$pkgdir"
 
   # we'll create this on installation
   rmdir "$pkgdir"/var/log/journal/remote
