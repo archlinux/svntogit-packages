@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -42,6 +42,7 @@ makedepends=(
   brltty
   bzip2
   cairo
+  capstone
   curl
   dtc
   fuse3
@@ -120,6 +121,7 @@ b2sums=('e05f91ce4993c7591a2df08b5fb017f8b8ec2141ab7bfd55d14730ea6b793ac1091de53
 validpgpkeys=('CEACC9E15534EBABB82D3FA03353C9CEF108B584') # Michael Roth <flukshun@gmail.com>
 
 _qemu_system_deps=(
+  capstone
   dtc
   fuse3
   gcc-libs
@@ -307,6 +309,10 @@ build() {
 package_qemu-common() {
   license+=(BSD MIT)
   depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so hicolor-icon-theme libcap-ng libcap-ng.so)
+  backup=(
+    etc/$pkgbase/bridge.conf
+    etc/sasl2/$pkgbase.conf
+  )
   install=$pkgname.install
 
   # install static binaries
@@ -627,7 +633,7 @@ package_qemu-guest-agent() {
   install -vDm 644 $pkgbase-$pkgver/contrib/systemd/$pkgname.service -t "$pkgdir/usr/lib/systemd/system/"
   install -vDm 644 99-$pkgname.rules -t "$pkgdir/usr/lib/udev/rules.d/"
   install -vDm 644 $pkgbase-ga.conf -t "$pkgdir/etc/$pkgbase/"
-  install -vDm 644 $pkgbase-$pkgver/scripts/$pkgname/fsfreeze-hook -t "$pkgdir/etc/$pkgbase/"
+  install -vDm 755 $pkgbase-$pkgver/scripts/$pkgname/fsfreeze-hook -t "$pkgdir/etc/$pkgbase/"
   install -vdm 755 "$pkgdir/etc/$pkgbase/fsfreeze-hook.d"
 }
 
@@ -918,7 +924,7 @@ package_qemu-ui-spice-core() {
 
 package_qemu-user() {
   pkgdesc="QEMU user mode emulation"
-  depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc gnutls liburing liburing.so qemu-common zlib)
+  depends=(capstone gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc gnutls liburing liburing.so qemu-common zlib)
   mv -v $pkgname/* "$pkgdir"
 }
 
