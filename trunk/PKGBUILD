@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=104.0.1
+pkgver=104.0.2
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -24,7 +24,7 @@ options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         arc4random.diff
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('f23f4198bd9ba1bbb7420a622080301adb924fafbd6d83b00b1e6cc687e75f4e'
+sha256sums=('72bba06f04e7745f6b02951906413eb1c15a7e253e06e373302162c6219f286a'
             'SKIP'
             '714ca50b2ce0cac470dbd5a60e9a0101b28072f08a5e7a9bba94fef2058321c4'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
