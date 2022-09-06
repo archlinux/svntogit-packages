@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=5.1.1
-pkgrel=2
+pkgrel=3
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -26,9 +26,11 @@ depends=(
   libass.so
   libavc1394
   libbluray.so
+  libbs2b.so
   libdav1d.so
   libdrm
   libfreetype.so
+  libgl
   libiec61883
   libmfx
   libmodplug
@@ -47,6 +49,7 @@ depends=(
   libvorbisenc.so
   libvorbis.so
   libvpx.so
+  libvulkan.so
   libwebp
   libx11
   libx264.so
@@ -57,6 +60,7 @@ depends=(
   libxv
   libxvidcore.so
   libzimg.so
+  ocl-icd
   opencore-amr
   openjpeg2
   opus
@@ -76,7 +80,10 @@ makedepends=(
   ffnvcodec-headers
   git
   ladspa
+  mesa
   nasm
+  opencl-headers
+  vulkan-headers
 )
 optdepends=(
   'avisynthplus: AviSynthPlus support'
@@ -135,6 +142,7 @@ build() {
     --enable-libaom \
     --enable-libass \
     --enable-libbluray \
+    --enable-libbs2b \
     --enable-libdav1d \
     --enable-libdrm \
     --enable-libfreetype \
@@ -172,8 +180,11 @@ build() {
     --enable-libzimg \
     --enable-nvdec \
     --enable-nvenc \
+    --enable-opencl \
+    --enable-opengl \
     --enable-shared \
-    --enable-version3
+    --enable-version3 \
+    --enable-vulkan
   make
   make tools/qt-faststart
   make doc/ff{mpeg,play}.1
