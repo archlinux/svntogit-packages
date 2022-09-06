@@ -61,7 +61,7 @@ build() {
       --disable-werror
   )
 
-  cd "$srcdir/glibc-build"
+  cd "${srcdir}"/glibc-build
 
   echo "slibdir=/usr/lib" >> configparms
   echo "rtlddir=/usr/lib" >> configparms
@@ -73,7 +73,7 @@ build() {
   # remove fortify for building libraries
   CFLAGS=${CFLAGS/-Wp,-D_FORTIFY_SOURCE=2/}
 
-  "$srcdir/glibc/configure" \
+  "${srcdir}"/glibc/configure \
       --libdir=/usr/lib \
       --libexecdir=/usr/lib \
       "${_configure_flags[@]}"
@@ -90,7 +90,7 @@ build() {
   # build info pages manually for reproducibility
   make info
 
-  cd "$srcdir/lib32-glibc-build"
+  cd "${srcdir}"/lib32-glibc-build
   export CC="gcc -m32 -mstackrealign"
   export CXX="g++ -m32 -mstackrealign"
 
@@ -99,7 +99,7 @@ build() {
   echo "sbindir=/usr/bin" >> configparms
   echo "rootsbindir=/usr/bin" >> configparms
 
-  "$srcdir/glibc/configure" \
+  "${srcdir}"/glibc/configure \
       --host=i686-pc-linux-gnu \
       --libdir=/usr/lib32 \
       --libexecdir=/usr/lib32 \
@@ -124,7 +124,7 @@ build() {
 skip_test() {
   test=${1}
   file=${2}
-  sed -i "s/\b${test}\b//" "${srcdir}"/glibc/${file}
+  sed -i "s/\b${test}\b//" "${{srcdir}}"/glibc/${file}
 }
 
 check() {
@@ -162,41 +162,41 @@ package_glibc() {
           etc/locale.gen
           etc/nscd.conf)
 
-  make -C glibc-build install_root="$pkgdir" install
-  rm -f "$pkgdir"/etc/ld.so.cache
+  make -C glibc-build install_root="${pkgdir}" install
+  rm -f "${pkgdir}"/etc/ld.so.cache
 
   # Shipped in tzdata
-  rm -f "$pkgdir"/usr/bin/{tzselect,zdump,zic}
+  rm -f "${pkgdir}"/usr/bin/{tzselect,zdump,zic}
 
   cd glibc
 
-  install -dm755 "$pkgdir"/usr/lib/{locale,systemd/system,tmpfiles.d}
-  install -m644 nscd/nscd.conf "$pkgdir/etc/nscd.conf"
-  install -m644 nscd/nscd.service "$pkgdir/usr/lib/systemd/system"
-  install -m644 nscd/nscd.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/nscd.conf"
-  install -dm755 "$pkgdir/var/db/nscd"
+  install -dm755 "${pkgdir}"/usr/lib/{locale,systemd/system,tmpfiles.d}
+  install -m644 nscd/nscd.conf "${pkgdir}"/etc/nscd.conf
+  install -m644 nscd/nscd.service "${pkgdir}"/usr/lib/systemd/system
+  install -m644 nscd/nscd.tmpfiles "${pkgdir}"/usr/lib/tmpfiles.d/nscd.conf
+  install -dm755 "${pkgdir}"/var/db/nscd
 
-  install -m644 posix/gai.conf "$pkgdir"/etc/gai.conf
+  install -m644 posix/gai.conf "${pkgdir}"/etc/gai.conf
 
-  install -m755 "$srcdir/locale-gen" "$pkgdir/usr/bin"
+  install -m755 "${srcdir}"/locale-gen "${pkgdir}"/usr/bin
 
   # Create /etc/locale.gen
-  install -m644 "$srcdir/locale.gen.txt" "$pkgdir/etc/locale.gen"
+  install -m644 "${srcdir}"/locale.gen.txt "${pkgdir}"/etc/locale.gen
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
-    "$srcdir/glibc/localedata/SUPPORTED" >> "$pkgdir/etc/locale.gen"
+    "${srcdir}"/glibc/localedata/SUPPORTED >> "${pkgdir}"/etc/locale.gen
 
   # Add SUPPORTED file
-  install -dm644 "$srcdir"/glibc/localedata/SUPPORTED "$pkgdir"/usr/share/i18n/SUPPORTED
+  install -dm644 "${srcdir}"/glibc/localedata/SUPPORTED "${pkgdir}"/usr/share/i18n/SUPPORTED
 
   # install C.UTF-8 so that it is always available
-  install -dm755 "$pkgdir/usr/lib/locale"
-  cp -r "$srcdir/C.UTF-8" -t "$pkgdir/usr/lib/locale"
-  sed -i '/#C\.UTF-8 /d' "$pkgdir/etc/locale.gen"
+  install -dm755 "${pkgdir}"/usr/lib/locale
+  cp -r "${srcdir}"/C.UTF-8 -t "${pkgdir}"/usr/lib/locale
+  sed -i '/#C\.UTF-8 /d' "${pkgdir}"/etc/locale.gen
 
   # Provide tracing probes to libstdc++ for exceptions, possibly for other
   # libraries too. Useful for gdb's catch command.
-  install -Dm644 "$srcdir/sdt.h" "$pkgdir/usr/include/sys/sdt.h"
-  install -Dm644 "$srcdir/sdt-config.h" "$pkgdir/usr/include/sys/sdt-config.h"
+  install -Dm644 "${srcdir}"/sdt.h "${pkgdir}"/usr/include/sys/sdt.h
+  install -Dm644 "${srcdir}"/sdt-config.h "${pkgdir}"/usr/include/sys/sdt-config.h
 }
 
 package_lib32-glibc() {
@@ -206,19 +206,19 @@ package_lib32-glibc() {
 
   cd lib32-glibc-build
 
-  make install_root="$pkgdir" install
-  rm -rf "$pkgdir"/{etc,sbin,usr/{bin,sbin,share},var}
+  make install_root="${pkgdir}" install
+  rm -rf "${pkgdir}"/{etc,sbin,usr/{bin,sbin,share},var}
 
   # We need to keep 32 bit specific header files
-  find "$pkgdir/usr/include" -type f -not -name '*-32.h' -delete
+  find "${pkgdir}"/usr/include -type f -not -name '*-32.h' -delete
 
   # Dynamic linker
-  install -d "$pkgdir/usr/lib"
-  ln -s ../lib32/ld-linux.so.2 "$pkgdir/usr/lib/"
+  install -d "${pkgdir}"/usr/lib
+  ln -s ../lib32/ld-linux.so.2 "${pkgdir}"/usr/lib/
 
   # Add lib32 paths to the default library search path
-  install -Dm644 "$srcdir/lib32-glibc.conf" "$pkgdir/etc/ld.so.conf.d/lib32-glibc.conf"
+  install -Dm644 "${srcdir}"/lib32-glibc.conf "${pkgdir}"/etc/ld.so.conf.d/lib32-glibc.conf
 
   # Symlink /usr/lib32/locale to /usr/lib/locale
-  ln -s ../lib/locale "$pkgdir/usr/lib32/locale"
+  ln -s ../lib/locale "${pkgdir}"/usr/lib32/locale
 }
