@@ -185,6 +185,9 @@ package_glibc() {
   sed -e '1,3d' -e 's|/| |g' -e 's|\\| |g' -e 's|^|#|g' \
     "$srcdir/glibc/localedata/SUPPORTED" >> "$pkgdir/etc/locale.gen"
 
+  # Add SUPPORTED file
+  install -dm644 "$srcdir"/glibc/localedata/SUPPORTED "$pkgdir"/usr/share/i18n/SUPPORTED
+
   # install C.UTF-8 so that it is always available
   install -dm755 "$pkgdir/usr/lib/locale"
   cp -r "$srcdir/C.UTF-8" -t "$pkgdir/usr/lib/locale"
