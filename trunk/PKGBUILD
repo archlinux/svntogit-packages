@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=5.1.1
-pkgrel=1
+pkgrel=2
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -97,17 +97,17 @@ provides=(
 options=(
   debug
 )
-_tag=1bad30dbe34f2d100b43e8f773d3fe0b5eb23523
+_tag=8536e629f0c35c0e8a2b67e65d3bc60a088fe413
 source=(
-  git+https://git.ffmpeg.org/ffmpeg.git#tag=${_tag}
+  git+https://git.ffmpeg.org/ffmpeg.git?signed#tag=${_tag}
   add-av_stream_get_first_dts-for-chromium.patch
 )
 b2sums=('SKIP'
         '555274228e09a233d92beb365d413ff5c718a782008075552cafb2130a3783cf976b51dfe4513c15777fb6e8397a34122d475080f2c4483e8feea5c0d878e6de')
+validpgpkeys=(DD1EC9E8DE085C629B3E1846B18E8928B3948D64) # Michael Niedermayer <michael@niedermayer.cc>
 
 prepare() {
   cd ffmpeg
-  git cherry-pick -n 412922cc6fa790897ef6bb2be5d6f9a5f030754d # remove default IPFS gateway
   patch -Np1 -i ../add-av_stream_get_first_dts-for-chromium.patch # https://crbug.com/1251779
 }
 
@@ -118,7 +118,6 @@ pkgver() {
 
 build() {
   cd ffmpeg
-
   ./configure \
     --prefix=/usr \
     --disable-debug \
@@ -175,7 +174,6 @@ build() {
     --enable-nvenc \
     --enable-shared \
     --enable-version3
-
   make
   make tools/qt-faststart
   make doc/ff{mpeg,play}.1
