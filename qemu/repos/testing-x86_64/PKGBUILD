@@ -15,7 +15,7 @@ pkgname=(
   qemu-hw-usb-{host,redirect,smartcard}
   qemu-img
   qemu-pr-helper
-  qemu-system-{aarch64,alpha,arm,avr,cris,hppa,m68k,microblaze,mips,nios2,or1k,ppc,riscv,rx,s390x,sh4,sparc,tricore,x86,xtensa}
+  qemu-system-{aarch64,alpha,arm,avr,cris,hppa,loongarch64,m68k,microblaze,mips,nios2,or1k,ppc,riscv,rx,s390x,sh4,sparc,tricore,x86,xtensa}
   qemu-tests
   qemu-tools
   qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}
@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.1.0
-pkgrel=3
+pkgrel=4
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
