@@ -3,18 +3,18 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=grep
-pkgver=3.7
-pkgrel=1
+pkgver=3.8
+pkgrel=2
 pkgdesc='A string search utility'
 arch=('x86_64')
 license=('GPL3')
 url='https://www.gnu.org/software/grep/'
 groups=('base-devel')
-depends=('glibc' 'pcre')
+depends=('glibc' 'pcre2')
 makedepends=('texinfo')
 validpgpkeys=('155D3FC500C834486D1EEA677FD9FCCB000BEEEE') # Jim Meyering
 source=("https://ftp.gnu.org/gnu/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig})
-sha256sums=('5c10da312460aec721984d5d83246d24520ec438dd48d7ab5a05dbc0d6d6823c'
+sha256sums=('498d7cc1b4fb081904d87343febb73475cf771e424fb7e6141aff66013abc382'
             'SKIP')
 
 prepare() {
