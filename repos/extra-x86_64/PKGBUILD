@@ -1,9 +1,9 @@
 # Maintainer: Christian Hesse <mail@eworm.de>
 
 pkgname=rsync
-_tag='001cc050f46d05cb0487359ed5101018da14a5a3' # git rev-parse v${pkgver}
-pkgver=3.2.5
-pkgrel=2
+_tag='40695f1e31d29e5d715d986a53cdad1fe0ce0210' # git rev-parse v${pkgver}
+pkgver=3.2.6
+pkgrel=1
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
 url='https://rsync.samba.org/'
