@@ -25,7 +25,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.1.0
-pkgrel=4
+pkgrel=5
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -761,6 +761,7 @@ package_qemu-system-ppc() {
   pkgdesc="QEMU system emulator for PPC"
   # NOTE: will require openbios
   depends=("${_qemu_system_deps[@]}" systemd-libs libudev.so)
+  options=(!strip)
   mv -v $pkgname/* "$pkgdir"
 }
 
