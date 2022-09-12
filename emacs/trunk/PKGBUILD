@@ -5,8 +5,8 @@
 
 pkgbase=emacs
 pkgname=(emacs emacs-nativecomp emacs-nox)
-pkgver=28.1
-pkgrel=7
+pkgver=28.2
+pkgrel=1
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
@@ -45,11 +45,12 @@ depends=(
   zlib
 )
 makedepends=(libgccjit)
-validpgpkeys=('17E90D521672C04631B1183EE78DAE0F3115E06B')
 options=(debug)
 source=(https://ftp.gnu.org/gnu/emacs/${pkgname}-${pkgver}.tar.xz{,.sig})
-b2sums=('42a12bec2dc74f4838ae79b5589fb7439ff415d8ddd34f2ff7a8c503f909ddd4144ad35ae19c758d8627cfa9ed29276b326c5bec3853a77cd179e9fb17d22ad7'
+b2sums=('a7e4990658b5e7306510f8dded93aaf0b82cdd9306df8b786526d038c3249ef9579287075f2235eb01a71ae1699db555254f137b86ab2d2305b45895053df552'
         'SKIP')
+validpgpkeys=('17E90D521672C04631B1183EE78DAE0F3115E06B'  # Eli Zaretskii <eliz@gnu.org>
+              'CEA1DE21AB108493CC9C65742E82323B8F4353EE') # Stefan Kangas <stefankangas@gmail.com>
 
 prepare() {
   cp -ar ${pkgname}-${pkgver} ${pkgbase}-${pkgver}-nativecomp
