@@ -1,0 +1,47 @@
+# Maintainer: Laurent Carlier <lordheavym@archlinux.org>
+
+pkgname=directx-shader-compiler
+pkgdesc="A compiler for HLSL to DXIL (DirectX Intermediate Language)."
+pkgver=1.7.2207
+pkgrel=1
+arch=('x86_64')
+url="https://github.com/microsoft/${_pkgname}"
+license=('custom')
+depends=('ncurses')
+makedepends=('git' 'cmake' 'ninja' 'python')
+source=("directx-shader-compiler-${pkgver}::git+https://github.com/microsoft/DirectXShaderCompiler.git#tag=v${pkgver}")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "${pkgname}-${pkgver}"
+
+  git submodule update --init
+
+  rm -rf build && mkdir build
+}
+
+build() {
+  cd "${pkgname}-${pkgver}"/build
+
+  cmake .. -G Ninja \
+    -C ../cmake/caches/PredefinedParams.cmake \
+    -DCMAKE_BUILD_TYPE=Release
+
+  ninja
+}
+
+package() {
+  cd "${pkgname}-${pkgver}"
+
+  install -m755 -d "${pkgdir}"/usr/bin
+  install -m755 -d "${pkgdir}"/usr/lib
+  install -m755 -d "${pkgdir}"/usr/include
+  install -m755 -d "${pkgdir}"/usr/share/licenses/${pkgname}
+
+  install build/bin/dxc "${pkgdir}"/usr/bin/
+  cp build/lib/libdxcompiler.so* "${pkgdir}"/usr/lib/
+  cp -r include/dxc "${pkgdir}"/usr/include/
+
+  install LICENSE.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/
+  install ThirdPartyNotices.txt "${pkgdir}"/usr/share/licenses/${pkgname}
+}
