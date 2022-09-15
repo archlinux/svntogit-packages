@@ -4,7 +4,7 @@
 # Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
 
 pkgname=python-twisted
-pkgver=22.4.0
+pkgver=22.8.0
 pkgrel=1
 pkgdesc="Asynchronous networking framework written in Python"
 arch=('any')
@@ -31,7 +31,7 @@ checkdepends=('python-pyhamcrest' 'subversion' 'xorg-server-xvfb' 'tk' 'openssh'
 # Conflicts with the command line tools used to be provided by the python2 package.
 conflicts=("python2-twisted<=20.3.0-3")
 source=("https://github.com/twisted/twisted/archive/twisted-$pkgver.tar.gz")
-sha512sums=('776d36040bcefb9ca65e471d9058fe1067ffc8171a501cb451e9d4824a88dd83f79dc9b27a127ca898451587454ee661000acbce6c4c39b069aeadd64710f103')
+sha512sums=('890a11ca55fd88636f404678c6fad3fcea9d0604b1b37681a4b92ea74952bc4d1b96a571dde39a4aa82d966121156801f6b42dbd0bb5a309503591a7a77c6d71')
 
 build() {
   cd twisted-twisted-$pkgver
