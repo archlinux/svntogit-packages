@@ -1,8 +1,8 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=noto-fonts-emoji
-pkgver=20211101
-_commit=9a5261d871451f9b5183c93483cbd68ed916b1e9
+pkgver=20220906
+_commit=7f2b4d6c31e30384bdda85521446785313b3c9c4
 pkgrel=1
 pkgdesc='Google Noto emoji fonts'
 arch=(any)
