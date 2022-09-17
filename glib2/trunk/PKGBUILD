@@ -3,23 +3,23 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.72.3
-pkgrel=3
+pkgver=2.74.0
+pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
 arch=(x86_64)
-depends=(pcre libffi util-linux-libs zlib libsysprof-capture)
+depends=(pcre2 libffi util-linux-libs zlib libsysprof-capture)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus)
 checkdepends=(desktop-file-utils)
 options=(debug staticlibs)
-_commit=dce30492f6087a8e1e288f1706d41142b74ca1ff  # tags/2.72.3^0
+_commit=30bd57ecf8aa051de9848ba5a2b140f4810401ff  # tags/2.74.0^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
         0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
         glib-compile-schemas.hook gio-querymodules.{hook,script})
 sha256sums=('SKIP'
-            'f410289d8acf787cf0fc512efe5622d4bbd574c032e3ee0efd9cae2155b2c3dc'
+            '6d51eb5856268d79eee01b97a299fa9f99db18b2abb4df56f2ed9e641a09138a'
             '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
             '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
             '92d08db5aa30bda276bc3d718e7ff9dd01dc40dcab45b359182dcc290054e24e')
