@@ -99,11 +99,12 @@ parameter() {
 
 kver() {
     # get kernel version from installed kernel
-    [[ "$(uname -m)" == "x86_64" ]] && VMLINUZ=/boot/vmlinuz-linux
+    [[ "$(uname -m)" == "x86_64" || "$(uname -m)" == "riscv64" ]] && VMLINUZ=/boot/vmlinuz-linux
     [[ "$(uname -m)" == "aarch64" ]] && VMLINUZ=/boot/Image
     if [[ -f "${VMLINUZ}" ]]; then
-        offset=$(hexdump -s 526 -n 2 -e '"%0d"' "${VMLINUZ}")
-        read -r _HWKVER _ < <(dd if="${VMLINUZ}" bs=1 count=127 skip=$(( offset + 0x200 )) 2>/dev/null)
+        reader=cat
+        [[ $(file -b --mime-type "${VMLINUZ}") == 'application/gzip' ]] && reader=zcat
+        read _ _ kver _ < <($reader "${VMLINUZ}" | grep -m1 -aoE 'Linux version .(\.[-[:alnum:]]+)+')
     fi
     # fallback if no detectable kernel is installed
     [[ "${_HWKVER}" == "" ]] && _HWKVER="$(uname -r)"
