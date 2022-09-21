@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=105.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
 license=(MPL GPL LGPL)
@@ -22,9 +22,11 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'xdg-desktop-portal: Screensharing with Wayland')
 options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
+        0001-Bug-1786638-Return-early-if-we-can-t-fetch-an-intern.patch
         $pkgname.desktop identity-icons-brand.svg)
 sha256sums=('2b5becbb89aa2b2007ba8c86ad517aeae1b54904d007d9d3acbf054be6a0ed62'
             'SKIP'
+            'befaba1bb16e441953cb36d8ac494991b62134cfbf40cd339904a55034472dd5'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
@@ -44,6 +46,9 @@ _mozilla_api_key=e05d56db0a694edc8b5aaebda3f2db6a
 prepare() {
   mkdir mozbuild
   cd firefox-$pkgver
+
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1786638
+  patch -Np1 -i ../0001-Bug-1786638-Return-early-if-we-can-t-fetch-an-intern.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
