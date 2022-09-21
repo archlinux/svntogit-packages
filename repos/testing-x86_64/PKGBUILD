@@ -4,7 +4,7 @@
 pkgbase=webkit2gtk-4.1
 pkgname=(webkit2gtk-4.1 webkit2gtk-4.1-docs)
 pkgver=2.38.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Web content engine for GTK"
 url="https://webkitgtk.org"
 arch=(x86_64)
