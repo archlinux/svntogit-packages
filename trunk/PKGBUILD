@@ -3,38 +3,45 @@
 
 pkgbase=flac
 pkgname=('flac' 'flac-doc')
-pkgver=1.4.0
+pkgver=1.4.1
 pkgrel=1
 pkgdesc='Free Lossless Audio Codec'
 url='https://xiph.org/flac/'
 arch=('x86_64')
 license=('BSD' 'GPL')
 depends=('gcc-libs' 'libogg')
-makedepends=('nasm' 'cmake' 'ninja' 'doxygen')
+makedepends=('nasm' 'cmake' 'ninja' 'doxygen' 'git' 'pandoc')
 options=('debug')
-source=(https://downloads.xiph.org/releases/flac/flac-${pkgver}.tar.xz)
-sha512sums=('b7310de7bcf49584c0a1fdc6d5ee7216a8ab3e2b1af85366fa0905752da13e1cbb9638e0d92f3b756568a69848abf4d5c2fe0d21a86c6fdb4840f2678daf0f8d')
+_commit=b6fbd6b3d97e2da4481bdbd25176f263fd6a5e75  # tags/1.4.1
+source=("git+https://github.com/xiph/flac?signed#commit=$_commit")
+b2sums=('SKIP')
+validpgpkeys=('5DE3E0509C47EA3CF04A42D34AEE18F83AFDEB23') # https://github.com/web-flow.gpg
+
+pkgver() {
+  cd flac
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
 
 prepare() {
-  cd flac-${pkgver}
+  cd flac
 
   # Shorten tests
   sed -i 's/FLAC__TEST_LEVEL=1/FLAC__TEST_LEVEL=0/' test/CMakeLists.txt
 }
 
 build() {
-  cmake -S flac-${pkgver} -B build -G Ninja \
+  cmake -S flac -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INSTALL_MANDIR=/usr/share/man/man1 \
     -DBUILD_SHARED_LIBS=ON \
+    -DINSTALL_MANPAGES=ON \
     -DWITH_STACK_PROTECTOR=OFF \
     -DNDEBUG=ON
   cmake --build build
 
   # Build docs and place them where install expects them
   cmake --build build --target FLAC-doxygen
-  mv build/doc/doxytmp/html flac-${pkgver}/doc/api
+  mv build/doc/doxytmp/html flac/doc/api
 }
 
 check() {
@@ -47,12 +54,12 @@ package_flac() {
 
   DESTDIR="${pkgdir}" cmake --install build
 
-  install -Dm 644 flac-${pkgver}/src/*/*.m4 -t "${pkgdir}/usr/share/aclocal"
+  install -Dm 644 flac/src/*/*.m4 -t "${pkgdir}/usr/share/aclocal"
 
   mkdir -p doc/usr/share
   mv {"${pkgdir}",doc}/usr/share/doc
 
-  install -Dm 644 flac-${pkgver}/COPYING.Xiph -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 flac/COPYING.Xiph -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 package_flac-doc() {
@@ -61,7 +68,7 @@ package_flac-doc() {
 
   mv doc/* "$pkgdir"
 
-  install -Dm 644 flac-${pkgver}/COPYING.Xiph -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 flac/COPYING.Xiph -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 # vim:set sw=2 sts=-1 et:
