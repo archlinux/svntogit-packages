@@ -4,7 +4,7 @@
 
 pkgbase=tracker3
 pkgname=(tracker3 tracker3-docs)
-pkgver=3.3.3
+pkgver=3.4.0
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
@@ -12,10 +12,10 @@ arch=(x86_64)
 license=(GPL)
 depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp json-glib
          libsoup3)
-makedepends=(gobject-introspection vala git hotdoc bash-completion meson
-             asciidoc systemd libsoup python-gobject python-dbus python-tappy)
+makedepends=(gobject-introspection git hotdoc bash-completion meson asciidoc
+             systemd libsoup python-gobject python-dbus python-tappy)
 options=(debug)
-_commit=cbccf6d3245b0a92ff6fe325cd75f2b197f847fb  # tags/3.3.3^0
+_commit=6e38fb55cb7cc58d8c29937db01dc8179fe15b68  # tags/3.4.0^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -63,4 +63,4 @@ package_tracker3-docs() {
   mv docs/* "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
