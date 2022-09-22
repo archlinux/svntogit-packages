@@ -25,7 +25,7 @@ source=(https://github.com/opencv/opencv/archive/$pkgver/$pkgname-$pkgver.tar.gz
         vtk9.patch)
 sha256sums=('1ec1cba65f9f20fe5a41fda1586e01c70ea0c9a6d7b67c9e13edf0cfe2239277'
             '1777d5fd2b59029cf537e5fd6f8aa68d707075822f90bde683fcde086f85f7a7'
-            'fc3e235c95874c1faa6c37e61a70623b92c4c307b2e258341a654ac3cfd44537'
+            '28edbd94c443b6aaa3054b4f9b35a4ad9a89dc45f40d408bcf3036950a072a32'
             'f35a2d4ea0d6212c7798659e59eda2cb0b5bc858360f7ce9c696c77d3029668e')
 
 prepare() {
