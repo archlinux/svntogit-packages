@@ -12,7 +12,7 @@ arch=(x86_64)
 depends=(pcre2 libffi util-linux-libs zlib libsysprof-capture)
 makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
              meson dbus)
-checkdepends=(desktop-file-utils)
+checkdepends=(desktop-file-utils glib2)
 options=(debug staticlibs)
 _commit=30bd57ecf8aa051de9848ba5a2b140f4810401ff  # tags/2.74.0^0
 source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
@@ -93,4 +93,4 @@ package_glib2-docs() {
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 glib/docs/reference/COPYING
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
