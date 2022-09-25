@@ -35,7 +35,6 @@ optdepends=(
 )
 source=(
     https://www.apache.org/dist/httpd/httpd-${pkgver}.tar.bz2{,.asc}
-    openssl-malloc-init.patch
     apache.tmpfiles.conf
     httpd.logrotate
     httpd.service
@@ -43,7 +42,6 @@ source=(
 )
 sha256sums=('eb397feeefccaf254f8d45de3768d9d68e8e73851c49afd5b7176d1ecf80c340'
             'SKIP'
-            'd305f8b52ac2a9bbda7bb0776496471e69e9d30642740f594d00086a8c7e344c'
             '63da1a420f4714a3e7af2672d28384419cc7eedbe7bf35baebd02938fabc15bf'
             '0bbbfae23a917b2fce0bf8f900f60319b50769224a96314e9301a75ccd078e16'
             'f574bac6d5f398e7a649fc0e1ca66ff01ad4ef34dac71258e93d8a9d9a2b3960'
@@ -64,9 +62,6 @@ prepare() {
       -i docs/conf/httpd.conf.in
 
   cat "${srcdir}/arch.layout" >> config.layout
-
-  # https://github.com/openssl/openssl/issues/2865
-  patch -Np1 -i ../openssl-malloc-init.patch
 }
 
 build() {
