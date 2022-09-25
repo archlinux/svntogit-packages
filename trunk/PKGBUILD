@@ -21,7 +21,7 @@ backup=(
 provides=('mod_proxy_uwsgi')
 conflicts=('mod_proxy_uwsgi')
 replaces=('mod_proxy_uwsgi')
-depends=('zlib' 'apr-util' 'pcre' 'libnghttp2' 'openssl' 'libxcrypt')
+depends=('zlib' 'apr-util' 'pcre2' 'libnghttp2' 'openssl' 'libxcrypt')
 makedepends=('libxml2' 'lua' 'curl' 'brotli' 'jansson')
 optdepends=(
     'lua: for mod_lua module'
@@ -90,7 +90,7 @@ build() {
       --enable-proxy-http2 --enable-md --enable-brotli \
       --with-apr=/usr/bin/apr-1-config \
       --with-apr-util=/usr/bin/apu-1-config \
-      --with-pcre=/usr
+      --with-pcre2
 
   make
 }
