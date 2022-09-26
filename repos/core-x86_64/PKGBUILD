@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.74.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -34,6 +34,10 @@ prepare() {
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+
+  # https://bugs.archlinux.org/task/75980
+  # https://gitlab.gnome.org/GNOME/glib/-/merge_requests/2921
+  git cherry-pick -n 'ea3f17d598d550345e94e4571130e429443e91cb'
 }
 
 build() {
