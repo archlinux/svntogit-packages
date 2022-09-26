@@ -5,7 +5,7 @@
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
 pkgver=3.44.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
 arch=(x86_64)
@@ -26,6 +26,9 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
+
+  # https://gitlab.gnome.org/GNOME/evolution/-/issues/1969
+  git cherry-pick -n 080791256d78a6d97384b4eef0d411cdc73feeb0
 }
 
 build() {
