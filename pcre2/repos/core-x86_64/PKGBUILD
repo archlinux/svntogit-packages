@@ -7,21 +7,26 @@
 
 pkgname=pcre2
 pkgver=10.40
-pkgrel=2
+pkgrel=3
 pkgdesc='A library that implements Perl 5-style regular expressions. 2nd version'
 arch=('x86_64')
 url='https://www.pcre.org/'
 license=('BSD')
 depends=('gcc-libs' 'readline' 'zlib' 'bzip2' 'bash')
 provides=(libpcre2-{8,16,32,posix}.so)
-options=(debug)
+options=(debug staticlibs)
 source=("https://github.com/PhilipHazel/pcre2/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2"{,.sig})
 sha512sums=('00e7b48a6554b9127cb6fe24c5cacf72783416a9754ec88f62f73c52f46ed72c86c1869e62c91a31b2ff2cbafbbedabca44b3f1eb7670bc92f49d8401c7374e8'
             'SKIP')
-validpgpkeys=('45F68D54BBE23FB3039B46E59766E084FB0F43D8')  # Philip Hazel
+validpgpkeys=('45F68D54BBE23FB3039B46E59766E084FB0F43D8')  # Philip Hazel <ph10@hermes.cam.ac.uk>
 
 build() {
   cd $pkgname-$pkgver
+
+  # use fat LTO objects for static libraries
+  CFLAGS+=" -ffat-lto-objects"
+  CXXFLAGS+=" -ffat-lto-objects"
+
   ./configure \
     --prefix=/usr \
     --enable-pcre2-16 \
@@ -45,4 +50,4 @@ package() {
   install -Dm644 LICENCE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
-# vim:set ts=2 sw=2 et:
+# vim:set sw=2 sts=-1 et:
