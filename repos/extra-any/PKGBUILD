@@ -2,8 +2,8 @@
 
 pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
-pkgver=20220607
-_commit=c971829a87e7920f960e7277c3dafd9bedd3c601
+pkgver=20220810
+_commit=2725c70baa8b0176c7577093ba1fc6179aa79478
 pkgrel=1
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
@@ -52,6 +52,9 @@ package_noto-fonts() {
 
   # Remove duplicate Display fonts https://github.com/googlefonts/noto-fonts/issues/2315
   rm "$pkgdir"/usr/share/fonts/noto/NotoSans-Display*
+
+  # Remove broken file which isn't even a font
+  rm "$pkgdir"/usr/share/fonts/noto/NotoSerifCJK-Regular.ttc
 }
 
 package_noto-fonts-extra() {
