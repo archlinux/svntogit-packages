@@ -2,7 +2,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.3.2
+_qtver=6.4.0
 pkgver=${_qtver/-/}
 pkgrel=1
 arch=(x86_64)
@@ -10,26 +10,26 @@ url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
 pkgdesc='Provides support for web applications using the Chromium browser project'
 depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr libxkbfile 
-         libevent snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font pciutils)
-makedepends=(cmake ninja python-html5lib gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets)
+         snappy nss libxslt minizip ffmpeg re2 libvpx libxtst ttf-font) # pciutils
+makedepends=(cmake ninja python-html5lib gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets libepoxy git)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
-options=(debug)
+#options=(debug) - hangs on stripping
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
-sha256sums=('65b4397f451650226142f35c8d6c6ebc45cee461b1c2d17d688208d455e24426')
+sha256sums=('662ae9ec599b00e902e2c2751ae4977fa95bedf1b035033547ea1b1b69e75303')
 
 build() {
   cmake -B build -S $_pkgfn -G Ninja \
+    -DCMAKE_MESSAGE_LOG_LEVEL=STATUS \
     -DCMAKE_TOOLCHAIN_FILE=/usr/lib/cmake/Qt6/qt.toolchain.cmake \
     -DQT_FEATURE_webengine_system_ffmpeg=ON \
     -DQT_FEATURE_webengine_system_icu=ON \
     -DQT_FEATURE_webengine_system_libevent=ON \
-    -DQT_FEATURE_webengine_system_libxslt=ON \
     -DQT_FEATURE_webengine_proprietary_codecs=ON \
     -DQT_FEATURE_webengine_kerberos=ON \
-    -DQT_FEATURE_webengine_webrtc_pipewire=ON \
-    -DQT_FEATURE_webengine_full_debug_info=ON
+    -DQT_FEATURE_webengine_webrtc_pipewire=ON
+#    -DQT_FEATURE_webengine_full_debug_info=ON
   cmake --build build
 }
 
