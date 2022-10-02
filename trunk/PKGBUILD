@@ -2,7 +2,7 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=devtools
-pkgver=20220621
+pkgver=20221002
 pkgrel=1
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
@@ -12,8 +12,8 @@ depends=('bash' 'openssh' 'subversion' 'rsync' 'arch-install-scripts'
          'git' 'bzr' 'mercurial' 'diffutils' 'util-linux' 'awk')
 makedepends=('asciidoc')
 optdepends=('btrfs-progs: btrfs support')
-source=(${url}/uploads/8217baae0afcdb540bde9f5b030f05a9/devtools-${pkgver}.tar.gz
-        ${url}/uploads/8570458d06b07d5a3ff8d30a1fc392d4/devtools-${pkgver}.tar.gz.sig)
+source=(${url}/uploads/a3a19bd63774cd4f54587b6a2053bc3d/devtools-${pkgver}.tar.gz
+        ${url}/uploads/26d8b38e4def1a7b3c4ca649d944c559/devtools-${pkgver}.tar.gz.sig)
 validpgpkeys=(
   '4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC' # Pierre Schmitz <pierre@archlinux.org>
   '86CFFCA918CF3AF47147588051E8B148A9999C34' # Evangelos Foutras <foutrelis@archlinux.org>
@@ -23,9 +23,9 @@ validpgpkeys=(
   '6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD' # Allan McRae (Developer) <allan@archlinux.org>
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8' # Levente Polyak <anthraxx@archlinux.org>
 )
-sha256sums=('0938d41b4bc469e62d86d2a287612a090640f6eebde92137b8bd7727b89e95dd'
+sha256sums=('bb8ff36a98375c0e9a014c641347079b103d07581fba666b38dbd283f87275ec'
             'SKIP')
-b2sums=('007f62b6cb3f06904fcafec4869a43136643bd364a7f0f314c792c08fbdafafaf8a268f8a372f78402deaa1f87bfc3f2fc7099f78742c6776d4ac49fe4884d58'
+b2sums=('1ab30becff370fd05b87b2aad884c401c786388545003264fbb7f3e51b07de4d735029ea624ad3cc253bc843c2ebc29b7ef3fb4c4d61f2ca2c0c60b2e8e41f5e'
         'SKIP')
 
 build() {
