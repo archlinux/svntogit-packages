@@ -1,0 +1,63 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Christian Hesse <mail@eworm.de>
+
+pkgname=f2fs-tools
+_tag='64f2596142800c215cb40a658ebd5793ed37c936' # git rev-parse v${pkgver}
+pkgver=1.15.0
+pkgrel=2
+pkgdesc='Tools for Flash-Friendly File System (F2FS)'
+arch=('x86_64')
+url='https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git/about/'
+provides=('libf2fs.so' 'libf2fs_format.so')
+depends=('util-linux')
+makedepends=('git')
+license=('GPL')
+validpgpkeys=('D3452A79D8C2B4EAC656F4224014A87E824850D2') # Jaegeuk Kim <jaegeuk@kernel.org>
+source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git#tag=${_tag}")
+sha256sums=('SKIP')
+
+_backports=(
+  # f2fs-tools: fix build error on lz4-1.9.4
+  '19f77c6f6277a274434d6d8883f50e7955c6a8db'
+)
+
+_reverts=(
+)
+
+prepare() {
+  cd "${pkgname}"
+
+  local _c
+  for _c in "${_backports[@]}"; do
+    if [[ $_c == *..* ]]; then
+      git log --oneline --reverse "${_c}"
+    else
+      git log --oneline -1 "${_c}"
+    fi
+    git cherry-pick -n -m1 "${_c}"
+  done
+  for _c in "${_reverts[@]}"; do
+    git log --oneline -1 "${_c}"
+    git revert -n "${_c}"
+  done
+
+  autoreconf -fi
+}
+
+build() {
+  cd "${pkgname}"
+
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin
+  make
+}
+
+package() {
+  cd "${pkgname}"
+
+  make DESTDIR="${pkgdir}/" sbindir=/usr/bin install
+
+  # /usr/bin/sg_write_buffer is provided in sg3_utils
+  rm "${pkgdir}"/usr/bin/sg_write_buffer
+}
