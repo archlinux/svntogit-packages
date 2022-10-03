@@ -2,39 +2,29 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Contributor: Daniele Paolella <dp@mcrservice.it>
 
-pkgbase=python-virtualenv
 pkgname=python-virtualenv
-pkgver=20.15.1
+pkgver=20.16.0
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
 license=('MIT')
-depends=('python-platformdirs' 'python-distlib' 'python-filelock' 'python-six'
-         'python-importlib-metadata')
-makedepends=('python-setuptools' 'python-platformdirs' 'python-distlib' 'python-filelock'
-             'python-six' 'python-setuptools-scm' 'python-sphinx' 'python-sphinx_rtd_theme'
+depends=('python-distlib' 'python-filelock' 'python-platformdirs')
+makedepends=('python-setuptools' 'python-setuptools-scm' 'python-sphinx' 'python-sphinx_rtd_theme'
              'python-sphinx-argparse' 'towncrier' 'python-importlib-metadata')
 checkdepends=('python-pytest-freezegun' 'python-pytest-mock' 'python-pip' 'python-coverage' 'fish'
               'xonsh' 'python-flaky')  # 'tcsh' removed: randomly hangs tests
 replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
-source=(https://github.com/pypa/virtualenv/archive/$pkgver/$pkgbase-$pkgver.tar.gz)
-sha512sums=('eaa6336269a6e958e36a4ad012b58f52a5990989b736f8e14324e69fa8e2ce28600f41531f0ff5bcfcbea0da96d068ee54a324374c7c11054bc91f40b94aebaa')
+source=(https://github.com/pypa/virtualenv/archive/$pkgver/$pkgname-$pkgver.tar.gz)
+sha512sums=('db612144331c4546d414754fdc631d80d35a3e28aa9f3a09abe348e19a90c569a9106a741bfc4c2867248d6c17d34bbadc5a904b675f38dd5b35053678f35931')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
 prepare() {
-  # TODO: figure out why
-  sed -i '/test_py_info_to_system_raises/i @pytest.mark.skip' virtualenv-$pkgver/tests/unit/discovery/py_info/test_py_info.py
-
   # workaround pip vendorod certifi
   sed -i "s|pkgutil.get_data(\"pip._vendor.certifi\", \"cacert.pem\")|open(os.path.join('/etc/ssl/certs/ca-certificates.crt'), 'rb').read()|" virtualenv-$pkgver/tests/conftest.py
-
-  # Use importlib-metadata directly for Python 3.9
-  sed -i 's/from backports.entry_points_selectable import entry_points/from importlib_metadata import entry_points/' virtualenv-$pkgver/src/virtualenv/run/plugin/base.py
-  sed -i '/backports.entry_points_selectable/d' virtualenv-$pkgver/setup.cfg
 }
 
 build() {
@@ -47,7 +37,8 @@ build() {
 
 check() {
   cd virtualenv-$pkgver
-  PYTHONPATH="$PWD/build/lib:$PWD/src" python -m pytest
+  # tests/unit/create/test_creator.py::test_py_pyc_missing: asking for Python 2.x
+  PYTHONPATH="$PWD/build/lib:$PWD/src" python -m pytest --deselect tests/unit/create/test_creator.py::test_py_pyc_missing
 }
 
 package() {
