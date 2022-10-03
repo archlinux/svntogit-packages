@@ -1,34 +1,36 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=yelp-xsl
-pkgver=42.0
+pkgver=42.1
 pkgrel=1
 pkgdesc="Document transformations from Yelp"
 url="https://gitlab.gnome.org/GNOME/yelp-xsl"
 arch=(any)
 license=(GPL)
 makedepends=(itstool git)
-_commit=0346fc97eca8792e9a806d2537fbef7d1f98792b  # tags/42.0^0
+_commit=1658a8eb59a296d9e7b7116fbc79ca778b702e14  # tags/42.1^0
 source=("git+https://gitlab.gnome.org/GNOME/yelp-xsl.git#commit=$_commit")
 sha256sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
+  cd yelp-xsl
   git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd yelp-xsl
   NOCONFIGURE=1 ./autogen.sh
 }
 
 build() {
-  cd $pkgname
+  cd yelp-xsl
   ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
   make
 }
 
 package() {
-  cd $pkgname
+  cd yelp-xsl
   make DESTDIR="$pkgdir" install
 }
+
+# vim:set sw=2 sts=-1 et:
