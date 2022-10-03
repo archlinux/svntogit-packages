@@ -16,7 +16,7 @@ pkgname=(
   qemu-img
   qemu-pr-helper
   qemu-system-{aarch64,alpha,arm,avr,cris,hppa,loongarch64,m68k,microblaze,mips,nios2,or1k,ppc,riscv,rx,s390x,sh4,sparc,tricore,x86,xtensa}
-  qemu-system-{alpha,arm,hppa,microblaze,ppc,riscv,sparc,x86}-firmware
+  qemu-system-{alpha,arm,hppa,microblaze,ppc,riscv,s390x,sparc,x86}-firmware
   qemu-tests
   qemu-tools
   qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}
@@ -26,7 +26,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.1.0
-pkgrel=7
+pkgrel=8
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -706,7 +706,7 @@ package_qemu-system-aarch64() {
 
 package_qemu-system-alpha() {
   pkgdesc="QEMU system emulator for Alpha"
-  depends=("${_qemu_system_deps[@]}" qemu-system-alpha-firmware systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" qemu-system-alpha-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -718,7 +718,7 @@ package_qemu-system-alpha-firmware() {
 
 package_qemu-system-arm() {
   pkgdesc="QEMU system emulator for ARM"
-  depends=("${_qemu_system_deps[@]}" qemu-system-arm-firmware systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" qemu-system-arm-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -742,7 +742,7 @@ package_qemu-system-cris() {
 
 package_qemu-system-hppa() {
   pkgdesc="QEMU system emulator for HPPA"
-  depends=("${_qemu_system_deps[@]}" qemu-system-hppa-firmware systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" qemu-system-hppa-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -766,7 +766,7 @@ package_qemu-system-m68k() {
 
 package_qemu-system-microblaze() {
   pkgdesc="QEMU system emulator for Microblaze"
-  depends=("${_qemu_system_deps[@]}" qemu-system-microblaze-firmware)
+  depends=("${_qemu_system_deps[@]}" qemu-system-microblaze-firmware=$pkgver-$pkgrel)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -796,7 +796,7 @@ package_qemu-system-or1k() {
 
 package_qemu-system-ppc() {
   pkgdesc="QEMU system emulator for PPC"
-  depends=("${_qemu_system_deps[@]}" qemu-system-ppc-firmware systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" qemu-system-ppc-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -808,7 +808,7 @@ package_qemu-system-ppc-firmware() {
 
 package_qemu-system-riscv() {
   pkgdesc="QEMU system emulator for RISC-V"
-  depends=("${_qemu_system_deps[@]}" qemu-system-riscv-firmware systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" qemu-system-riscv-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -826,7 +826,13 @@ package_qemu-system-rx() {
 
 package_qemu-system-s390x() {
   pkgdesc="QEMU system emulator for S390"
-  depends=("${_qemu_system_deps[@]}")
+  depends=("${_qemu_system_deps[@]}" qemu-system-s390x-firmware=$pkgver-$pkgrel)
+  mv -v $pkgname/* "$pkgdir"
+}
+
+package_qemu-system-s390x-firmware() {
+  pkgdesc="Firmware for QEMU system emulator for S390"
+  options=(!strip)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -838,7 +844,7 @@ package_qemu-system-sh4() {
 
 package_qemu-system-sparc() {
   pkgdesc="QEMU system emulator for SPARC"
-  depends=("${_qemu_system_deps[@]}" qemu-system-sparc-firmware systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" qemu-system-sparc-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -857,7 +863,7 @@ package_qemu-system-tricore() {
 
 package_qemu-system-x86() {
   pkgdesc="QEMU system emulator for x86"
-  depends=("${_qemu_system_deps[@]}" edk2-ovmf qemu-system-x86-firmware seabios systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" edk2-ovmf qemu-system-x86-firmware=$pkgver-$pkgrel seabios systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -991,6 +997,7 @@ package_qemu-user() {
 
 package_qemu-user-binfmt() {
   pkgdesc="Binary format rules for QEMU user mode emulation"
+  depends=(qemu-user=$pkgver-$pkgrel)
   provides=(qemu-user-binfmt-provider)
   conflicts=(qemu-user-binfmt-provider)
   mv -v $pkgname/* "$pkgdir"
@@ -1005,6 +1012,7 @@ package_qemu-user-static() {
 
 package_qemu-user-static-binfmt() {
   pkgdesc="Binary format rules for QEMU static user mode emulation"
+  depends=(qemu-user-static=$pkgver-$pkgrel)
   provides=(qemu-user-binfmt-provider)
   conflicts=(qemu-user-binfmt-provider)
   mv -v $pkgname/* "$pkgdir"
