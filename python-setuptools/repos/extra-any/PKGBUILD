@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=63.0.0
+pkgver=63.1.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -15,12 +15,13 @@ depends=('python-appdirs' 'python-jaraco.text' 'python-more-itertools' 'python-o
 makedepends=('git' 'python-setuptools')
 checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip' 'python-pip-run'
               'python-pytest-fixture-config' 'python-pytest-virtualenv' 'python-wheel'
-              'python-paver' 'python-sphinx' 'python-build' 'python-ini2toml' 'python-tomli-w')
+              'python-pytest-enabler' 'python-pytest-mypy' 'python-sphinx' 'python-build'
+              'python-ini2toml' 'python-tomli-w')
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('099faa3270f04699cb04a8fb88bd4ca8d35925f1fc0629f7f0d967558979a364c4dab22631b50d8763f1f606314683970732d015ea03e74cd1e7565ddef227af'
+sha512sums=('bd907fa06fba5e17f6ea840e7d4f07c44dd874d3a49a8d81600cb609b1e0095b799978052ddce7da2cd1dedc7284756c1f112ba99cecf7b6731d9e9ba33dedfe'
             '50495062093b1b6902484c384abe073896e4f45c5768741582e178014367f186831711a72a8a987e7bacafe96d871161fc07c686dd92c6886de19302f6a10b56')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
