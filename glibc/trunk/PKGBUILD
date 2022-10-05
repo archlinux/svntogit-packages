@@ -10,7 +10,7 @@ pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.36
 _commit=da5f134f6d59701a3a6119309ae91c93c3fa5b51
-pkgrel=4
+pkgrel=5
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -26,7 +26,7 @@ source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
 b2sums=('SKIP'
-        '23c772feb247e6b5216b7962528617e53730267cb0913fd184edd6d3f59a4874ee7a864a56c48eb6e2936abadb30fc53166477b733a8a3e973932d79370c7b24'
+        'c859bf2dfd361754c9e3bbd89f10de31f8e81fd95dc67b77d10cb44e23834b096ba3caa65fbc1bd655a8696c6450dfd5a096c476b3abf5c7e125123f97ae1a72'
         '04fbb3b0b28705f41ccc6c15ed5532faf0105370f22133a2b49867e790df0491f5a1255220ff6ebab91a462f088d0cf299491b3eb8ea53534cb8638a213e46e3'
         '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
         'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
