@@ -4,7 +4,7 @@
 pkgname=qt6-webengine
 _qtver=6.4.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -14,7 +14,7 @@ depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr libxkbfile
 makedepends=(cmake ninja python-html5lib gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets libepoxy git)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
-#options=(debug) - hangs on stripping
+options=(debug)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
         qtbug-107144.patch::https://code.qt.io/cgit/qt/qtwebengine.git/patch/?id=64b7da9d)
