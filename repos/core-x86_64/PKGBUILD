@@ -9,8 +9,8 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.36
-_commit=da5f134f6d59701a3a6119309ae91c93c3fa5b51
-pkgrel=5
+_commit=2bd815d8347851212b9a91dbdca8053f4dbdac87
+pkgrel=6
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -56,8 +56,8 @@ build() {
       --enable-multi-arch
       --enable-stack-protector=strong
       --enable-systemtap
-      --disable-profile
       --disable-crypt
+      --disable-profile
       --disable-werror
   )
 
