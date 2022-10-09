@@ -3,7 +3,7 @@
 # Contributor: Daniele Paolella <dp@mcrservice.it>
 
 pkgname=python-virtualenv
-pkgver=20.16.0
+pkgver=20.16.1
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
@@ -18,7 +18,7 @@ replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=(https://github.com/pypa/virtualenv/archive/$pkgver/$pkgname-$pkgver.tar.gz)
-sha512sums=('db612144331c4546d414754fdc631d80d35a3e28aa9f3a09abe348e19a90c569a9106a741bfc4c2867248d6c17d34bbadc5a904b675f38dd5b35053678f35931')
+sha512sums=('7b2686d2425a3260c267c096abb98fa681213b35a4459ec226a62706e687d14f2e1b62f2f7433d345d0e6117b85014b4e88bd868b40f35f7529ec3c1399dd755')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
