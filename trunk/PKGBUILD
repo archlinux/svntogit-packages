@@ -8,17 +8,18 @@ pkgname=openssh
 pkgver=9.0p1
 pkgrel=1
 pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
+arch=('x86_64')
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
-arch=('x86_64')
 depends=('glibc' 'krb5' 'openssl' 'libedit' 'ldns' 'libxcrypt' 'libcrypt.so' 'zlib' 'pam')
 makedepends=('linux-headers' 'libfido2')
 optdepends=('xorg-xauth: X11 forwarding'
             'x11-ssh-askpass: input passphrase in X'
             'libfido2: FIDO/U2F support')
+backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
 options=('debug')
-validpgpkeys=('7168B983815A5EEF59A4ADFD2A3F414E736060BA')
 #source=("git://anongit.mindrot.org/openssh.git?signed#tag=V_8_2_P1"
+install=install
 source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
         'sshdgenkeys.service'
         'sshd.service'
@@ -36,10 +37,7 @@ b2sums=('49724a400951964d659d136908657940f79e150056728cc4dadf8ff8652a832f7fd46ee
         '07ad5c7fb557411a6646ff6830bc9d564c07cbddc4ce819641d31c05dbdf677bfd8a99907cf529a7ee383b8c250936a6423f4b4b97ba0f1c14f627bbd629bd4e'
         '27571f728c3c10834a81652f3917188436474b588f8b047462e44b6c7a424f60d06ce8cb74839b691870177d7261592207d7f35d4ae6c79af87d6a7ea156d395'
         '557d015bca7008ce824111f235da67b7e0051a693aaab666e97b78e753ed7928b72274af03d7fde12033986b733d5f996faf2a4feb6ecf53f39accae31334930')
-
-backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
-
-install=install
+validpgpkeys=('7168B983815A5EEF59A4ADFD2A3F414E736060BA')
 
 # prepare() {
 # 	cd "${pkgname}-${pkgver}"
