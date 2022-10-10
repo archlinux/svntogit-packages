@@ -33,7 +33,6 @@ backup=(
   'etc/ssh/sshd_config'
 )
 options=('debug')
-install=install
 source=(
   "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
   "$pkgname-9.0p1-sshd_config.patch"
