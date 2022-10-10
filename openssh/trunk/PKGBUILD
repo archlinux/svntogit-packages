@@ -56,61 +56,63 @@ b2sums=('49724a400951964d659d136908657940f79e150056728cc4dadf8ff8652a832f7fd46ee
 validpgpkeys=('7168B983815A5EEF59A4ADFD2A3F414E736060BA')  # Damien Miller <djm@mindrot.org>
 
 build() {
-	cd "${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
 
-	./configure \
-		--prefix=/usr \
-		--sbindir=/usr/bin \
-		--libexecdir=/usr/lib/ssh \
-		--sysconfdir=/etc/ssh \
-		--disable-strip \
-		--with-ldns \
-		--with-libedit \
-		--with-security-key-builtin \
-		--with-ssl-engine \
-		--with-pam \
-		--with-privsep-user=nobody \
-		--with-kerberos5=/usr \
-		--with-xauth=/usr/bin/xauth \
-		--with-md5-passwords \
-		--with-pid-dir=/run \
-		--with-default-path='/usr/local/sbin:/usr/local/bin:/usr/bin' \
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --libexecdir=/usr/lib/ssh \
+    --sysconfdir=/etc/ssh \
+    --disable-strip \
+    --with-ldns \
+    --with-libedit \
+    --with-security-key-builtin \
+    --with-ssl-engine \
+    --with-pam \
+    --with-privsep-user=nobody \
+    --with-kerberos5=/usr \
+    --with-xauth=/usr/bin/xauth \
+    --with-md5-passwords \
+    --with-pid-dir=/run \
+    --with-default-path='/usr/local/sbin:/usr/local/bin:/usr/bin' \
 
-	make
+  make
 }
 
 check() {
-	cd "${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
 
-	# Tests require openssh to be already installed system-wide,
-	# also connectivity tests will fail under makechrootpkg since
+  # Tests require openssh to be already installed system-wide,
+  # also connectivity tests will fail under makechrootpkg since
         # it runs as nobody which has /bin/false as login shell.
 
-	if [[ -e /usr/bin/scp && ! -e /.arch-chroot ]]; then
-		make tests
-	fi
+  if [[ -e /usr/bin/scp && ! -e /.arch-chroot ]]; then
+    make tests
+  fi
 }
 
 package() {
-	cd "${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
 
-	make DESTDIR="${pkgdir}" install
+  make DESTDIR="${pkgdir}" install
 
-	ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1.gz
-	install -Dm644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENCE"
+  ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1.gz
+  install -Dm644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENCE"
 
-	install -Dm644 ../sshdgenkeys.service "${pkgdir}"/usr/lib/systemd/system/sshdgenkeys.service
-	install -Dm644 ../sshd.service "${pkgdir}"/usr/lib/systemd/system/sshd.service
-	install -Dm644 ../sshd.conf "${pkgdir}"/usr/lib/tmpfiles.d/sshd.conf
-	install -Dm644 ../sshd.pam "${pkgdir}"/etc/pam.d/sshd
+  install -Dm644 ../sshdgenkeys.service "${pkgdir}"/usr/lib/systemd/system/sshdgenkeys.service
+  install -Dm644 ../sshd.service "${pkgdir}"/usr/lib/systemd/system/sshd.service
+  install -Dm644 ../sshd.conf "${pkgdir}"/usr/lib/tmpfiles.d/sshd.conf
+  install -Dm644 ../sshd.pam "${pkgdir}"/etc/pam.d/sshd
 
-	install -Dm755 contrib/findssl.sh "${pkgdir}"/usr/bin/findssl.sh
-	install -Dm755 contrib/ssh-copy-id "${pkgdir}"/usr/bin/ssh-copy-id
-	install -Dm644 contrib/ssh-copy-id.1 "${pkgdir}"/usr/share/man/man1/ssh-copy-id.1
+  install -Dm755 contrib/findssl.sh "${pkgdir}"/usr/bin/findssl.sh
+  install -Dm755 contrib/ssh-copy-id "${pkgdir}"/usr/bin/ssh-copy-id
+  install -Dm644 contrib/ssh-copy-id.1 "${pkgdir}"/usr/share/man/man1/ssh-copy-id.1
 
-	sed \
-		-e '/^#KbdInteractiveAuthentication yes$/c KbdInteractiveAuthentication no' \
-		-e '/^#PrintMotd yes$/c PrintMotd no # pam does that' \
-		-e '/^#UsePAM no$/c UsePAM yes' \
-		-i "${pkgdir}"/etc/ssh/sshd_config
+  sed \
+    -e '/^#KbdInteractiveAuthentication yes$/c KbdInteractiveAuthentication no' \
+    -e '/^#PrintMotd yes$/c PrintMotd no # pam does that' \
+    -e '/^#UsePAM no$/c UsePAM yes' \
+    -i "${pkgdir}"/etc/ssh/sshd_config
 }
+
+# vim: ts=2 sw=2 et:
