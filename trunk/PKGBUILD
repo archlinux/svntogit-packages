@@ -72,7 +72,6 @@ build() {
     --with-privsep-user=nobody \
     --with-kerberos5=/usr \
     --with-xauth=/usr/bin/xauth \
-    --with-md5-passwords \
     --with-pid-dir=/run \
     --with-default-path='/usr/local/sbin:/usr/local/bin:/usr/bin' \
 
