@@ -11,19 +11,36 @@ pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 arch=('x86_64')
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
-depends=('glibc' 'krb5' 'libkrb5.so' 'libgssapi_krb5.so' 'ldns' 'libedit' 'libxcrypt' 'libcrypt.so' 'openssl' 'pam' 'libpam.so' 'zlib')
+depends=(
+  'glibc'
+  'krb5' 'libkrb5.so' 'libgssapi_krb5.so'
+  'ldns'
+  'libedit'
+  'libxcrypt' 'libcrypt.so'
+  'openssl'
+  'pam' 'libpam.so'
+  'zlib'
+)
 makedepends=('libfido2' 'linux-headers')
-optdepends=('libfido2: FIDO/U2F support'
-            'x11-ssh-askpass: input passphrase in X'
-            'xorg-xauth: X11 forwarding')
-backup=('etc/pam.d/sshd' 'etc/ssh/ssh_config' 'etc/ssh/sshd_config')
+optdepends=(
+  'libfido2: FIDO/U2F support'
+  'x11-ssh-askpass: input passphrase in X'
+  'xorg-xauth: X11 forwarding'
+)
+backup=(
+  'etc/pam.d/sshd'
+  'etc/ssh/ssh_config'
+  'etc/ssh/sshd_config'
+)
 options=('debug')
 install=install
-source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
-        'sshdgenkeys.service'
-        'sshd.service'
-        'sshd.conf'
-        'sshd.pam')
+source=(
+  "https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
+  'sshdgenkeys.service'
+  'sshd.service'
+  'sshd.conf'
+  'sshd.pam'
+)
 sha256sums=('03974302161e9ecce32153cfa10012f1e65c8f3750f573a73ab1befd5972a28a'
             'SKIP'
             '4031577db6416fcbaacf8a26a024ecd3939e5c10fe6a86ee3f0eea5093d533b7'
