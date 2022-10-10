@@ -11,12 +11,12 @@ pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
 arch=('x86_64')
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
-depends=('glibc' 'krb5' 'openssl' 'libedit' 'ldns' 'libxcrypt' 'libcrypt.so' 'zlib' 'pam')
-makedepends=('linux-headers' 'libfido2')
-optdepends=('xorg-xauth: X11 forwarding'
+depends=('glibc' 'krb5' 'libkrb5.so' 'libgssapi_krb5.so' 'ldns' 'libedit' 'libxcrypt' 'libcrypt.so' 'openssl' 'pam' 'libpam.so' 'zlib')
+makedepends=('libfido2' 'linux-headers')
+optdepends=('libfido2: FIDO/U2F support'
             'x11-ssh-askpass: input passphrase in X'
-            'libfido2: FIDO/U2F support')
-backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
+            'xorg-xauth: X11 forwarding')
+backup=('etc/pam.d/sshd' 'etc/ssh/ssh_config' 'etc/ssh/sshd_config')
 options=('debug')
 #source=("git://anongit.mindrot.org/openssh.git?signed#tag=V_8_2_P1"
 install=install
