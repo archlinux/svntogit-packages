@@ -24,12 +24,6 @@ source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgve
         'sshd.service'
         'sshd.conf'
         'sshd.pam')
-sha1sums=('06dd658874dcd22d66311cf5999bd56c614de509'
-          'SKIP'
-          'caaa801da59a5d14c0c29c43e9de5fef281ea03e'
-          '8640ac6593602e74a863263223e92ab5c4711588'
-          'c9b2e4ce259cd62ddb00364d3ee6f00a8bf2d05f'
-          'd93dca5ebda4610ff7647187f8928a3de28703f3')
 sha256sums=('03974302161e9ecce32153cfa10012f1e65c8f3750f573a73ab1befd5972a28a'
             'SKIP'
             '4031577db6416fcbaacf8a26a024ecd3939e5c10fe6a86ee3f0eea5093d533b7'
