@@ -7,7 +7,7 @@
 pkgname=openssh
 pkgver=9.0p1
 pkgrel=1
-pkgdesc='Premier connectivity tool for remote login with the SSH protocol'
+pkgdesc="SSH protocol implementation for remote login, command execution and file transfer"
 arch=('x86_64')
 url='https://www.openssh.com/portable.html'
 license=('custom:BSD')
