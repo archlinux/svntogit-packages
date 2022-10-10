@@ -18,7 +18,6 @@ optdepends=('libfido2: FIDO/U2F support'
             'xorg-xauth: X11 forwarding')
 backup=('etc/pam.d/sshd' 'etc/ssh/ssh_config' 'etc/ssh/sshd_config')
 options=('debug')
-#source=("git://anongit.mindrot.org/openssh.git?signed#tag=V_8_2_P1"
 install=install
 source=("https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/${pkgname}-${pkgver}.tar.gz"{,.asc}
         'sshdgenkeys.service'
@@ -38,14 +37,6 @@ b2sums=('49724a400951964d659d136908657940f79e150056728cc4dadf8ff8652a832f7fd46ee
         '27571f728c3c10834a81652f3917188436474b588f8b047462e44b6c7a424f60d06ce8cb74839b691870177d7261592207d7f35d4ae6c79af87d6a7ea156d395'
         '557d015bca7008ce824111f235da67b7e0051a693aaab666e97b78e753ed7928b72274af03d7fde12033986b733d5f996faf2a4feb6ecf53f39accae31334930')
 validpgpkeys=('7168B983815A5EEF59A4ADFD2A3F414E736060BA')  # Damien Miller <djm@mindrot.org>
-
-# prepare() {
-# 	cd "${pkgname}-${pkgver}"
-
-#       patch goes here
-
-# 	autoreconf
-# }
 
 build() {
 	cd "${pkgname}-${pkgver}"
