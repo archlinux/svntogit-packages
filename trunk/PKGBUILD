@@ -81,13 +81,8 @@ build() {
 check() {
   cd "${pkgname}-${pkgver}"
 
-  # Tests require openssh to be already installed system-wide,
-  # also connectivity tests will fail under makechrootpkg since
-        # it runs as nobody which has /bin/false as login shell.
-
-  if [[ -e /usr/bin/scp && ! -e /.arch-chroot ]]; then
-    make tests
-  fi
+  # NOTE: make t-exec does not work in our build environment
+  make file-tests interop-tests unit
 }
 
 package() {
