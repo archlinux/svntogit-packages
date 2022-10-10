@@ -98,16 +98,16 @@ package() {
   make DESTDIR="${pkgdir}" install
 
   ln -sf ssh.1.gz "${pkgdir}"/usr/share/man/man1/slogin.1.gz
-  install -Dm644 LICENCE "${pkgdir}/usr/share/licenses/${pkgname}/LICENCE"
+  install -Dm644 LICENCE -t "${pkgdir}/usr/share/licenses/${pkgname}/"
 
-  install -Dm644 ../sshdgenkeys.service "${pkgdir}"/usr/lib/systemd/system/sshdgenkeys.service
-  install -Dm644 ../sshd.service "${pkgdir}"/usr/lib/systemd/system/sshd.service
-  install -Dm644 ../sshd.conf "${pkgdir}"/usr/lib/tmpfiles.d/sshd.conf
+  install -Dm644 ../sshdgenkeys.service -t "${pkgdir}"/usr/lib/systemd/system/
+  install -Dm644 ../sshd.service -t "${pkgdir}"/usr/lib/systemd/system/
+  install -Dm644 ../sshd.conf -t "${pkgdir}"/usr/lib/tmpfiles.d/
   install -Dm644 ../sshd.pam "${pkgdir}"/etc/pam.d/sshd
 
-  install -Dm755 contrib/findssl.sh "${pkgdir}"/usr/bin/findssl.sh
-  install -Dm755 contrib/ssh-copy-id "${pkgdir}"/usr/bin/ssh-copy-id
-  install -Dm644 contrib/ssh-copy-id.1 "${pkgdir}"/usr/share/man/man1/ssh-copy-id.1
+  install -Dm755 contrib/findssl.sh -t "${pkgdir}"/usr/bin/
+  install -Dm755 contrib/ssh-copy-id -t "${pkgdir}"/usr/bin/
+  install -Dm644 contrib/ssh-copy-id.1 -t "${pkgdir}"/usr/share/man/man1/
 }
 
 # vim: ts=2 sw=2 et:
