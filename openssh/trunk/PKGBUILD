@@ -42,7 +42,7 @@ backup=('etc/ssh/ssh_config' 'etc/ssh/sshd_config' 'etc/pam.d/sshd')
 install=install
 
 # prepare() {
-# 	cd "${srcdir}/${pkgname}-${pkgver}"
+# 	cd "${pkgname}-${pkgver}"
 
 #       patch goes here
 
@@ -50,7 +50,7 @@ install=install
 # }
 
 build() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${pkgname}-${pkgver}"
 
 	./configure \
 		--prefix=/usr \
@@ -74,7 +74,7 @@ build() {
 }
 
 check() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${pkgname}-${pkgver}"
 
 	# Tests require openssh to be already installed system-wide,
 	# also connectivity tests will fail under makechrootpkg since
@@ -86,7 +86,7 @@ check() {
 }
 
 package() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
+	cd "${pkgname}-${pkgver}"
 
 	make DESTDIR="${pkgdir}" install
 
