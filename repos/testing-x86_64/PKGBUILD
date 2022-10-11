@@ -1,0 +1,50 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+#Contributor: Urs Wolfer <uwolfer @ fwo.ch>
+
+pkgname=dmraid
+pkgver=1.0.0.rc16.3
+pkgrel=14
+pkgdesc="Device mapper RAID interface"
+url="https://people.redhat.com/~heinzm/sw/dmraid/"
+conflicts=('mkinitcpio<0.7')
+depends=('device-mapper>=2.0.54')
+arch=('x86_64')
+license=('GPL')
+source=(#https://sources.archlinux.org/other/dmraid/$pkgname-$pkgver.tar.bz2
+        https://people.redhat.com/~heinzm/sw/dmraid/src/$pkgname-1.0.0.rc16-3.tar.bz2
+        dmraid_install
+        dmraid_hook
+        dmraid_tmpfiles
+        dmraid.service
+	dmraid-format-security.patch)
+install=dmraid.install
+sha256sums=('93421bd169d71ff5e7d2db95b62b030bfa205a12010b6468dcdef80337d6fbd8'
+            '6e74f7e1d66fbe5fc41560dfebb327eb31eb3104fec09985e388c2fe252d6575'
+            'e74cdc82b59160d079594ce082980a3ae3561b5f6ecbdfdd30b7497b76373a2b'
+            'f00fa4462d83553d2fb769159a019b4d4898634e52b4a9bf796fe52b3b97f0cc'
+            '7d7c09d40e52a3596fe3ddb2c370a1b7c838530902f8395f5c12f8d07eaa2491'
+            '7c91f82db42018b09cf19fb43d3e1f672cc0b926acc6c572b01c7724206da650')
+
+prepare() {
+  cd "$pkgname/1.0.0.rc16-3/$pkgname"
+  patch -Np1 -i ${srcdir}/dmraid-format-security.patch
+}
+
+build() {
+  cd "$pkgname/1.0.0.rc16-3/$pkgname"
+  ./configure --enable-led --enable-intel_led
+  make -j1
+}
+
+package() {
+  cd "$pkgname/1.0.0.rc16-3/$pkgname"
+  make DESTDIR="$pkgdir" sbindir=/usr/bin prefix=/usr libdir=/usr/lib mandir=/usr/share/man includedir=/usr/include install
+  install -D -m644 "$srcdir"/dmraid_install "$pkgdir"/usr/lib/initcpio/install/dmraid
+  install -D -m644 "$srcdir"/dmraid_hook "$pkgdir"/usr/lib/initcpio/hooks/dmraid
+  install -D -m644 "$srcdir"/dmraid_tmpfiles "$pkgdir"/usr/lib/tmpfiles.d/dmraid.conf
+
+  # fix permissions
+  chmod 644 "$pkgdir"/usr/include/dmraid/* "$pkgdir"/usr/lib/libdmraid.a
+
+  install -Dm644 "$srcdir/dmraid.service" "$pkgdir/usr/lib/systemd/system/dmraid.service"
+}
