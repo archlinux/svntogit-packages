@@ -3,8 +3,8 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=kwin
-pkgver=5.25.5
-pkgrel=2
+pkgver=5.26.0
+pkgrel=1
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -17,7 +17,7 @@ replaces=(kwayland-server)
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig})
 install=$pkgname.install
-sha256sums=('5a6c33481950d5de68d124ebdde2b975277ef01ba58d32ee2839add579f307b6'
+sha256sums=('3a9f4769c08c568397fbf956019c00de3086a18a263f2a1a2738fd4b344029fd'
             'SKIP')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
