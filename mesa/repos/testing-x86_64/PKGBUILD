@@ -6,8 +6,8 @@
 pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=22.2.0
-pkgrel=2
+pkgver=22.2.1
+pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -17,9 +17,13 @@ url="https://www.mesa3d.org/"
 license=('custom')
 options=('debug' '!lto')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
+        0001-anv-force-MEDIA_INTERFACE_DESCRIPTOR_LOAD-reemit-aft.patch
+        0002-intel-fs-always-mask-the-bottom-bits-of-the-sampler-.patch
         LICENSE)
-sha512sums=('13a21b9ed6b0a5dfd0293b73df271a929c3155d83e8beb3d958fe18d79277f3611bf5b26a1186d446f4e1479a36bb13d0a13d6ac68937989fe7a0d917e12171e'
+sha512sums=('cb69c808453474f77aad68afae7cdb427e6720e1d2259f7b911a5476a03144bbe8adfbe040f9bed3954d92805eea302757b76fd29f03f692f725c0fd2295df7e'
             'SKIP'
+            '9bf47019a7c1da6724393cf571c6e1ce6b56ca24fe32045bc056d2e1bb2584f6a81e886dd8b2f1b1aabb953367dd068f9833f520fa41a9b2bbce20fdc15d07b4'
+            '3df104f4abbecb12fcf9631cabdc7fe883b6c529abebaf36a0d47933ebd0c57235f11767060604dec71acefdf55f2f025eb997b1dd1cf0b92c02af0a604cae98'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
@@ -31,6 +35,11 @@ validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l
 prepare() {
   cd mesa-$pkgver
 
+  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/7111
+  # https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/17247
+  # https://github.com/HansKristian-Work/vkd3d-proton/issues/1200
+  patch -Np1 -i ../0001-anv-force-MEDIA_INTERFACE_DESCRIPTOR_LOAD-reemit-aft.patch
+  patch -Np1 -i ../0002-intel-fs-always-mask-the-bottom-bits-of-the-sampler-.patch
 }
 
 build() {
