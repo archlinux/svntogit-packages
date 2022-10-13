@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=63.3.0
+pkgver=63.4.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -21,7 +21,7 @@ provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('a8af2e87f7305717c7f454871513301ee09aeb14d9dbe5fd9f31c294efc2e6b819a2d4eef7191ce306969f8cbfc730fefb5f51c673db67aafeea463cec9cded2'
+sha512sums=('9aa13df71078d39f3b891d135f6458cc8c0332f263cc5cbb97d19a63d1a1dba460cc668ea7809a50c98431606b6aced87de4fc085afa84bf29c6396d83033b57'
             '50495062093b1b6902484c384abe073896e4f45c5768741582e178014367f186831711a72a8a987e7bacafe96d871161fc07c686dd92c6886de19302f6a10b56')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
