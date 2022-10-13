@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.15.73
-pkgrel=1
+pkgrel=2
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -22,6 +22,14 @@ source=(
   0004-Bluetooth-btintel-Fix-bdaddress-comparison-with-garb.patch
   0005-lg-laptop-Recognize-more-models.patch
   0006-Fix-NFSv4-mount-regression.patch
+  0007-wifi-cfg80211-fix-u8-overflow-in-cfg80211_update_not.patch
+  0008-wifi-cfg80211-mac80211-reject-bad-MBSSID-elements.patch
+  0009-wifi-cfg80211-ensure-length-byte-is-present-before-a.patch
+  0010-wifi-cfg80211-fix-BSS-refcounting-bugs.patch
+  0011-wifi-cfg80211-avoid-nontransmitted-BSS-list-corrupti.patch
+  0012-wifi-mac80211_hwsim-avoid-mac80211-warning-on-bad-ra.patch
+  0013-wifi-mac80211-fix-crash-in-beacon-protection-for-P2P.patch
+  0014-wifi-cfg80211-update-hidden-BSSes-to-avoid-WARN_ON.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -31,12 +39,20 @@ validpgpkeys=(
 sha256sums=('a822f09525ae8803453939a91e73f18097a3ba2aec73be4fe9ab314a0131715d'
             'SKIP'
             'f5d9ce7b3f7b9c7003a5af69baf4d84268068eb89ba3bc6ac4f471fb5c251c11'
-            '7bd64ff894475b3415d792ba8466ba7e8f872af56dbf1aeed0d261fe4008b8b5'
-            '39649dc1dfcb06b411ad124e123769e955a78961b4ea17538c0919a930925549'
-            '56c12551e859cc67520909e64feecbf1b190cee8addef150c5b9d1bb1d40981e'
+            '3b5cfc9ca9cf778ea2c4b619b933cda26519969df2d764b5a687f63cf59974cd'
+            'c175fbb141c3cec013c799f694d88310375ac5456042f6a4a1adc7667836d786'
+            '8357f000b2b622e73dcfd41c2bad42b5e99fffe8f7ee64f774aa771f86cef43c'
             '5c1ee81fdd5818442af6081de987f9c1a9ce3c8d183566b3dfc19a8433aa3dde'
             '067e8995fcd6f6ed25e0253e9374c0e179a000c154da3e59ce62634945ac5be9'
-            '95dad02b01937681af0a207e22a6bf64c33e067bf7a14cb98262dd8f69194eb8')
+            '10801c245064777873b580bea1fc17a4288ec519e0ce9500aa1b7c6e19fe777b'
+            '2bff15b0a83730d3126f327f3a6c99e499ea7656714a25428dc7cd0f9f523133'
+            'e6d94a6c0976ee41c69b3d38bf1865b0a41936ef286acc93eb7fea18fab00461'
+            '8f8f19527ee033b1a5262e737c309ae015731f4d519829354bbb8f192cca85bf'
+            '9cd69a9a20772a104cd9a3f0d5501d380a8bc8e5aed612172f1bb2888a7c2e7d'
+            '8986c7cf22dfbe18722f0ac22a706b84757a3d44e0cf4ba5e63f7507556302e9'
+            'af69b08e37bf6a7ba9a35e25e96a46a47d1a614c2b100e4ba5cf5fa346179f1f'
+            'f65517c4daf7c6cfb07b1843e28df2bc6c8ac04fab41683b2a5c9f399d36434f'
+            '1475d5f0b9823f9f26cc3a684644e8a2fb935fe9885384a07e07b390ea41a6cf')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
