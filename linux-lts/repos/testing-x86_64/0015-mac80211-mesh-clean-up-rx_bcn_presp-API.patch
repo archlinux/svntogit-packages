@@ -1,0 +1,143 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Johannes Berg <johannes.berg@intel.com>
+Date: Thu, 13 Oct 2022 20:15:56 +0200
+Subject: [PATCH] mac80211: mesh: clean up rx_bcn_presp API
+
+commit a5b983c6073140b624f64e79fea6d33c3e4315a0 upstream.
+
+We currently pass the entire elements to the rx_bcn_presp()
+method, but only need mesh_config. Additionally, we use the
+length of the elements to calculate back the entire frame's
+length, but that's confusing - just pass the length of the
+frame instead.
+
+Link: https://lore.kernel.org/r/20210920154009.a18ed3d2da6c.I1824b773a0fbae4453e1433c184678ca14e8df45@changeid
+Signed-off-by: Johannes Berg <johannes.berg@intel.com>
+Cc: Felix Fietkau <nbd@nbd.name>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ net/mac80211/ieee80211_i.h |  7 +++----
+ net/mac80211/mesh.c        |  4 ++--
+ net/mac80211/mesh_sync.c   | 26 ++++++++++++--------------
+ 3 files changed, 17 insertions(+), 20 deletions(-)
+
+diff --git a/net/mac80211/ieee80211_i.h b/net/mac80211/ieee80211_i.h
+index f7bea4af2ddb..4bd55af184b2 100644
+--- a/net/mac80211/ieee80211_i.h
++++ b/net/mac80211/ieee80211_i.h
+@@ -631,10 +631,9 @@ struct ieee80211_if_ocb {
+  */
+ struct ieee802_11_elems;
+ struct ieee80211_mesh_sync_ops {
+-	void (*rx_bcn_presp)(struct ieee80211_sub_if_data *sdata,
+-			     u16 stype,
+-			     struct ieee80211_mgmt *mgmt,
+-			     struct ieee802_11_elems *elems,
++	void (*rx_bcn_presp)(struct ieee80211_sub_if_data *sdata, u16 stype,
++			     struct ieee80211_mgmt *mgmt, unsigned int len,
++			     const struct ieee80211_meshconf_ie *mesh_cfg,
+ 			     struct ieee80211_rx_status *rx_status);
+ 
+ 	/* should be called with beacon_data under RCU read lock */
+diff --git a/net/mac80211/mesh.c b/net/mac80211/mesh.c
+index 42bd81a30310..9f6414a68d71 100644
+--- a/net/mac80211/mesh.c
++++ b/net/mac80211/mesh.c
+@@ -1354,8 +1354,8 @@ static void ieee80211_mesh_rx_bcn_presp(struct ieee80211_sub_if_data *sdata,
+ 	}
+ 
+ 	if (ifmsh->sync_ops)
+-		ifmsh->sync_ops->rx_bcn_presp(sdata,
+-			stype, mgmt, &elems, rx_status);
++		ifmsh->sync_ops->rx_bcn_presp(sdata, stype, mgmt, len,
++					      elems.mesh_config, rx_status);
+ }
+ 
+ int ieee80211_mesh_finish_csa(struct ieee80211_sub_if_data *sdata)
+diff --git a/net/mac80211/mesh_sync.c b/net/mac80211/mesh_sync.c
+index fde93de2b80a..9e342cc2504c 100644
+--- a/net/mac80211/mesh_sync.c
++++ b/net/mac80211/mesh_sync.c
+@@ -3,6 +3,7 @@
+  * Copyright 2011-2012, Pavel Zubarev <pavel.zubarev@gmail.com>
+  * Copyright 2011-2012, Marco Porsch <marco.porsch@s2005.tu-chemnitz.de>
+  * Copyright 2011-2012, cozybit Inc.
++ * Copyright (C) 2021 Intel Corporation
+  */
+ 
+ #include "ieee80211_i.h"
+@@ -35,12 +36,12 @@ struct sync_method {
+ /**
+  * mesh_peer_tbtt_adjusting - check if an mp is currently adjusting its TBTT
+  *
+- * @ie: information elements of a management frame from the mesh peer
++ * @cfg: mesh config element from the mesh peer (or %NULL)
+  */
+-static bool mesh_peer_tbtt_adjusting(struct ieee802_11_elems *ie)
++static bool mesh_peer_tbtt_adjusting(const struct ieee80211_meshconf_ie *cfg)
+ {
+-	return (ie->mesh_config->meshconf_cap &
+-			IEEE80211_MESHCONF_CAPAB_TBTT_ADJUSTING) != 0;
++	return cfg &&
++	       (cfg->meshconf_cap & IEEE80211_MESHCONF_CAPAB_TBTT_ADJUSTING);
+ }
+ 
+ void mesh_sync_adjust_tsf(struct ieee80211_sub_if_data *sdata)
+@@ -76,50 +77,47 @@ void mesh_sync_adjust_tsf(struct ieee80211_sub_if_data *sdata)
+ 	}
+ }
+ 
+-static void mesh_sync_offset_rx_bcn_presp(struct ieee80211_sub_if_data *sdata,
+-				   u16 stype,
+-				   struct ieee80211_mgmt *mgmt,
+-				   struct ieee802_11_elems *elems,
+-				   struct ieee80211_rx_status *rx_status)
++static void
++mesh_sync_offset_rx_bcn_presp(struct ieee80211_sub_if_data *sdata, u16 stype,
++			      struct ieee80211_mgmt *mgmt, unsigned int len,
++			      const struct ieee80211_meshconf_ie *mesh_cfg,
++			      struct ieee80211_rx_status *rx_status)
+ {
+ 	struct ieee80211_if_mesh *ifmsh = &sdata->u.mesh;
+ 	struct ieee80211_local *local = sdata->local;
+ 	struct sta_info *sta;
+ 	u64 t_t, t_r;
+ 
+ 	WARN_ON(ifmsh->mesh_sp_id != IEEE80211_SYNC_METHOD_NEIGHBOR_OFFSET);
+ 
+ 	/* standard mentions only beacons */
+ 	if (stype != IEEE80211_STYPE_BEACON)
+ 		return;
+ 
+ 	/*
+ 	 * Get time when timestamp field was received.  If we don't
+ 	 * have rx timestamps, then use current tsf as an approximation.
+ 	 * drv_get_tsf() must be called before entering the rcu-read
+ 	 * section.
+ 	 */
+ 	if (ieee80211_have_rx_timestamp(rx_status))
+ 		t_r = ieee80211_calculate_rx_timestamp(local, rx_status,
+-						       24 + 12 +
+-						       elems->total_len +
+-						       FCS_LEN,
+-						       24);
++						       len + FCS_LEN, 24);
+ 	else
+ 		t_r = drv_get_tsf(local, sdata);
+ 
+ 	rcu_read_lock();
+ 	sta = sta_info_get(sdata, mgmt->sa);
+ 	if (!sta)
+ 		goto no_sync;
+ 
+ 	/* check offset sync conditions (13.13.2.2.1)
+ 	 *
+ 	 * TODO also sync to
+ 	 * dot11MeshNbrOffsetMaxNeighbor non-peer non-MBSS neighbors
+ 	 */
+ 
+-	if (elems->mesh_config && mesh_peer_tbtt_adjusting(elems)) {
++	if (mesh_peer_tbtt_adjusting(mesh_cfg)) {
+ 		msync_dbg(sdata, "STA %pM : is adjusting TBTT\n",
+ 			  sta->sta.addr);
+ 		goto no_sync;
