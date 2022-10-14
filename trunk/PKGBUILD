@@ -10,11 +10,9 @@ pkgname=gnupg
 pkgver=2.2.39
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
+arch=('x86_64')
 url='https://www.gnupg.org/'
 license=(BSD custom custom:CC0 GPL2 GPL3 LGPL3 LGPL2.1 MIT)
-arch=('x86_64')
-checkdepends=('openssh')
-makedepends=('libldap' 'libusb-compat' 'pcsclite')
 depends=(
   'bzip2' 'libbz2.so'
   'glibc'
@@ -29,18 +27,15 @@ depends=(
   'sqlite'
   'zlib'
 )
+makedepends=('libldap' 'libusb-compat' 'pcsclite')
+checkdepends=('openssh')
 optdepends=(
   'libldap: gpg2keys_ldap'
   'libusb-compat: scdaemon'
   'pcsclite: scdaemon'
 )
 options=('debug')
-validpgpkeys=(
-  '5B80C5754298F0CB55D8ED6ABCEF7E294B092E28' # Andre Heinecke (Release Signing Key)
-  '6DAA6E64A76D2840571B4902528897B826403ADA' # Werner Koch (dist signing 2020)
-  'AC8E115BF73E2D8D47FA9908E98E9B2D19C6C8BD' # Niibe Yutaka (GnuPG Release Key)
-  '02F38DFF731FF97CB039A1DA549E695E905BA208' # GnuPG.com (Release Signing Key 2021)
-)
+install=$pkgname.install
 source=(
   "https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}
   'drop-import-clean.patch'
@@ -54,8 +49,12 @@ b2sums=('a9e31830f3ef9ec6d8d461a85fcbe4b91bcac9607d3b5f13f5edc0c54505afb6c6c119c
         'SKIP'
         'd598015e7f27b27840667d1656c083b4ad85d6acdd312e9929854067313a5f28415ee7eecf4d84a4b8da0385b667aaa01a9743461f5c785402a56c238274e376'
         '7ea069e81e2d91a3154bcb62516b4b599f34596de277f95ad1ccaba73869c4f84f94f063b65026ba0bc8a72c0fd8e8e182b82346964f67ea78166b6399c923c5')
-
-install=$pkgname.install
+validpgpkeys=(
+  '5B80C5754298F0CB55D8ED6ABCEF7E294B092E28' # Andre Heinecke (Release Signing Key)
+  '6DAA6E64A76D2840571B4902528897B826403ADA' # Werner Koch (dist signing 2020)
+  'AC8E115BF73E2D8D47FA9908E98E9B2D19C6C8BD' # Niibe Yutaka (GnuPG Release Key)
+  '02F38DFF731FF97CB039A1DA549E695E905BA208' # GnuPG.com (Release Signing Key 2021)
+)
 
 prepare() {
   cd "${srcdir}/${pkgname}-${pkgver}"
