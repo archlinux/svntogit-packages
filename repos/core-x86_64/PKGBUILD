@@ -2,7 +2,7 @@
 
 pkgbase=linux-lts
 pkgver=5.15.73
-pkgrel=2
+pkgrel=3
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -30,6 +30,12 @@ source=(
   0012-wifi-mac80211_hwsim-avoid-mac80211-warning-on-bad-ra.patch
   0013-wifi-mac80211-fix-crash-in-beacon-protection-for-P2P.patch
   0014-wifi-cfg80211-update-hidden-BSSes-to-avoid-WARN_ON.patch
+  0015-mac80211-mesh-clean-up-rx_bcn_presp-API.patch
+  0016-mac80211-move-CRC-into-struct-ieee802_11_elems.patch
+  0017-mac80211-mlme-find-auth-challenge-directly.patch
+  0018-mac80211-always-allocate-struct-ieee802_11_elems.patch
+  0019-mac80211-fix-memory-leaks-with-element-parsing.patch
+  0020-wifi-mac80211-fix-MBSSID-parsing-use-after-free.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -52,7 +58,13 @@ sha256sums=('a822f09525ae8803453939a91e73f18097a3ba2aec73be4fe9ab314a0131715d'
             '8986c7cf22dfbe18722f0ac22a706b84757a3d44e0cf4ba5e63f7507556302e9'
             'af69b08e37bf6a7ba9a35e25e96a46a47d1a614c2b100e4ba5cf5fa346179f1f'
             'f65517c4daf7c6cfb07b1843e28df2bc6c8ac04fab41683b2a5c9f399d36434f'
-            '1475d5f0b9823f9f26cc3a684644e8a2fb935fe9885384a07e07b390ea41a6cf')
+            '1475d5f0b9823f9f26cc3a684644e8a2fb935fe9885384a07e07b390ea41a6cf'
+            '5ebde67acb63a87650d2978b9089e1dd54b846ae31260501fdd849143731cad2'
+            'c58155897dc71b52f2c6442c8feea4ff3392b335f36106e337ad577981928ee5'
+            'a6a1b114d1d8d32091cf4616b1626e693aebc773c936d45d871f4c26a1d0f745'
+            '74e9f5cef382d208e850281046300e535181f16304ed4cb1b1b78d3775d49b42'
+            '06c40a0f87b3e85864f678a6c52e5eda26c906e119fd1ddd58d30c6de17810de'
+            '01fee9118fa943e25dd40889a282f081781aef61de499826fedd1489a7b5ef61')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
