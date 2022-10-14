@@ -57,7 +57,7 @@ validpgpkeys=(
 )
 
 prepare() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
 
   local src
   for src in "${source[@]}"; do
@@ -75,7 +75,7 @@ prepare() {
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
   ./configure \
     --prefix=/usr \
     --sysconfdir=/etc \
@@ -87,7 +87,7 @@ build() {
 }
 
 check() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
   make check
 }
 
@@ -96,7 +96,7 @@ package() {
   local socket_target_dir="$pkgdir/usr/lib/systemd/user/sockets.target.wants/"
   local unit
 
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${pkgname}-${pkgver}"
   make DESTDIR="${pkgdir}" install
   ln -s gpg "${pkgdir}"/usr/bin/gpg2
   ln -s gpgv "${pkgdir}"/usr/bin/gpgv2
