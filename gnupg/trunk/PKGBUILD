@@ -15,9 +15,20 @@ license=(BSD custom custom:CC0 GPL2 GPL3 LGPL3 LGPL2.1 MIT)
 arch=('x86_64')
 checkdepends=('openssh')
 makedepends=('libldap' 'libusb-compat' 'pcsclite')
-depends=('npth' 'libgpg-error' 'libgcrypt' 'libksba' 'libassuan' 'pinentry'
-         'bzip2' 'libbz2.so' 'readline' 'libreadline.so' 'gnutls' 'sqlite'
-         'zlib' 'glibc')
+depends=(
+  'bzip2' 'libbz2.so'
+  'glibc'
+  'gnutls'
+  'libgcrypt'
+  'libgpg-error'
+  'libksba'
+  'libassuan' 'libassuan.so'
+  'npth' 'libnpth.so'
+  'pinentry'
+  'readline' 'libreadline.so'
+  'sqlite'
+  'zlib'
+)
 optdepends=(
   'libldap: gpg2keys_ldap'
   'libusb-compat: scdaemon'
