@@ -9,25 +9,36 @@ arch=('x86_64')
 url='https://github.com/shadow-maint/shadow'
 license=('BSD')
 # libcap-ng needed by install scriptlet for 'filecap'
-depends=('pam' 'acl' 'libacl.so' 'audit' 'libaudit.so' 'libcap-ng' 'libcap-ng.so'
-         'libxcrypt' 'libcrypt.so')
-backup=(etc/login.defs
-        etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
-        etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
-        etc/pam.d/{chgpasswd,groupmems}
-        etc/default/useradd)
+depends=(
+  'acl' 'libacl.so'
+  'attr' 'libattr.so'
+  'audit' 'libaudit.so'
+  'glibc'
+  'libcap-ng' 'libcap-ng.so'
+  'libxcrypt' 'libcrypt.so'
+  'pam' 'libpam.so' 'libpam_misc.so'
+)
+backup=(
+  etc/default/useradd
+  etc/login.defs
+  etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
+  etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
+  etc/pam.d/{chgpasswd,groupmems}
+)
 options=('!emptydirs')
 install=shadow.install
-source=("https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
-        LICENSE
-        chgpasswd
-        chpasswd
-        defaults.pam
-        login.defs
-        newusers
-        passwd
-        shadow.{timer,service}
-        useradd.defaults)
+source=(
+  "https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
+  LICENSE
+  chgpasswd
+  chpasswd
+  defaults.pam
+  login.defs
+  newusers
+  passwd
+  shadow.{timer,service}
+  useradd.defaults
+)
 sha512sums=('12fbe4d6ac929ad3c21525ed0f1026b5b678ccec9762f2ec7e611d9c180934def506325f2835fb750dd30af035b592f827ff151cd6e4c805aaaf8e01425c279f'
             'SKIP'
             '62efcede35948e4a2f367362590723d7b3a2dde8a079baa9721069194bc924b16869c871ac824a73d56129ca620aaba0bfde5886a7146c1f8b1a155d06cb9b53'
