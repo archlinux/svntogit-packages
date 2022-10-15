@@ -17,7 +17,7 @@ backup=(etc/login.defs
         etc/pam.d/{chgpasswd,groupmems}
         etc/default/useradd)
 options=('!emptydirs')
-validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn
+install=shadow.install
 source=("https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
         LICENSE
         chgpasswd
@@ -28,7 +28,6 @@ source=("https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shado
         passwd
         shadow.{timer,service}
         useradd.defaults)
-install=shadow.install
 sha1sums=('9cb767b86ff2b46e880b428e817972aa07b3a67c'
           'SKIP'
           '33a6cf1e44a1410e5c9726c89e5de68b78f5f922'
@@ -41,6 +40,7 @@ sha1sums=('9cb767b86ff2b46e880b428e817972aa07b3a67c'
           'a154a94b47a3d0c6c287253b98c0d10b861226d0'
           'b5540736f5acbc23b568973eb5645604762db3dd'
           'c173208c5cf34528602f9931468a67b7f68abad3')
+validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn
 
 build() {
   cd "$pkgname-$pkgver"
