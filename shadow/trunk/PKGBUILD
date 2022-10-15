@@ -29,7 +29,6 @@ options=('!emptydirs')
 install=shadow.install
 source=(
   "https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
-  LICENSE
   chgpasswd
   chpasswd
   defaults.pam
@@ -41,7 +40,6 @@ source=(
 )
 sha512sums=('12fbe4d6ac929ad3c21525ed0f1026b5b678ccec9762f2ec7e611d9c180934def506325f2835fb750dd30af035b592f827ff151cd6e4c805aaaf8e01425c279f'
             'SKIP'
-            '62efcede35948e4a2f367362590723d7b3a2dde8a079baa9721069194bc924b16869c871ac824a73d56129ca620aaba0bfde5886a7146c1f8b1a155d06cb9b53'
             'aef316f283a0ba0387afd5bd049b20d748dcfe8aebc5f5ea1ce1308167d6a578ae7d0007a5ed4d9862de7d377851edd2c8771e1fb1076262468078c2c76e42fc'
             'dc75dfeafa901f9988176b82ef9db5d927dfe687a72ca36ca13ba3e7ac1b0c8055db1104373f2a7ac463e156f079cbc1f0a9f5e6e16b9f74153eb63dcb8f96df'
             '41c856d893c4157b158d79341fe2b1892be463e17f7a007f1c17397b5625c1d2d5671bc0b37879064ae715a918fb9b05c32d18d1aaa64284cddd8ecbda9b2434'
@@ -53,7 +51,6 @@ sha512sums=('12fbe4d6ac929ad3c21525ed0f1026b5b678ccec9762f2ec7e611d9c180934def50
             'b681401895de553674cfc7f51809565db03cb4351f85b492460d09abfd703e73c41ba1dfd708964e0f6ea356dc9c929818c62e7d740d55fb795a2e9b7de271fc')
 b2sums=('d459a1e0ffb342b6b455caf65e6af60b32eee72d4a9b1ab126485fb4632503a42061d3f0b960554c8155af6dc0564c585335b27aecca6538b394a0d58d927588'
         'SKIP'
-        'f3d3eaedb1cd8952d47614fe6e20bf9f84d44704963a921c97ddba40e1c570063bc582c78b1c9cfeebfc30657453ea5940f8cce56d6b6bde18270bdfafb6e78a'
         '31e74eebedf8cb6e5ade36096b4399892d7091b9dce4645fde591f64802dc8befd73ae8019e78f8d326a605b224c7828694d21788bd6073db43c41cf5a9c2805'
         '1518839dbfe12f2f55190976de808515f93eb8c06f1570f02780a5ce8c237e0be43aa7cd0fbbe4c88af1f641586e4d3cf122896d97c7594ef72991e1801ee666'
         '5fde901d7d29995523cf261de973cc053265f37cf8fecc5511ccfff35a6ef4308f8cf36dc94e37c8b7604694ffa6ab87331c9b533b3538c6f7d7d911c9f94d19'
@@ -92,7 +89,7 @@ package() {
   make DESTDIR="$pkgdir" -C man install
 
   # license
-  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/shadow/LICENSE"
+  install -Dm644 COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
 
   # useradd defaults
   install -Dm600 "$srcdir/useradd.defaults" "$pkgdir/etc/default/useradd"
