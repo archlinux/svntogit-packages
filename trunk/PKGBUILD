@@ -63,7 +63,7 @@ b2sums=('d459a1e0ffb342b6b455caf65e6af60b32eee72d4a9b1ab126485fb4632503a42061d3f
         '5cfc936555aa2b2e15f8830ff83764dad6e11a80e2a102c5f2bd3b7c83db22a5457a3afdd182e3648c9d7d5bca90fa550f59576d0ac47a11a31dfb636cb18f2b'
         '4a9cb6fe6658f2182655d42761d9d669654c6f0e891610e1b7fd256ce32a561f05e71daf8e473d98f16f5ee9d16d46a097a2d0de42eac58b4ce3be1525a74856'
         '75738ba7705fe4f8c22d07bff738a5c2c3bc0fd44d9aaca170cb4e6e7bb3f1e05f729f6decfaa4dec8a037e09fdea83b3500aaa8d6693fd4ae20d7fb0ede420e')
-validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn
+validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn <sergeh@kernel.org>
 
 build() {
   cd "$pkgname-$pkgver"
