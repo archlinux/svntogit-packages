@@ -14,7 +14,7 @@ depends=(
   'attr' 'libattr.so'
   'audit' 'libaudit.so'
   'glibc'
-  'libcap-ng' 'libcap-ng.so'
+  'libcap-ng'
   'libxcrypt' 'libcrypt.so'
   'pam' 'libpam.so' 'libpam_misc.so'
 )
