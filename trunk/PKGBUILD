@@ -1,5 +1,6 @@
-# Maintainer: Dave Reisner <dreisner@archlinux.org>
-# Maintainer: Aaron Griffin <aaron@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Aaron Griffin <aaron@archlinux.org>
 
 pkgname=shadow
 pkgver=4.11.1
