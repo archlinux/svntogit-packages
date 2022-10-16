@@ -21,9 +21,7 @@ depends=(
 backup=(
   etc/default/useradd
   etc/login.defs
-  etc/pam.d/{chage,passwd,shadow,useradd,usermod,userdel}
-  etc/pam.d/{chpasswd,newusers,groupadd,groupdel,groupmod}
-  etc/pam.d/{chgpasswd,groupmems}
+  etc/pam.d/{chage,{,ch,chg}passwd,group{add,del,mems,mod},newusers,shadow,user{add,del,mod}}
 )
 options=('!emptydirs')
 install=shadow.install
