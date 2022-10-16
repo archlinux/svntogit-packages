@@ -77,6 +77,8 @@ build() {
     --with-libpam \
     --with-group-name-max-length=32 \
     --with-audit \
+    --with-bcrypt \
+    --with-yescrypt \
     --without-selinux \
     --without-su
 
