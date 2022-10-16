@@ -95,20 +95,20 @@ package() {
   install -Dm644 COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
 
   # useradd defaults
-  install -Dm600 "$srcdir/useradd.defaults" "$pkgdir/etc/default/useradd"
+  install -Dm600 "../useradd.defaults" "$pkgdir/etc/default/useradd"
 
   # systemd units
-  install -D -m644 "$srcdir/shadow.timer" "$pkgdir/usr/lib/systemd/system/shadow.timer"
-  install -D -m644 "$srcdir/shadow.service" "$pkgdir/usr/lib/systemd/system/shadow.service"
+  install -D -m644 "../shadow.timer" "$pkgdir/usr/lib/systemd/system/shadow.timer"
+  install -D -m644 "../shadow.service" "$pkgdir/usr/lib/systemd/system/shadow.service"
   install -d -m755 "$pkgdir/usr/lib/systemd/system/timers.target.wants"
   ln -s ../shadow.timer "$pkgdir/usr/lib/systemd/system/timers.target.wants/shadow.timer"
 
   # login.defs
-  install -Dm644 "$srcdir/login.defs" "$pkgdir/etc/login.defs"
+  install -Dm644 "../login.defs" "$pkgdir/etc/login.defs"
 
   # PAM config - custom
   rm "$pkgdir/etc/pam.d"/*
-  install -t "$pkgdir/etc/pam.d" -m644 "$srcdir"/{passwd,chgpasswd,chpasswd,newusers}
+  install -t "$pkgdir/etc/pam.d" -m644 ".."/{passwd,chgpasswd,chpasswd,newusers}
 
   # PAM config - from tarball
   install -Dm644 etc/pam.d/groupmems "$pkgdir/etc/pam.d/groupmems"
@@ -116,7 +116,7 @@ package() {
   # we use the 'useradd' PAM file for other similar utilities
   for file in chage groupadd groupdel groupmod shadow \
       useradd usermod userdel; do
-    install -Dm644 "$srcdir/defaults.pam" "$pkgdir/etc/pam.d/$file"
+    install -Dm644 "../defaults.pam" "$pkgdir/etc/pam.d/$file"
   done
 
   # Remove evil/broken tools
