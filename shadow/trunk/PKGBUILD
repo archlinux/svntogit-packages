@@ -92,43 +92,40 @@ package() {
   make DESTDIR="$pkgdir" -C man install
 
   # license
-  install -Dm644 COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -vDm 644 COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
 
   # useradd defaults
-  install -Dm600 "../useradd.defaults" "$pkgdir/etc/default/useradd"
+  install -vDm 600 "../useradd.defaults" "$pkgdir/etc/default/useradd"
 
   # systemd units
-  install -D -m644 "../shadow.timer" "$pkgdir/usr/lib/systemd/system/shadow.timer"
-  install -D -m644 "../shadow.service" "$pkgdir/usr/lib/systemd/system/shadow.service"
-  install -d -m755 "$pkgdir/usr/lib/systemd/system/timers.target.wants"
+  install -vDm 644 "../shadow.timer" -t "$pkgdir/usr/lib/systemd/system/"
+  install -vDm 644 "../shadow.service" -t "$pkgdir/usr/lib/systemd/system/"
+  install -vdm 755 "$pkgdir/usr/lib/systemd/system/timers.target.wants"
   ln -s ../shadow.timer "$pkgdir/usr/lib/systemd/system/timers.target.wants/shadow.timer"
 
   # login.defs
-  install -Dm644 "../login.defs" "$pkgdir/etc/login.defs"
+  install -vDm 644 "../login.defs" -t "$pkgdir/etc/"
 
   # PAM config - custom
   rm "$pkgdir/etc/pam.d"/*
-  install -t "$pkgdir/etc/pam.d" -m644 ".."/{passwd,chgpasswd,chpasswd,newusers}
+  install -vDm 644 ../{passwd,chgpasswd,chpasswd,newusers} -t "$pkgdir/etc/pam.d/"
 
   # PAM config - from tarball
-  install -Dm644 etc/pam.d/groupmems "$pkgdir/etc/pam.d/groupmems"
+  install -vDm 644 etc/pam.d/groupmems -t "$pkgdir/etc/pam.d/"
 
   # we use the 'useradd' PAM file for other similar utilities
-  for file in chage groupadd groupdel groupmod shadow \
-      useradd usermod userdel; do
-    install -Dm644 "../defaults.pam" "$pkgdir/etc/pam.d/$file"
+  for file in chage group{add,del,mod} shadow user{add,del,mod}; do
+    install -vDm 644 "../defaults.pam" "$pkgdir/etc/pam.d/$file"
   done
 
   # Remove evil/broken tools
-  rm "$pkgdir"/usr/sbin/logoutd
+  rm -v "$pkgdir"/usr/sbin/logoutd
 
   # Remove utilities provided by util-linux
-  rm \
-      "$pkgdir"/usr/bin/{login,chsh,chfn,sg,nologin} \
-      "$pkgdir"/usr/sbin/{vipw,vigr}
+  rm -v "$pkgdir"/usr/{bin/{login,chsh,chfn,sg,nologin},sbin/{vipw,vigr}}
 
   # but we keep newgrp, as sg is really an alias to it
-  mv "$pkgdir"/usr/bin/{newgrp,sg}
+  mv -v "$pkgdir"/usr/bin/{newgrp,sg}
 
   # ...and their many man pages
   find "$pkgdir"/usr/share/man \
@@ -144,6 +141,6 @@ package() {
       -delete
 
   # move everything else to /usr/bin, because this isn't handled by ./configure
-  mv "$pkgdir"/usr/sbin/* "$pkgdir"/usr/bin
-  rmdir "$pkgdir/usr/sbin"
+  mv -v "$pkgdir"/usr/sbin/* "$pkgdir"/usr/bin
+  rmdir -v "$pkgdir/usr/sbin"
 }
