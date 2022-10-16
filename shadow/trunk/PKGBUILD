@@ -73,6 +73,7 @@ build() {
     --mandir=/usr/share/man \
     --sysconfdir=/etc \
     --disable-account-tools-setuid \
+    --with-fcaps \
     --with-libpam \
     --with-group-name-max-length=32 \
     --with-audit \
