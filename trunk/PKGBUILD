@@ -30,35 +30,40 @@ source=(
   chgpasswd
   chpasswd
   defaults.pam
-  login.defs
   newusers
   passwd
   shadow.{timer,service}
   useradd.defaults
+  $pkgname-4.11.1-login.defs.patch
 )
 sha512sums=('12fbe4d6ac929ad3c21525ed0f1026b5b678ccec9762f2ec7e611d9c180934def506325f2835fb750dd30af035b592f827ff151cd6e4c805aaaf8e01425c279f'
             'SKIP'
             'aef316f283a0ba0387afd5bd049b20d748dcfe8aebc5f5ea1ce1308167d6a578ae7d0007a5ed4d9862de7d377851edd2c8771e1fb1076262468078c2c76e42fc'
             'dc75dfeafa901f9988176b82ef9db5d927dfe687a72ca36ca13ba3e7ac1b0c8055db1104373f2a7ac463e156f079cbc1f0a9f5e6e16b9f74153eb63dcb8f96df'
             '41c856d893c4157b158d79341fe2b1892be463e17f7a007f1c17397b5625c1d2d5671bc0b37879064ae715a918fb9b05c32d18d1aaa64284cddd8ecbda9b2434'
-            'edc3becca531dfa791fbeace4ae159e9d760689b979e8892c6eb60b93b12e1a88648ef23602d1ad3fd0ebcbed088bce5bed6eba4444cdb7165f91becce5856a1'
             'dc75dfeafa901f9988176b82ef9db5d927dfe687a72ca36ca13ba3e7ac1b0c8055db1104373f2a7ac463e156f079cbc1f0a9f5e6e16b9f74153eb63dcb8f96df'
             '4fb7474ea9dedf86e4c65bf18f503a6d8c00d477a7c32be3cfdfd026bd62ef866d009c50e5a2dc2101bea332c5697bc1e0d55225f39c83252860f5b9b7461aeb'
             'e4edf705dd04e088c6b561713eaa1afeb92f42ac13722bff037aede6ac5ad7d4d00828cfb677f7b1ff048db8b6788238c1ab6a71dfcfd3e02ef6cb78ae09a621'
             '67a49415f676a443f81021bfa29d198462008da1224086f8c549b19c2fd21514ca3302d5ac23edec28b9c724fef921596586423ebe41e852ebfbe7216af727e6'
-            'b681401895de553674cfc7f51809565db03cb4351f85b492460d09abfd703e73c41ba1dfd708964e0f6ea356dc9c929818c62e7d740d55fb795a2e9b7de271fc')
+            'b681401895de553674cfc7f51809565db03cb4351f85b492460d09abfd703e73c41ba1dfd708964e0f6ea356dc9c929818c62e7d740d55fb795a2e9b7de271fc'
+            'f718a788a79c38860fe2bce4e03ba3c356d5d90534e06170646f25cadc37fd6ccebf38729a1084b7448d69af8ca0047dc899f0a028362df219cf271dfada4a06')
 b2sums=('d459a1e0ffb342b6b455caf65e6af60b32eee72d4a9b1ab126485fb4632503a42061d3f0b960554c8155af6dc0564c585335b27aecca6538b394a0d58d927588'
         'SKIP'
         '31e74eebedf8cb6e5ade36096b4399892d7091b9dce4645fde591f64802dc8befd73ae8019e78f8d326a605b224c7828694d21788bd6073db43c41cf5a9c2805'
         '1518839dbfe12f2f55190976de808515f93eb8c06f1570f02780a5ce8c237e0be43aa7cd0fbbe4c88af1f641586e4d3cf122896d97c7594ef72991e1801ee666'
         '5fde901d7d29995523cf261de973cc053265f37cf8fecc5511ccfff35a6ef4308f8cf36dc94e37c8b7604694ffa6ab87331c9b533b3538c6f7d7d911c9f94d19'
-        'db8e794f6b55e00acebeb89a57e4b40facba8d0c039b5d9bcd6ff58a9e44639cffe826c6fb23744fd3c52de3c5b4a7a5ac28917d552980fb8a6d9f347f2a4028'
         '1518839dbfe12f2f55190976de808515f93eb8c06f1570f02780a5ce8c237e0be43aa7cd0fbbe4c88af1f641586e4d3cf122896d97c7594ef72991e1801ee666'
         '5b4e20609d38dcec82eae66acdfb7d45288574e7bf9684fa0f66bc0fb1c45cd78ee503d04a5084e28755fb7a1c6cea95854c93b33d76ab20964f45420c68403c'
         '5cfc936555aa2b2e15f8830ff83764dad6e11a80e2a102c5f2bd3b7c83db22a5457a3afdd182e3648c9d7d5bca90fa550f59576d0ac47a11a31dfb636cb18f2b'
         '4a9cb6fe6658f2182655d42761d9d669654c6f0e891610e1b7fd256ce32a561f05e71daf8e473d98f16f5ee9d16d46a097a2d0de42eac58b4ce3be1525a74856'
-        '75738ba7705fe4f8c22d07bff738a5c2c3bc0fd44d9aaca170cb4e6e7bb3f1e05f729f6decfaa4dec8a037e09fdea83b3500aaa8d6693fd4ae20d7fb0ede420e')
+        '75738ba7705fe4f8c22d07bff738a5c2c3bc0fd44d9aaca170cb4e6e7bb3f1e05f729f6decfaa4dec8a037e09fdea83b3500aaa8d6693fd4ae20d7fb0ede420e'
+        'f386a0a84e33772f9d98f5ba9d2d97c4a904cff3a4ef52c223bc9c761c74d50bccb09833da185c09e0675bf3d04856e266f5578c0b250ef9c00f2cf1fcc03bd0')
 validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn <sergeh@kernel.org>
+
+prepare() {
+  # comment options that are taken over by util-linux and apply defaults
+  patch -Np1 -d "$pkgname-$pkgver" -i ../$pkgname-4.11.1-login.defs.patch
+}
 
 build() {
   cd "$pkgname-$pkgver"
@@ -102,9 +107,6 @@ package() {
   install -vDm 644 "../shadow.service" -t "$pkgdir/usr/lib/systemd/system/"
   install -vdm 755 "$pkgdir/usr/lib/systemd/system/timers.target.wants"
   ln -s ../shadow.timer "$pkgdir/usr/lib/systemd/system/timers.target.wants/shadow.timer"
-
-  # login.defs
-  install -vDm 644 "../login.defs" -t "$pkgdir/etc/"
 
   # PAM config - custom
   rm "$pkgdir/etc/pam.d"/*
