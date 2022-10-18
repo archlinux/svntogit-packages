@@ -100,8 +100,8 @@ package() {
   # license
   install -vDm 644 COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
 
-  # useradd defaults
-  install -vDm 600 "../useradd.defaults" "$pkgdir/etc/default/useradd"
+  # custom useradd(8) defaults (not provided by upstream)
+  install -vDm 600 ../useradd.defaults "$pkgdir/etc/default/useradd"
 
   # systemd units
   install -vDm 644 "../shadow.timer" -t "$pkgdir/usr/lib/systemd/system/"
