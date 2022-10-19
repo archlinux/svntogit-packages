@@ -15,17 +15,16 @@ depends=(
   'attr' 'libattr.so'
   'audit' 'libaudit.so'
   'glibc'
-  'libcap-ng'
   'libxcrypt' 'libcrypt.so'
   'pam' 'libpam.so' 'libpam_misc.so'
 )
+makedepends=(libcap)
 backup=(
   etc/default/useradd
   etc/login.defs
   etc/pam.d/{chage,{,ch,chg}passwd,group{add,del,mems,mod},newusers,shadow,user{add,del,mod}}
 )
 options=(debug '!emptydirs')
-install=shadow.install
 source=(
   "https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
   chgpasswd
