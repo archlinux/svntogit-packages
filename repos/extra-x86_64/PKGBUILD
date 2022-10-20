@@ -7,7 +7,7 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.40.0
+pkgver=1.40.2
 pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
@@ -21,7 +21,7 @@ makedepends=(dhclient dhcpcd iptables-nft gobject-introspection gtk-doc
              openresolv libpsl audit meson)
 checkdepends=(libx11 python-dbus)
 options=(debug)
-_commit=5d4802f7d869e2a91192dc75bf33cff892a3facf  # tags/1.40.0^0
+_commit=4704b924ad584b467926dabddb8e726c1166ab5b  # tags/1.40.2^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 b2sums=('SKIP')
 
