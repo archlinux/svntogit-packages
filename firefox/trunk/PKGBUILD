@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=106.0
+pkgver=106.0.1
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -23,7 +23,7 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('1546ebfd9d5a814f17479ed626519ed69aa3c89c22c7fb1fe5c84e4d7e5d7e18'
+sha256sums=('bdf8184f9aadce4fd9613ec63525a96891e2e9dbbef9e4f72193038450a7fd35'
             'SKIP'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
