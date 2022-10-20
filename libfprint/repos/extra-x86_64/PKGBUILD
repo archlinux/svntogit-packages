@@ -3,7 +3,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgname=libfprint
-pkgver=1.94.4
+pkgver=1.94.5
 pkgrel=1
 pkgdesc="Library for fingerprint readers"
 url="https://fprint.freedesktop.org/"
@@ -15,7 +15,7 @@ checkdepends=(cairo)
 provides=(libfprint-2.so)
 groups=(fprint)
 options=(debug)
-_commit=f20b8bc3112d1ae240df79fd9b648ded99b74e06  # tags/v1.94.4^0
+_commit=86961a9429d589c387da37351fd6b4ff3caf67ea  # tags/v1.94.5^0
 source=("git+https://gitlab.freedesktop.org/libfprint/libfprint.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -41,4 +41,4 @@ package() {
   meson install -C build --destdir "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
