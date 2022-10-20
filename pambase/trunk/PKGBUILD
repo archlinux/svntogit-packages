@@ -7,18 +7,22 @@ pkgdesc="Base PAM configuration for services"
 arch=('any')
 url="https://www.archlinux.org"
 license=('GPL')
-source=('system-auth'
-        'system-local-login'
-        'system-login'
-        'system-remote-login'
-        'system-services'
-        'other')
-backup=('etc/pam.d/system-auth'
-        'etc/pam.d/system-local-login'
-        'etc/pam.d/system-login'
-        'etc/pam.d/system-remote-login'
-        'etc/pam.d/system-services'
-        'etc/pam.d/other')
+source=(
+  'system-auth'
+  'system-local-login'
+  'system-login'
+  'system-remote-login'
+  'system-services'
+  'other'
+)
+backup=(
+  'etc/pam.d/system-auth'
+  'etc/pam.d/system-local-login'
+  'etc/pam.d/system-login'
+  'etc/pam.d/system-remote-login'
+  'etc/pam.d/system-services'
+  'etc/pam.d/other'
+)
 sha512sums=('881f2d76cd5f621b46cc710e9f63269b801b6e03fd3cacf0b31bd1ec2b846c1e610891e2f7a52bfc67917336f411005927a9a6a01f6173143c4ef89a034dc604'
             '83cc3d84ef5afded9afd4d347132901b9adcbd8b21be45b80d010370a2082e8388a713eb78d052944bc47b07fd7383edf18e2674d9d0545215cc45e14a2e14b1'
             '39fc1b3e9d16c5049453d9756ae2088e4a927e42c5dad35a1d07b372c7801bb67606e69eb1dbf19c85843277f207812aca3da0addab09032a4de9ef933e7b0c5'
