@@ -1,4 +1,5 @@
-# Maintainer: Dave Reisner <dreisner@archlinux.org>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
 
 pkgname=pambase
 pkgver=20211210
