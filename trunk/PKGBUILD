@@ -38,8 +38,7 @@ b2sums=('2120f15bca3092ce6ed672a3244c1f2d9f13601db3fda83442029d1ceca3a5622b9ce8e
         '3de32ccd196fecaf0a3cce8e61867f93f85fff651044519d8521a28d9f8d6ddaf51f3e30eac4979884c505f9f52d01f458e5bccc5d5adc4f1d7d372068dd02da')
 
 package() {
-  install -dm755 "$pkgdir/etc/pam.d"
-  install -m644 -t "$pkgdir/etc/pam.d" "${source[@]}"
+  install -vDm 644 "${source[@]}" -t "$pkgdir/etc/pam.d/"
 }
 
 # vim:set ts=2 sw=2 et:
