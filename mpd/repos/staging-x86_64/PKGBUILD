@@ -1,0 +1,86 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Angel Velasquez <angvp@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+# Contributor: Ben <ben@benmazer.net>
+
+pkgname=mpd
+pkgver=0.23.10
+pkgrel=2
+pkgdesc="Flexible, powerful, server-side application for playing music"
+arch=(x86_64)
+url="https://www.musicpd.org/"
+license=(GPL2)
+depends=(bzip2 chromaprint gcc-libs glibc lame libcdio libcdio-paranoia
+libgcrypt libgme libmad libmms libmodplug libmpcdec libnfs libshout
+libsidplayfp libsoxr openal opus smbclient sqlite wavpack wildmidi zlib
+zziplib)
+makedepends=(alsa-lib audiofile avahi boost curl dbus expat faad2 ffmpeg flac
+fluidsynth fmt icu jack libao libid3tag libmikmod libmpdclient libogg
+libopenmpt libpulse libsamplerate libsndfile libupnp liburing libvorbis meson
+mpg123 pipewire python-sphinx systemd-libs twolame yajl)
+backup=(etc/$pkgname.conf)
+options=(debug)
+source=(
+  https://www.musicpd.org/download/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig}
+  $pkgname.conf
+  $pkgname.sysusers
+  $pkgname.tmpfiles
+  $pkgname.service.override
+)
+sha512sums=('15e51a1fab2e187529141ebb25f0bb6cc9c2ad5127c1a9f4c40d1a944ed5bc4e7e76b26eb71f659ddd8a5ce448089e6d3dcf0c302ced8a4d08951ef1b1f09c49'
+            'SKIP'
+            '25a823740d92da8e186916701413114142eb6ad91a172c592e68b569c8e4f50fa99580e555ccf6cd31fc4f55a09bfe0278efa46e4e76ee0fe02846292fadf3c1'
+            '6e467481406279767b709ec6d5c06dbd825c0de09045c52ffa2d21d0604dcfe19b7a92bf42bed25163d66a3a0d1dbde6185a648b433eaf5eac56be90491e2e18'
+            'db473db27cd68994c3ee26e78e0fb34d13126301d8861563dcc12a22d62ecb14c4ffb1e0798c6aaccdff34e73bae3fbeeff7b42606c901a2d35e278865cdf35d'
+            'c1782b82f9db1d30aece43a07230c5d57370f2494a16e108af03815d83968805472f10f53ea5495cf0e08ff8f245430c3c3bc44025af43aaf9ecd12fcd6afc6c')
+b2sums=('6b648971412a5f83fe9ff2694c030b451393c415de9c34cbea9894555ac7ea87c5a991edfdd41c7cd76511ae0680ecab35eb36ceae5e372900518c9cf5e9c55c'
+        'SKIP'
+        '0969a3c477b6a3f34b44e067e515d7f306414dd14e0163584417b9d071e3cc825898219f7ff66ead7905b15429b8411304052d3b2b14a72e560bfabf9bf0adcf'
+        '4ab6e415284c77802a39d0913d701fe55e56f3c22b19557661fbef77e456b5e1d151da4202695282b956602e716a7afdb994aa2fc17368b9a0d0d051d47a3afb'
+        'd7b587c25dd5830c27af475a8fdd8102139d7c8fdd6f04fe23b36be030e4411582e289f575c299255ff8183096f7d47247327276f9a24641cbd032d9675b837a'
+        '753664445d7d5cc0b36f51ac66549beea403b9731cbcb81b0a782974a0a73d90559ba93e6afcaa470b6f2f5a844c09ef695bdf3b1e6dfee97aa080f41b7fe513')
+validpgpkeys=('0392335A78083894A4301C43236E8A58C6DB4512') # Max Kellermann <max@blarg.de>
+
+build() {
+  local _meson_options=(
+    -D documentation=enabled
+    -D adplug=disabled
+    -D sndio=disabled
+    -D shine=disabled
+    -D tremor=disabled
+    -D b_ndebug=true
+  )
+
+  # NOTE: sndio conflicts with alsa
+  # TODO: package adplug
+  # TODO: package shine
+  arch-meson "${_meson_options[@]}" build $pkgname-$pkgver
+  ninja -C build
+}
+
+check() {
+  ninja -C build test
+}
+
+package() {
+  depends+=(libbz2.so libFLAC.so libao.so libasound.so libaudiofile.so
+  libavahi-client.so libavahi-common.so libavcodec.so libavformat.so
+  libavutil.so libcurl.so libdbus-1.so libexpat.so libfaad.so libfluidsynth.so
+  libfmt.so libicui18n.so libicuuc.so libid3tag.so libjack.so libmikmod.so
+  libmpdclient.so libmpg123.so libogg.so libopenmpt.so libpipewire-0.3.so
+  libpulse.so libsamplerate.so libsndfile.so libsystemd.so libtwolame.so
+  libupnp.so liburing.so libvorbis.so libvorbisenc.so libyajl.so libavfilter.so
+  libchromaprint.so libixml.so)
+
+  DESTDIR="$pkgdir" ninja -C build install
+  install -vDm 644 $pkgname-$pkgver/doc/${pkgname}conf.example -t "$pkgdir/usr/share/doc/$pkgname/"
+  install -vDm 644 $pkgname.service.override "$pkgdir/usr/lib/systemd/system/mpd.service.d/00-arch.conf"
+  install -vDm 644 $pkgname.conf -t "$pkgdir/etc/"
+  install -vDm 644 $pkgname.sysusers "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
+  install -vDm 644 $pkgname.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/$pkgname.conf"
+}
+
+# vim: ts=2 sw=2 et:
