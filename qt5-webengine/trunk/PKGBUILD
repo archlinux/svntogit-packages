@@ -40,7 +40,7 @@ prepare() {
   git submodule init
   git submodule set-url src/3rdparty "$srcdir"/qtwebengine-chromium
   git submodule set-branch --branch 87-based src/3rdparty
-  git submodule update
+  git -c protocol.file.allow=always submodule update
 
   patch -p1 -i "$srcdir"/qt5-webengine-python3.patch # Fix build with Python 3
   patch -p1 -d src/3rdparty -i "$srcdir"/qt5-webengine-chromium-python3.patch
