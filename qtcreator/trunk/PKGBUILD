@@ -8,9 +8,9 @@
 
 pkgbase=qtcreator
 pkgname=(qtcreator qtcreator-devel)
-pkgver=8.0.1
+pkgver=8.0.2
 _clangver=14.0.6
-pkgrel=3
+pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -30,25 +30,18 @@ optdepends=('qt6-doc: integrated Qt documentation'
             'perf: performer analyzer'
             'mlocate: locator filter')
 source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz
-        qtcreator-languageclient1.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=dc2cd9db
         qtcreator-languageclient2.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=bd00cc8b
-        qtcreator-languageclient3.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=8276bd26
-        qtcreator-deviceshell-use-after-free.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=1404c36e)
-sha256sums=('e2ce200a79c74dcd6367dcbb83c839c1c20b2cc077d6a658639eacde8a4ab865'
-            'f6b1a43f2a4bfb3fadd4a2fe0080dcee3242a905b1f97aeda85a361a04f20d76'
+        qtcreator-languageclient3.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=8276bd26)
+sha256sums=('0cbd93c62bfc33f517d7c026d82fb02a7203fe5efd67132814271083f7299db0'
             '1861f416f2accb75f3f8074f7caa83da2aa6183af99eb9c3d8e35183db0a5e8c'
-            '08ddbe2b5fae2f8900e44c7af10397277e05c65859595d5d98256f83555e7d09'
-            'c50cc37835fad9b7b9a205cfaa333c9b8479b264e63076f968711985dd9ca1f2')
+            '08ddbe2b5fae2f8900e44c7af10397277e05c65859595d5d98256f83555e7d09')
 options=(docs debug)
 
 prepare() {
   cd qt-creator-opensource-src-$pkgver
 # Backport patches to mitigate clang language server crashes
-  patch -p1 -i ../qtcreator-languageclient1.patch
   patch -p1 -i ../qtcreator-languageclient2.patch 
   patch -p1 -i ../qtcreator-languageclient3.patch 
-# Fix crash in DeviceShell
-  patch -p1 -i ../qtcreator-deviceshell-use-after-free.patch
 }
 
 build() {
