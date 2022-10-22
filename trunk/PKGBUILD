@@ -1,17 +1,16 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-incremental
-pkgver=21.3.0
-pkgrel=5
+pkgver=22.10.0
+pkgrel=1
 pkgdesc='A small library that versions your Python projects'
 arch=('any')
 license=('MIT')
-depends=('python-click' 'python-twisted')
+depends=('python-click' 'python-setuptools' 'python-twisted')
 url='https://github.com/hawkowl/incremental'
-makedepends=('python-setuptools')
-checkdepends=('python-pytest-runner')
+checkdepends=('python-pytest')
 source=("https://github.com/hawkowl/incremental/archive/incremental-$pkgver.tar.gz")
-sha512sums=('99a9e27b8513c4a13a74d37ae3d2c912af78ff9c6c528de1cba84767e2c08c9fc00cb54832efcccc70b922ac1582dd116cf8e8ba3f69926b424cf204ba4f0e7d')
+sha512sums=('fbc0b123038341a788789aa513c93dfa08592881ea89aafebdd5b21917a9888f7a7d54d7765c105eb362559391ef45f15d8ef98278b0e75c84fce7d83febf5f0')
 
 build() {
   cd incremental-incremental-$pkgver
@@ -20,7 +19,7 @@ build() {
 
 check() {
   cd incremental-incremental-$pkgver
-  LC_CTYPE=en_US.UTF-8 python setup.py ptr
+  pytest
 }
 
 package() {
