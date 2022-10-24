@@ -1,10 +1,11 @@
 # Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
-# Maintainer: Dave Reisner <dreisner@archlinux.org>
-# Maintainer: Thomas Bächler <thomas@archlinux.org>
+# Maintainer: Morten Linderud <foxboron@archlinux.org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+# Contributor: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=mkinitcpio
-pkgver=31
-pkgrel=3
+pkgver=32
+pkgrel=1
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url='https://github.com/archlinux/mkinitcpio'
@@ -19,22 +20,14 @@ optdepends=('gzip: Use gzip compression for the initramfs image'
             'mkinitcpio-nfs-utils: Support for root filesystem on NFS')
 provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
-source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig}
-       0001-Fix-the-warning-about-missing-modules.builtin.modinf.patch)
+source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
-sha512sums=('4ef87c2e4f579b292c38f9c487e78b3b99f6db77909cab322e860e5ca70aca3747fcfc272e2e15c9a3605c924ab178057b8b23151f98debc5d96e65f3c0c49d5'
-            'SKIP'
-            'fd348d6fcff249672b495db50fa67ce06d5d9a0c8f749c8b488bc1e4b43c9b850a5ad87392230fbe8b715422bb14e760bb0ad219cfcf1d7e132c6a7e4dd118a6')
-b2sums=('0113e288906e3b5fa485c29c00e7df60d85addd96718c45531031a686f18c739fa18303b6cac374d35b85edb7b663e221c8dc9158dff08c75858a4ed4dd154bf'
-        'SKIP'
-        '5a05cee0382284d6cc0a2033e872b7c4c9f01ddfe6d3550974b5eab9a8a18690d1115b57d8d08153497fed08fd55b69f8b4a4cbcbe67795d615cc06ea7c86618')
-validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB')    # Giancarlo Razzolini
-
-prepare() {
-  cd $pkgname-$pkgver
-  patch -Np1 < "$srcdir"/0001-Fix-the-warning-about-missing-modules.builtin.modinf.patch  
-   
-}
+sha512sums=('c180bef8af774305e8c9779b3405daaa5be33588bf89c6625a28eac1cde424f447782737d85d810fed4971d38b31086a072293d42aad08398c090f9538b56a4e'
+            'SKIP')
+b2sums=('0c29659278e662eb58bc776f99e9579b5f0cf3268175382ecf2d635d54a6a8261ae173e387503a0c20a7492656c703a6699b52e1a6693c85c3211225d3e7abf8'
+        'SKIP')
+validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'    # Giancarlo Razzolini
+              'C100346676634E80C940FB9E9C02FF419FECBE16')   # Morten Linderud
 
 check() {
   make -C "$pkgname-$pkgver" check
