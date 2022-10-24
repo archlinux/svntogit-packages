@@ -2,7 +2,7 @@
 
 pkgname=python-tomli-w
 pkgver=1.0.0
-pkgrel=4
+pkgrel=5
 pkgdesc="A lil' TOML writer"
 url=https://github.com/hukkin/tomli-w
 license=(MIT)
@@ -10,9 +10,9 @@ arch=(any)
 depends=(python)
 makedepends=(
   git
-  python-flit
-  python-pip
-  python-poetry
+  python-build
+  python-flit-core
+  python-installer
 )
 checkdepends=(
   python-pytest
@@ -29,7 +29,7 @@ pkgver() {
 
 build() {
   cd tomli-w
-  python -m flit build --format wheel
+  python -m build --wheel --no-isolation
 }
 
 check() {
@@ -38,7 +38,7 @@ check() {
 }
 
 package() {
-  PIP_CONFIG_FILE=/dev/null pip install --isolated --root="${pkgdir}" --ignore-installed --no-deps tomli-w/dist/*.whl
+  python -m installer --destdir="${pkgdir}" tomli-w/dist/*.whl
   install -Dm 644 tomli-w/LICENSE -t "${pkgdir}"/usr/share/licenses/python-tomli-w/
 }
 
