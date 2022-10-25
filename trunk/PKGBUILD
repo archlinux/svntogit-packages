@@ -4,7 +4,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=expat
-pkgver=2.4.9
+pkgver=2.5.0
 pkgrel=1
 pkgdesc="An XML parser library"
 arch=(x86_64)
@@ -14,10 +14,10 @@ depends=(glibc)
 makedepends=(cmake)
 provides=(libexpat.so)
 options=(debug)
-source=("https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/${pkgname}-${pkgver}.tar.bz2"{,.asc})
-sha512sums=('fdfdc57dd11541eb307b38bd97ec84f78012c7b48fafc5c879b4b8c768cabfbcd7652ccec11e870bf31fee8f68174b22cf632de12c8c46601277f6750f90c192'
+source=(https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/$pkgname-$pkgver.tar.bz2{,.asc})
+sha512sums=('22fd904d75aab7506a85c03519b9cf79e44898c8e1ba6abf6cb7f95de71b8e63a7e2d5cf4395e3627d46035ea29342b3e631a8809fef8aad3f59976dc075ad17'
             'SKIP')
-b2sums=('d60183f96f3359acc069af638cc8d16ba19f51fbd8a61eddd80c2babddde357dcf0561e87af901f53617bfd9452e146c9dd9f317729cd3648b65832a38388640'
+b2sums=('15a5dcd3af17995fb4299301710b38d609c1fe7a8d6a6284581fedd96e89e0c16526d0342fb55773ac9d678cd65dc5cdb1532c764eeb3a20ccdf1e168b96e337'
         'SKIP')
 validpgpkeys=(3176EF7DB2367F1FCA4F306B1F9B0E909AF37285) # Sebastian Pipping
 
@@ -26,7 +26,7 @@ build() {
         -DCMAKE_BUILD_TYPE=None \
         -W no-dev \
         -B build \
-        -S "$pkgname-$pkgver"
+        -S $pkgname-$pkgver
   make VERBOSE=1 -C build
 }
 
@@ -36,6 +36,6 @@ check() {
 
 package() {
   make VERBOSE=1 DESTDIR="$pkgdir" -C build install
-  install -vDm 644 "$pkgname-$pkgver/COPYING" -t "${pkgdir}/usr/share/licenses/$pkgname/"
-  install -vDm 644 "$pkgname-$pkgver/"{AUTHORS,Changes,README.md} -t "${pkgdir}/usr/share/doc/${pkgname}/"
+  install -vDm 644 $pkgname-$pkgver/COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -vDm 644 $pkgname-$pkgver/{AUTHORS,Changes,README.md} -t "$pkgdir/usr/share/doc/$pkgname/"
 }
