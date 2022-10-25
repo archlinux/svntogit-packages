@@ -4,18 +4,18 @@
 
 pkgbase=evolution
 pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.44.4
-pkgrel=2
+pkgver=3.46.1
+pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
 arch=(x86_64)
 license=(GPL)
 depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef gspell
-         libcryptui gnome-autoar libgweather-4 enchant cmark)
+         gnome-autoar libgweather-4 enchant cmark webkit2gtk-4.1)
 makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
              spamassassin highlight gtk-doc yelp-tools git cmake ninja)
 options=(!emptydirs debug)
-_commit=9166ad318512d9820ac6e8c5da6232ff18289f88  # tags/3.44.4^0
+_commit=da03209889367e61565bea22fc36098a8df426cc  # tags/3.46.1^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -26,9 +26,6 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
-
-  # https://gitlab.gnome.org/GNOME/evolution/-/issues/1969
-  git cherry-pick -n 080791256d78a6d97384b4eef0d411cdc73feeb0
 }
 
 build() {
@@ -37,8 +34,7 @@ build() {
     -DLIBEXEC_INSTALL_DIR=/usr/lib \
     -DSYSCONF_INSTALL_DIR=/etc \
     -DENABLE_SMIME=ON \
-    -DENABLE_GTK_DOC=ON \
-    -DWITH_GWEATHER4=ON
+    -DENABLE_GTK_DOC=ON
   cmake --build build
 }
 
@@ -81,3 +77,5 @@ package_evolution-spamassassin() {
   depends=("evolution=$pkgver" spamassassin)
   mv spamassassin/* "$pkgdir"
 }
+
+# vim:set sw=2 sts=-1 et:
