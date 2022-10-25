@@ -1,0 +1,74 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgname=gnome-control-center
+pkgver=43.1
+pkgrel=1
+pkgdesc="GNOME's main interface to configure various aspects of the desktop"
+url="https://gitlab.gnome.org/GNOME/gnome-control-center"
+license=(GPL3)
+arch=(x86_64)
+depends=(accountsservice cups-pk-helper gnome-bluetooth-3.0 gnome-desktop-4
+         gnome-online-accounts gnome-settings-daemon gsettings-desktop-schemas
+         gtk4 libgtop libnma-gtk4 sound-theme-freedesktop upower libpwquality
+         gnome-color-manager smbclient libmm-glib libgnomekbd libibus libgudev
+         bolt udisks2 libadwaita gsound colord-gtk4 gcr libmalcontent)
+makedepends=(docbook-xsl modemmanager git python meson)
+checkdepends=(python-dbusmock python-gobject xorg-server-xvfb)
+optdepends=('system-config-printer: Printer settings'
+            'gnome-user-share: WebDAV file sharing'
+            'gnome-remote-desktop: screen sharing'
+            'rygel: media sharing'
+            'openssh: remote login'
+            'power-profiles-daemon: Power profiles support'
+            'malcontent: application permission control')
+groups=(gnome)
+options=(debug)
+_commit=cdcdee471b7d452dd5449565af3b36fb95155e99  # tags/43.1^0
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gnome-control-center.git#commit=$_commit"
+  "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+  pixmaps-dir.diff
+)
+sha256sums=('SKIP'
+            'SKIP'
+            'd3d97995f9e4d5bed2e81b196c1e086777fc33dd6b6f6b08bcc931944569ea4a')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Install bare logos into pixmaps, not icons
+  git apply -3 ../pixmaps-dir.diff
+
+  git config --global protocol.file.allow always
+  git submodule init subprojects/gvc
+  git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
+  git submodule update
+}
+
+
+build() {
+  local meson_options=(
+    -D documentation=true
+    -D malcontent=true
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -d -o root -g 102 -m 750 "$pkgdir/usr/share/polkit-1/rules.d"
+}
+
+# vim:set sw=2 sts=-1 et:
