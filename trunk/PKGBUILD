@@ -1,0 +1,58 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=libshumate
+pkgname=(libshumate libshumate-docs)
+pkgver=1.0.2
+pkgrel=1
+pkgdesc="Map widget for GTK 4"
+url="https://wiki.gnome.org/Projects/libshumate"
+license=(LGPL)
+arch=(x86_64)
+depends=(glib2 cairo sqlite gtk4 libsoup3)
+makedepends=(gobject-introspection gi-docgen vala meson git)
+checkdepends=(xorg-server-xvfb)
+options=(debug)
+_commit=bcaeede96beb0ede116343aada1a25bab2a16ea4  # tags/1.0.2^0
+source=("git+https://gitlab.gnome.org/GNOME/libshumate.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  local meson_options=(
+    -D demos=true
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
+}
+
+package_libshumate() {
+  provides=(libshumate-1.0.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+}
+
+package_libshumate-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
