@@ -1,0 +1,50 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=endeavour
+pkgver=v42.0
+pkgrel=1
+pkgdesc="Task manager for GNOME"
+url="https://wiki.gnome.org/Apps/Todo"
+arch=(x86_64)
+license=(GPL)
+depends=(evolution-data-server libpeas python gtk4 libportal-gtk4 libadwaita)
+makedepends=(gobject-introspection appstream-glib git meson yelp-tools)
+provides=(gnome-todo)
+replaces=("gnome-todo<=41.0+r106+gebc68374-1")
+conflicts=("gnome-todo<=41.0+r106+gebc68374-1")
+groups=(gnome-extra)
+options=(debug)
+_commit=188ef00f6194c1dd36d39279c2d7a5429a68d3f5  # tags/v42.0
+source=("git+https://gitlab.gnome.org/World/Endeavour.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd Endeavour
+  git describe --tags | sed 's/^GNOME_TODO_//;s/_/./g;s/[^-]*-g/r&/;s/-/+/g'
+
+}
+
+prepare() {
+  cd Endeavour
+
+  # -Wformat-security
+  git cherry-pick -n 3bad03e90fcc28f6e3f87f2c90df5984dbeb0791
+}
+
+build() {
+  arch-meson Endeavour build
+  meson compile -C build
+}
+
+check() (
+  export GSETTINGS_SCHEMA_DIR="$PWD/Endeavour/data"
+  glib-compile-schemas "$GSETTINGS_SCHEMA_DIR"
+
+  meson test -C build --print-errorlogs
+)
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
