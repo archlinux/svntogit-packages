@@ -1,0 +1,456 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Lubomir Rintel <lkundrak@v3.sk>
+Date: Thu, 6 Oct 2022 14:24:49 +0200
+Subject: [PATCH] build: unbreak build with gcr-3.92
+
+Newer gcr pre-release removed the widgets and therefore the library is
+not reliant on Gtk anymore, no matter which version. That's good -- we
+were only using the GcrCertificate, not the widgets.
+
+Details here:
+https://gitlab.gnome.org/GNOME/gcr/-/issues/100
+
+In fact, we weren't even needing the UI part of gcr-3, just the
+gcr-base-3 part. That would've not conflicted with Gtk4.
+
+This allows use to simplify things considerably: both gcr-base-3 and
+gcr-4 are fine for use for either Gtk3 or Gtk4.
+---
+ .gitlab-ci.yml                       | 12 +++----
+ Makefile.am                          | 16 ++++-----
+ config.h.meson                       |  5 +--
+ configure.ac                         | 42 ++++++----------------
+ meson.build                          | 53 ++++++++++------------------
+ meson_options.txt                    |  1 -
+ src/meson.build                      |  4 +--
+ src/nma-cert-chooser-button.c        |  8 ++---
+ src/nma-pkcs11-cert-chooser-dialog.c |  4 +++
+ 9 files changed, 52 insertions(+), 93 deletions(-)
+
+diff --git a/.gitlab-ci.yml b/.gitlab-ci.yml
+index 98a681f87632..67e241bb8097 100644
+--- a/.gitlab-ci.yml
++++ b/.gitlab-ci.yml
+@@ -176,30 +176,30 @@ fedora_autotools_full:
+   image: fedora:latest
+   stage: test
+ 
+-# Fedora 37 includes gcr-gtk4 support.
+-# gcr-gtk4 support can be moved above and the four jobs below can be removed
++# Fedora 37 includes gcr version that no longer pulls in gtk3.
++# gcr-4 support can be moved above and the four jobs below can be removed
+ # once fedora:latest is actually fedora:37 or later.
+ 
+ f37_meson_gcr4:
+   <<: *fedora_meson_full
+   variables:
+-    EXTRA_PACKAGES: gcr-gtk3-devel gcr-gtk4-devel
+-    EXTRA_MESON_FLAGS: -Dlibnma_gtk4=true -Dgcr_gtk4=true
++    EXTRA_PACKAGES: gcr-devel
++    EXTRA_MESON_FLAGS: -Dlibnma_gtk4=true
+   image: fedora:37
+   stage: test
+ 
+ f37_meson_gcr3:
+   <<: *fedora_meson_full
+   variables:
+     EXTRA_PACKAGES: gcr3-devel
+   image: fedora:37
+   stage: test
+ 
+ f37_autotools_gcr4:
+   <<: *fedora_autotools_full
+   variables:
+-    EXTRA_PACKAGES: gcr-gtk3-devel gcr-gtk4-devel
+-    EXTRA_CONFIGURE_FLAGS: --with-libnma-gtk4 --with-gcr-gtk4
++    EXTRA_PACKAGES: gcr-devel
++    EXTRA_CONFIGURE_FLAGS: --with-libnma-gtk4
+   image: fedora:37
+   stage: test
+ 
+diff --git a/Makefile.am b/Makefile.am
+index ceb422304ca8..8206c907cc95 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -269,60 +269,60 @@ src_libnma_la_SOURCES = \
+ 	$(libnma_h_priv_real) \
+ 	$(libnma_c_real)
+ 
+-if WITH_GCR_GTK3
++if WITH_GCR
+ src_libnma_la_SOURCES += \
+ 	$(libnma_h_priv_gcr) \
+ 	$(libnma_c_gcr)
+ endif
+ 
+ nodist_src_libnma_la_SOURCES = \
+ 	$(libnma_h_priv_gen) \
+ 	$(libnma_c_gen)
+ 
+ src_libnma_la_CFLAGS = \
+ 	$(dflt_cppflags) \
+ 	-DICONDIR=\""$(datadir)/icons"\" \
+ 	-DBINDIR=\""$(bindir)"\" \
+ 	-DSYSCONFDIR=\""$(sysconfdir)"\" \
+ 	-DLIBEXECDIR=\""$(libexecdir)"\" \
+ 	-DDATADIR=\""$(datadir)"\" \
+ 	-DAUTOSTARTDIR=\""$(sysconfdir)/xdg/autostart"\" \
+ 	-DNMALOCALEDIR=\"$(datadir)/locale\" \
+ 	-DNETWORKMANAGER_COMPILATION=NM_NETWORKMANAGER_COMPILATION_LIB \
+ 	"-I$(srcdir)/shared" \
+ 	"-I$(srcdir)/src/utils" \
+ 	"-I$(srcdir)/src/nma-ws" \
+ 	"-I$(srcdir)/src" \
+ 	-Isrc \
+ 	$(GTK3_CFLAGS) \
+ 	$(LIBNM_CFLAGS) \
+-	$(GCR_GTK3_CFLAGS)
++	$(GCR_CFLAGS)
+ 
+ src_libnma_la_LIBADD = \
+ 	src/utils/libutils-libnm.la \
+ 	$(GTK3_LIBS) \
+ 	$(LIBNM_LIBS) \
+-	$(GCR_GTK3_LIBS)
++	$(GCR_LIBS)
+ 
+ EXTRA_src_libnma_la_DEPENDENCIES = src/libnma.ver
+ 
+ src_libnma_la_LDFLAGS = \
+ 	-Wl,-no-undefined \
+ 	-Wl,--version-script=$(srcdir)/src/libnma.ver
+ 
+ 
+ pkgconfig_DATA += src/libnma.pc
+ 
+ if HAVE_INTROSPECTION
+ src/NMA-1.0.gir: src/libnma.la
+ src_NMA_1_0_gir_INCLUDES = NM-1.0 Gtk-3.0
+ src_NMA_1_0_gir_EXPORT_PACKAGES = libnma
+ src_NMA_1_0_gir_CFLAGS = $(src_libnma_la_CFLAGS)
+ src_NMA_1_0_gir_LIBS = src/libnma.la
+ src_NMA_1_0_gir_FILES = \
+ 	$(libnma_h_pub) \
+ 	$(libnma_c_real)
+-if WITH_GCR_GTK3
++if WITH_GCR
+ src_NMA_1_0_gir_FILES += \
+ 	$(libnma_c_gcr)
+ endif
+@@ -482,59 +482,59 @@ src_libnma_gtk4_la_SOURCES = \
+ 	$(libnma_h_priv_real) \
+ 	$(libnma_c_real)
+ 
+-if WITH_GCR_GTK4
++if WITH_GCR
+ src_libnma_gtk4_la_SOURCES += \
+ 	$(libnma_h_priv_gcr) \
+ 	$(libnma_c_gcr)
+ endif
+ 
+ nodist_src_libnma_gtk4_la_SOURCES = \
+ 	$(libnma_h_priv_gen) \
+ 	$(libnma_gtk4_c_gen)
+ 
+ src_libnma_gtk4_la_CFLAGS = \
+ 	-DICONDIR=\""$(datadir)/icons"\" \
+ 	-DBINDIR=\""$(bindir)"\" \
+ 	-DSYSCONFDIR=\""$(sysconfdir)"\" \
+ 	-DLIBEXECDIR=\""$(libexecdir)"\" \
+ 	-DDATADIR=\""$(datadir)"\" \
+ 	-DAUTOSTARTDIR=\""$(sysconfdir)/xdg/autostart"\" \
+ 	-DNMALOCALEDIR=\"$(datadir)/locale\" \
+ 	-DNETWORKMANAGER_COMPILATION=NM_NETWORKMANAGER_COMPILATION_LIB \
+ 	"-I$(srcdir)/shared" \
+ 	"-I$(srcdir)/src/utils" \
+ 	"-I$(srcdir)/src/nma-ws" \
+ 	"-I$(srcdir)/src" \
+ 	-Isrc \
+ 	$(GTK4_CFLAGS) \
+ 	$(LIBNM_CFLAGS) \
+-	$(GCR_GTK4_CFLAGS)
++	$(GCR_CFLAGS)
+ 
+ src_libnma_gtk4_la_LIBADD = \
+ 	src/utils/libutils-libnm-gtk4.la \
+ 	$(GTK4_LIBS) \
+ 	$(LIBNM_LIBS) \
+-	$(GCR_GTK4_LIBS)
++	$(GCR_LIBS)
+ 
+ EXTRA_src_libnma_gtk4_la_DEPENDENCIES = src/libnma.ver
+ 
+ src_libnma_gtk4_la_LDFLAGS = \
+ 	-Wl,-no-undefined \
+ 	-Wl,--version-script=$(srcdir)/src/libnma.ver
+ 
+ 
+ pkgconfig_DATA += src/libnma-gtk4.pc
+ 
+ if HAVE_INTROSPECTION
+ src/NMA4-1.0.gir: src/libnma-gtk4.la
+ src_NMA4_1_0_gir_INCLUDES = NM-1.0 Gtk-4.0
+ src_NMA4_1_0_gir_EXPORT_PACKAGES = libnma-gtk4
+ src_NMA4_1_0_gir_CFLAGS = $(src_libnma_gtk4_la_CFLAGS)
+ src_NMA4_1_0_gir_LIBS = src/libnma-gtk4.la
+ src_NMA4_1_0_gir_FILES = \
+ 	$(libnma_h_pub) \
+ 	$(libnma_c_real)
+-if WITH_GCR_GTK4
++if WITH_GCR
+ src_NMA4_1_0_gir_FILES += \
+ 	$(libnma_c_gcr)
+ endif
+diff --git a/config.h.meson b/config.h.meson
+index b56cd0b3745a..e73e38bc2cd7 100644
+--- a/config.h.meson
++++ b/config.h.meson
+@@ -39,10 +39,7 @@
+ #mesondefine VERSION
+ 
+ /* Define if Gcr is available */
+-#mesondefine WITH_GCR_GTK3
+-
+-/* Define if GTK4 Gcr is available */
+-#mesondefine WITH_GCR_GTK4
++#mesondefine WITH_GCR
+ 
+ /* Define to 1 if on MINIX. */
+ #mesondefine _MINIX
+diff --git a/configure.ac b/configure.ac
+index 16bbc471f748..f02070afccef 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -153,8 +153,12 @@ AC_DEFUN([CHECK_GCR], [
+         CFLAGS="$CFLAGS $[$1]_CFLAGS"
+         AC_MSG_CHECKING([for $1 usefulness])
+         AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+-              #include <gcr/gcr.h>
+               #include <gck/gck.h>
++              #if GCK_CHECK_VERSION(3,90,0)
++              #include <gcr/gcr.h>
++              #else
++              #include <gcr/gcr-base.h>
++              #endif
+ 
+               const GckAttribute *gck_attributes_find (GckAttributes *attrs, gulong attr_type);
+               gboolean gck_attributes_find_string (GckAttributes *attrs, gulong attr_type, gchar **value);
+@@ -213,44 +217,19 @@ AC_ARG_WITH(gcr, AS_HELP_STRING([--with-gcr], [Enable advanced certificate choos
+ if (test "${with_gcr}" == "no"); then
+     have_gcr=no
+ else
+-    CHECK_GCR(GCR_GTK3, [gcr-4-gtk3 >= 3.90], have_gcr=yes,
+-        [CHECK_GCR(GCR_GTK3, [gcr-3 >= 3.14, gck-1 >= 3.14], have_gcr=yes, have_gcr=no)])
++    CHECK_GCR(GCR, [gcr-4 >= 3.92, gck-2 >= 3.92], have_gcr=yes,
++        [CHECK_GCR(GCR, [gcr-base-3 >= 3.14, gck-1 >= 3.14], have_gcr=yes, have_gcr=no)])
+ fi
+ 
+ if (test "${have_gcr}" == "yes"); then
+-     AC_DEFINE(WITH_GCR_GTK3, 1, [Define if Gcr is available for Gtk3])
++     AC_DEFINE(WITH_GCR, 1, [Define if Gcr is available for Gtk3])
+ else
+     if (test "${with_gcr}" == "yes"); then
+         AC_MSG_ERROR([gcr support was requested, but the gcr library is not available.])
+     fi
+-    AC_DEFINE(WITH_GCR_GTK3, 0, [Define if Gcr is available for Gtk3])
++    AC_DEFINE(WITH_GCR, 0, [Define if Gcr is available for Gtk3])
+ fi
+-AM_CONDITIONAL(WITH_GCR_GTK3, test "${have_gcr}" == "yes")
+-
+-dnl GCR for PKCS#11 enabled certificate chooser with Gtk4
+-AC_ARG_WITH(gcr_gtk4, AS_HELP_STRING([--with-gcr-gtk4], [Enable EXPERIMENTAL advanced certificate chooser for Gtk4 (default: auto)]))
+-if (test "$with_libnma_gtk4" = "yes"); then
+-    if (test "${with_gcr_gtk4}" = "no"); then
+-        have_gcr_gtk4=no
+-    else
+-        CHECK_GCR(GCR_GTK4, [gcr-4-gtk4 >= 3.90], have_gcr_gtk4=yes, have_gcr_gtk4=no)
+-    fi
+-else
+-    if (test "${with_gcr_gtk4}" = "yes"); then
+-        AC_MSG_ERROR([gcr-gtk4 support was requested, but the libnma-gtk4 build was not enabled.])
+-    fi
+-    have_gcr_gtk4=no
+-fi
+-
+-if (test "${have_gcr_gtk4}" = "yes"); then
+-     AC_DEFINE(WITH_GCR_GTK4, 1, [Define if Gcr is available for Gtk4])
+-else
+-    if (test "${with_gcr_gtk4}" = "yes"); then
+-        AC_MSG_ERROR([gcr-gtk4 support was requested, but the gcr-gtk4 library is not available.])
+-    fi
+-    AC_DEFINE(WITH_GCR_GTK4, 0, [Define if Gcr is available for Gtk4])
+-fi
+-AM_CONDITIONAL(WITH_GCR_GTK4, test "${have_gcr_gtk4}" = "yes")
++AM_CONDITIONAL(WITH_GCR, test "${have_gcr}" == "yes")
+ 
+ dnl Check for gobject introspection
+ GOBJECT_INTROSPECTION_CHECK([0.9.6])
+@@ -301,7 +280,6 @@ AC_OUTPUT
+ echo ""
+ echo "  Build libnma-gtk4 library for use with GTK4: --with-libnma-gtk4=${with_libnma_gtk4}"
+ echo "  GCR: --with-gcr=$have_gcr"
+-echo "  GCR_GTK4 (EXPERIMENTAL): --with-gcr-gtk4=$have_gcr_gtk4"
+ echo "  LTO: --enable-lto=$enable_lto"
+ echo "  Linker garbage collection: --enable-ld-gc=$enable_ld_gc"
+ echo ""
+diff --git a/meson.build b/meson.build
+index aed3989516d1..895c987fc0d8 100644
+--- a/meson.build
++++ b/meson.build
+@@ -187,15 +187,12 @@ libnm_dep = declare_dependency(
+ 
+ # GCR API is declared subject to change, do an extensive check of the prototypes
+ gcr_api_check_src = '''
+-  #ifndef GCR_API_SUBJECT_TO_CHANGE
+-  # define GCR_API_SUBJECT_TO_CHANGE
+-  #endif
+-  #ifndef GCK_API_SUBJECT_TO_CHANGE
+-  # define GCK_API_SUBJECT_TO_CHANGE
+-  #endif
+-
+-  #include <gcr/gcr.h>
+   #include <gck/gck.h>
++  #if GCK_CHECK_VERSION(3,90,0)
++  #include <gcr/gcr.h>
++  #else
++  #include <gcr/gcr-base.h>
++  #endif
+ 
+   const GckAttribute *gck_attributes_find (GckAttributes *attrs, gulong attr_type);
+   gboolean gck_attributes_find_string (GckAttributes *attrs, gulong attr_type, gchar **value);
+@@ -242,51 +239,37 @@ gcr_api_check_src = '''
+   GcrCertificate *gcr_simple_certificate_new (const guchar *data, gsize n_data);
+ '''
+ 
+-gcr_cflags = [
+-  '-DGCR_API_SUBJECT_TO_CHANGE',
+-  '-DGCK_API_SUBJECT_TO_CHANGE'
+-]
+-
+ # GCR for PKCS#11 enabled certificate chooser
+ enable_gcr = get_option('gcr')
+ if enable_gcr
+-  gcr4_gtk3_deps = dependency('gcr-4-gtk3', version: '>= 3.90', required: false)
++  gcr4_deps = [
++    dependency('gcr-4', version: '>= 3.92', required: false),
++    dependency('gck-2', version: '>= 3.92', required: false)
++  ]
+   gcr3_deps = [
+-    dependency('gcr-3', version: '>= 3.14', required: false),
++    dependency('gcr-base-3', version: '>= 3.14', required: false),
+     dependency('gck-1', version: '>= 3.14', required: false)
+   ]
++  gcr_cflags = [
++    '-DGCR_API_SUBJECT_TO_CHANGE',
++    '-DGCK_API_SUBJECT_TO_CHANGE'
++  ]
+ 
+-  if cc.compiles(gcr_api_check_src, dependencies: gcr4_gtk3_deps)
++  if cc.compiles(gcr_api_check_src, dependencies: gcr4_deps, args: gcr_cflags)
+     gcr_dep = declare_dependency(
+-      dependencies: gcr4_gtk3_deps,
++      dependencies: gcr4_deps,
+       compile_args: gcr_cflags
+     )
+   else
+-    assert(cc.compiles(gcr_api_check_src, dependencies: gcr3_deps),
++    assert(cc.compiles(gcr_api_check_src, dependencies: gcr3_deps, args: gcr_cflags),
+       'gcr support was requested, but the gcr library is not available. Use -Dgcr=false to build without it.')
+     gcr_dep = declare_dependency(
+       dependencies: gcr3_deps,
+       compile_args: gcr_cflags
+     )
+   endif
+ endif
+-config_h.set10('WITH_GCR_GTK3', enable_gcr)
+-
+-# GCR for PKCS#11 enabled certificate chooser for libnma-gtk4
+-enable_gcr_gtk4 = get_option('gcr_gtk4')
+-if enable_gcr_gtk4
+-  assert(enable_libnma_gtk4, 'gcr-gtk4 support was requested, but the libnma-gtk4 build was not enabled.')
+-
+-  gcr4_gtk4_deps = dependency('gcr-4-gtk4', version: '>= 3.90', required: false)
+-  assert(cc.compiles(gcr_api_check_src, dependencies: gcr4_gtk4_deps),
+-    'gcr-gtk4 support was requested with -Dgcr_gtk4=true, but the gcr-gtk4 library is not available.')
+-
+-  gcr_gtk4_dep = declare_dependency(
+-    dependencies: gcr4_gtk4_deps,
+-    compile_args: gcr_cflags
+-  )
+-endif
+-config_h.set10('WITH_GCR_GTK4', enable_gcr_gtk4)
++config_h.set10('WITH_GCR', enable_gcr)
+ 
+ # introspection support
+ enable_introspection = get_option('introspection')
+diff --git a/meson_options.txt b/meson_options.txt
+index f0c21d7a85af..459422d49b1b 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -1,6 +1,5 @@
+ option('libnma_gtk4', type: 'boolean', value: false, description: 'build library libnma-gtk4 for use with GTK4')
+ option('gcr', type: 'boolean', value: true, description: 'Enable advanced certificate chooser.')
+-option('gcr_gtk4', type: 'boolean', value: false, description: 'Enable EXPERIMENTAL advanced certificate chooser for library libnma-gtk4.')
+ option('more_asserts', type: 'string', value: '0', description: 'Enable more assertions for debugging.')
+ option('iso_codes', type: 'boolean', value: true, description: 'check for iso-codes at build-time')
+ option('mobile_broadband_provider_info', type: 'boolean', value: true, description: 'check for mobile-broadband-provider-info at build-time')
+diff --git a/src/meson.build b/src/meson.build
+index 7547fa60f0f8..052619036a21 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -170,9 +170,9 @@ if enable_libnma_gtk4
+ 
+   nma_gtk4_deps = [ deps, gtk4_dep ]
+   nma_gtk4_sources = [ gir_sources, gtk4_built_sources ]
+-  if enable_gcr_gtk4
++  if enable_gcr
+     nma_gtk4_sources += pkcs11_sources
+-    nma_gtk4_deps += gcr_gtk4_dep
++    nma_gtk4_deps += gcr_dep
+   endif
+ 
+   libnma_gtk4 = shared_library(
+diff --git a/src/nma-cert-chooser-button.c b/src/nma-cert-chooser-button.c
+index 863af63a9893..bb78fc1295af 100644
+--- a/src/nma-cert-chooser-button.c
++++ b/src/nma-cert-chooser-button.c
+@@ -12,12 +12,10 @@
+ #include "nma-cert-chooser-button.h"
+ #include "utils.h"
+ 
+-#if GTK_CHECK_VERSION(4,0,0) ? WITH_GCR_GTK4 : WITH_GCR_GTK3
++#if WITH_GCR
+ #include "nma-pkcs11-cert-chooser-dialog.h"
+ #include <gck/gck.h>
+-/* GCK version numbers are funny: version 3 is older than version 1.9x.
+- * See: https://gitlab.gnome.org/GNOME/gcr/-/merge_requests/109 */
+-#if !GCK_CHECK_VERSION(1,90,0) || (GCK_MAJOR_VERSION == 3 && GCK_MINOR_VERSION < 90)
++#if !GCK_CHECK_VERSION(3,90,0)
+ #define gck_uri_data_parse gck_uri_parse
+ #endif
+ #endif
+@@ -69,7 +67,7 @@ enum {
+ static void
+ update_title (NMACertChooserButton *button);
+ 
+-#if GTK_CHECK_VERSION(4,0,0) ? WITH_GCR_GTK4 : WITH_GCR_GTK3
++#if WITH_GCR
+ static gboolean
+ is_this_a_slot_nobody_loves (GckSlot *slot)
+ {
+diff --git a/src/nma-pkcs11-cert-chooser-dialog.c b/src/nma-pkcs11-cert-chooser-dialog.c
+index 92665c7ada56..bb007cbb249a 100644
+--- a/src/nma-pkcs11-cert-chooser-dialog.c
++++ b/src/nma-pkcs11-cert-chooser-dialog.c
+@@ -14,7 +14,11 @@
+ 
+ #include <string.h>
+ #include <gck/gck.h>
++#if GCK_CHECK_VERSION(3,90,0)
+ #include <gcr/gcr.h>
++#else
++#include <gcr/gcr-base.h>
++#endif
+ 
+ #if !GCR_CHECK_VERSION(3,90,0)
+ #define gck_slot_open_session_async(self, options, interaction, cancellable, callback, user_data) \
