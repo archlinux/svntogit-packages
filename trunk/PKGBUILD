@@ -16,10 +16,10 @@ depends=(
   systemd
 )
 makedepends=(
-  meson
-  gtk-doc
-  gobject-introspection
   git
+  gobject-introspection
+  gtk-doc
+  meson
 )
 checkdepends=(python-dbusmock)
 provides=(libpolkit-{agent,gobject}-1.so)
