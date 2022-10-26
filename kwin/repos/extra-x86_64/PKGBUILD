@@ -3,7 +3,7 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=kwin
-pkgver=5.26.1
+pkgver=5.26.2.1
 pkgrel=1
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
@@ -15,9 +15,9 @@ makedepends=(extra-cmake-modules qt5-tools kdoctools krunner wayland-protocols p
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 replaces=(kwayland-server)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig})
+source=(https://download.kde.org/stable/plasma/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig})
 install=$pkgname.install
-sha256sums=('c3acc4b7ada4191780ea64f03ed9fa249a0c17af0040c0fc29d6bd6aeb8f7fa3'
+sha256sums=('7c9e921226f85c8f8e835b8bf63ae67da800d6921ba148618e570bf4825f3364'
             'SKIP')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
