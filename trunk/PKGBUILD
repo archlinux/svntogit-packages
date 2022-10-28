@@ -93,6 +93,8 @@ package_libcamera-tools() {
     qt5-base
     sdl2
   )
+  conflicts=("$pkgbase-tests<0.0.1-2")
+  replaces=("$pkgbase-tests<0.0.1-2")
 
   mv -v $pkgname/* "$pkgdir"
 }
