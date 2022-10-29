@@ -4,7 +4,7 @@ pkgbase=libcamera
 pkgname=(libcamera libcamera-docs libcamera-tools gst-plugin-libcamera)
 pkgver=0.0.1
 _commit=7219110a121c3904dca3bfb86da27ca5bfb57a76  # refs/tags/v0.0.1
-pkgrel=2
+pkgrel=3
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
 url="https://libcamera.org/"
@@ -29,6 +29,8 @@ _pick() {
 
 prepare() {
   cd $pkgname
+  # add version, so that utils/gen-version.sh may rely on it
+  printf "%s\n" "$pkgver" > .tarball-version
 }
 
 build() {
