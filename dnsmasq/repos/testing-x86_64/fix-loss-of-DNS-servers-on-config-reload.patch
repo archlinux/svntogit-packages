@@ -1,0 +1,27 @@
+From 930428fb970f4991e5c2933fd5a5d2504c18a551 Mon Sep 17 00:00:00 2001
+From: Simon Kelley <simon@thekelleys.org.uk>
+Date: Mon, 17 Oct 2022 21:15:43 +0100
+Subject: Fix loss of DNS servers on config reload.
+
+A bug, introduced in 2.87, which could result in DNS
+servers being removed from the configuration when reloading
+server configuration from DBus, or re-reading /etc/resolv.conf
+Only servers from the same source should be replaced, but some
+servers from other sources (ie hard coded or another dynamic source)
+could mysteriously disappear.
+---
+diff --git a/src/domain-match.c b/src/domain-match.c
+index f7db0fe..76a1109 100644
+--- a/src/domain-match.c
++++ b/src/domain-match.c
+@@ -683,7 +683,9 @@ int add_update_server(int flags,
+ 		  serv->next = NULL;
+ 		}
+ 	      break;
+-	    }	
++	    }
++	  else
++	    up = &serv->next;
+ 	}
+ 
+       if (serv)
