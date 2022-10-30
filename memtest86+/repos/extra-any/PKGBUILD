@@ -1,21 +1,53 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
 # Contributor: Eric Bélanger <eric@archlinux.org>
 
-pkgname=memtest86+
-pkgver=5.31b
-pkgrel=1
+pkgbase=memtest86+
+pkgname=('memtest86+' 'memtest86+-efi' 'memtest86+-iso')
+_tag='d3bc8fa7c2a2400d9c4d58cee00168d39fa9d716' # tag/v6.00
+pkgver=6.00
+pkgrel=2
 pkgdesc='Advanced memory diagnostic tool'
 url='https://www.memtest.org'
 arch=('any')
 license=('GPL2')
-source=(https://www.memtest.org/download/${pkgver}/${pkgname}-${pkgver}.bin.gz
-        60_memtest86+)
-b2sums=('d171e2c8ee53fef79d37f9f014ab0bb4c796c26c1eb4ae3c0a5ac2635277480890c147988937646e2d32cdbd1dcc4c38551eb140f69f574ed4ec04b638f9ab59'
-        'ca607b4483b592f7f0c64893f72b0b57b1dd91ebf2c107e65f0a1979a7234d09221dd2149c73d1c6a41ffea331c3cb633babed4400316fc953528272016b15d8')
+makedepends=('git')
+makedepends+=('xorriso' 'dosfstools' 'mtools') # to build the iso image
+source=(#https://www.memtest.org/download/${pkgver}/${pkgname}-${pkgver}.bin.gz
+        "git+https://github.com/memtest86plus/memtest86plus.git#tag=${_tag}"
+        60_memtest86+ 
+        60_memtest86+-efi)
+sha512sums=('SKIP'
+            '9067f58ab7ad6d7080a7f5e428fb2ef68a44cb6d83e531badf385df134d1e764e0f77e9b2d1c3e8fca36cd5e25dcde672f71a4a8f883783ec600a70f0ee1c22c'
+            '926f5a7ef54e706c977bc03ca66a9e5ec3aa5ca119359c6e6bfdf83834ff5097689b312032cdf7661afab6baa04867e25792f27dd665fc89a061f2a9e39cf97e')
 
-package() {
-  install -Dm 644 "${srcdir}/${pkgname}-${pkgver}.bin" "${pkgdir}/boot/memtest86+/memtest.bin"
+build() {
+  cd "memtest86plus"/build64
+  make
+  make iso
+}
+
+# Do not remove the space before the () or commitpkg will
+# accidentally to run this function on the system (!!!) 
+# see devtools gitlab issue #87
+package_memtest86+ () {
+  pkgdesc+=" legacy BIOS version"
+
+  cd "memtest86plus"/build64
+  install -Dm644 memtest.bin "$pkgdir"/boot/memtest86+/memtest.bin
   install -Dm 755 "${srcdir}/60_memtest86+" "${pkgdir}/etc/grub.d/60_memtest86+"
+}
+package_memtest86+-efi() {
+  pkgdesc+=" EFI version"
+
+  cd "memtest86plus"/build64
+  install -Dm644 memtest.efi "$pkgdir"/boot/memtest86+/memtest.efi
+  install -Dm 755 "${srcdir}/60_memtest86+-efi" "${pkgdir}/etc/grub.d/60_memtest86+-efi"
+}
+package_memtest86+-iso() {
+  pkgdesc+=" ISO image"
+
+  cd "memtest86plus"/build64
+  install -Dm644 memtest.iso "$pkgdir"/usr/share/memtest86+/memtest.iso
 }
 
 # vim: ts=2 sw=2 et:
