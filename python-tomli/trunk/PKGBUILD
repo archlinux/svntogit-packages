@@ -14,7 +14,7 @@ sha512sums=('a467f8d48cdbd7213bd9b6f85fd48ba142ab7c9656c40bb30785e1c4b37a9e29eae
 
 build() {
   cd tomli-$pkgver
-  python -m build -wn
+  python -m build -wn --skip-dependency-check
 }
 
 check() {
