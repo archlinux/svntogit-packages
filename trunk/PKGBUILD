@@ -7,24 +7,44 @@
 pkgname=aspell
 pkgver=0.60.8
 _pkgmajorver=0.60
-pkgrel=2
+pkgrel=3
 pkgdesc="A spell checker designed to eventually replace Ispell"
 arch=('x86_64')
 url="http://aspell.net/"
 license=('LGPL')
 depends=('gcc-libs' 'ncurses')
 optdepends=('perl: to import old dictionaries')
-source=("https://github.com/GNUAspell/aspell/archive/rel-$pkgver.tar.gz")
-sha512sums=('b7ca2ed063f003581020d2043b1686915997261695bb0aef6e530431ea55781861ba19e16ce1fb74eb892203c9433c8652d105d380c0a6a24590f13fb1a401be')
+provides=(libaspell.so libpspell.so)
+options=(debug)
+source=(
+  "https://github.com/GNUAspell/aspell/archive/rel-$pkgver.tar.gz"
+  $pkgname-0.60.8-CVE-2019-25051.patch::https://github.com/gnuaspell/aspell/commit/0718b375425aad8e54e1150313b862e4c6fd324a.patch
+)
+sha512sums=('b7ca2ed063f003581020d2043b1686915997261695bb0aef6e530431ea55781861ba19e16ce1fb74eb892203c9433c8652d105d380c0a6a24590f13fb1a401be'
+            '529f3f4737d2e19f7571f4c8666b1cd089cc4e9dfdaa52dc468919f01ce9f8f8112d8fe8afda295b3dfb92f5e0c2bbd79bf1ec69f06c163c32eb28f0168ab263')
+b2sums=('c8e0006304aff0d14d230cba1e79ace43041d6fbe15a8b2f3148b9bf2f9ec40dc61c03d9f8e45e0cacde50e45d5a8ff2e949a8d26bbd83f7f53ced9b7480bcaf'
+        'b181caf27feae7eae908c92496a5f05f7e7f1f1a089c460b757c2f745b97f5339d4c8e13cf851e704cff7952c5dcd5ad0a8496ec1ae45c1e83fb1fa577134c63')
+
+prepare() {
+  # fix CVE-2019-25051: https://bugs.archlinux.org/task/71554
+  patch -Np1 -d $pkgname-rel-$pkgver -i ../$pkgname-0.60.8-CVE-2019-25051.patch
+
+  cd $pkgname-rel-$pkgver
+  PERL_USE_UNSAFE_INC=1 ./autogen
+}
 
 build() {
   cd $pkgname-rel-$pkgver
-  PERL_USE_UNSAFE_INC=1 ./autogen
   ./configure --prefix=/usr --sysconfdir=/etc
+
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 package() {
+  depends+=(libncursesw.so)
+
   cd $pkgname-rel-$pkgver
   make DESTDIR="$pkgdir" install
   ln -s $pkgname-$_pkgmajorver "$pkgdir"/usr/lib/$pkgname
