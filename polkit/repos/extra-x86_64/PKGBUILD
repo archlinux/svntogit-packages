@@ -2,20 +2,33 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgname=polkit
-pkgver=121
+pkgver=122
 pkgrel=1
 pkgdesc="Application development toolkit for controlling system-wide privileges"
 url="https://gitlab.freedesktop.org/polkit/polkit"
 arch=(x86_64)
 license=(LGPL)
-depends=(glib2 pam expat systemd duktape)
-makedepends=(meson gtk-doc gobject-introspection git)
+depends=(
+  duktape
+  expat
+  glib2
+  pam
+  systemd
+)
+makedepends=(
+  meson
+  gtk-doc
+  gobject-introspection
+  git
+)
 checkdepends=(python-dbusmock)
 provides=(libpolkit-{agent,gobject}-1.so)
 backup=(etc/pam.d/polkit-1)
 options=(debug)
-_commit=827b0ddac5b1ef00a47fca4526fcf057bee5f1db  # tags/121
-source=("git+https://gitlab.freedesktop.org/polkit/polkit.git#commit=$_commit")
+_commit=da87c5698019897dd731bb2cbb54ebd9c9481f52  # tags/122
+source=(
+  "git+https://gitlab.freedesktop.org/polkit/polkit.git#commit=$_commit"
+)
 b2sums=('SKIP')
 
 pkgver() {
@@ -49,7 +62,6 @@ package() {
   meson install -C build --destdir "$pkgdir"
 
   install -d -o root -g 102 -m 750 "$pkgdir"/{etc,usr/share}/polkit-1/rules.d
-  mv "$pkgdir"/{etc,usr/share}/polkit-1/rules.d/50-default.rules
 
   install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/$pkgname.conf" <<END
 u polkitd 102 "PolicyKit daemon"
