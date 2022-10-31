@@ -6,17 +6,16 @@ pkgname=shadow
 pkgver=4.11.1
 pkgrel=3
 pkgdesc="Password and account management tool suite with support for shadow files and PAM"
-arch=('x86_64')
-url='https://github.com/shadow-maint/shadow'
-license=('BSD')
-# libcap-ng needed by install scriptlet for 'filecap'
+arch=(x86_64)
+url="https://github.com/shadow-maint/shadow"
+license=(BSD)
 depends=(
-  'acl' 'libacl.so'
-  'attr' 'libattr.so'
-  'audit' 'libaudit.so'
-  'glibc'
-  'libxcrypt' 'libcrypt.so'
-  'pam' 'libpam.so' 'libpam_misc.so'
+  acl libacl.so
+  attr libattr.so
+  audit libaudit.so
+  glibc
+  libxcrypt libcrypt.so
+  pam libpam.so libpam_misc.so
 )
 makedepends=(libcap)
 backup=(
@@ -24,9 +23,9 @@ backup=(
   etc/login.defs
   etc/pam.d/{chage,{,ch,chg}passwd,group{add,del,mems,mod},newusers,shadow,user{add,del,mod}}
 )
-options=(debug '!emptydirs')
+options=(debug !emptydirs)
 source=(
-  "https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz"{,.asc}
+  https://github.com/shadow-maint/shadow/releases/download/v$pkgver/shadow-$pkgver.tar.xz{,.asc}
   chgpasswd
   chpasswd
   defaults.pam
@@ -62,11 +61,11 @@ validpgpkeys=('66D0387DB85D320F8408166DB175CFA98F192AF2')  # Serge Hallyn <serge
 
 prepare() {
   # comment options that are taken over by util-linux and apply defaults
-  patch -Np1 -d "$pkgname-$pkgver" -i ../$pkgname-4.11.1-login.defs.patch
+  patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-4.11.1-login.defs.patch
 }
 
 build() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname-$pkgver
 
   ./configure \
     --prefix=/usr \
@@ -91,7 +90,7 @@ build() {
 }
 
 package() {
-  cd "$pkgname-$pkgver"
+  cd $pkgname-$pkgver
 
   make DESTDIR="$pkgdir" install
   make DESTDIR="$pkgdir" -C man install
@@ -103,8 +102,8 @@ package() {
   install -vDm 600 ../useradd.defaults "$pkgdir/etc/default/useradd"
 
   # systemd units
-  install -vDm 644 "../shadow.timer" -t "$pkgdir/usr/lib/systemd/system/"
-  install -vDm 644 "../shadow.service" -t "$pkgdir/usr/lib/systemd/system/"
+  install -vDm 644 ../shadow.timer -t "$pkgdir/usr/lib/systemd/system/"
+  install -vDm 644 ../shadow.service -t "$pkgdir/usr/lib/systemd/system/"
   install -vdm 755 "$pkgdir/usr/lib/systemd/system/timers.target.wants"
   ln -s ../shadow.timer "$pkgdir/usr/lib/systemd/system/timers.target.wants/shadow.timer"
 
@@ -117,7 +116,7 @@ package() {
 
   # we use the 'useradd' PAM file for other similar utilities
   for file in chage group{add,del,mod} shadow user{add,del,mod}; do
-    install -vDm 644 "../defaults.pam" "$pkgdir/etc/pam.d/$file"
+    install -vDm 644 ../defaults.pam "$pkgdir/etc/pam.d/$file"
   done
 
   # Remove evil/broken tools
