@@ -1,18 +1,19 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: György Balló <ballogy@freestart.hu>
 
-pkgname=gupnp
-pkgver=1.4.3
+pkgbase=gupnp
+pkgname=(gupnp gupnp-docs)
+pkgver=1.6.0
 pkgrel=1
 epoch=1
 pkgdesc="An object-oriented UPNP framework"
 url="https://wiki.gnome.org/Projects/GUPnP"
 arch=(x86_64)
 license=(LGPL)
-depends=(glib2 gssdp util-linux libxml2)
-makedepends=(gobject-introspection gtk-doc vala meson git)
-optdepends=('python: gupnp-binding-tool')
-_commit=1e752b11dc51673c71c70bbf6deb34c96e3abd19  # tags/gupnp-1.4.3^0
+depends=(glib2 gssdp libxml2)
+makedepends=(gobject-introspection gi-docgen vala meson git)
+options=(debug)
+_commit=f05648e240c99be32911fb0c6de84e5954470e56  # tags/gupnp-1.6.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gupnp.git#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -23,9 +24,6 @@ pkgver() {
 
 prepare() {
   cd gupnp
-  
-  # Unbreak man page build
-  git revert -n 8795626a07963a91400773cfe04d4f2f1c37ff14
 }
 
 build() {
@@ -37,10 +35,32 @@ check() {
   meson test -C build --print-errorlogs
 }
 
-package() {
-  depends+=(libg{lib,object,io,module}-2.0.so libgssdp-1.2.so libsoup-2.4.so
-            libuuid.so)
-  provides+=(libgupnp-1.2.so)
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+
+package_gupnp() {
+  depends+=(libg{lib,object,io,module}-2.0.so libgssdp-1.6.so libsoup-3.0.so)
+  optdepends=('python: gupnp-binding-tool')
+  provides=(libgupnp-1.6.so)
 
   meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+  _pick docs usr/share/doc
 }
+
+package_gupnp-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+  mv docs/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
