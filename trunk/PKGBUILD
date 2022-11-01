@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=63.4.3
+pkgver=64.0.0
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -21,7 +21,7 @@ provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch)
-sha512sums=('039b72fc8b62c3dc27edb856c5c0f1fe01ccf813c2a5a446baf163c4560a6b819b309056681da9f811609b1e44c4787d4f0e18b2550428df19e9c24e790ade90'
+sha512sums=('efc15a423215443e05a9e6a778b8ff910f0a982a814899f20f7599b6bf7213e11effaae2725548e5c52874d3c9de5be7964f4d1155e7df48ccf990b64fcff246'
             '390fea2c575a0042054f51d33e629b04a48f832f0a4a2dd07d34e23cdf330c382dba0f54bfb7c8a6a253bb248a4940f2a789672f715e4dc2aeb395fa185cae7a')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
@@ -49,6 +49,11 @@ prepare() {
           {} +
   done
 
+  # Fix tests invoking python-build
+  sed -e 's/"-m", "build", "--wheel"/"-m", "build", "--wheel", "--no-isolation"/' \
+      -e 's/"-m", "build", "--sdist"/"-m", "build", "--sdist", "--no-isolation"/' \
+      -i setuptools/tests/fixtures.py
+
   # Remove post-release tag since we are using stable tags
   sed -e '/tag_build = .post/d' \
       -e '/tag_date = 1/d' \
@@ -71,22 +76,22 @@ check() { (
   export PYTHONDONTWRITEBYTECODE=1
 
   cd setuptools-$pkgver
-  # 1-7: skipping all tests using "setuptools_sdist", "setuptools_wheel" (or "venv" which uses the latter)
-  # 8-9: subtle difference introduced by devendoring
-  # 10-12: TODO
-  PRE_BUILT_SETUPTOOLS_SDIST="$PWD"/build/lib python -m pytest \
-    --deselect setuptools/tests/integration/test_pip_install_sdist.py \
-    --deselect setuptools/tests/test_distutils_adoption.py \
-    --deselect setuptools/tests/test_setuptools.py::test_its_own_wheel_does_not_contain_tests \
-    --deselect setuptools/tests/test_virtualenv.py \
-    --deselect setuptools/tests/test_editable_install.py::test_editable_with_pyproject \
-    --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::TestMeta::test_example_file_in_sdist \
-    --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::TestMeta::test_example_file_not_in_wheel \
+  # 1: subtle difference introduced by devendoring
+  # rest: skipping broken tests using "setuptools_sdist", "setuptools_wheel" (or "venv" which uses the latter)
+  #       and fails with pip
+  PYTHONPATH="$PWD"/build/lib python -m pytest \
     --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::test_apply_pyproject_equivalent_to_setupcfg \
-    --deselect setuptools/tests/config/test_pyprojecttoml.py::test_invalid_example \
-    --deselect setuptools/tests/test_dist_info.py::TestWheelCompatibility \
-    --deselect setuptools/tests/test_dist_info.py::TestDistInfo::test_invalid_version \
-    --deselect setuptools/tests/test_build.py
+    --deselect setuptools/tests/test_build_meta.py::test_legacy_editable_install \
+    --deselect setuptools/tests/test_distutils_adoption.py::test_distutils_local_with_setuptools \
+    --deselect setuptools/tests/test_editable_install.py::test_editable_with_pyproject \
+    --deselect setuptools/tests/test_editable_install.py::test_editable_with_flat_layout \
+    --deselect setuptools/tests/test_editable_install.py::TestLegacyNamespaces::test_namespace_package_importable \
+    --deselect setuptools/tests/test_editable_install.py::TestPep420Namespaces::test_namespace_package_importable \
+    --deselect setuptools/tests/test_editable_install.py::TestPep420Namespaces::test_namespace_created_via_package_dir \
+    --deselect setuptools/tests/test_editable_install.py::TestOverallBehaviour::test_editable_install \
+    --deselect setuptools/tests/test_editable_install.py::TestLinkTree::test_strict_install \
+    --deselect setuptools/tests/test_editable_install.py::test_compat_install \
+    --deselect setuptools/tests/test_virtualenv.py
 )}
 
 package() {
