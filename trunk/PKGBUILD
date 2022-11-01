@@ -8,7 +8,7 @@ pkgbase=rust
 pkgname=(rust lib32-rust-libs rust-musl rust-wasm rust-src)
 epoch=1
 pkgver=1.64.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Systems programming language focused on safety, speed and concurrency"
 url=https://www.rust-lang.org/
 arch=(x86_64)
@@ -16,7 +16,7 @@ license=(MIT Apache)
 options=(!emptydirs !strip !lto)
 depends=(gcc-libs llvm-libs curl libssh2 gcc)
 makedepends=(rust llvm libffi lib32-gcc-libs perl python cmake musl ninja
-             wasi-libc lld)
+             wasi-libc lld openssl-1.1)
 checkdepends=(procps-ng gdb)
 source=(
   "https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
