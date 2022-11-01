@@ -1,0 +1,91 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Thomas Baechler <thomas@archlinux.org>
+
+pkgname=ppp
+pkgver=2.4.9
+pkgrel=3
+pkgdesc="A daemon which implements the Point-to-Point Protocol for dial-up networking"
+arch=(x86_64)
+url="https://www.samba.org/ppp/"
+license=('GPL' 'BSD')
+depends=('glibc' 'libpcap' 'libxcrypt' 'openssl')
+backup=(etc/ppp/{chap-secrets,pap-secrets,options,ip-up,ip-down,ip-down.d/00-dns.sh,ip-up.d/00-dns.sh,ipv6-up.d/00-iface-config.sh})
+source=(https://download.samba.org/pub/ppp/ppp-$pkgver.tar.gz{,.asc}
+        ppp-2.4.6-makefiles.patch
+        options
+        ip-up
+        ip-down
+        ip-up.d.dns.sh
+        ip-down.d.dns.sh
+        ipv6-up
+        ipv6-down
+        ipv6-up.d.iface-config.sh
+        ppp.systemd
+        LICENSE)
+sha512sums=('5721b1915f2d02b895508601120d09ff17a76cbab62cbcb7d0216837bdf84f10f345311b77f346b120bda3b488ae10d7d942c4d7d5f1e369d0a002f3071099f1'
+            'SKIP'
+            '90b6b7c40cece43ed90a69aa1a2fa11c23da85045105354e7440cdb0d059f9ea660b58bf9d3045e32ffb05a8e65ff3d5a101002ac1f48f3f608b1706d6bc5c81'
+            '4324a9abe79b20735b87de2158bb73b6449415a4760f06a06b648dfb53517f8d9907b094a88d1b492b24c8720cfd9b17d491fbe236fbd51ba9042af60483b231'
+            'bdaaac792dd448ff31da6da2749d8c2f9c4e0311b1d4639de7c68038fcaa333cc28e25f5a6308de0ecb24b60b2e7284a811482df990da5f54d5581a746964f3c'
+            '92f3a5e383f2c888938e891ba831042e7f8c026b0ddf5ce8c3523d06ac32fa81742e638a4c665975cbc79868b98806d92574ee2ee8e034e33b065a90ee3ab28b'
+            '1636b2f8e3e0b0561aae9716e62c58cc7bee06aea0cdc163e64aba17da427810b7a12e4cea3d51b7a0b212fc2f4b7890f08d35d25165cd340b93241c9fe8842c'
+            '7ab85cd977333e89c1d184619a52fa46492db04760c86a44843607c68efc577a1715d0d1f827d6855184af0d87b4b4b02cf7e7102c798516238a45a3c8aa26ad'
+            '256941b220ad54119daf1c76237fecd0b2e9ede1d74b0950c45e373252ce20c1d4cd35a26b4d35f94ad2b7f49569fc9050c44731d672317994b562c750020326'
+            '1b8dc6300f746607c0cce835e69ed444f24ba81874ba061b2b0377f0b9c1cb41a383d6845b364dfabb249a461422972ba5010bacf55c5f85f5eb0d3c0f4c71cd'
+            '5b92a05bcf3ad4b7a88434546884e088069ce7c16a10c472589ca5ecc648f86ca02c2f608fb856ac6cb6ef14b508c2e0dec146c953128693bfb6c988f1963de8'
+            'b9978c4038fb764a1bbe9dea92850673e14978450c0dcd7a1b0b24c4ebd515fcc4c5cc82cd4b97d826d483261e96945208b9fe97d6fea09a7a5c7910541db24c'
+            'ab3acd0387a7966ac3d220f2b0b6880302f827125d978991f83dd3f1a30340c2a98ca5aedf0b81ec6a9e5eb49b0b0a0a5356419f3b8415c892c2df8b52d3994a')
+validpgpkeys=('631E179E370CD727A7F2A33A9E4295D605F66CE9'  # Paul Mackerras (Signing key) <paulus@samba.org>
+              'DE8E01561D8276A4DBFAEFCC040F1D49EC9DBB8C') # Paul Mackerras <paulus@ozlabs.org>
+
+prepare() {
+  cd $pkgname-$pkgver
+
+  patch -p1 -i "$srcdir"/ppp-2.4.6-makefiles.patch
+
+  # enable active filter
+  sed -i "s:^#FILTER=y:FILTER=y:" pppd/Makefile.linux
+  # enable ipv6 support
+  sed -i "s:^#HAVE_INET6=y:HAVE_INET6=y:" pppd/Makefile.linux
+  # Enable Microsoft proprietary Callback Control Protocol
+  sed -i "s:^#CBCP=y:CBCP=y:" pppd/Makefile.linux
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+  # -D_GNU_SOURCE is needed for IPv6 to work apparently
+  CFLAGS="$CPPFLAGS $CFLAGS -D_GNU_SOURCE" LDFLAGS="$LDFLAGS" ./configure --prefix=/usr
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make INSTROOT="$pkgdir" install
+
+  install -D -m644 ../options "$pkgdir"/etc/ppp/options
+  install -D -m755 ../ip-up   "$pkgdir"/etc/ppp/ip-up
+  install -D -m755 ../ip-down "$pkgdir"/etc/ppp/ip-down
+  install -d -m755 "$pkgdir"/etc/ppp/ip-up.d
+  install -d -m755 "$pkgdir"/etc/ppp/ip-down.d
+  install -m755 ../ip-up.d.dns.sh   "$pkgdir"/etc/ppp/ip-up.d/00-dns.sh
+  install -m755 ../ip-down.d.dns.sh "$pkgdir"/etc/ppp/ip-down.d/00-dns.sh
+  install -D -m755 ../ipv6-up   "$pkgdir"/etc/ppp/ipv6-up
+  install -D -m755 ../ipv6-down "$pkgdir"/etc/ppp/ipv6-down
+  install -d -m755 "$pkgdir"/etc/ppp/ipv6-up.d
+  install -d -m755 "$pkgdir"/etc/ppp/ipv6-down.d
+  install -m755 ../ipv6-up.d.iface-config.sh "$pkgdir"/etc/ppp/ipv6-up.d/00-iface-config.sh
+
+  install -D -m755 scripts/pon  "$pkgdir"/usr/bin/pon
+  install -D -m755 scripts/poff "$pkgdir"/usr/bin/poff
+  install -D -m755 scripts/plog "$pkgdir"/usr/bin/plog
+  install -D -m644 scripts/pon.1 "$pkgdir"/usr/share/man/man1/pon.1
+  install -D -m600 etc.ppp/pap-secrets  "$pkgdir"/etc/ppp/pap-secrets
+  install -D -m600 etc.ppp/chap-secrets "$pkgdir"/etc/ppp/chap-secrets
+  install -d -m755 "$pkgdir"/etc/ppp/peers
+  chmod 0755 "$pkgdir"/usr/lib/pppd/$pkgver/*.so
+
+  install -D -m644 "$srcdir"/ppp.systemd "$pkgdir"/usr/lib/systemd/system/ppp@.service
+
+  install -Dm644 "$srcdir"/LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}
