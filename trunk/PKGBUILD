@@ -16,7 +16,7 @@ license=(MIT Apache)
 options=(!emptydirs !strip !lto)
 depends=(gcc-libs llvm-libs curl libssh2 gcc)
 makedepends=(rust llvm libffi lib32-gcc-libs perl python cmake musl ninja
-             wasi-libc lld openssl-1.1)
+             wasi-libc lld)
 checkdepends=(procps-ng gdb)
 source=(
   "https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
