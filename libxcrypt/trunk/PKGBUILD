@@ -2,7 +2,7 @@
 
 pkgbase=libxcrypt
 pkgname=(libxcrypt libxcrypt-compat)
-pkgver=4.4.29
+pkgver=4.4.30
 pkgrel=1
 pkgdesc='Modern library for one-way hashing of passwords'
 arch=('x86_64')
@@ -14,7 +14,7 @@ options=('debug')
 install=libxcrypt.install
 validpgpkeys=('678CE3FEE430311596DB8C16F52E98007594C21D') # Björn 'besser82' Esser
 source=("${url}/releases/download/v${pkgver}/${pkgbase}-${pkgver}.tar.xz"{,.asc})
-sha256sums=('75ee3cff4821498c52356382c4a1df5799a1bf0d56ac5ea94d9542b7cee9f786'
+sha256sums=('b3667f0ba85daad6af246ba4090fbe53163ad93c8b6a2a1257d22a78bb7ceeba'
             'SKIP')
 
 build() {
