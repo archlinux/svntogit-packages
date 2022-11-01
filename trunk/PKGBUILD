@@ -3,13 +3,13 @@
 pkgbase=ghostscript
 pkgname=(ghostscript ghostxps ghostpcl)
 pkgver=10.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc="An interpreter for the PostScript language"
 url="https://www.ghostscript.com/"
 arch=('x86_64')
 license=('AGPL3' 'custom')
 depends=('libxt' 'libcups' 'fontconfig' 'zlib' 'libpng' 'libjpeg' 'jbig2dec'
-         'libtiff' 'lcms2' 'dbus' 'libpaper' 'ijs' 'openjpeg2' 'libidn')
+         'libtiff' 'lcms2' 'dbus' 'libpaper' 'ijs' 'openjpeg2' 'libidn' 'poppler-data')
 makedepends=('gtk3' 'gnutls' 'glu' 'freeglut')
 options=('debug')
 # https://github.com/ArtifexSoftware/ghostpdl-downloads/releases
@@ -55,9 +55,9 @@ prepare() {
   # http://git.ghostscript.com/?p=ghostpdl.git;a=commit;h=40dc5b409c6262b18b4bf5386b5482ead4c511e3
   # libs link unwanted to libgpdl that isn't installed
   rm -rf gpdl
-
-  # https://bugs.ghostscript.com/show_bug.cgi?id=704405
-  sed -i "s/gscms_transformm_color_const/gscms_transform_color_const/" base/gsicc_lcms2.c
+  
+  # Remove internal CMaps (CMaps from poppler-data are used instead)
+  rm -r Resource/CMap
 
   # Debian: # allow the build timestamp to be externally set
   patch -Np1 -i ../2010_add_build_timestamp_setting.patch
@@ -66,7 +66,6 @@ prepare() {
 build() {
   cd ghostpdl-${pkgver}
   ./configure --prefix=/usr \
-              --enable-dynamic \
               --with-ijs \
               --with-jbig2dec \
               --with-x \
@@ -79,7 +78,7 @@ build() {
               --with-system-libtiff \
               --with-libpaper \
               --disable-compile-inits #--help # needed for linking with system-zlib
-  make
+  make so
 }
 
 package_ghostscript() {
@@ -87,14 +86,23 @@ package_ghostscript() {
               'gtk3:              needed for gsx')
 
   cd ghostpdl-${pkgver}
-  make DESTDIR="${pkgdir}" install-gs install-so-gs
+  make -j1 DESTDIR="${pkgdir}" soinstall
+  # split pkg cleanup
+  rm -v "${pkgdir}"/usr/bin/{gpcl6*,gxps*}
+  rm -v "${pkgdir}"/usr/lib/{libgpcl6*,libgxps.so*}
 
-  # replace statically linked gs binary with symlink to dynamically linked gsc
-  rm -v "${pkgdir}"/usr/bin/gs
-  ln -s gsc "${pkgdir}"/usr/bin/gs
+  # gsc collides with gambit gambit-c
+  mv "${pkgdir}"/usr/bin/{gsc,gs}
+  ln -s gs "${pkgdir}"/usr/bin/ghostscript
+  ln -s /usr/share/man/man1/gs.1.gz "${pkgdir}"/usr/share/man/man1/ghostscript.1
 
   # remove unwanted localized manpages
   rm -rv "${pkgdir}"/usr/share/man/de
+  # remove obsolete lpr bsd/Unix related files
+  rm -rv "${pkgdir}"/usr/bin/{lprsetup.sh,unix-lpr.sh}
+
+  # install the CMaps from poppler-data
+  ln -s /usr/share/poppler/cMap "${pkgdir}"/usr/share/ghostscript/Resource/CMap
 
   install -Dt "${pkgdir}"/usr/share/licenses/${pkgname} -m644 LICENSE
 }
