@@ -4,7 +4,7 @@
 
 pkgname=sudo
 _sudover=1.9.12
-pkgrel=2
+pkgrel=3
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
