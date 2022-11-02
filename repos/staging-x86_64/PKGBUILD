@@ -1,0 +1,37 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Mirco Tischler <mt-ml at gmx dot de>
+# Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname=efitools
+pkgver=1.9.2
+pkgrel=5
+pkgdesc="Tools for manipulating UEFI secure boot platforms"
+url="https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git/about/"
+arch=(x86_64)
+license=(GPL2 LGPL2.1)
+makedepends=(git gnu-efi-libs help2man perl-file-slurp sbsigntools)
+depends=(glibc openssl)
+source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/jejb/$pkgname.git#tag=v${pkgver}?signed"
+        "${pkgname}-1.9.2-console_warning_typo.patch")
+sha512sums=('SKIP'
+            '9e609eb4fb2a7116166626d15470d66e2eb66a25867618d4065d48636304f88549a71c5e827ac92750183f0fabaa3b84beea3dffa905031a2867939bfae955e7')
+validpgpkeys=('D5606E73C8B46271BEAD9ADF814AE47C214854D6') # James Bottomley <jejb@kernel.org>
+
+prepare() {
+  cd "${pkgname}"
+  patch -Np1 -i "../${pkgname}-1.9.2-console_warning_typo.patch"
+}
+
+build() {
+  # fix PreLoader.efi building on x86_64 #49314
+  export ARCH="${CARCH}"
+  # build with one job because the Makefile does not support parallel jobs ;_;
+  # https://bugs.archlinux.org/task/73600
+  make -j1 -C "${pkgname}"
+}
+
+package() {
+  make DESTDIR="${pkgdir}" install -C "${pkgname}"
+  install -vDm 644 "${pkgname}/"README -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
