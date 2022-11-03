@@ -1,8 +1,8 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=5.15.76
-pkgrel=2
+pkgver=5.15.77
+pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
@@ -21,22 +21,20 @@ source=(
   0003-iommu-intel-do-deep-dma-unmapping-to-avoid-kernel-fl.patch
   0004-Bluetooth-btintel-Fix-bdaddress-comparison-with-garb.patch
   0005-lg-laptop-Recognize-more-models.patch
-  0006-Fix-NFSv4-mount-regression.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 # https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
-sha256sums=('9007a020c419e3625b980e361be09f70ebd99e156ccb66129a981483d065d57f'
+sha256sums=('142f841f33796a84c62fae2f2b96d2120bd8bbf9e0aac4ce157692cdb0afe9f9'
             'SKIP'
-            '8e8bf635b2dbf24be1ecbf202f4b507301c545218e3d865f5d4c2ec3c5257bf4'
+            '90b857145f4a2281998ba4338de92d673bd939be5d5ccd32a2d34d6e19b17816'
             '3b5cfc9ca9cf778ea2c4b619b933cda26519969df2d764b5a687f63cf59974cd'
             'c175fbb141c3cec013c799f694d88310375ac5456042f6a4a1adc7667836d786'
             '8357f000b2b622e73dcfd41c2bad42b5e99fffe8f7ee64f774aa771f86cef43c'
             '5c1ee81fdd5818442af6081de987f9c1a9ce3c8d183566b3dfc19a8433aa3dde'
-            '067e8995fcd6f6ed25e0253e9374c0e179a000c154da3e59ce62634945ac5be9'
-            '10801c245064777873b580bea1fc17a4288ec519e0ce9500aa1b7c6e19fe777b')
+            '067e8995fcd6f6ed25e0253e9374c0e179a000c154da3e59ce62634945ac5be9')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
