@@ -4,7 +4,7 @@
 
 pkgname=sudo
 _sudover=1.9.12
-pkgrel=3
+pkgrel=4
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
@@ -27,11 +27,11 @@ sha256sums=('de15733888170c56834daafd34bf983db10fb21039742fcfc396bd32168d6362'
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
 prepare() {
-  cd "$srcdir/$pkgname-$_sudover"
+  cd $pkgname-$_sudover
 }
 
 build() {
-  cd "$srcdir/$pkgname-$_sudover"
+  cd $pkgname-$_sudover
 
   ./configure \
     --prefix=/usr \
@@ -52,12 +52,14 @@ build() {
 }
 
 check() {
-  cd "$srcdir/$pkgname-$_sudover"
+  cd $pkgname-$_sudover
   make check
 }
 
 package() {
-  cd "$srcdir/$pkgname-$_sudover"
+  depends+=('libcrypto.so' 'libssl.so')
+
+  cd $pkgname-$_sudover
   make DESTDIR="$pkgdir" install
 
   # sudo_logsrvd service file (taken from sudo-logsrvd-1.9.0-1.el8.x86_64.rpm)
