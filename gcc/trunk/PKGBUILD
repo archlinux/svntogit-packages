@@ -39,8 +39,6 @@ checkdepends=(
 )
 options=(!emptydirs !lto debug)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-# _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
-# source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
 source=(git+https://sourceware.org/git/gcc.git#commit=${_commit}
         c89 c99
         gcc-ada-repro.patch
