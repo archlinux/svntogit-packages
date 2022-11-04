@@ -3,7 +3,7 @@
 pkgname=rsync
 _tag='b13e7a8ef4fa430223f66403506fb821caae5cfd' # git rev-parse v${pkgver}
 pkgver=3.2.7
-pkgrel=1
+pkgrel=2
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
 url='https://rsync.samba.org/'
