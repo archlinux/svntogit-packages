@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=43.0
-pkgrel=2
+pkgver=43.1
+pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -21,10 +21,11 @@ optdepends=('gnome-control-center: System settings'
             'evolution-data-server: Evolution calendar integration'
             'gst-plugins-good: Screen recording'
             'gst-plugin-pipewire: Screen recording'
-            'gnome-bluetooth-3.0: Bluetooth support')
+            'gnome-bluetooth-3.0: Bluetooth support'
+            'power-profiles-daemon: Power profile switching')
 groups=(gnome)
 options=(debug)
-_commit=0bd73b79a630ad1354bae3ccd69beaeba2f74d4b  # tags/43.0^0
+_commit=8b00255cc31814b09a35c9be38228d873676233e  # tags/43.1^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
