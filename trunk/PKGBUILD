@@ -4,7 +4,7 @@
 
 pkgname=chromaprint
 pkgver=1.5.1
-pkgrel=4
+pkgrel=5
 pkgdesc="Library for extracting fingerprints from any audio source"
 url="https://acoustid.org/chromaprint"
 arch=('x86_64')
@@ -14,18 +14,17 @@ makedepends=('cmake' 'ffmpeg' 'gtest')
 provides=('libchromaprint.so')
 # upstream signs with DSA key: https://github.com/acoustid/chromaprint/issues/81
 source=(https://github.com/acoustid/${pkgname}/archive/v$pkgver/$pkgname-$pkgver.tar.gz
-        chromaprint-ffmpeg5.patch::https://patch-diff.githubusercontent.com/raw/acoustid/chromaprint/pull/114.patch)
+        8ccad693.patch)
 sha512sums=('ea16e4d2b879c15b1d9b9ec93878da8b893f1834c70942663e1d2d106c2e0a661094fe2dd3bae7a6c2a1f9d5d8fab5e0b0ba493561090cf57b2228606fad1e66'
-            'b487c7b61dd67a2a84d51b8ead3aee58f678f1179da33b39071093af4d6fb0bdc536f8c872b0edaeefc81d4c6c9b0f4a634ab8df623b75e03b629ebd88c897b9')
+            '9eb62b6b165fb2a48fe6399025a51161347cb56b8b7d28819a90be38425d145d2997aecb203dbadf40bcb469b0757ad8f836dca7dbb1db95f923a427f3c2d9ee')
 b2sums=('9f7f030e97d3114cf679df298d313ea826c0fb05e7e7d8a10090d0a27ed0811b380b81b29fce973e0493826c478964367396311fd0484619cb2fc4c2d8e0d4c0'
-        '6f386ff4690e5286df7609f2211eb4edea07508eff087622aacbee81d8ca2147378a244886fb6d0951c1dca627dc022f661f68c36d155f17a8ac69e8a9287138')
+        '085dd1c64347a76cf912d327d8782fafd392777aae9dd565b1e84860e12a1262d9b25f908c54b96147abf74c82824529c6e100f5943ddff725358bb7aa19da47')
 
 prepare() {
-  patch -d $pkgname-$pkgver -p1 < chromaprint-ffmpeg5.patch
+  patch -d $pkgname-$pkgver -p1 < 8ccad693.patch # Port to ffmpeg 5
 }
 
 build() {
-  cd "${pkgname}-${pkgver}"
   cmake -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_BUILD_TYPE='None' \
         -DBUILD_TESTS=ON \
@@ -33,19 +32,17 @@ build() {
         -DGTEST_SOURCE_DIR=/usr/src/googletest/ \
         -Wno-dev \
         -B build \
-        -S .
+        -S $pkgname-$pkgver
   make VERBOSE=1 -C build
 }
 
 check() {
-  cd "${pkgname}-${pkgver}"
   make VERBOSE=1 -C build check
 }
 
 package() {
   depends+=('libavcodec.so' 'libavformat.so' 'libavutil.so' 'libswresample.so')
-  cd "${pkgname}-${pkgver}"
-  make VERBOSE=1 DESTDIR="${pkgdir}" install -C build
-  install -vDm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -vDm 644 {NEWS.txt,README.md} -t "${pkgdir}/usr/share/doc/${pkgname}"
+  make VERBOSE=1 DESTDIR="$pkgdir" install -C build
+  install -vDm 644 $pkgname-$pkgver/LICENSE.md -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -vDm 644 $pkgname-$pkgver/{NEWS.txt,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
 }
