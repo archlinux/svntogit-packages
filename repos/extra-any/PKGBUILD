@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=64.0.0
+pkgver=64.0.1
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -20,9 +20,11 @@ checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pi
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
-        system-validate-pyproject.patch)
-sha512sums=('efc15a423215443e05a9e6a778b8ff910f0a982a814899f20f7599b6bf7213e11effaae2725548e5c52874d3c9de5be7964f4d1155e7df48ccf990b64fcff246'
-            '390fea2c575a0042054f51d33e629b04a48f832f0a4a2dd07d34e23cdf330c382dba0f54bfb7c8a6a253bb248a4940f2a789672f715e4dc2aeb395fa185cae7a')
+        system-validate-pyproject.patch
+        add-dependency.patch)
+sha512sums=('ac824d4753d468605d57011fb61d8829d505b117430c5361f4b8ced8a91f65f914a58efb9fcdc31c0eda64d9b8c5376b22c1959ac4cace82d8c61e91ed691069'
+            '390fea2c575a0042054f51d33e629b04a48f832f0a4a2dd07d34e23cdf330c382dba0f54bfb7c8a6a253bb248a4940f2a789672f715e4dc2aeb395fa185cae7a'
+            '4277c983f17db19b0e499ceff7b6e24aad4f7956ec282bb7f5148f6f44e4e35077bfdfa219cbc04f49f37d0b9dc9c3e3075db7a36dbdc30944e1bd28efad0e0b')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
@@ -48,6 +50,9 @@ prepare() {
           -e 's/from \.\.extern\./from /' \
           {} +
   done
+
+  # Add the devendored dependencies into metadata of setuptools
+  patch -p1 -i ../add-dependency.patch
 
   # Fix tests invoking python-build
   sed -e 's/"-m", "build", "--wheel"/"-m", "build", "--wheel", "--no-isolation"/' \
@@ -77,20 +82,9 @@ check() { (
 
   cd setuptools-$pkgver
   # 1: subtle difference introduced by devendoring
-  # rest: skipping broken tests using "setuptools_sdist", "setuptools_wheel" (or "venv" which uses the latter)
-  #       and fails with pip
+  # 2: pip failures related to devendoring, 
   PYTHONPATH="$PWD"/build/lib python -m pytest \
     --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::test_apply_pyproject_equivalent_to_setupcfg \
-    --deselect setuptools/tests/test_build_meta.py::test_legacy_editable_install \
-    --deselect setuptools/tests/test_distutils_adoption.py::test_distutils_local_with_setuptools \
-    --deselect setuptools/tests/test_editable_install.py::test_editable_with_pyproject \
-    --deselect setuptools/tests/test_editable_install.py::test_editable_with_flat_layout \
-    --deselect setuptools/tests/test_editable_install.py::TestLegacyNamespaces::test_namespace_package_importable \
-    --deselect setuptools/tests/test_editable_install.py::TestPep420Namespaces::test_namespace_package_importable \
-    --deselect setuptools/tests/test_editable_install.py::TestPep420Namespaces::test_namespace_created_via_package_dir \
-    --deselect setuptools/tests/test_editable_install.py::TestOverallBehaviour::test_editable_install \
-    --deselect setuptools/tests/test_editable_install.py::TestLinkTree::test_strict_install \
-    --deselect setuptools/tests/test_editable_install.py::test_compat_install \
     --deselect setuptools/tests/test_virtualenv.py
 )}
 
