@@ -2,7 +2,7 @@
 # Contributor: Tobias Roettger <toroettg@gmail.com>
 
 pkgname=python-platformdirs
-pkgver=2.5.2
+pkgver=2.5.3
 pkgrel=1
 pkgdesc='A small Python module for determining appropriate platform-specific dirs, e.g. a "user data dir"'
 arch=('any')
@@ -12,7 +12,7 @@ depends=('python-typing_extensions')
 makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-vcs')
 checkdepends=('python-pytest-mock')
 source=("https://pypi.io/packages/source/p/platformdirs/platformdirs-$pkgver.tar.gz")
-sha512sums=('b0b0dee3ac4176e64f302b3d34e253b2e33784160051b9dafb563962e597df75f2c9f714c050d5bdeb1769a1f56c2878a47e9a42361596e287ae7b2afe870370')
+sha512sums=('550be64700a3f3cfe884989d26907ec420c55f229387a378f7c7eb8549415a55ee5027846955efb0e2429c0813e167a1fc3f78c6d7e3ca10672247a360b502dc')
 
 build() {
   cd "$srcdir"/platformdirs-$pkgver
@@ -27,7 +27,7 @@ check() {
 package() {
   cd platformdirs-$pkgver
   python -m installer --destdir="$pkgdir/" dist/*.whl
-  install -Dm644 LICENSE.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
 
 # vim:set ts=2 sw=2 et:
