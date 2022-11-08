@@ -2,7 +2,7 @@
 
 pkgbase=bubblewrap
 pkgname=(bubblewrap bubblewrap-suid)
-pkgver=0.6.2
+pkgver=0.7.0
 pkgrel=1
 pkgdesc='Unprivileged sandboxing tool'
 url='https://github.com/projectatomic/bubblewrap'
@@ -11,7 +11,7 @@ license=(GPL)
 depends=(glibc libcap)
 makedepends=(libxslt docbook-xsl git meson bash-completion)
 options=(debug)
-_commit=c54bbc6d7b78e7a45016efe0c4ac8af9d209aa20  # tags/v0.6.2^0
+_commit=aa0fb696ab4b7482fa54a0422b8a19c87407350e  # tags/v0.7.0^0
 source=("git+$url#commit=$_commit")
 sha256sums=('SKIP')
 
@@ -45,3 +45,5 @@ package_bubblewrap-suid() {
   meson install -C build --destdir "$pkgdir"
   chmod u+s "$pkgdir/usr/bin/bwrap"
 }
+
+# vim:set sw=2 sts=-1 et:
