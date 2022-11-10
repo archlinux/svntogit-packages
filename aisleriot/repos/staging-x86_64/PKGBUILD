@@ -1,0 +1,55 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=aisleriot
+pkgver=3.22.26
+pkgrel=2
+pkgdesc="A collection of patience games written in guile scheme"
+url="https://wiki.gnome.org/Apps/Aisleriot"
+arch=(x86_64)
+license=(GPL)
+depends=(guile gtk3 librsvg libcanberra dconf)
+makedepends=(git meson yelp-tools appstream-glib)
+optdepends=('pysolfc: PySol card sets'
+            'pysolfc-cardsets: PySol card sets')
+options=(
+  debug
+
+  # https://gitlab.gnome.org/GNOME/aisleriot/-/commit/ca27295085473111564b6674059351a0b6f170c1
+  !lto
+)
+_commit=7028b2f96e224a78bd3108b483cc3ecf90a6b354  # tags/3.22.26^0
+source=("git+https://gitlab.gnome.org/GNOME/aisleriot.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  local meson_options=(
+    # https://gitlab.gnome.org/GNOME/aisleriot/-/commit/ca27295085473111564b6674059351a0b6f170c1
+    -D b_lto=false
+
+    -D theme_kde=false
+    -D theme_pysol=true
+    -D theme_pysol_path=/usr/share/PySolFC
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
