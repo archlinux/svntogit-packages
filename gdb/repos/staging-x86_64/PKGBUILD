@@ -1,0 +1,68 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Anatol Pomozov <anatol.pomozov@gmail.com>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gdb
+# gdb-common is a package that contains files common for all cross compiled versions
+# of gdb (for arm/avr/...)
+pkgname=(gdb gdb-common)
+pkgver=12.1
+pkgrel=2
+pkgdesc='The GNU Debugger'
+arch=(x86_64)
+url='https://www.gnu.org/software/gdb/'
+license=(GPL3)
+makedepends=(glibc gcc-libs texinfo python guile ncurses expat xz mpfr
+             source-highlight boost readline)
+source=(https://ftp.gnu.org/gnu/gdb/${pkgname}-${pkgver}.tar.xz{,.sig}
+        readline8.patch)
+sha1sums=('2edabd9f5766b84889b07b366b4438e93e994005'
+          'SKIP'
+          '9a57ab62b2f1fdbb73fff3f502827101ea945d59')
+b2sums=('7f6f853d1640908cf2c79932cdc1ba02549a07721c005d9c7ce2946a715761719cc164a4e68235a18664ec8a029afe3a2a0cfb57e1635f280076d6bed91317fd'
+        'SKIP'
+        'e2deed0d704caf3ae3e99242006f2b8a9abe5e81c75beb664b90f1ca1d79d3e2ecdf40edaca946bc4af1d2958efaf42d4a49afdde8e85fa98108522a0a82ebf4')
+validpgpkeys=('F40ADB902B24264AA42E50BF92EDB04BFF325CF3') # Joel Brobecker
+
+build() {
+  cd gdb-$pkgver
+  patch -Np1 -i ../readline8.patch
+
+  mkdir -p build && cd build
+  ../configure \
+    --prefix=/usr \
+    --disable-nls \
+    --enable-source-highlight \
+    --enable-tui \
+    --with-system-readline \
+    --with-python=/usr/bin/python \
+    --with-system-gdbinit=/etc/gdb/gdbinit
+  make
+}
+
+package_gdb-common() {
+  depends=(python guile)
+
+  cd gdb-$pkgver/build
+  make -C gdb/data-directory DESTDIR="$pkgdir" install
+}
+
+package_gdb() {
+  depends=(glibc ncurses libncursesw.so gcc-libs expat xz mpfr source-highlight gdb-common=$pkgver
+           readline libreadline.so guile python libelf)
+  backup=(etc/gdb/gdbinit)
+
+  cd gdb-$pkgver/build
+  make -C gdb DESTDIR="$pkgdir" install
+  make -C gdbserver DESTDIR="$pkgdir" install
+
+  # install "custom" system gdbinit
+  install -dm 755 "$pkgdir/etc/gdb"
+  touch "$pkgdir/etc/gdb/gdbinit"
+
+  # comes from gdb-common
+  rm -r "$pkgdir/usr/share/gdb/"
+}
+
+# vim: ts=2 sw=2 et:
