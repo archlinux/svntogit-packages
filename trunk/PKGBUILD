@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=43.1
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -38,6 +38,10 @@ pkgver() {
 
 prepare() {
   cd gnome-shell
+
+  # More fixes to screencast support detection
+  git cherry-pick -n a2acecb491e53e889dd995d3db386aaa182e04a0 \
+                     144daf200c12f313c2cc7c01daef9e26e396a328
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
