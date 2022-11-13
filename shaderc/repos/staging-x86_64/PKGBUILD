@@ -1,0 +1,59 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Daniel M. Capella <polycitizen@gmail.com>
+# Contributor: Bin Jin <bjin@ctrl-d.org>
+
+pkgname=shaderc
+pkgver=2022.3
+pkgrel=1
+pkgdesc='Collection of tools, libraries and tests for shader compilation'
+url='https://github.com/google/shaderc'
+arch=('x86_64')
+license=('Apache')
+depends=('glibc' 'gcc-libs' 'glslang' 'spirv-tools')
+makedepends=('asciidoctor' 'cmake' 'ninja' 'python' 'spirv-headers')
+provides=('libshaderc_shared.so')
+source=(https://github.com/google/shaderc/archive/v${pkgver}/${pkgname}-${pkgver}.tar.gz)
+sha512sums=('a0ac3350defb89e39de79eba64a3648d24fd4d764be2df3193cabc1976d4a8f6bd8ebe296b02cc53788c8b74d66e8bcea3fe1266f7ad1c7e0e5a0d70ecb842ee')
+b2sums=('6b00677464a916618f0f204c650a89a3a74fcfd463a4e9476f16f8ff3f1079979da2e42f30dff93ddb1d509cb117c03e50508661f8de892157334ad0e477fd3c')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+
+  # de-vendor libs and disable git versioning
+  sed '/examples/d;/third_party/d' -i CMakeLists.txt
+  sed '/build-version/d' -i glslc/CMakeLists.txt
+  cat <<- EOF > glslc/src/build-version.inc
+"${pkgver}\\n"
+"$(pacman -Q spirv-tools|cut -d \  -f 2|sed 's/-.*//')\\n"
+"$(pacman -Q glslang|cut -d \  -f 2|sed 's/-.*//')\\n"
+EOF
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  cmake \
+    -B build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_CXX_FLAGS="$CXXFLAGS -ffat-lto-objects" \
+    -DSHADERC_SKIP_TESTS=ON \
+    -Dglslang_SOURCE_DIR=/usr/include/glslang \
+    -GNinja
+  ninja -C build
+
+  cd glslc
+  asciidoctor -b manpage README.asciidoc -o glslc.1
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  ninja -C build test
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  DESTDIR="${pkgdir}" ninja -C build install
+  install -Dm 644 glslc/glslc.1 -t "${pkgdir}/usr/share/man/man1"
+}
+
+# vim: ts=2 sw=2 et:
