@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.6.0
-pkgrel=5
+pkgrel=6
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
@@ -69,7 +69,9 @@ build() {
   CFLAGS="${CFLAGS} -fno-lto" CXXFLAGS="${CXXFLAGS} -fno-lto" LDFLAGS="${LDFLAGS} -fno-lto" \
   cmake -B build-cuda -S $pkgname-$pkgver $_opts \
     -DWITH_CUDA=ON \
-    -DWITH_CUDNN=ON
+    -DWITH_CUDNN=ON \
+    -DCUDA_ARCH_BIN='52-real;53-real;60-real;61-real;62-real;70-real;72-real;75-real;80-real;86-real;87-real;89-real;90-real;90-virtual' \
+    -DCUDA_ARCH_PTX='90-virtual'
   cmake --build build-cuda
 }
 
