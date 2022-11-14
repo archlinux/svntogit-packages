@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=106.0.5
+pkgver=107.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 arch=(x86_64)
@@ -24,7 +24,7 @@ options=(!emptydirs !makeflags !strip !lto !debug)
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         0001-libwebrtc-screen-cast-sync.patch
         $pkgname.desktop identity-icons-brand.svg)
-sha256sums=('9471a7610d0adc350f14c363f1fcd2e15a85f22744f5850604af01aa844bc8a8'
+sha256sums=('8a562e5a397b57e9bf383c2988308ab494c5d28844e792c658fedea27756584a'
             'SKIP'
             '5c164f6dfdf2d97f3f317e417aaa2e6ae46a9b3a160c3162d5073fe39d203286'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
