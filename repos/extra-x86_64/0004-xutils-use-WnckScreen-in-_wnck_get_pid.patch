@@ -1,0 +1,173 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alberts=20Muktup=C4=81vels?= <alberts.muktupavels@gmail.com>
+Date: Fri, 30 Sep 2022 18:39:00 +0300
+Subject: [PATCH] xutils: use WnckScreen in _wnck_get_pid
+
+---
+ libwnck/application.c         |  2 +-
+ libwnck/window.c              |  2 +-
+ libwnck/wnck-resource-usage.c | 26 +++++++++++++-------------
+ libwnck/xutils.c              | 16 ++++++++++------
+ libwnck/xutils.h              |  4 ++--
+ 5 files changed, 27 insertions(+), 23 deletions(-)
+
+diff --git a/libwnck/application.c b/libwnck/application.c
+index 9ab7f4892fbf..31005ba40dfc 100644
+--- a/libwnck/application.c
++++ b/libwnck/application.c
+@@ -524,7 +524,7 @@ _wnck_application_create (Window      xwindow,
+   if (application->priv->name)
+     application->priv->name_from_leader = TRUE;
+ 
+-  application->priv->pid = _wnck_get_pid (xscreen,
++  application->priv->pid = _wnck_get_pid (screen,
+                                           application->priv->xwindow);
+ 
+   application->priv->startup_id = _wnck_get_utf8_property (xscreen,
+diff --git a/libwnck/window.c b/libwnck/window.c
+index 35bb37c1adaa..229b4cb1debc 100644
+--- a/libwnck/window.c
++++ b/libwnck/window.c
+@@ -510,7 +510,7 @@ _wnck_window_create (Window      xwindow,
+     _wnck_get_session_id (xscreen, window->priv->xwindow);
+ 
+   window->priv->pid =
+-    _wnck_get_pid (xscreen, window->priv->xwindow);
++    _wnck_get_pid (screen, window->priv->xwindow);
+ 
+   window->priv->x = 0;
+   window->priv->y = 0;
+diff --git a/libwnck/wnck-resource-usage.c b/libwnck/wnck-resource-usage.c
+index a845d82bc99e..1d81c283a5ae 100644
+--- a/libwnck/wnck-resource-usage.c
++++ b/libwnck/wnck-resource-usage.c
+@@ -126,25 +126,25 @@ wnck_gulong_equal (gconstpointer a,
+ }
+ 
+ static gulong
+-wnck_check_window_for_pid (Screen *screen,
+-                           Window  win,
+-                           XID     match_xid,
+-                           XID     mask)
++wnck_check_window_for_pid (WnckScreen *screen,
++                           Window      win,
++                           XID         match_xid,
++                           XID         mask)
+ {
+   if ((win & ~mask) == match_xid)
+     return _wnck_get_pid (screen, win);
+ 
+   return 0;
+ }
+ 
+ static void
+-wnck_find_pid_for_resource_r (Display *xdisplay,
+-                              Screen  *screen,
+-                              Window   win_top,
+-                              XID      match_xid,
+-                              XID      mask,
+-                              gulong  *xid,
+-                              gulong  *pid)
++wnck_find_pid_for_resource_r (Display    *xdisplay,
++                              WnckScreen *screen,
++                              Window      win_top,
++                              XID         match_xid,
++                              XID         mask,
++                              gulong     *xid,
++                              gulong     *pid)
+ {
+   Status   qtres;
+   int      err;
+@@ -250,10 +250,10 @@ wnck_pid_read_resource_usage_fill_cache (struct xresclient_state *state)
+ 
+   for (i = 0; i < ScreenCount (state->xdisplay); i++)
+     {
+-      Screen *screen;
++      WnckScreen *screen;
+       Window  root;
+ 
+-      screen = ScreenOfDisplay (state->xdisplay, i);
++      screen = wnck_handle_get_screen (_wnck_get_handle (), i);
+       root = RootWindow (state->xdisplay, i);
+ 
+       if (root == None)
+diff --git a/libwnck/xutils.c b/libwnck/xutils.c
+index d120ff16c0da..08be8aa96f1a 100644
+--- a/libwnck/xutils.c
++++ b/libwnck/xutils.c
+@@ -1147,50 +1147,54 @@ _wnck_get_session_id (Screen *screen,
+ 
+ #ifdef HAVE_XRES
+ static int
+-xres_get_pid (Screen *screen,
+-              Window  xwindow)
++xres_get_pid (WnckScreen *screen,
++              Window      xwindow)
+ {
+   int pid = -1;
++  Screen *xscreen;
+   XResClientIdSpec client_spec;
+   long client_id_count = 0;
+   XResClientIdValue *client_ids = NULL;
+ 
++  xscreen = _wnck_screen_get_xscreen (screen);
++
+   client_spec.client = xwindow;
+   client_spec.mask = XRES_CLIENT_ID_PID_MASK;
+ 
+-  if (XResQueryClientIds (DisplayOfScreen (screen), 1, &client_spec,
++  if (XResQueryClientIds (DisplayOfScreen (xscreen), 1, &client_spec,
+                           &client_id_count, &client_ids) == Success)
+     {
+       long i;
+ 
+       for (i = 0; i < client_id_count; i++)
+         {
+           pid = XResGetClientPid (&client_ids[i]);
+           if (pid != -1)
+             break;
+         }
+ 
+       XResClientIdsDestroy (client_id_count, client_ids);
+     }
+ 
+   return pid;
+ }
+ #endif
+ 
+ int
+-_wnck_get_pid (Screen *screen,
+-               Window  xwindow)
++_wnck_get_pid (WnckScreen *screen,
++               Window      xwindow)
+ {
+   int pid = -1;
+ 
+ #ifdef HAVE_XRES
+   pid = xres_get_pid (screen, xwindow);
+ 
+   if (pid != -1)
+     return pid;
+ #endif
+ 
+-  if (!_wnck_get_cardinal (screen, xwindow,
++  if (!_wnck_get_cardinal (_wnck_screen_get_xscreen (screen),
++                           xwindow,
+                            _wnck_atom_get ("_NET_WM_PID"),
+                            &pid))
+     return 0;
+diff --git a/libwnck/xutils.h b/libwnck/xutils.h
+index 4e5c62049c1e..700832a4832b 100644
+--- a/libwnck/xutils.h
++++ b/libwnck/xutils.h
+@@ -123,8 +123,8 @@ void _wnck_change_viewport (Screen *screen,
+ 
+ char*  _wnck_get_session_id     (Screen *screen,
+                                  Window xwindow);
+-int    _wnck_get_pid            (Screen *screen,
+-                                 Window  xwindow);
++int    _wnck_get_pid            (WnckScreen *screen,
++                                 Window      xwindow);
+ char*  _wnck_get_name           (Screen *screen,
+                                  Window  xwindow);
+ char*  _wnck_get_icon_name      (Screen *screen,
