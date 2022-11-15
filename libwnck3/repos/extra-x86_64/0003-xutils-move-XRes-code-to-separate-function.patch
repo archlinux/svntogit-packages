@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alberts=20Muktup=C4=81vels?= <alberts.muktupavels@gmail.com>
+Date: Fri, 30 Sep 2022 18:07:55 +0300
+Subject: [PATCH] xutils: move XRes code to separate function
+
+---
+ libwnck/xutils.c | 28 ++++++++++++++++++++--------
+ 1 file changed, 20 insertions(+), 8 deletions(-)
+
+diff --git a/libwnck/xutils.c b/libwnck/xutils.c
+index 60ae7b253228..d120ff16c0da 100644
+--- a/libwnck/xutils.c
++++ b/libwnck/xutils.c
+@@ -1145,37 +1145,49 @@ _wnck_get_session_id (Screen *screen,
+                                            _wnck_atom_get ("SM_CLIENT_ID"));
+ }
+ 
+-int
+-_wnck_get_pid (Screen *screen,
+-               Window  xwindow)
++#ifdef HAVE_XRES
++static int
++xres_get_pid (Screen *screen,
++              Window  xwindow)
+ {
+   int pid = -1;
+-
+-#ifdef HAVE_XRES
+   XResClientIdSpec client_spec;
+   long client_id_count = 0;
+   XResClientIdValue *client_ids = NULL;
+ 
+   client_spec.client = xwindow;
+   client_spec.mask = XRES_CLIENT_ID_PID_MASK;
+ 
+   if (XResQueryClientIds (DisplayOfScreen (screen), 1, &client_spec,
+                           &client_id_count, &client_ids) == Success)
+     {
+       long i;
+ 
+       for (i = 0; i < client_id_count; i++)
+         {
+           pid = XResGetClientPid (&client_ids[i]);
+           if (pid != -1)
+             break;
+         }
+ 
+       XResClientIdsDestroy (client_id_count, client_ids);
+-
+-      if (pid != -1)
+-        return pid;
+     }
++
++  return pid;
++}
++#endif
++
++int
++_wnck_get_pid (Screen *screen,
++               Window  xwindow)
++{
++  int pid = -1;
++
++#ifdef HAVE_XRES
++  pid = xres_get_pid (screen, xwindow);
++
++  if (pid != -1)
++    return pid;
+ #endif
+ 
+   if (!_wnck_get_cardinal (screen, xwindow,
