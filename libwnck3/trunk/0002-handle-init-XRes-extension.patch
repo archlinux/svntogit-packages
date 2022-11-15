@@ -1,0 +1,132 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alberts=20Muktup=C4=81vels?= <alberts.muktupavels@gmail.com>
+Date: Fri, 30 Sep 2022 17:32:09 +0300
+Subject: [PATCH] handle: init XRes extension
+
+XResQueryClientIds needs XRes 1.2 or newer.
+---
+ libwnck/wnck-handle-private.h |  2 ++
+ libwnck/wnck-handle.c         | 48 +++++++++++++++++++++++++++++++++++
+ meson.build                   |  2 +-
+ 3 files changed, 51 insertions(+), 1 deletion(-)
+
+diff --git a/libwnck/wnck-handle-private.h b/libwnck/wnck-handle-private.h
+index c4217cefd277..063310400934 100644
+--- a/libwnck/wnck-handle-private.h
++++ b/libwnck/wnck-handle-private.h
+@@ -26,6 +26,8 @@ G_BEGIN_DECLS
+ 
+ WnckClientType   _wnck_handle_get_client_type            (WnckHandle     *self);
+ 
++gboolean         _wnck_handle_has_xres                   (WnckHandle     *self);
++
+ gsize            _wnck_handle_get_default_icon_size      (WnckHandle     *self);
+ 
+ gsize            _wnck_handle_get_default_mini_icon_size (WnckHandle     *self);
+diff --git a/libwnck/wnck-handle.c b/libwnck/wnck-handle.c
+index 8d5da45c8787..fa11d3d16cd1 100644
+--- a/libwnck/wnck-handle.c
++++ b/libwnck/wnck-handle.c
+@@ -29,20 +29,27 @@
+ #include "config.h"
+ #include "wnck-handle-private.h"
+ 
++#include <X11/Xlib.h>
++#ifdef HAVE_XRES
++#include <X11/extensions/XRes.h>
++#endif
++
+ #include "private.h"
+ #include "screen.h"
+ #include "window.h"
+ #include "wnck-enum-types.h"
+ #include "xutils.h"
+ 
+ struct _WnckHandle
+ {
+   GObject          parent;
+ 
+   WnckScreen     **screens;
+ 
+   WnckClientType   client_type;
+ 
++  gboolean         have_xres;
++
+   gsize            default_icon_size;
+   gsize            default_mini_icon_size;
+ 
+@@ -167,6 +174,40 @@ filter_func (GdkXEvent *gdkxevent,
+   return GDK_FILTER_CONTINUE;
+ }
+ 
++static void
++init_xres (WnckHandle *self)
++{
++#ifdef HAVE_XRES
++  Display *xdisplay;
++  int event_base;
++  int error_base;
++  int major;
++  int minor;
++
++  xdisplay = _wnck_get_default_display ();
++  event_base = error_base = major = minor = 0;
++
++  if (XResQueryExtension (xdisplay, &event_base, &error_base) &&
++      XResQueryVersion (xdisplay, &major, &minor) == 1)
++    {
++      if (major > 1 || (major == 1 && minor >= 2))
++        self->have_xres = TRUE;
++    }
++#endif
++}
++
++static void
++wnck_handle_constructed (GObject *object)
++{
++  WnckHandle *self;
++
++  self = WNCK_HANDLE (object);
++
++  G_OBJECT_CLASS (wnck_handle_parent_class)->constructed (object);
++
++  init_xres (self);
++}
++
+ static void
+ wnck_handle_finalize (GObject *object)
+ {
+@@ -293,6 +334,7 @@ wnck_handle_class_init (WnckHandleClass *self_class)
+ 
+   object_class = G_OBJECT_CLASS (self_class);
+ 
++  object_class->constructed = wnck_handle_constructed;
+   object_class->finalize = wnck_handle_finalize;
+   object_class->get_property = wnck_handle_get_property;
+   object_class->set_property = wnck_handle_set_property;
+@@ -346,6 +388,12 @@ _wnck_handle_get_client_type (WnckHandle *self)
+   return self->client_type;
+ }
+ 
++gboolean
++_wnck_handle_has_xres (WnckHandle *self)
++{
++  return self->have_xres;
++}
++
+ /**
+  * wnck_handle_get_default_screen:
+  * @self: a #WnckHandle
+diff --git a/meson.build b/meson.build
+index 6b0eea97af5b..907fdf269e7e 100644
+--- a/meson.build
++++ b/meson.build
+@@ -45,7 +45,7 @@ pkg_deps = [
+   {'name': 'gtk+-3.0', 'version': '>= 3.22.0' },
+   {'name': STARTUP_NOTIFICATION_PACKAGE, 'version': '>= 0.4', 'required': get_option('startup_notification')},
+   {'name': X11_PACKAGE },
+-  {'name': XRES_PACKAGE, 'required': false},
++  {'name': XRES_PACKAGE, 'version': '>= 1.2', 'required': false},
+ ]
+ 
+ foreach p: pkg_deps
