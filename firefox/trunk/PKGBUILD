@@ -24,7 +24,6 @@ depends=(
   ttf-font
 )
 makedepends=(
-  autoconf2.13
   cbindgen
   clang
   diffutils
