@@ -6,30 +6,77 @@ pkgname=firefox
 pkgver=107.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
-arch=(x86_64)
-license=(MPL GPL LGPL)
 url="https://www.mozilla.org/firefox/"
-depends=(gtk3 libxt mime-types dbus-glib ffmpeg nss ttf-font libpulse)
-makedepends=(unzip zip diffutils yasm mesa imake inetutils xorg-server-xvfb
-             autoconf2.13 rust clang llvm jack nodejs cbindgen nasm python
-             lld dump_syms wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi
-             )
-optdepends=('networkmanager: Location detection via available WiFi networks'
-            'libnotify: Notification integration'
-            'pulseaudio: Audio support'
-            'speech-dispatcher: Text-to-Speech'
-            'hunspell-en_US: Spell checking, American English'
-            'xdg-desktop-portal: Screensharing with Wayland')
-options=(!emptydirs !makeflags !strip !lto !debug)
-source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
-        0001-libwebrtc-screen-cast-sync.patch
-        $pkgname.desktop identity-icons-brand.svg)
+arch=(x86_64)
+license=(
+  GPL
+  LGPL
+  MPL
+)
+depends=(
+  dbus-glib
+  ffmpeg
+  gtk3
+  libpulse
+  libxt
+  mime-types
+  nss
+  ttf-font
+)
+makedepends=(
+  autoconf2.13
+  cbindgen
+  clang
+  diffutils
+  dump_syms
+  imake
+  inetutils
+  jack
+  lld
+  llvm
+  mesa
+  nasm
+  nodejs
+  python
+  rust
+  unzip
+  wasi-compiler-rt
+  wasi-libc
+  wasi-libc++
+  wasi-libc++abi
+  xorg-server-xvfb
+  yasm
+  zip
+)
+optdepends=(
+  'hunspell-en_US: Spell checking, American English'
+  'libnotify: Notification integration'
+  'networkmanager: Location detection via available WiFi networks'
+  'pulseaudio: Audio support'
+  'speech-dispatcher: Text-to-Speech'
+  'xdg-desktop-portal: Screensharing with Wayland'
+)
+options=(
+  !debug
+  !emptydirs
+  !lto
+  !makeflags
+  !strip
+)
+source=(
+  https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
+  $pkgname.desktop
+  identity-icons-brand.svg
+  0001-libwebrtc-screen-cast-sync.patch
+)
+validpgpkeys=(
+  '14F26682D0916CDD81E37B6D61B7B526D98F0353'  # Mozilla Software Releases <release@mozilla.com>
+)
 sha256sums=('8a562e5a397b57e9bf383c2988308ab494c5d28844e792c658fedea27756584a'
             'SKIP'
-            '5c164f6dfdf2d97f3f317e417aaa2e6ae46a9b3a160c3162d5073fe39d203286'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
-            'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
-validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
+            'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9'
+            '5c164f6dfdf2d97f3f317e417aaa2e6ae46a9b3a160c3162d5073fe39d203286')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -216,4 +263,4 @@ END
   fi
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
