@@ -8,12 +8,13 @@ pkgbase=brotli
 pkgname=('brotli' 'python-brotli' 'brotli-testdata')
 _gitcommit=e61745a6b7add50d380cfd7d3883dd6c62fc2c71
 pkgver=1.0.9
-pkgrel=8
+pkgrel=9
 pkgdesc='Generic-purpose lossless compression algorithm'
 url='https://github.com/google/brotli'
 arch=('x86_64')
 license=('MIT')
 makedepends=('git' 'glibc' 'gcc-libs' 'cmake' 'python-setuptools')
+options=('debug')
 source=(${pkgname}::"git+${url}#commit=${_gitcommit}")
 sha512sums=('SKIP')
 
@@ -30,18 +31,19 @@ pkgver() {
 build() {
   cd ${pkgbase}
   python setup.py build
-  cmake -B build \
+  cmake -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DBUILD_SHARED_LIBS=True \
     -DCMAKE_C_FLAGS="$CFLAGS -ffat-lto-objects"
-  make -C build VERBOSE=1
+  cmake --build build -v
 }
 
 check() {
   cd ${pkgbase}
-  make test
   python setup.py test
+  cd build
+  ctest --output-on-failure --stop-on-failure -j$(nproc)
 }
 
 package_brotli() {
@@ -49,8 +51,8 @@ package_brotli() {
   provides=(libbrotlicommon.so libbrotlidec.so libbrotlienc.so)
 
   cd ${pkgbase}
-  make -C build DESTDIR="$pkgdir" install
-  local man;
+  DESTDIR="$pkgdir" cmake --install build
+  local man
   for man in docs/*.?; do
     install -Dm 644 "$man" "$pkgdir/usr/share/man/man${man##*.}/${man##*/}"
   done
