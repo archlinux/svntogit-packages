@@ -5,7 +5,7 @@ pkgname=lm_sensors
 pkgver=3.6.0.r41.g31d1f125
 _commit=31d1f125d8076f1c8c8f3224b31d240e6e6a1763
 #_pkgver=${pkgver//./-}
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Collection of user space tools for general SMBus access and hardware monitoring"
 arch=('x86_64')
@@ -16,6 +16,7 @@ optdepends=('rrdtool: for logging with sensord'
 makedepends=('rrdtool' 'perl' 'git')
 provides=('libsensors.so')
 backup=('etc/sensors3.conf' 'etc/healthd.conf' 'etc/conf.d/sensord')
+options=('debug')
 #source=(lm_sensors-${pkgver}.tar.gz::https://github.com/lm-sensors/lm-sensors/archive/V${_pkgver}.tar.gz
 source=("git+https://github.com/groeck/lm-sensors.git#commit=${_commit}"
 	healthd healthd.conf healthd.service sensord.conf)
