@@ -3,14 +3,14 @@
 
 pkgname=('llvm' 'llvm-libs')
 pkgver=14.0.6
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
              'python-setuptools' 'python-psutil' 'python-sphinx'
              'python-recommonmark')
-options=('staticlibs' '!lto') # Getting thousands of test failures with LTO
+options=('staticlibs' 'debug' '!lto') # Getting thousands of test failures with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         llvm-coroutines-ubsan.patch
@@ -31,6 +31,10 @@ prepare() {
 
 build() {
   cd llvm-$pkgver.src/build
+
+  # Build only minimal debug info to reduce size
+  CFLAGS+=' -g1'
+  CXXFLAGS+=' -g1'
 
   local cmake_args=(
     -G Ninja
