@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=65.4.0
+pkgver=65.4.1
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -22,7 +22,7 @@ replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch
         add-dependency.patch)
-sha512sums=('9d956aee88c15214cae63579e2e434ccd77d2dbbbefca4907e5181e50d6fdd60e61521900d153e608369442295c55a65f66a62c42b962dbdd7772bf64b655f3d'
+sha512sums=('368c35fe4b3c05aea0bcb7ec0995473e6e9eca6fa51e61e6a908cbaf21972fbe0cdd71bb2aee53a819c2b740119b11a6a24e5da748bcdd19dc9560bc2c27d5f8'
             '390fea2c575a0042054f51d33e629b04a48f832f0a4a2dd07d34e23cdf330c382dba0f54bfb7c8a6a253bb248a4940f2a789672f715e4dc2aeb395fa185cae7a'
             '4277c983f17db19b0e499ceff7b6e24aad4f7956ec282bb7f5148f6f44e4e35077bfdfa219cbc04f49f37d0b9dc9c3e3075db7a36dbdc30944e1bd28efad0e0b')
 
