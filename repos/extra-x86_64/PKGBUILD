@@ -1,7 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=libinput
-pkgver=1.21.0
+pkgver=1.22.0
 pkgrel=1
 pkgdesc="Input device management and event handling library"
 url="https://gitlab.freedesktop.org/libinput"
@@ -15,7 +15,7 @@ optdepends=('gtk4: libinput debug-gui'
             'python-libevdev: libinput measure')
 options=(debug)
 source=(https://gitlab.freedesktop.org/libinput/libinput/-/archive/$pkgver/$pkgname-$pkgver.tar.bz2)
-sha256sums=('3173d83e0f5a686606d2780129c802b865b6a0750c86db88d56097afc016a2dd')
+sha256sums=('b9204a860b4f6f9b2587c484f67a21fbdedd01a97db1f983b0b51cb7bdd428aa')
 #validpgpkeys=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # Peter Hutterer (Who-T) <office@who-t.net>
 
 build() {
