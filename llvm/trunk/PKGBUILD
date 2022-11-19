@@ -33,8 +33,8 @@ build() {
   cd llvm-$pkgver.src/build
 
   # Build only minimal debug info to reduce size
-  CFLAGS+=' -g1'
-  CXXFLAGS+=' -g1'
+  CFLAGS=${CFLAGS/-g /-g1 }
+  CXXFLAGS=${CXXFLAGS/-g /-g1 }
 
   local cmake_args=(
     -G Ninja
