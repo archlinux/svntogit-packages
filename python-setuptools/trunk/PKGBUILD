@@ -3,7 +3,7 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=65.5.0
+pkgver=65.5.1
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -13,16 +13,16 @@ url="https://pypi.org/project/setuptools/"
 depends=('python-appdirs' 'python-jaraco.text' 'python-more-itertools' 'python-ordered-set'
          'python-packaging' 'python-pyparsing' 'python-tomli' 'python-validate-pyproject')
 makedepends=('git' 'python-setuptools')
-checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-mock' 'python-pip' 'python-pip-run'
+checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-pip' 'python-pip-run'
               'python-pytest-fixture-config' 'python-pytest-virtualenv' 'python-wheel'
-              'python-pytest-enabler' 'python-pytest-mypy' 'python-sphinx' 'python-build'
-              'python-ini2toml' 'python-tomli-w')
+              'python-pytest-enabler' 'python-pytest-mypy' 'python-pytest-timeout' 'python-sphinx'
+              'python-build' 'python-ini2toml' 'python-tomli-w')
 provides=('python-distribute')
 replaces=('python-distribute')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
         system-validate-pyproject.patch
         add-dependency.patch)
-sha512sums=('b3ed6546bfa45c96f9b69fd7f014a87b52e6d8a6591340bf980bd4de98e33dbe0990b089940c348f2ad20a27590b82de84aec44c8ba1dce0510a3835653930d3'
+sha512sums=('66a221d74950be71c79fb9cb16b3f94faaaa9d3152d645f849c54d8f78f7ee6ca6f4817fb090a6bc7058ec8726f9ce9a3a1ce26c6f326929cf67c202310ebd82'
             '390fea2c575a0042054f51d33e629b04a48f832f0a4a2dd07d34e23cdf330c382dba0f54bfb7c8a6a253bb248a4940f2a789672f715e4dc2aeb395fa185cae7a'
             '4277c983f17db19b0e499ceff7b6e24aad4f7956ec282bb7f5148f6f44e4e35077bfdfa219cbc04f49f37d0b9dc9c3e3075db7a36dbdc30944e1bd28efad0e0b')
 
