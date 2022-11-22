@@ -1,0 +1,60 @@
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=tcl
+pkgver=8.6.13
+pkgrel=1
+pkgdesc="Powerful, easy-to-learn dynamic programming language"
+arch=('x86_64')
+url="http://tcl.sourceforge.net/"
+license=('custom')
+depends=('zlib')
+options=('staticlibs' '!lto')
+source=(https://downloads.sourceforge.net/sourceforge/tcl/tcl${pkgver}-src.tar.gz)
+sha256sums=('43a1fae7412f61ff11de2cfd05d28cfc3a73762f354a417c62370a54e2caf066')
+
+prepare() {
+  cd tcl${pkgver}
+  # we build the tcl sqlite interface in sqlite-tcl package
+  rm -rf pkgs/sqlite3*
+}
+
+build() {
+  cd tcl${pkgver}/unix
+  ./configure --prefix=/usr --mandir=/usr/share/man --enable-threads --enable-64bit
+  make
+}
+
+check() {
+  cd tcl${pkgver}/unix
+  make test
+}
+
+package() {
+  cd tcl${pkgver}/unix
+  make INSTALL_ROOT="${pkgdir}" install install-private-headers
+  ln -sf tclsh${pkgver%.*} "${pkgdir}/usr/bin/tclsh"
+  ln -sf libtcl${pkgver%.*}.so "${pkgdir}/usr/lib/libtcl.so"
+  install -Dm644 ../license.terms "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 tcl.m4 -t "$pkgdir"/usr/share/aclocal
+  chmod 644 "$pkgdir/usr/lib/libtclstub8.6.a"
+
+  # remove buildroot traces
+  _tclver=8.6
+  sed -e "s#${srcdir}/tcl${pkgver}/unix#/usr/lib#" \
+      -e "s#${srcdir}/tcl${pkgver}#/usr/include#" \
+      -e "s#'{/usr/lib} '#'/usr/lib/tcl$_tclver'#" \
+      -i "${pkgdir}/usr/lib/tclConfig.sh"
+
+  tdbcver=tdbc1.1.5
+  sed -e "s#${srcdir}/tcl${pkgver}/unix/pkgs/$tdbcver#/usr/lib/$tdbcver#" \
+      -e "s#${srcdir}/tcl${pkgver}/pkgs/$tdbcver/generic#/usr/include#" \
+      -e "s#${srcdir}/tcl${pkgver}/pkgs/$tdbcver/library#/usr/lib/tcl${pkgver%.*}#" \
+      -e "s#${srcdir}/tcl${pkgver}/pkgs/$tdbcver#/usr/include#" \
+      -i "${pkgdir}/usr/lib/$tdbcver/tdbcConfig.sh"
+
+  itclver=itcl4.2.3
+  sed -e "s#${srcdir}/tcl${pkgver}/unix/pkgs/$itclver#/usr/lib/$itclver#" \
+      -e "s#${srcdir}/tcl${pkgver}/pkgs/$itclver/generic#/usr/include#" \
+      -e "s#${srcdir}/tcl${pkgver}/pkgs/$itclver#/usr/include#" \
+      -i "${pkgdir}/usr/lib/$itclver/itclConfig.sh"
+}
