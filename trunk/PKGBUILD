@@ -2,8 +2,8 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=gawk
-pkgver=5.2.0
-pkgrel=3
+pkgver=5.2.1
+pkgrel=1
 pkgdesc="GNU version of awk"
 arch=('x86_64')
 url="https://www.gnu.org/software/gawk/"
@@ -15,7 +15,7 @@ options=('debug')
 source=(https://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig}
         0001-Add-missing-UPREF.patch)
 validpgpkeys=('D1967C63788713177D861ED7DF597815937EC0D2') # Arnold Robbins
-sha256sums=('ef5af4449cb0269faf3af24bf4c02273d455f0741bf3c50f86ddc09332d6cf56'
+sha256sums=('529e7c8c6acf21ff3a6183f4d763c632810908989c24675c77995d51ac37b79c'
             'SKIP'
             'd39fa487f89c743ba55ed0b5eeb9fe33db4bd7010bf5f61f8aa1a9541a18775e')
 
