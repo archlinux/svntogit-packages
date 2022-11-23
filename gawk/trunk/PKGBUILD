@@ -12,19 +12,10 @@ groups=('base-devel')
 depends=('sh' 'glibc' 'mpfr')
 provides=('awk')
 options=('debug')
-source=(https://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig}
-        0001-Add-missing-UPREF.patch)
+source=(https://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig})
 validpgpkeys=('D1967C63788713177D861ED7DF597815937EC0D2') # Arnold Robbins
 sha256sums=('529e7c8c6acf21ff3a6183f4d763c632810908989c24675c77995d51ac37b79c'
-            'SKIP'
-            'd39fa487f89c743ba55ed0b5eeb9fe33db4bd7010bf5f61f8aa1a9541a18775e')
-
-prepare() {
-  cd ${pkgname}-${pkgver}
-
-  # https://bugs.gentoo.org/868567
-  patch -Np1 -i ../0001-Add-missing-UPREF.patch
-}
+            'SKIP')
 
 build() {
   cd ${pkgname}-${pkgver}
