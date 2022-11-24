@@ -8,7 +8,7 @@
 
 pkgbase=qtcreator
 pkgname=(qtcreator qtcreator-devel)
-pkgver=8.0.2
+pkgver=9.0.0
 _clangver=14.0.6
 pkgrel=1
 pkgdesc='Lightweight, cross-platform integrated development environment'
@@ -29,20 +29,9 @@ optdepends=('qt6-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer'
             'mlocate: locator filter')
-source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz
-        qtcreator-languageclient2.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=bd00cc8b
-        qtcreator-languageclient3.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=8276bd26)
-sha256sums=('0cbd93c62bfc33f517d7c026d82fb02a7203fe5efd67132814271083f7299db0'
-            '1861f416f2accb75f3f8074f7caa83da2aa6183af99eb9c3d8e35183db0a5e8c'
-            '08ddbe2b5fae2f8900e44c7af10397277e05c65859595d5d98256f83555e7d09')
+source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz)
+sha256sums=('5cb4798cd81b086e7f17f5a8d42ea024f64da7efd38ccb5c62f9c1457c23551a')
 options=(docs debug)
-
-prepare() {
-  cd qt-creator-opensource-src-$pkgver
-# Backport patches to mitigate clang language server crashes
-  patch -p1 -i ../qtcreator-languageclient2.patch 
-  patch -p1 -i ../qtcreator-languageclient3.patch 
-}
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
