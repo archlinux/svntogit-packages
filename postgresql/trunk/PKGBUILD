@@ -3,9 +3,9 @@
 
 pkgbase=postgresql
 pkgname=('postgresql-libs' 'postgresql-docs' 'postgresql')
-pkgver=14.5
+pkgver=14.6
 _majorver=${pkgver%.*}
-pkgrel=4
+pkgrel=1
 pkgdesc='Sophisticated object-relational DBMS'
 url='https://www.postgresql.org/'
 arch=('x86_64')
@@ -23,7 +23,7 @@ source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.ta
         postgresql-check-db-dir
         postgresql.sysusers
         postgresql.tmpfiles)
-md5sums=('1b319af2ece7fbf836d2d9533e91aa9b'
+md5sums=('427c62b6561e272dc3b41bfcefe87fc4'
          'bdafe5b6cd3ac2675cda972f322b6188'
          '4572e8317064bd47429938c4c5681470'
          '96f82c38f3f540b53f3e5144900acf17'
@@ -32,7 +32,7 @@ md5sums=('1b319af2ece7fbf836d2d9533e91aa9b'
          '984ab302670537938627688bdcd5c296'
          '2050d34e4dfa05f3c6fe4cd7615eaa4b'
          '02d017978f0bba21f455feceb3f0a45a')
-sha256sums=('d4f72cb5fb857c9a9f75ec8cf091a1771272802f2178f0b2e65b7b6ff64f4a30'
+sha256sums=('508840fc1809d39ab72274d5f137dabb9fd7fb4f933da4168aeebb20069edf22'
             '55d4c36b41b3925e2d74d4695c261aa267f06d70b9d768864f54262ec332eda4'
             'dc17da62ce200ea2dacd5eb27adc33b0e296eb5bb10fada54fe4539d214c81c8'
             '57dfd072fd7ef0018c6b0a798367aac1abb5979060ff3f9df22d1048bb71c0d5'
@@ -41,7 +41,7 @@ sha256sums=('d4f72cb5fb857c9a9f75ec8cf091a1771272802f2178f0b2e65b7b6ff64f4a30'
             '0ad19ab58ee90c6cd97fe4ccb3287b3a2982768d937b4742d9e5572311349e6d'
             '7fa8f0ef3f9d40abd4749cc327c2f52478cb6dfb6e2405bd0279c95e9ff99f12'
             '4a4c0bb9ceb156cc47e9446d8393d1f72b4fe9ea1d39ba17213359df9211da57')
-b2sums=('6d303850ef1e8f9f5d66a53275fc814475646c762b9747a4f0401a472ebaf59be06d6e7c08e9c1c5ad5d3b9dbc3bb3c06d58bae137806e1a437c86bcc8cae501'
+b2sums=('675283751a51500382395cb07a956fa0392987f938e12c0757c4c537327aa119d62fe86c78372d7607ae1ff4c811a567ffb89a8c087d2d029c32bd7271733fb6'
         'f91b7bbd23569af7c24189f01d93cf71752c5559fd0dc93027b0944e3986dfddee929027884a77393d104b8ebf848650ed907e327828346e67a16f0aa0629fc1'
         'cb10afa597fd7e99f3f69322657c2137ffcc311f11acc97782d48f928361c5b7063cec4ceb08a63c6d97d6a96793f209bbc5026369999fbe0097c0db137c25e1'
         '3eab84d332d96678fe6e435ee243c8f1a82b838f601d61d3604d11e918aed7a62202edca5e476c4b9031ed284570e6fcd6c659cfdbd9624aa0019d3233755f81'
@@ -211,4 +211,4 @@ package_postgresql() {
   rmdir "${pkgdir}/usr/share/doc/postgresql/html"
 }
 
-# vim: ts=2 sw=2 et:
+# vim:set sw=2 sts=-1 et:
