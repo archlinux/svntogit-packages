@@ -2,19 +2,21 @@
 # Contributor: Alexander Epaneshnikov <alex19ep@archlinux.org>
 
 _brotli_ver=1.0.9
-_openssl_ver=1.1.1q
+_openssl_ver=1.1.1s
 pkgbase=edk2
-pkgname=(edk2-armvirt edk2-shell edk2-ovmf)
-pkgver=202208
-pkgrel=3
+pkgname=(edk2-arm edk2-aarch64 edk2-shell edk2-ovmf)
+pkgver=202211
+_commit=fff6d81270b57ee786ea18ad74f43149b9f03494  # refs/tags/edk2-stable202211
+pkgrel=1
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
 license=(BSD)
-makedepends=(aarch64-linux-gnu-gcc acpica git iasl util-linux-libs nasm python seabios)
+makedepends=(aarch64-linux-gnu-gcc arm-none-eabi-gcc acpica git iasl util-linux-libs nasm python seabios)
 options=(!makeflags)
 source=(
-  $pkgbase-$pkgver.tar.gz::https://github.com/tianocore/$pkgbase/archive/$pkgbase-stable$pkgver.tar.gz
+  git+$url#tag=$_commit
+  $pkgbase-softfloat::git+https://github.com/ucb-bar/berkeley-softfloat-3.git
   https://www.openssl.org/source/openssl-$_openssl_ver.tar.gz{,.asc}
   brotli-$_brotli_ver.tar.gz::https://github.com/google/brotli/archive/v$_brotli_ver.tar.gz
   50-edk2-ovmf-i386-secure.json
@@ -27,7 +29,8 @@ source=(
   60-edk2-ovmf-x86_64-4m.json
   60-edk2-ovmf-microvm.json
   60-edk2-ovmf-microvm-4m.json
-  60-edk2-armvirt-aarch64.json
+  60-edk2-aarch64.json
+  60-edk2-arm.json
   70-edk2-ovmf-i386-csm.json
   70-edk2-ovmf-i386-csm-4m.json
   70-edk2-ovmf-x86_64-csm.json
@@ -40,71 +43,87 @@ source=(
   82-edk2-ovmf-ia32-on-x86_64-csm-4m.json
   $pkgbase-202202-brotli.patch
 )
-sha512sums=('6a09d90c2e7f9b762dd8a22d61acf94ef740b5250532c50bc1a56b4df3cc11937457b3aff5494b85c41d9567de1f7718855e3801b8ba4b6762d35f524118245e'
-            'cb9f184ec4974a3423ef59c8ec86b6bf523d5b887da2087ae58c217249da3246896fdd6966ee9c13aea9e6306783365239197e9f742c508a0e35e5744e3e085f'
+sha512sums=('SKIP'
+            'SKIP'
+            '2ef983f166b5e1bf456ca37938e7e39d58d4cd85e9fc4b5174a05f5c37cc5ad89c3a9af97a6919bcaab128a8a92e4bdc8a045e5d9156d90768da8f73ac67c5b9'
             'SKIP'
             'b8e2df955e8796ac1f022eb4ebad29532cb7e3aa6a4b6aee91dbd2c7d637eee84d9a144d3e878895bb5e62800875c2c01c8f737a1261020c54feacf9f676b5f5'
-            '603cae145a87bae371bd069d05128beebddb7048e78b93650b19c44b86b2d27cabbcf3bc4c0b2384b862f32383ce7a914a10fc0ad564632bcadd6e4f9389fede'
-            '7413998ca02e048b6acbe4d2ef1a6a7ee2a84a58ac2816d861f6fc20978a222b48425ccd77e12aa07a1614aa87cca7c4828eaacbdac83a3b34e44effb98f527a'
-            '3e10bdc9ad13aadbd4111230fb8f37d5f16306aeb7bce2af5ec31c1e2b5adea26d5875cd0d7070ea82eca7546ecbacc8c195ed68425428bf6d2533b58e307b2d'
-            '78f35d7918633c5dafcf9ba41fecfb80eb08b69243a535a1ff0183b33d1bb0dd9c7725f25ccf844a132ada4949c4480e5823a5a17624780013b7e2d1878724c0'
-            '56d0bffd6dd7be79709f66bcfba2112e8ef6208de9b5018e90251e3ba68b37f9d911f0bd5a03987b49bb19bd0d62f7fa9ac3ca9f234e80ada3c4dbdd619705b9'
-            '8b7c81e235d79abae887aa0761a7847f3262be86aa0cd75e629afeb5b70a2d61f11a9869234c17d4b15582b927637323a540031d89a541968222fb274883d1dd'
-            '04b4c86f5afeab6170ad1b7b9937fa775a920c78719a33b213f7f8924e4e905709335307c38b8d5d9c127dd8c7000ddbe740b77f1ddfb68035819b7b4cf2b1e4'
-            '03ca52a137fb1bfd37e5df1f7da4c0a3bd73e4bc229fa80c6e4cf4dc1e1b4b4ad5089495974c52bbc3f78a7f65201235bdedfa6e7d08644bd8128eb57161aa70'
-            '31874507e67e1332f678f6f4b10b9f893cef6bafb1db2ac781ea7bfded31a23a84c485b6df43699aaf6c4c7a5a30e024031ffd2b52ede104eedc7c8725e2b5d6'
-            '15a7496cbcd75dfda9f3e2300fa36e3eb6d92cb32abcc9dc9983d2e08ba6568abb706578673e4c8bebb200d64dc42b8d5d9428774b6a65662c5fc5d50bde946a'
-            '6d2799171058b45ff4205441ad222893ebe2fce5c5c71c9c52c97efc95e4cad65d66d390b6a554ce7a2ce505ceba7431d18f79f2c2c1101addccee55141d4a66'
-            '4ee69302de1cec37e4bf4c6a5525d887392f8f733ae8a95a54021f6531741e95baef31da1538b45667a1b198cbbab3069678169069f9ba8db641d603ebb3735b'
-            '74f2a7d87f495edb087e669fb9f6bfab959cfd2ab56f82a14b6e310ce9be094357ad427ba0d2e2aacc6615ab4b2fee2d800c88d9f81a5f9da2c74d441350fe79'
-            '77e23f0c116ae5a087553edb2754df172b2c4fe5bc346356abe0e1f2acfb41a346d06d87b0569102ca4ac9356e189198c0c74476cb35f1b62773a956cb6a1e04'
-            'fbc4adcfc206580581b5d4d8238e1e61b5704fbfa4eb2f9b598a53b736441d70b6ee277a53c22d2a23bc14abef830cc3c08b3f3da7a616575014bd283bd9859d'
-            '8e5eb4e24fad4644a66eb52c95a90a82f01df0af6e57208ad61cb0859dd4425e623e75d93846e8fc3235370a88d93a1d27a512dc4e559bedfe3249404797838b'
-            'd4c0310cda702c7d58e7e64dbf5be6ff5071f6d6361b63314e46827dc8b71f6caa691edd85d6c4852e75a620c05538fe0f126b97f6220c9fc192c39b3d841b47'
-            '7c9f8e7ce7451e7aa852998ffcd3ca95c08083c313dc8dcf0877969ef23d9da6f69c60bb1e652387a223da6e690524fa094bfbaed14d8bdae2853e68530b2f82'
-            '7bd4925414042baa514965cb29288f178a6f9e40fe90a29ee9c37562d8e2598c18c38f0bee1e5bd8c480807596f5c901d593455fa4eef595fbc5eb006dad1aff'
-            '891d3ea36d966114ff1f79c3619675a46b30b68def16ab426f2dee00bd0768f82ca0ee26acd7adedd379f25613e309ec9dfaed4e8a5d3f3e4fa7e8d845f55b18'
-            'a7875aeb7cbe81851faa839709cc0585aef9bfabd8a1afcc1a2f4d104e22caba97a60204270734b26c27d240ba49858661557f4d6ee30f3c5401a216ac61f3f1'
+            '9182615c6f89e4f3c19f1b0f4434aa0a3293f982cf3ed783a2c140c2555d824b417c7c3c7a00ad10616188507f5068226c720b20ffd41d44449605ba0844bad2'
+            '53604279dea69000cb036062d9617f1c7dc5ce3d83fbcb066b9087e4f412c2ea24ae3a37436ab17d5bf9dd6b2da380933c48400163d4b9fde65ea42d37956d5e'
+            'e2e5f3eabb3ced681385ed9d57a3aa83e2155415ea6fd2c16eb15c5a1e685f92e90f1c6f270c1c8da23dde3a0e4a085399f65038b799430c713d1628eb44ac07'
+            'c1f83b3c5f5c43803d4bb1084f6ebdd1987364cab59945a8226a8cf1229daba79c83f638c0a1395ea56acffbd4349b94459659705743a397ff03369b7794a1c6'
+            '25df19b698081c7a21e4c5f37321150ab2f144f4888d887513c3ed926a844909cee390d3e5d80b02c084510074c874b21db3b3d119330342cf8877197ef0a425'
+            'c886b3d6e5f23833c2dc9f8c9f3b21523c680dd2c6bfebbb488f54619d31e53d4019b05b4e1a3dc91abd6e0cab4540d750a2db1b9b4dcf8257e4ba9a2b9b487a'
+            '99f5dcdbc54824976f51c45b939e8bcb4971a70dc2d50b24233d3125ce6cf687f92b8d3896d72280470a2c001637920da8d6e33d576c489beb7f0e898bfb22ab'
+            '9da9de6717b610a181be8f7b34b379a56a1fa31f945f78198eec52359abd178bdf77fda4426157992e64329f53a204af042d5145cb5d3b4b1203915a48815449'
+            'a86e294e5904f52441b86da220f37cc693d7066f7fcb75dafc472a3a72516e865c213be6d0ce245ec5dd680ca9272429d39dca4db4f3e6434b12c479227bc4b0'
+            'b17d3ff5c9230c394ca4ee8229842c801b0cab3d88b546f2094dd0b42f2bc535f5bda3f9faee4b5418482185887648f906daaf0b7307c4c19747f5f0ab504f9a'
+            '126822ef6198e87fb38014a5ba21969c9a163b41df3cdef6825317971ecc8df4a63099113e687634b88648acc93f24917d729e1c44295d2df7012288740307d3'
+            'bbf663d539a985504d5fbc95552a2a60ac860a6bce4a62ecc551292d838b41cba3b5203f580a76a05e9f862ef98e7a3e5da39505c1f39d8ef48c08778fac584a'
+            'b5829aaf5ebae0073de26695eddbda61d117fbfb5e3c9f169fade31127ceb9bbc332af760bf6033d90a277d44c095fc30fe0d69defd81fb1aaf82cba0cf6fb90'
+            '2e03935b57fabbbac4493ba6d54ac5b68abfd75775a56c95f5ba8c4627ba38260a3691a335e597c65096c50ce5038389efbb41ef5822a1ff49a8f312d8e37f75'
+            '6e91029d451c9d43c1488ce0e252e6abc18fb1da48b6938d6ae3644fce58c97da6fff6addc60740b1b9ed5e6b86e9d7e94ee0dd55ea73833a82401b4c6f8c936'
+            '69ec9e9288aad64b585bbffa8566a96a43791c4f899b9e9ba4858645ffe667423cd875ec8d6bed742cc1b1a9e96c8dd81609ff0f48da86b415ecf8cf8089cac2'
+            'cebf9c2cfe8ea7007c68112b4e64d61a98a1637d4b51bceefa22a205e57bb947c757cea8dcc2d01961d8b72b4f289f692d4034d3c38f062e06941b2cc4586377'
+            '95661c2182112a76652507de84b7d0f9bb0d21f6b3b62134952bd7aada8df5cfc727658d11b71a7780a22049d9cafc4361d9a1d515b68d1463e7082465fd4f7e'
+            '8ed6d1d749c3471421a02c41e0e8c3e1ceb62ca6bc09cf2bc85055e2b2661bc149a77b83f480af1aec2f9a948971c6b5aebc92fbc112508fc6293cc6edc7a8a7'
+            'c9dbe7b2b6b8c18b7b8fdfef5bc329d9142c442f2f3dbae3ca4919255dcaf2ab576cd305648228d5dd48040ca3b14f44ee33b05cb6ca13b49e2836947b78ea53'
+            '692e5bdefb61ae7b8d6e2063f163e2b68136b2522d606806766186f10c5fae1f7583fd83cda52c235d0d8eb0651e5a711f505021a8d8d949d8dccfce7f0c82ac'
+            'c699ad500f24569643a4581f4bb5be0e4a90d160f0b3ae7728cf8e27b39665983b80439ca7b853b1bd9a174c8c123cbaf7ed3cd4a17d6460f4fec670c62a1183'
             'd074c794796d17d77eed7c34201d93d7ef3f1322fe1ea4a2ddd7137fae884d49f94f465ee39cfd8346b026142668a41f5a8671e521409505dd6d002f71c0eebc')
-b2sums=('06b25eb8b2a7fd16041a8f3f5b0fcca6bf554a452a39c0ec5d222e94361cc6485c7b6ac1458e464a0b504e257aa5573d6fc0107aa60550226b960046a47d8d2e'
-        'fc8fd6a62dc291d0bda328a051e253175fb04442cc4b8f45d67c3a5027748a0fc5fb372d0483bc9024ae0bff119c4fac8f1e982a182612427696d6d09f5935f5'
+b2sums=('SKIP'
+        'SKIP'
+        'ecd19eaf84dbc80448b51651abe52a89cc0052f024537959c4ebe61528988f235d661244fce6967159a876dd038c817bad19df742e828ca1cbae97ce6a4124bb'
         'SKIP'
         '8b9939d5224396ef33b43e019250ba4bc8949903583615e8dc02c85340fc0a1e2d1632161e00b0ee7355d77f05529ac772f482e05d2089afd71a0bf71e803904'
-        'fa75566a2ac591fc0c296812f907bfe3fd67f2ee90d3762f0fcae6427df0dfd6260238f5af4fc6b74a76eccfc264db2259db70f8c533871e8b58f37b91a90657'
-        'd7d797316b916f82bd46671c09591cc20a8bbae3345edd6b9b3985b802c4acff1d8358603d4ad20b805d6dbb3c8664942d0e75b953b8b1c3671f1fc3654a4c24'
-        'f6aaccf4b5a070b05e8eb58d5df60c8798d9b9de2f9febf1417a1ae178431be9a69890a7107d3ca100a439551b4949b937ba400ac36bb9eebaf7e1fdb61dc9d3'
-        '764f373bd9f34c71784cdacb94966e14ec7d21a321c957745dd77f9c679fccc3488f021860b7bd1553973e963fcc285c822924a9b2d555717a3c5ba0f2d47648'
-        '891719a70d14f29f6ec9e9cfe83cbf48abb5aedfaf5a3a02efaf9cf1dcca0c14f42f8e4486425df12c72001d7811b0f6030520bad2d83b4885f13d110ab2ae0f'
-        'ed442146c52ad98bc86832c0d8fe4ada39bc9eaac505a0f8756ab3964216238df05b5efc498c7dbe483e0f3c7949618949c276c9630d27c5a99ceda5752a595a'
-        '899ecf699815216984905a7abdd3385890c6309f3ef7813778bedf63c15d42ab12c59532d45033a11838f990744417100eb13048b53cee5cdf46440af61b475d'
-        '8b34c02f8ac43783d8b133763cd98a9b8e9d46aa81823d12bc1c4805b3216b9de996f11fba35ee0299d8e9a4fc99c59a21c5b9fb9dce973dc7d99f927632a684'
-        '271322de65313b310a390ea9148640eb065c71b4edcab8aa675f8dbdfbbfa961950994d47213e22f05aa093895d180b840627a15d324252323986596f5c9f067'
-        '9c29984eaa3045a13eb74b17480aa2791ec64dad72bec57137068eae3bcec50d361e012b780e529095910df7583b6b6882267b51ca052af08627d199895bc276'
-        'e61378139f2da0d4185e67436d87a023600a075b4258234e818fe7f591bdb5d363713d29d250263df6074f5d37deed269c067983ee6bd322f2f7d0ee710bc452'
-        '8c211a1bbef20ff361c53735b91cc05660f9d94e7d8a937d903c061a1ec9c96ec2c37f0ef5e954cd4aac7f7962489f5a7a0507e44c781a7671211a9530dccb5b'
-        '8093ba2e465c668a9858995d23f970f519e6b6626c3f7151bf0fd1b49542efd8afaa1196705187a0275315e49b0c9782f686ad1ec6150c094c1e772979ca4b88'
-        '7f48bb1747c732c597a749c851a6cac46de844c1727f3d5edca35249df845a0f578780e8bcda7d86ad2c4a62a9a2a0bc7e1cfab9b7b93d7b5415bb5817d73346'
-        '77e16726e2812514fcce7cec566b5719d3f142a42acd25384ac4301ff8cfce75fa859d88a37f4a7b14bc37b3812d02a815c77f7271add68a6a448e4f2bafa13a'
-        'ddacbab89d0fd7831149594487559bb6bac1464b2b5620641043306fabfc37800db8c6d87a833c70ec35c699ea2f35cf09d34028ec7982a94686e8cd97b73300'
-        '285c678c69a96b181fa859485a061dcce4ea7cb23d02b783aae7e6face037502b91cbda865d26abd92600f5dd9b73480ec887e8c49ee29e7cd84f7c1d0f49ba1'
-        '99bf35c4042fd5105a3b3b7f71b0aeb18db7811da4ed4481ffec485258619c30d33b08633f9a1c762d383e3bf0191053be9b88b9a4c142350186c6df1261d1f7'
-        'a91898d3a5bc04ee51a324844d13d7457f747daab67cbdd7c18c841bf3863651b12a2f55ad49f365b0bc4832012fb7031b66778bfb25906907e0b9b7320f60ef'
-        'd45b224c36eda139ca6ad9e4c6c04282724b264dd36a0b3ba904d71476b83e02963c8cadf1f1e1233955071d133dc0defa746740fa08b26398c489fbf6ba89a0'
-        'accaf6045b6221dadf4b23a7c603653f46c1fa7723c30f4cb9fdf62060f145208e71b9c5c408abfd7d9e19229435b75bf141a40542b759bb64f95f82253b70ac'
+        '98742b83c2d605772a1bfa64ee434430413516db13d80235f0bc0be3a0e930aa17d737a6d2c95ce3d60f33de9f93679e09f421632d9e3fc9575d662fcf198f4b'
+        'ee28940a8d13a7badf94bcceebd4371c79cd0194ca9f984f39cd75ee64f1ba53059d81f5826c6b5a564d50dce7b9fb5fe8d63ee8d38d38462bc070249124a16b'
+        '8dfd44f35d35d699bb12eef771b08b978cf38ba64494b0eb8c153c72493d47c2d71445869c8d9115c29b28cd206f31be27b43024bd8796a50c8c41a67f87a859'
+        'b9a488c2a6295f3d8eab80150dbfa7acea94720b08928d4e6a4613189fe24922f6c40e1ae8c9856ebb1bc31586ecfb1e02e099a11f7abde575d1f9aa78cc732d'
+        '0a30e819e63b09207c664beca8845f73fb43482d19e831c7f915755594eeafcfc8dccb842f819fb7d20215d87452da31943488e201b9690b733db8169870afcc'
+        'd5d3dc38bf8a09473075a2dd8ab4adcd3af80be30c0ae49fbf55f478b8e0d9a1fde90abceda7099ed3136ee9cadee406bef949a17a070be1b92250adb14c1a7c'
+        'aa1144f31bd391e09d2bf0f55d6cb7a50fab38eca5967989463d58f2931267f7499414709c9692335376f8834b513d69249d995fdc9e90429eadd287348d57e8'
+        '56562116024236f6bb5590fff241d47568a9c1755faa25a62011e8fa3f14b7d74014651b421f5a0c6fb269fb6c05f23b97a5b1ed13929e8141e1c3839f784a5b'
+        'f55e220c6d6a8733bd9233115453e9aca10af91e4cd93be438b4951049198228bdd1b6765b2eae2a781cf3e90beab9b14540c9165ab76af38b9db35b09dde947'
+        '01dbc4cad102535504eace2d9da225a481b62785d37365f1dea2d1210990ca6177485aa0134a074c09d253b539f12ae810706a77a46779ddb7dd4f1b9b934011'
+        'f84ff505702e4b2a38b6fd23fbb732c25d3102a04bb6918b0cc3b3d7528a92626324199cea4ed91955aade98f308f1d1037255f26cc9ee21ace75fc6376e7df6'
+        '04a7eb373d6ea1415d7cd6e8dea0d16b75cbb1fb88572a30b8ce9960dd0404adc7f25fce2ccfb103eb09405411dc4d4e0084236e4c814916d81e957dc6aedfd4'
+        'b4fcc2351b2d77b85cdce35180353aef06900af1554479853bf915d27a756d4bbed50a50e85b72e2e7f4868e6dec3b9c5b27f743d7c112e24e4e0c50cd103a33'
+        '1783b83c6e39c99feb59043c3cff48b24bef55d43949cd9a3097dfbee73a6cf511c180d610a52de876ccea9833fec46d7a88ebce8114e54620b9988232fb9bcc'
+        '1d76eda20067c1bb9928b0304244ab5770a9c4e1f401a74d51da31a47f3a5d6e1e64b5394768cdae6a5bc396b68b6a32eb1a407e1c6377461dd2d5f2f5a2538d'
+        '1debba4546e7cc7d758302a1b5aa3d0a874f39b046beac60e36ecf8aaf8a7690c97508f81fd40eaea807bdd8f4d6c8284e72d6bd61b0791db144a6adcc13ccbf'
+        'c54eb05090280af70ceb44b601752ec38ca80d2af232385cf5ddd6f95ea0504d00a2dd2c82828aa07c41fb456fbb6f174b8bf89b851061206328ae66e589dd2a'
+        'b53bbe532f9a7583bfbcc9436f2172f2dcaa75177c1480753a2a60d97a2fbd5bfb86b97b3f7c27d82e88eb2035c6607abb7e35d39a42e6a2d40c0b54d7c430ef'
+        'dc9a98b8b6d6d8cc2f3aa2b314ba521a2fa8110abf199ca2a6c612ba53df3adad89e5ae0e4cfbe8f5ebf2cefd3cda1716d19f90304a138630f0b8d6e36cd4d10'
+        '0c1e145109de9a25339633b563e47f6c09ea314f636023d09a58559a499dd0bd283a45e050fc99fe34c4d712bd00a035064fa8406734d57029c67b9adb4b11ce'
+        '0ad956e3e662909abafd0b9a2b7ef12e35a8832183cb41e17dcafaa4f5db1e47ef20b3040268644daebb24f66c18b99de07f41e7d62089691c07de688a08f05a'
+        'a44b5ffc35d78925ac7362ec2cf75475d02e05ed0b9e8771c909d090187aaff7436e8d856d58b8a56827990006b813c63318b60a8a7780844c829a2b13a502cf'
         '644c071dc4fbbccaa64b0b1babcad60395ffce1a7a317a6f5380eff44cbb886be5f29156a8e967ab02b508a33954fcf5602606b43362cc3bb1936a8cfc3a3c07')
 validpgpkeys=(
-  8657ABB260F056B1E5190839D9C4D26D0E604491 # Matt Caswell <matt@openssl.org>
+  8657ABB260F056B1E5190839D9C4D26D0E604491  # Matt Caswell <matt@openssl.org>
   7953AC1FBC3DC8B3B292393ED5E9E43F7DF9EE8C  # Richard Levitte <richard@levitte.org>
+  A21FAB74B0088AA361152586B8EF1A6BA9DA2D5C  # Tomáš Mráz <tm@t8m.info>
 )
-_arch_list=(AARCH64 IA32 X64)
+_arch_list=(ARM AARCH64 IA32 X64)
 _build_type=RELEASE
 _build_plugin=GCC5
 
 prepare() {
   # patch to be able to use brotli 1.0.9
-  patch -Np1 -d $pkgbase-$pkgbase-stable$pkgver -i ../$pkgbase-202202-brotli.patch
+  patch -Np1 -d $pkgbase -i ../$pkgbase-202202-brotli.patch
 
-  cd $pkgbase-$pkgbase-stable$pkgver
+  cd $pkgbase
+
+  git submodule init
+  git submodule deinit BaseTools/Source/C/BrotliCompress/brotli
+  git submodule deinit CryptoPkg/Library/OpensslLib/openssl
+  git submodule deinit MdeModulePkg/Library/BrotliCustomDecompressLib/brotli
+  git submodule deinit MdeModulePkg/Universal/RegularExpressionDxe/oniguruma
+  git submodule deinit RedfishPkg/Library/JsonLib/jansson
+  git submodule deinit UnitTestFrameworkPkg/Library/CmockaLib/cmocka
+  git submodule deinit UnitTestFrameworkPkg/Library/GoogleTestLib/googletest
+  git config submodule.SoftFloat "$srcdir/$pkgbase-softfloat"
+  git -c protocol.file.allow=always submodule update
 
   # symlinking openssl into place
   rm -rfv CryptoPkg/Library/OpensslLib/openssl
@@ -125,6 +144,7 @@ prepare() {
 # TODO: check TPM_ENABLE/TPM2_ENABLE
 build() {
   local _arch
+  local _build_options=()
   # shared targets for all
   local _common_args=(
     -b "$_build_type"
@@ -152,12 +172,15 @@ build() {
     -D TLS_ENABLE
   )
 
-  cd $pkgbase-$pkgbase-stable$pkgver
+  cd $pkgbase
   export GCC5_IA32_PREFIX="x86_64-linux-gnu-"
   export GCC5_X64_PREFIX="x86_64-linux-gnu-"
   export GCC5_AARCH64_PREFIX="aarch64-linux-gnu-"
+  export GCC5_ARM_PREFIX="arm-none-eabi-"
   echo "Building base tools (AARCH64)"
   ARCH=AARCH64 make -C BaseTools
+  echo "Building base tools (ARM)"
+  ARCH=ARM make -C BaseTools
   echo "Building base tools"
   make -C BaseTools
   . edksetup.sh
@@ -167,7 +190,8 @@ build() {
     echo "Building shell ($_arch)."
     BaseTools/BinWrappers/PosixLike/build -p ShellPkg/ShellPkg.dsc -a "$_arch" "${_common_args[@]}"
     # ovmf
-    if [[ "$_arch" == IA32 ]]; then
+    case "$_arch" in
+      IA32)
       echo "Building ovmf ($_arch) with secure boot support"
       OvmfPkg/build.sh -p OvmfPkg/OvmfPkgIa32.dsc \
                        -a "$_arch" \
@@ -224,8 +248,8 @@ build() {
                        "${_4mb_args[@]}" \
                        -D LOAD_X64_ON_IA32_ENABLE
       mv -v Build/Ovmf{Ia32,IA32-4mb}
-    fi
-    if [[ "$_arch" == X64 ]]; then
+      ;;
+      X64)
       echo "Building ovmf ($_arch) with microvm support (4MB FD)"
       OvmfPkg/build.sh -p OvmfPkg/Microvm/Microvm$_arch.dsc \
                        -a "$_arch" \
@@ -288,38 +312,85 @@ build() {
                        "${_common_args[@]}" \
                        "${_efi_args[@]}" \
                        "${_x86_args[@]}"
-    fi
-    if [[ "$_arch" == AARCH64 ]]; then
+      ;;
+      AARCH64)
       echo "Building ArmVirtPkg ($_arch) with secure boot"
-      BaseTools/BinWrappers/PosixLike/build -p ArmVirtPkg/ArmVirtQemu.dsc \
-                                            -a "$_arch" \
-                                            "${_common_args[@]}" \
-                                            "${_efi_args[@]}" \
-                                            -D NETWORK_HTTP_BOOT_ENABLE \
-                                            -D NETWORK_TLS_ENABLE \
-                                            -D SECURE_BOOT_ENABLE
+      local _build_options=(
+        -p ArmVirtPkg/ArmVirtQemu.dsc
+        -a "$_arch"
+        "${_common_args[@]}"
+        "${_efi_args[@]}"
+        -D NETWORK_HTTP_BOOT_ENABLE
+        -D NETWORK_TLS_ENABLE
+        -D SECURE_BOOT_ENABLE
+      )
+      BaseTools/BinWrappers/PosixLike/build "${_build_options[@]}"
       dd if=/dev/zero of=Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/FV/QEMU_CODE.fd bs=1M count=64
       dd if=Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/FV/QEMU_EFI.fd of=Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/FV/QEMU_CODE.fd conv=notrunc
       dd if=/dev/zero of=Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/FV/QEMU_VARS.fd bs=1M count=64
-    fi
+      ;;
+      ARM)
+      echo "Building ovmf (${_arch}) with secure boot"
+      local _build_options=(
+        -p ArmVirtPkg/ArmVirtQemu.dsc
+        -a "${_arch}"
+        "${_common_args[@]}"
+        "${_efi_args[@]}"
+        -D NETWORK_HTTP_BOOT_ENABLE
+        -D NETWORK_TLS_ENABLE
+        -D SECURE_BOOT_ENABLE
+        -D TPM_ENABLE
+        -D TPM_CONFIG_ENABLE
+      )
+      BaseTools/BinWrappers/PosixLike/build "${_build_options[@]}"
+      dd if=/dev/zero of=Build/ArmVirtQemu-$_arch/${_build_type}_$_build_plugin/FV/QEMU_CODE.fd bs=1M count=64
+      dd if=Build/ArmVirtQemu-$_arch/${_build_type}_$_build_plugin/FV/QEMU_EFI.fd of=Build/ArmVirtQemu-$_arch/${_build_type}_$_build_plugin/FV/QEMU_CODE.fd conv=notrunc
+      dd if=/dev/zero of=Build/ArmVirtQemu-$_arch/${_build_type}_$_build_plugin/FV/QEMU_VARS.fd bs=1M count=64
+      ;;
+    esac
   done
 }
 
-package_edk2-armvirt() {
+package_edk2-aarch64() {
   local _arch=AARCH64
 
   pkgdesc="Firmware for Virtual Machines (aarch64)"
   url="https://github.com/tianocore/tianocore.github.io/wiki/ArmVirtPkg"
+  conflicts=('edk2-armvirt<202211')
+  replaces=('edk2-armvirt<202211')
 
-  cd $pkgbase-$pkgbase-stable$pkgver
-  install -vDm 644 Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/FV/*.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
+  cd $pkgbase
+  install -vDm 644 Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/FV/*.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
   # add libvirt compatibility (which hardcodes the following paths)
   install -vdm 755 "$pkgdir/usr/share/AAVMF"
-  ln -svf /usr/share/$pkgname/${_arch,,}/QEMU_CODE.fd "$pkgdir/usr/share/AAVMF/AAVMF_CODE.fd"
-  ln -svf /usr/share/$pkgname/${_arch,,}/QEMU_VARS.fd "$pkgdir/usr/share/AAVMF/AAVMF_VARS.fd"
+  ln -svf /usr/share/$pkgbase/${_arch,,}/QEMU_CODE.fd "$pkgdir/usr/share/AAVMF/AAVMF_CODE.fd"
+  ln -svf /usr/share/$pkgbase/${_arch,,}/QEMU_VARS.fd "$pkgdir/usr/share/AAVMF/AAVMF_VARS.fd"
   # install qemu descriptors in accordance with qemu:
   # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
-  install -vDm 644 ../*$pkgname*.json -t "$pkgdir/usr/share/qemu/firmware/"
+  install -vDm 644 ../*$pkgname.json -t "$pkgdir/usr/share/qemu/firmware/"
+  # license
+  install -vDm 644 License.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+
+  # add symlink for previous aarch64 location
+  ln -svf /usr/share/$pkgbase "$pkgdir/usr/share/$pkgbase-armvirt"
+}
+
+package_edk2-arm() {
+  local _arch=ARM
+
+  pkgdesc="Firmware for Virtual Machines (armv7)"
+  url="https://github.com/tianocore/tianocore.github.io/wiki/ArmVirtPkg"
+
+  cd $pkgbase
+  install -vDm 644 Build/ArmVirtQemu-$_arch/${_build_type}_$_build_plugin/FV/*.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
+  # add libvirt compatibility (which hardcodes the following paths)
+  install -vdm 755 "$pkgdir/usr/share/AAVMF"
+  ln -svf /usr/share/$pkgbase/${_arch,,}/QEMU_CODE.fd "$pkgdir/usr/share/AAVMF/AAVMF32_CODE.fd"
+  ln -svf /usr/share/$pkgbase/${_arch,,}/QEMU_VARS.fd "$pkgdir/usr/share/AAVMF/AAVMF32_VARS.fd"
+
+  # install qemu descriptors in accordance with qemu:
+  # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
+  install -vDm 644 ../*$pkgname.json -t "$pkgdir/usr/share/qemu/firmware/"
   # license
   install -vDm 644 License.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
 }
@@ -334,14 +405,10 @@ package_edk2-shell() {
   pkgdesc="EDK2 UEFI Shell"
   provides=(uefi-shell)
 
-  cd $pkgbase-$pkgbase-stable$pkgver
+  cd $pkgbase
   for _arch in ${_arch_list[@]}; do
-    if [[ "${_arch}" == 'AARCH64' ]]; then
-      install -vDm 644 Build/ArmVirtQemu-$_arch/${_build_type}_${_build_plugin}/$_arch/Shell.efi -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
-    else
-      install -vDm 644 Build/Shell/${_build_type}_${_build_plugin}/$_arch/Shell_$_min.efi "$pkgdir/usr/share/$pkgname/${_arch,,}/Shell.efi"
-      install -vDm 644 Build/Shell/${_build_type}_${_build_plugin}/$_arch/Shell_$_full.efi "$pkgdir/usr/share/$pkgname/${_arch,,}/Shell_Full.efi"
-    fi
+    install -vDm 644 Build/Shell/${_build_type}_${_build_plugin}/$_arch/Shell_$_min.efi "$pkgdir/usr/share/$pkgname/${_arch,,}/Shell.efi"
+    install -vDm 644 Build/Shell/${_build_type}_${_build_plugin}/$_arch/Shell_$_full.efi "$pkgdir/usr/share/$pkgname/${_arch,,}/Shell_Full.efi"
   done
   # license
   install -vDm 644 License.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
@@ -360,41 +427,38 @@ package_edk2-ovmf() {
   replaces=(ovmf)
   install=$pkgname.install
 
-  cd $pkgbase-$pkgbase-stable$pkgver
+  cd $pkgbase
   # installing the various firmwares
-  for _arch in ${_arch_list[@]}; do
-    if [[ "$_arch" == AARCH64 ]]; then
-      continue
+  for _arch in IA32 X64; do
+    # installing OVMF.fd for xen: https://bugs.archlinux.org/task/58635
+    install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
+    install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
+    install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
+    install -vDm 644 Build/Ovmf$_arch-4mb/${_build_type}_${_build_plugin}/FV/OVMF.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF.4m.fd"
+    install -vDm 644 Build/Ovmf$_arch-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.4m.fd"
+    install -vDm 644 Build/Ovmf$_arch-4mb/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_VARS.4m.fd"
+    install -vDm 644 Build/Ovmf$_arch-csm/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.csm.fd"
+    install -vDm 644 Build/Ovmf$_arch-csm-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.csm.4m.fd"
+    if [[ "${_arch}" == 'X64' ]]; then
+      install -vDm 644 Build/Ovmf3264-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.fd"
+      install -vDm 644 Build/Ovmf3264-secure-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.4m.fd"
+      install -vDm 644 Build/MicrovmX64/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
+      install -vDm 644 Build/MicrovmX64-4mb/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/MICROVM.4m.fd"
     else
-      # installing OVMF.fd for xen: https://bugs.archlinux.org/task/58635
-      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
-      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
-      install -vDm 644 Build/Ovmf$_arch/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
-      install -vDm 644 Build/Ovmf$_arch-4mb/${_build_type}_${_build_plugin}/FV/OVMF.fd "$pkgdir/usr/share/${pkgname}/${_arch,,}/OVMF.4m.fd"
-      install -vDm 644 Build/Ovmf$_arch-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.4m.fd"
-      install -vDm 644 Build/Ovmf$_arch-4mb/${_build_type}_${_build_plugin}/FV/OVMF_VARS.fd "$pkgdir/usr/share/${pkgname}/${_arch,,}/OVMF_VARS.4m.fd"
-      install -vDm 644 Build/Ovmf$_arch-csm/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgname/${_arch,,}/OVMF_CODE.csm.fd"
-      install -vDm 644 Build/Ovmf$_arch-csm-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.csm.4m.fd"
-      if [[ "${_arch}" == 'X64' ]]; then
-        install -vDm 644 Build/Ovmf3264-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgname/${_arch,,}/OVMF_CODE.secboot.fd"
-        install -vDm 644 Build/Ovmf3264-secure-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.4m.fd"
-        install -vDm 644 Build/MicrovmX64/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/$pkgname/${_arch,,}/"
-        install -vDm 644 Build/MicrovmX64-4mb/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/${pkgname}/${_arch,,}/MICROVM.4m.fd"
-      else
-        install -vDm 644 Build/Ovmf$_arch-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgname/${_arch,,}/OVMF_CODE.secboot.fd"
-        install -vDm 644 Build/Ovmf$_arch-secure-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/${pkgname}/${_arch,,}/OVMF_CODE.secboot.4m.fd"
-      fi
+      install -vDm 644 Build/Ovmf$_arch-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.fd"
+      install -vDm 644 Build/Ovmf$_arch-secure-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.4m.fd"
     fi
   done
   # installing qemu descriptors in accordance with qemu:
   # https://git.qemu.org/?p=qemu.git;a=tree;f=pc-bios/descriptors
   # https://bugs.archlinux.org/task/64206
   install -vDm 644 ../*$pkgname*.json -t "$pkgdir/usr/share/qemu/firmware/"
-  # adding symlink for previous ovmf location
+  # add symlink for previous ovmf locations
   # https://bugs.archlinux.org/task/66528
-  ln -svf /usr/share/$pkgname "$pkgdir/usr/share/ovmf"
+  ln -svf /usr/share/$pkgbase "$pkgdir/usr/share/ovmf"
+  ln -svf /usr/share/$pkgbase "$pkgdir/usr/share/$pkgbase-ovmf"
   # adding a symlink for applications with questionable heuristics (such as lxd)
-  ln -svf /usr/share/$pkgname "$pkgdir/usr/share/OVMF"
+  ln -svf /usr/share/$pkgbase "$pkgdir/usr/share/OVMF"
   # licenses
   install -vDm 644 License.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
   install -vDm 644 OvmfPkg/License.txt "$pkgdir/usr/share/licenses/$pkgname/OvmfPkg.License.txt"
