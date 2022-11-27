@@ -14,13 +14,10 @@ sha256sums=('SKIP')
 
 build() {
   cd ${pkgname}
-  ./configure --prefix=/usr
+  ./configure --prefix=/usr --disable-blacklist
 }
 
 package() {
   cd ${pkgname}
   make DESTDIR="${pkgdir}" install
-
-  # Do not package blacklist of kernel modules
-  rm -rf "${pkgdir}"/usr/lib/
 }
