@@ -26,7 +26,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.1.0
-pkgrel=10
+pkgrel=11
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -325,6 +325,13 @@ build() {
 }
 
 package_qemu-common() {
+  local binfmt_conf_options=(
+    --systemd ALL
+    --exportdir "$pkgdir/usr/lib/binfmt.d/"
+    --qemu-path "/usr/bin"
+    --preserve-argv0
+  )
+
   license+=(BSD MIT)
   depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so hicolor-icon-theme libcap-ng libcap-ng.so)
   backup=(
@@ -336,7 +343,7 @@ package_qemu-common() {
   # install static binaries
   meson install -C build-static --destdir "$pkgdir"
   install -vdm 755 "$pkgdir/usr/lib/binfmt.d/"
-  $pkgbase-$pkgver/scripts/qemu-binfmt-conf.sh --systemd ALL --exportdir "$pkgdir/usr/lib/binfmt.d/" --qemu-path "/usr/bin"
+  $pkgbase-$pkgver/scripts/qemu-binfmt-conf.sh "${binfmt_conf_options[@]}"
 
   # rename static binaries to prevent name conflicts
   for _src in "$pkgdir/usr/bin/qemu-"*; do
@@ -351,7 +358,7 @@ package_qemu-common() {
   meson install -C build --destdir "$pkgdir"
 
   install -vdm 755 "$pkgdir/usr/lib/binfmt.d/"
-  $pkgbase-$pkgver/scripts/qemu-binfmt-conf.sh --systemd ALL --exportdir "$pkgdir/usr/lib/binfmt.d/" --qemu-path "/usr/bin"
+  $pkgbase-$pkgver/scripts/qemu-binfmt-conf.sh "${binfmt_conf_options[@]}"
 
   install -vDm 644 bridge.conf -t "$pkgdir/etc/$pkgbase/"
   install -vDm 644 $pkgbase-$pkgver/$pkgbase.sasl "$pkgdir/etc/sasl2/$pkgbase.conf"
@@ -370,7 +377,7 @@ package_qemu-common() {
   # remove files provided by seabios
   rm -fv "$pkgdir/usr/share/$pkgbase/"{bios,vgabios}*
 
-  # remove files provided by edk2-{armvirt,ovmf}
+  # remove files provided by edk2-{aarch64,arm,ovmf}
   rm -fv "$pkgdir/usr/share/$pkgbase/"edk2-*
   rm -frv "$pkgdir/usr/share/$pkgbase/firmware"
 
@@ -716,7 +723,7 @@ package_qemu-hw-s390x-virtio-gpu-ccw() {
 
 package_qemu-system-aarch64() {
   pkgdesc="QEMU system emulator for AARCH64"
-  depends=("${_qemu_system_deps[@]}" edk2-armvirt systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" edk2-aarch64 systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -734,7 +741,7 @@ package_qemu-system-alpha-firmware() {
 
 package_qemu-system-arm() {
   pkgdesc="QEMU system emulator for ARM"
-  depends=("${_qemu_system_deps[@]}" qemu-system-arm-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
+  depends=("${_qemu_system_deps[@]}" edk2-arm qemu-system-arm-firmware=$pkgver-$pkgrel systemd-libs libudev.so)
   mv -v $pkgname/* "$pkgdir"
 }
 
