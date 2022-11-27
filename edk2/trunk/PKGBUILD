@@ -7,7 +7,7 @@ pkgbase=edk2
 pkgname=(edk2-arm edk2-aarch64 edk2-shell edk2-ovmf)
 pkgver=202211
 _commit=fff6d81270b57ee786ea18ad74f43149b9f03494  # refs/tags/edk2-stable202211
-pkgrel=1
+pkgrel=2
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -357,6 +357,7 @@ package_edk2-aarch64() {
   pkgdesc="Firmware for Virtual Machines (aarch64)"
   url="https://github.com/tianocore/tianocore.github.io/wiki/ArmVirtPkg"
   conflicts=('edk2-armvirt<202211')
+  provides=(edk2-armvirt)
   replaces=('edk2-armvirt<202211')
 
   cd $pkgbase
