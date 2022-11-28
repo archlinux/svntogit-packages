@@ -7,7 +7,7 @@ pkgbase=edk2
 pkgname=(edk2-arm edk2-aarch64 edk2-shell edk2-ovmf)
 pkgver=202211
 _commit=fff6d81270b57ee786ea18ad74f43149b9f03494  # refs/tags/edk2-stable202211
-pkgrel=2
+pkgrel=3
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
@@ -444,7 +444,7 @@ package_edk2-ovmf() {
       install -vDm 644 Build/Ovmf3264-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.fd"
       install -vDm 644 Build/Ovmf3264-secure-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.4m.fd"
       install -vDm 644 Build/MicrovmX64/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/"
-      install -vDm 644 Build/MicrovmX64-4mb/${_build_type}_${_build_plugin}/FV/MICROVM.fd -t "$pkgdir/usr/share/$pkgbase/${_arch,,}/MICROVM.4m.fd"
+      install -vDm 644 Build/MicrovmX64-4mb/${_build_type}_${_build_plugin}/FV/MICROVM.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/MICROVM.4m.fd"
     else
       install -vDm 644 Build/Ovmf$_arch-secure/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.fd"
       install -vDm 644 Build/Ovmf$_arch-secure-4mb/${_build_type}_${_build_plugin}/FV/OVMF_CODE.fd "$pkgdir/usr/share/$pkgbase/${_arch,,}/OVMF_CODE.secboot.4m.fd"
