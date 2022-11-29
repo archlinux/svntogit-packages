@@ -3,26 +3,51 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.74.1
+pkgver=2.74.2
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
 arch=(x86_64)
-depends=(pcre2 libffi util-linux-libs zlib libsysprof-capture)
-makedepends=(gettext gtk-doc shared-mime-info python libelf git util-linux
-             meson dbus)
-checkdepends=(desktop-file-utils glib2)
-options=(debug staticlibs)
-_commit=058491cb6f635ff6e0a57fcdd4107a40ca91c62a  # tags/2.74.1^0
-source=("git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
-        0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
-        glib-compile-schemas.hook gio-querymodules.{hook,script})
-sha256sums=('SKIP'
-            '6d51eb5856268d79eee01b97a299fa9f99db18b2abb4df56f2ed9e641a09138a'
-            '64ae5597dda3cc160fc74be038dbe6267d41b525c0c35da9125fbf0de27f9b25'
-            '2a9f9b8235f48e3b7d0f6cfcbc76cd2116c45f28692cac4bd61074c495bd5eb7'
-            '92d08db5aa30bda276bc3d718e7ff9dd01dc40dcab45b359182dcc290054e24e')
+depends=(
+  libffi
+  libsysprof-capture
+  pcre2
+  util-linux-libs
+  zlib
+)
+makedepends=(
+  dbus
+  gettext
+  git
+  gtk-doc
+  libelf
+  meson
+  python
+  shared-mime-info
+  util-linux
+)
+checkdepends=(
+  desktop-file-utils
+  glib2
+)
+options=(
+  debug
+  staticlibs
+)
+_commit=b5299ed2055aa3ccd628aceb016c1e9bda516e39  # tags/2.74.2^0
+source=(
+  "git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
+  0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+  gio-querymodules.{hook,script}
+  glib-compile-schemas.hook
+)
+b2sums=('SKIP'
+        '4d5cb5ad1222a5e8d06e79736170cd694a6277e0da71ffd55560d74cf5c3273551d302a35bd2ff43f09070d61c1de147bb312428fce98347d232ac3d44406511'
+        'cd3a7817193ca985be5aff0813e78cc59c39ad8d4a2171c1c719267e4f51beda47c58a44c6d5afead64e9fa1b854430ac935976d02158e927ba3ec8f36fce282'
+        '4b90eb8d582509b09aab401313d4399cc139ad21b5dd7d45d79860d0764c7494c60714e0794e09823e51d1894ac032a994f27d79d1499abf24ee6f59bdb0c243'
+        'd30d349b4cb4407839d9074ce08f5259b8a5f3ca46769aabc621f17d15effdb89c4bf19bd23603f6df3d59f8d1adaded0f4bacd0333afcab782f2d048c882858')
+
 
 pkgver() {
   cd glib
@@ -58,12 +83,16 @@ check() {
 }
 
 package_glib2() {
-  depends+=(libmount.so libffi.so)
-  provides+=(libgio-2.0.so libglib-2.0.so libgmodule-2.0.so libgobject-2.0.so
-             libgthread-2.0.so)
-  optdepends=('python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
-              'libelf: gresource inspection tool'
-              'gvfs: most gio functionality')
+  depends+=(
+    libffi.so
+    libmount.so
+  )
+  provides+=(libg{lib,io,module,object,thread}-2.0.so)
+  optdepends=(
+    'gvfs: most gio functionality'
+    'libelf: gresource inspection tool'
+    'python: gdbus-codegen, glib-genmarshal, glib-mkenums, gtester-report'
+  )
 
   meson install -C build --destdir "$pkgdir"
 
