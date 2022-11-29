@@ -3,23 +3,40 @@
 # Contributor: Mirco Tischler <mt-ml at gmx dot de>
 
 pkgname=ostree
-_commit=73744a3a4dfc7aa9ab183a9700273eee2f49750a  # tags/v2022.6
-pkgver=2022.6
-pkgrel=4
+_commit=46c51b3537c0c02e815d9624479e461c84f7d374  # tags/v2022.7
+pkgver=2022.7
+pkgrel=1
 pkgdesc="Operating system and container binary deployment and upgrades"
 url="https://ostreedev.github.io/ostree/"
 arch=(x86_64)
-license=(GPL)
-depends=(fuse3 glibc libgpg-error libsodium util-linux openssl xz zlib curl)
-makedepends=(avahi e2fsprogs git glib2 gobject-introspection gpgme gtk-doc
-             libarchive libxslt mkinitcpio python systemd)
+license=(custom:LGPL2)
+depends=(fuse3 glibc libgpg-error libsodium util-linux zlib)
+makedepends=(
+  avahi
+  curl
+  e2fsprogs
+  git
+  glib2
+  gobject-introspection
+  gpgme
+  gtk-doc
+  libarchive
+  libsoup
+  libxslt
+  mkinitcpio
+  openssl
+  python
+  systemd
+  xz
+)
 checkdepends=(cpio elfutils gjs parallel python-yaml syslinux)
+provides=(libostree-1.so)
 options=(debug)
 source=(
   git+https://github.com/ostreedev/ostree#tag=$_commit
   git+https://github.com/mendsley/bsdiff
   git+https://gitlab.gnome.org/GNOME/libglnx.git
-  ostree-2022.6-use_fuse3.patch
+  $pkgname-2022.6-use_fuse3.patch
 )
 b2sums=('SKIP'
         'SKIP'
@@ -30,10 +47,13 @@ b2sums=('SKIP'
 validpgpkeys=('1CEC7A9DF7DA85ABEF843DC0A866D7CCAE087291') # Colin Walters <walters@redhat.com>
 
 prepare() {
-  cd ostree
+  cd $pkgname
+
+  # remove failing test: https://github.com/ostreedev/ostree/issues/2790
+  sed -e '/test-signed-pull-summary.sh/d' -i Makefile-tests.am
 
   # use fusemount3 (fuse3)
-  git apply -3 ../ostree-2022.6-use_fuse3.patch
+  git apply -3 ../$pkgname-2022.6-use_fuse3.patch
 
   git submodule init
   git submodule set-url bsdiff "$srcdir/bsdiff"
@@ -59,24 +79,32 @@ build() {
     --with-ed25519-libsodium
     --with-mkinitcpio
     --with-openssl
-    --without-soup
   )
 
-  cd ostree
+  cd $pkgname
   ./configure "${configure_options[@]}"
+  # prevent overlinking due to libtool
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
 check() {
-  make check -k -C ostree || echo "Known to fail: https://github.com/ostreedev/ostree/issues/2313"
+  make check -k -C $pkgname
 }
 
 package() {
-  depends+=(libarchive.so libavahi-client.so libavahi-common.so
-            libavahi-glib.so libgio-2.0.so libglib-2.0.so libgobject-2.0.so
-            libgpgme.so libsystemd.so)
-  provides=(libostree-1.so)
+  depends+=(
+    avahi libavahi-client.so libavahi-common.so libavahi-glib.so
+    curl libcurl.so
+    glib2 libgio-2.0.so libglib-2.0.so libgobject-2.0.so
+    gpgme libgpgme.so
+    libarchive libarchive.so
+    libsoup libsoup-2.4.so
+    openssl libcrypto.so
+    systemd-libs libsystemd.so
+    xz liblzma.so
+  )
 
-  make DESTDIR="$pkgdir" install -C ostree
+  make DESTDIR="$pkgdir" install -C $pkgname
+  install -vDm 644 $pkgname/COPYING -t "$pkgdir/usr/share/licenses/$pkgname/"
 }
