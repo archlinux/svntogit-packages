@@ -3,7 +3,7 @@
 # Contributor: judd <jvinet@zeroflux.org>
 
 pkgname=sed
-pkgver=4.8
+pkgver=4.9
 pkgrel=1
 pkgdesc='GNU stream editor'
 arch=('x86_64')
@@ -14,7 +14,7 @@ depends=('glibc' 'acl' 'attr')
 makedepends=('gettext')
 source=("https://ftp.gnu.org/pub/gnu/sed/$pkgname-$pkgver.tar.xz"{,.sig})
 validpgpkeys=('155D3FC500C834486D1EEA677FD9FCCB000BEEEE') #Jim Meyering <jim@meyering.net>
-sha256sums=('f79b0cfea71b37a8eeec8490db6c5f7ae7719c35587f21edb0617f370eeff633'
+sha256sums=('6e226b732e1cd739464ad6862bd1a1aba42d7982922da7a53519631d24975181'
             'SKIP')
 
 prepare() {
