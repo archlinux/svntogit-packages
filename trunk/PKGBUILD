@@ -5,12 +5,12 @@
 pkgbase=wayland
 pkgname=(wayland wayland-docs)
 pkgver=1.21.0
-pkgrel=1
+pkgrel=2
 pkgdesc='A computer display server protocol'
 arch=('x86_64')
 url='https://wayland.freedesktop.org/'
 license=('MIT')
-depends=('glibc' 'libffi' 'expat' 'libxml2')
+depends=('glibc' 'libffi' 'expat' 'libxml2' 'default-cursors')
 makedepends=('meson' 'libxslt' 'doxygen' 'xmlto' 'graphviz' 'docbook-xsl')
 options=('debug')
 validpgpkeys=('C7223EBE4EF66513B892598911A30156E0E67611'  # Bryce Harrington
@@ -46,4 +46,4 @@ package_wayland-docs() {
   install -Dm 644 $pkgbase-$pkgver/COPYING "$pkgdir/usr/share/licenses/$pkgname/COPYING"
 }
 
-# vim:set ts=2 sw=2 et:
+# vim:set sw=2 sts=-1 et:
