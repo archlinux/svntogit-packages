@@ -2,9 +2,10 @@
 # Contributor: Lukas Fleischer <lfleischer@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
-pkgname=adwaita-icon-theme
+pkgbase=adwaita-icon-theme
+pkgname=(adwaita-icon-theme adwaita-cursors)
 pkgver=43
-pkgrel=1
+pkgrel=2
 pkgdesc="GNOME standard icons"
 url="https://gitlab.gnome.org/GNOME/adwaita-icon-theme"
 arch=(any)
@@ -36,7 +37,20 @@ check() {
   make check
 }
 
-package() {
-  cd $pkgname
-  make DESTDIR="$pkgdir" install
+package_adwaita-icon-theme() {
+  depends+=(adwaita-cursors)
+
+  make -C $pkgname DESTDIR="$pkgdir" install
+
+  mkdir -p cursors/usr/share/icons/Adwaita
+  mv {"$pkgdir",cursors}/usr/share/icons/Adwaita/cursors
 }
+
+package_adwaita-cursors() {
+  pkgdesc="GNOME standard cursors"
+  depends=()
+
+  mv cursors/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
