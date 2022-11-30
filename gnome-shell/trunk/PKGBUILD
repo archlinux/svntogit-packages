@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=43.1
-pkgrel=2
+pkgver=43.1+r6+g92e9689a4
+pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -25,7 +25,7 @@ optdepends=('gnome-control-center: System settings'
             'power-profiles-daemon: Power profile switching')
 groups=(gnome)
 options=(debug)
-_commit=8b00255cc31814b09a35c9be38228d873676233e  # tags/43.1^0
+_commit=92e9689a4c6244904b85e8d7e5f6478e41e519bd  # gnome-43
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
@@ -38,10 +38,6 @@ pkgver() {
 
 prepare() {
   cd gnome-shell
-
-  # More fixes to screencast support detection
-  git cherry-pick -n a2acecb491e53e889dd995d3db386aaa182e04a0 \
-                     144daf200c12f313c2cc7c01daef9e26e396a328
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
