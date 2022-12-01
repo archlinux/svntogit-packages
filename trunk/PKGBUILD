@@ -6,7 +6,7 @@
 pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=22.2.4
+pkgver=22.3.0
 pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
@@ -20,10 +20,10 @@ source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
         0001-anv-force-MEDIA_INTERFACE_DESCRIPTOR_LOAD-reemit-aft.patch
         0002-intel-fs-always-mask-the-bottom-bits-of-the-sampler-.patch
         LICENSE)
-sha512sums=('fa4aa916e57137c758052ee5190d291e6d637f9ec809de54b64bddf5d2fdeafeb3389cd60d44203502e3d93b2563c84182b77a0d4d180bc438fc8064864426c6'
+sha512sums=('bf4d344459f97d266a5943b33aecf062b0825e13c1617afdab71c4ba6a87a201440761c9a32a6e0060910a0917122e3f4d29f666d6b94a38a71c94b9ff3ab9da'
             'SKIP'
-            '9bf47019a7c1da6724393cf571c6e1ce6b56ca24fe32045bc056d2e1bb2584f6a81e886dd8b2f1b1aabb953367dd068f9833f520fa41a9b2bbce20fdc15d07b4'
-            '3df104f4abbecb12fcf9631cabdc7fe883b6c529abebaf36a0d47933ebd0c57235f11767060604dec71acefdf55f2f025eb997b1dd1cf0b92c02af0a604cae98'
+            '4ff7c359f08aedb1fb6eb2c6bb34bafa399edfa7916cd6cce7844bb38795e84c0265324e3fc7d37237d4824f029cb04da176bcf476785fd2e35a8b0ce4f8a394'
+            '5dd0cb8affa9cfe6e7d94f59b8e23727036fd8ab76938321f8d266315f30611584da6f6277fe2aa920130483302adab5e57e2bc08f1bd3c62ea57b3e4b007305'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
@@ -63,7 +63,6 @@ build() {
     -D gallium-va=enabled \
     -D gallium-vdpau=enabled \
     -D gallium-xa=enabled \
-    -D gallium-xvmc=disabled \
     -D gbm=enabled \
     -D gles1=disabled \
     -D gles2=enabled \
