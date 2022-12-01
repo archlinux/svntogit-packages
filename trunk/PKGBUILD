@@ -3,8 +3,8 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.74.2
-pkgrel=2
+pkgver=2.74.3
+pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -35,7 +35,7 @@ options=(
   debug
   staticlibs
 )
-_commit=b5299ed2055aa3ccd628aceb016c1e9bda516e39  # tags/2.74.2^0
+_commit=a8ad6347a404962c3b83aca1bf50610a76618c0f  # tags/2.74.3^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
   0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
@@ -56,9 +56,6 @@ pkgver() {
 
 prepare() {
   cd glib
-
-  # Fix building WebKitGTK
-  git cherry-pick -n 560e56fa71f21e8f0f7b91322d560dedb1af13e4
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
