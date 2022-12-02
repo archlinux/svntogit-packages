@@ -7,12 +7,13 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=22.3.0
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
              'libomxil-bellagio' 'libclc' 'clang' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
              'systemd' 'valgrind' 'glslang' 'vulkan-icd-loader' 'directx-headers' 'cmake' 'meson')
+makedepends+=('rust' 'rust-bindgen' 'spirv-tools' 'spirv-llvm-translator') # rusticl dependencies
 url="https://www.mesa3d.org/"
 license=('custom')
 options=('debug' '!lto')
@@ -63,6 +64,8 @@ build() {
     -D gallium-va=enabled \
     -D gallium-vdpau=enabled \
     -D gallium-xa=enabled \
+    -D gallium-rusticl=true \
+    -D rust_std=2021 \
     -D gbm=enabled \
     -D gles1=disabled \
     -D gles2=enabled \
@@ -113,7 +116,7 @@ package_vulkan-mesa-layers() {
 }
 
 package_opencl-mesa() {
-  pkgdesc="OpenCL support for AMD/ATI Radeon mesa drivers"
+  pkgdesc="OpenCL support with clover and rusticl for mesa drivers"
   depends=('libdrm' 'libclc' 'clang' 'expat')
   optdepends=('opencl-headers: headers necessary for OpenCL development')
   provides=('opencl-driver')
