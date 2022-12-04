@@ -3,34 +3,32 @@
 # Contributor: Gilles CHAUVIN <gcnweb@gmail.com>
 
 pkgname=live-media
-pkgver=2022.10.01
+pkgver=2022.12.01
 pkgrel=1
 pkgdesc='Set of C++ libraries for multimedia streaming'
 url='http://live555.com/liveMedia'
 arch=('x86_64')
 license=('LGPL')
 depends=('gcc-libs' 'openssl')
-options=('staticlibs')
 source=(https://download.videolan.org/contrib/live555/live.${pkgver}.tar.gz)
-sha256sums=('429de73061e3fc6901c4d2f0b7562ae3f6233060ca4b5e182fe555d065cbdd45')
-sha512sums=('9f2622fa9fd290bf519ed25858041c216a28491e6ebcacdb11096df9c59284d22c33eebc2b5db3133dace437a555fb74e5f215b52ec5c73184067dcb685039f3')
+sha256sums=('057c1d3dc24c26b33e14c4dc3592885adf220403a1e1255e8a101e233c69c108')
+sha512sums=('bb5dc80b5b1621e04fb8a100bd3deff190efb757da10e6cfc652d6eaa878f6a3e063b2f2219d5d83d6fb6892b55be55eafe2dd43f42a559e1f931130b45584b1')
+
+prepare() {
+  cd live
+  find . -name Makefile.head | xargs sed -e 's|/local||g' -i # Fix prefix
+}
 
 build() {
   cd live
-  export CFLAGS+=" -ffat-lto-objects"
-  export CXXFLAGS+=" -ffat-lto-objects"
-  sed -E 's|(-DSOCKLEN_T=socklen_t)|\1 -fPIC -DRTSPCLIENT_SYNCHRONOUS_INTERFACE=1|g' -i config.linux
-  ./genMakefiles linux
+  sed -E 's|(-DSOCKLEN_T=socklen_t)|\1 -fPIC -DRTSPCLIENT_SYNCHRONOUS_INTERFACE=1|g' -i config.linux-with-shared-libraries
+  ./genMakefiles linux-with-shared-libraries
   make
 }
 
 package() {
   cd live
-  for dir in BasicUsageEnvironment groupsock liveMedia UsageEnvironment; do
-    install -Dm 644 ${dir}/*.a -t "${pkgdir}/usr/lib"
-    install -Dm 644 ${dir}/include/*.h* -t "${pkgdir}/usr/include/${dir}"
-  done
-  find testProgs -type f -perm 755 -print0|xargs -0 -I '{}' install -Dm 755 '{}' -t "${pkgdir}/usr/bin"
+  make DESTDIR="$pkgdir" install
 }
 
 # vim: ts=2 sw=2 et:
