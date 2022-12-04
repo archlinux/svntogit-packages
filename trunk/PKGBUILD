@@ -7,7 +7,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=22.3.0
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -20,11 +20,13 @@ options=('debug' '!lto')
 source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
         0001-anv-force-MEDIA_INTERFACE_DESCRIPTOR_LOAD-reemit-aft.patch
         0002-intel-fs-always-mask-the-bottom-bits-of-the-sampler-.patch
+        0003-d3d12-Don-t-crash-when-libd3d12.so-can-t-be-found.patch
         LICENSE)
 sha512sums=('bf4d344459f97d266a5943b33aecf062b0825e13c1617afdab71c4ba6a87a201440761c9a32a6e0060910a0917122e3f4d29f666d6b94a38a71c94b9ff3ab9da'
             'SKIP'
             '4ff7c359f08aedb1fb6eb2c6bb34bafa399edfa7916cd6cce7844bb38795e84c0265324e3fc7d37237d4824f029cb04da176bcf476785fd2e35a8b0ce4f8a394'
             '5dd0cb8affa9cfe6e7d94f59b8e23727036fd8ab76938321f8d266315f30611584da6f6277fe2aa920130483302adab5e57e2bc08f1bd3c62ea57b3e4b007305'
+            '8747e6ded9e73b9f6eed72d922b21ca2a67f028eef05ce3bf237f248d3b765bb3db52e2f25a51c2add7fc82ef23aeb70afb5aefe88bdbe2d9fe4b7008007c397'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
@@ -41,6 +43,10 @@ prepare() {
   # https://github.com/HansKristian-Work/vkd3d-proton/issues/1200
   patch -Np1 -i ../0001-anv-force-MEDIA_INTERFACE_DESCRIPTOR_LOAD-reemit-aft.patch
   patch -Np1 -i ../0002-intel-fs-always-mask-the-bottom-bits-of-the-sampler-.patch
+
+  # `Xephyr :3` crashes
+  # https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/20145
+  patch -Np1 -i ../0003-d3d12-Don-t-crash-when-libd3d12.so-can-t-be-found.patch
 }
 
 build() {
