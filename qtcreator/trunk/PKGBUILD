@@ -10,7 +10,7 @@ pkgbase=qtcreator
 pkgname=(qtcreator qtcreator-devel)
 pkgver=9.0.0
 _clangver=14.0.6
-pkgrel=1
+pkgrel=2
 pkgdesc='Lightweight, cross-platform integrated development environment'
 arch=(x86_64)
 url='https://www.qt.io'
@@ -29,9 +29,15 @@ optdepends=('qt6-doc: integrated Qt documentation'
             'valgrind: analyze support'
             'perf: performer analyzer'
             'mlocate: locator filter')
-source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz)
-sha256sums=('5cb4798cd81b086e7f17f5a8d42ea024f64da7efd38ccb5c62f9c1457c23551a')
+source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz
+        qtcreatorbug-28545.patch::https://code.qt.io/cgit/qt-creator/qt-creator.git/patch/?id=d6484109)
+sha256sums=('5cb4798cd81b086e7f17f5a8d42ea024f64da7efd38ccb5c62f9c1457c23551a'
+            'f5f31583f55d43db3b8cad31a645d68d5ee750710a6438beb584e52a1ef85dba')
 options=(docs debug)
+
+prepare() {
+  patch -d qt-creator-opensource-src-$pkgver -p1 < qtcreatorbug-28545.patch # Fix perf analyzer
+}
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \
