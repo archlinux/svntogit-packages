@@ -4,20 +4,42 @@
 
 pkgbase=tracker3
 pkgname=(tracker3 tracker3-docs)
-pkgver=3.4.1
+pkgver=3.4.2
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
 arch=(x86_64)
 license=(GPL)
-depends=(sqlite icu glib2 libffi util-linux libstemmer libseccomp json-glib
-         libsoup3)
-makedepends=(gobject-introspection git hotdoc bash-completion meson asciidoc
-             systemd libsoup python-gobject python-dbus python-tappy)
+depends=(
+  glib2
+  icu
+  json-glib
+  libffi
+  libseccomp
+  libsoup3
+  libstemmer
+  sqlite
+  util-linux
+)
+makedepends=(
+  asciidoc
+  bash-completion
+  git
+  gobject-introspection
+  hotdoc
+  libsoup
+  meson
+  python-dbus
+  python-gobject
+  python-tappy
+  systemd
+)
 options=(debug)
-_commit=2fcff65236bd55139bf0c238affaed9f45d67aee  # tags/3.4.1^0
-source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit")
-sha256sums=('SKIP')
+_commit=0de82e325639c567353ca68ccc421d12e5f1de86  # tags/3.4.2^0
+source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit"
+        hotdoc.diff)
+sha256sums=('SKIP'
+            '804c682efe02e89349b4269f87bb50f97de5674f58b20bd7895569dbaafc6788')
 
 pkgver() {
   cd tracker
@@ -26,6 +48,9 @@ pkgver() {
 
 prepare() {
   cd tracker
+
+  # Fix docs build
+  git apply -3 ../hotdoc.diff
 }
 
 build() {
