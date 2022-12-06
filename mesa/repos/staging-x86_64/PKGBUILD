@@ -7,7 +7,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=22.3.0
-pkgrel=5
+pkgrel=6
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -58,7 +58,7 @@ build() {
     -D b_ndebug=true \
     -D b_lto=false \
     -D platforms=x11,wayland \
-    -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,iris,crocus,zink,d3d12 \
+    -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,i915,iris,crocus,zink,d3d12 \
     -D vulkan-drivers=amd,intel,intel_hasvk,swrast \
     -D vulkan-layers=device-select,intel-nullhw,overlay \
     -D dri3=enabled \
