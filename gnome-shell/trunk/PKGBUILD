@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=43.1+r6+g92e9689a4
+pkgver=43.2
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -25,7 +25,7 @@ optdepends=('gnome-control-center: System settings'
             'power-profiles-daemon: Power profile switching')
 groups=(gnome)
 options=(debug)
-_commit=92e9689a4c6244904b85e8d7e5f6478e41e519bd  # gnome-43
+_commit=e9b26eac0c0d66b87201874ce2b704268ee99be6  # tags/43.2^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
 sha256sums=('SKIP'
