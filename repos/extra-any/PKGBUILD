@@ -2,7 +2,7 @@
 # Contributor: Tobias Roettger <toroettg@gmail.com>
 
 pkgname=python-platformdirs
-pkgver=2.5.4
+pkgver=2.6.0
 pkgrel=1
 pkgdesc='A small Python module for determining appropriate platform-specific dirs, e.g. a "user data dir"'
 arch=('any')
@@ -12,15 +12,15 @@ depends=('python-typing_extensions')
 makedepends=('python-build' 'python-installer' 'python-hatchling' 'python-hatch-vcs')
 checkdepends=('python-pytest-mock')
 source=("https://pypi.io/packages/source/p/platformdirs/platformdirs-$pkgver.tar.gz")
-sha512sums=('1b7ff79a421bc0b0320a9b1ba8f99dbbecd34a9bea7fa7696b58007f2e05d8a910a3f32e2c03e6e3a8f3d272ab1c045051a682e3155c5bc5285e66e4add59489')
+sha512sums=('39a4066b5ca8da4e5801677cee8db9cee3843fd11cbd7d1a19da5045cd03e23998a0bdd0e97f6bd53f9bcfc9bbc683ad1bc1d800b68eb1802ddeb0391135762b')
 
 build() {
-  cd "$srcdir"/platformdirs-$pkgver
+  cd platformdirs-$pkgver
   python -m build --wheel --no-isolation
 }
 
 check() {
-  cd "$srcdir"/platformdirs-$pkgver
+  cd platformdirs-$pkgver
   PYTHONPATH="$PWD"/src pytest
 }
 
