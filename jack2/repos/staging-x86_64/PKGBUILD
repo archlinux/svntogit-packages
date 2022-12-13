@@ -8,16 +8,18 @@ pkgbase=jack2
 pkgname=(jack2 jack2-dbus jack2-docs)
 pkgdesc="The JACK low-latency audio server"
 pkgver=1.9.21
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url="https://github.com/jackaudio/jack2"
 license=(GPL2)
-makedepends=(alsa-lib dbus doxygen expat git libffado libsamplerate opus systemd waf)
+makedepends=(alsa-lib db5.3 dbus doxygen expat git libffado libsamplerate opus systemd waf)
 # jack breaks when built with LTO: https://github.com/jackaudio/jack2/issues/485
 options=(debug !lto)
-source=(git+https://github.com/jackaudio/$pkgbase.git#tag=v$pkgver?signed)
+source=(git+https://github.com/jackaudio/$pkgbase.git#tag=v$pkgver?signed
+        bdb_5.3.patch)
 validpgpkeys=('62B11043D2F6EB6672D93103CDBAA37ABC74FBA0') # falkTX <falktx@falktx.com>
-sha512sums=('SKIP')
+sha512sums=('SKIP'
+            '3d2842899de395e48ef6d4307905fc3633eaac02f4987032594084573991450566b592e30069c19dca4a5cb0b07e1962bbfc7b9cd7c8a174990190147481823f')
 
 _pick() {
   local p="$1" f d; shift
@@ -36,10 +38,13 @@ prepare() {
     touch __init__.py
     rm -rv waflib
   )
+  patch -Np1 -i ../bdb_5.3.patch  
 }
 
 build() {
   cd $pkgbase
+  export CXXFLAGS="$CXXFLAGS -I/usr/include/db5.3"
+  export LDFLAGS="$LDFLAGS -ldb-5.3"
   export LINKFLAGS="$LDFLAGS"
   export PYTHONPATH="$PWD:$PYTHONPATH"
   waf configure --prefix=/usr \
@@ -54,7 +59,7 @@ build() {
 
 package_jack2() {
   license+=(LGPL2.1)
-  depends=(db gcc-libs glibc opus libasound.so libdbus-1.so libsamplerate.so
+  depends=(db5.3 gcc-libs glibc opus libasound.so libdbus-1.so libsamplerate.so
   libsystemd.so )
   optdepends=(
     'a2jmidid: for ALSA MIDI to JACK MIDI bridging'
