@@ -1,0 +1,113 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=harfbuzz
+pkgname=(harfbuzz harfbuzz-icu)
+pkgver=6.0.0
+pkgrel=1
+pkgdesc="OpenType text shaping engine"
+url="https://www.freedesktop.org/wiki/Software/HarfBuzz"
+arch=(x86_64)
+license=(MIT)
+makedepends=(
+  cairo
+  chafa
+  freetype2
+  git
+  glib2
+  gobject-introspection
+  graphite
+  gtk-doc
+  icu
+  meson
+  python
+  ragel
+)
+checkdepends=(
+  python-fonttools
+  python-setuptools
+)
+options=(debug)
+_commit=afcae83a064843d71d47624bc162e121cc56c08b  # tags/6.0.0^0
+source=("git+https://github.com/harfbuzz/harfbuzz#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd harfbuzz
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd harfbuzz
+}
+
+build() {
+  local meson_options=(
+    -D graphite2=enabled
+  )
+  # Harfbuzz wants no exceptions
+  CFLAGS="${CFLAGS/-fexceptions/}"
+  CXXFLAGS="${CXXFLAGS/-fexceptions/}"
+
+  arch-meson harfbuzz build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  mkdir -p tmp
+  TMPDIR="$PWD/tmp" meson test -C build --print-errorlogs
+  rm -r tmp
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_harfbuzz() {
+  depends=(
+    freetype2
+    glib2
+    graphite
+    libfreetype.so
+    libglib-2.0.so
+    libgobject-2.0.so
+  )
+  provides=(libharfbuzz{,-subset,-gobject}.so)
+  optdepends=(
+    'cairo: hb-view program'
+    'chafa: hb-view program'
+  )
+
+  meson install -C build --destdir "$pkgdir"
+
+  ( cd "$pkgdir"
+
+    _pick hb-icu usr/lib/libharfbuzz-icu*
+    _pick hb-icu usr/lib/pkgconfig/harfbuzz-icu.pc
+    _pick hb-icu usr/include/harfbuzz/hb-icu.h
+  )
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 harfbuzz/COPYING
+}
+
+package_harfbuzz-icu() {
+  pkgdesc+=" - ICU integration"
+  depends=(
+    "harfbuzz=$pkgver-$pkgrel"
+    libharfbuzz.so
+    libicuuc.so
+  )
+  provides=(libharfbuzz-icu.so)
+
+  mv hb-icu/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 harfbuzz/COPYING
+}
+
+# vim:set sw=2 sts=-1 et:
