@@ -1,0 +1,413 @@
+From e944aa454e60cbff8ab4e8c70dd974083398378f Mon Sep 17 00:00:00 2001
+From: Paul Zimmermann <Paul.Zimmermann@inria.fr>
+Date: Sat, 10 Dec 2022 08:47:51 +0100
+Subject: [PATCH 1/6] functions with FILE arguments should be defined only when
+ stdio.h is included
+
+---
+ src/mpc.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/mpc.h b/src/mpc.h
+index bb1334f..31c7990 100644
+--- a/src/mpc.h
++++ b/src/mpc.h
+@@ -270,6 +270,7 @@ __MPC_DECLSPEC long double _Complex mpc_get_ldc (mpc_srcptr, mpc_rnd_t);
+ __MPC_DECLSPEC int mpc_inp_str    (mpc_ptr, FILE *, size_t *, int, mpc_rnd_t);
+ __MPC_DECLSPEC size_t mpc_out_str (FILE *, int, size_t, mpc_srcptr, mpc_rnd_t);
+ __MPC_DECLSPEC void mpcb_out_str  (FILE *f, mpcb_srcptr);
++__MPC_DECLSPEC void mpcr_out_str (FILE *f, mpcr_srcptr r);
+ #endif
+ 
+ __MPC_DECLSPEC int mpcr_inf_p (mpcr_srcptr r);
+@@ -284,7 +285,6 @@ __MPC_DECLSPEC void mpcr_set_ui64_2si64 (mpcr_ptr r, uint64_t mant,
+    int64_t exp);
+ __MPC_DECLSPEC void mpcr_max (mpcr_ptr r, mpcr_srcptr s, mpcr_srcptr t);
+ __MPC_DECLSPEC int64_t mpcr_get_exp (mpcr_srcptr r);
+-__MPC_DECLSPEC void mpcr_out_str (FILE *f, mpcr_srcptr r);
+ __MPC_DECLSPEC void mpcr_mul (mpcr_ptr r, mpcr_srcptr s, mpcr_srcptr t);
+ __MPC_DECLSPEC void mpcr_mul_2ui (mpcr_ptr r, mpcr_srcptr s,
+    unsigned long int e);
+-- 
+2.39.0
+
+From c4ecee561ca9f93ee13e4d6295af8adc77e50208 Mon Sep 17 00:00:00 2001
+From: Paul Zimmermann <Paul.Zimmermann@inria.fr>
+Date: Mon, 12 Dec 2022 10:42:12 +0100
+Subject: [PATCH 2/6] added test for case when stdio.h is not included
+
+---
+ src/mpc-impl.h    |  2 ++
+ tests/Makefile.am |  2 +-
+ tests/mpc-tests.h |  2 ++
+ tests/tdummy.c    | 33 +++++++++++++++++++++++++++++++++
+ 4 files changed, 38 insertions(+), 1 deletion(-)
+ create mode 100644 tests/tdummy.c
+
+diff --git a/src/mpc-impl.h b/src/mpc-impl.h
+index 2b7bbb2..a915751 100644
+--- a/src/mpc-impl.h
++++ b/src/mpc-impl.h
+@@ -27,7 +27,9 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ #ifdef HAVE_STDLIB_H
+ #include <stdlib.h>
+ #endif
++#ifndef DONT_INCLUDE_STDIO
+ #include <stdio.h>
++#endif
+ #include "mpc.h"
+ 
+ /*
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index f488bdb..2fe0813 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -45,7 +45,7 @@ check_PROGRAMS = tradius tballs teta                                    \
+   treimref trootofunity                                                 \
+   tset tsin tsin_cos tsinh tsqr tsqrt tstrtoc tsub tsub_fr	        \
+   tsub_ui tsum tswap ttan ttanh tui_div tui_ui_sub                      \
+-  tget_version texceptions
++  tget_version texceptions tdummy
+ 
+ check_LTLIBRARIES=libmpc-tests.la
+ libmpc_tests_la_SOURCES = mpc-tests.h check_data.c clear_parameters.c	\
+diff --git a/tests/mpc-tests.h b/tests/mpc-tests.h
+index ecd10b7..57ac632 100644
+--- a/tests/mpc-tests.h
++++ b/tests/mpc-tests.h
+@@ -22,7 +22,9 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ #define __MPC_TESTS_H
+ 
+ #include "config.h"
++#ifndef DONT_INCLUDE_STDIO
+ #include <stdio.h>
++#endif
+ #include <ctype.h>
+ #include <stdlib.h>
+ #include <inttypes.h> /* for the PRIi64 format modifier */
+diff --git a/tests/tdummy.c b/tests/tdummy.c
+new file mode 100644
+index 0000000..23072f5
+--- /dev/null
++++ b/tests/tdummy.c
+@@ -0,0 +1,33 @@
++/* tdummy -- test file when stdio.h is not included
++
++Copyright (C) 2022 INRIA
++
++This file is part of GNU MPC.
++
++GNU MPC is free software; you can redistribute it and/or modify it under
++the terms of the GNU Lesser General Public License as published by the
++Free Software Foundation; either version 3 of the License, or (at your
++option) any later version.
++
++GNU MPC is distributed in the hope that it will be useful, but WITHOUT ANY
++WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
++FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for
++more details.
++
++You should have received a copy of the GNU Lesser General Public License
++along with this program. If not, see http://www.gnu.org/licenses/ .
++*/
++
++#define DONT_INCLUDE_STDIO
++#include "mpc-tests.h"
++
++int
++main (void)
++{
++  test_start ();
++
++  test_end ();
++
++  return 0;
++}
++
+-- 
+2.39.0
+
+From 3c582150facc14230a157e927d07ff2398ab5f3e Mon Sep 17 00:00:00 2001
+From: Paul Zimmermann <Paul.Zimmermann@inria.fr>
+Date: Mon, 12 Dec 2022 10:55:05 +0100
+Subject: [PATCH 3/6] fixed last commit
+
+---
+ tests/mpc-tests.h | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/tests/mpc-tests.h b/tests/mpc-tests.h
+index 57ac632..c6b5679 100644
+--- a/tests/mpc-tests.h
++++ b/tests/mpc-tests.h
+@@ -141,6 +141,7 @@ extern int same_mpc_value  (mpc_ptr got, mpc_ptr ref,
+                             known_signs_t known_signs);
+ 
+ /** READ FILE WITH TEST DATA SET **/
++#ifndef DONT_INCLUDE_STDIO
+ extern FILE * open_data_file         (const char *file_name);
+ extern void   close_data_file        (FILE *fp);
+ 
+@@ -155,6 +156,7 @@ extern size_t read_string            (FILE *fp, char **buffer_ptr,
+                                       size_t buffer_length, const char *name);
+ extern void read_mpfr                (FILE *fp, mpfr_ptr x, int *known_sign);
+ extern void read_mpc                 (FILE *fp, mpc_ptr z, known_signs_t *ks);
++#endif
+ 
+ void set_mpfr_flags   (int counter);
+ void check_mpfr_flags (int counter);
+@@ -287,6 +289,7 @@ typedef struct {
+ void        read_description    (mpc_fun_param_t* param, const char *file);
+ const char* read_description_findname (mpc_param_t e);
+ 
++#ifndef DONT_INCLUDE_STDIO
+ /* file functions */
+ typedef struct {
+   char *pathname;
+@@ -339,6 +342,7 @@ void    tpl_read_mpc        (mpc_datafile_context_t* datafile_context,
+                              mpc_data_t* z);
+ void    tpl_read_mpc_rnd    (mpc_datafile_context_t* datafile_context,
+                              mpc_rnd_t* rnd);
++#endif
+ 
+ int     tpl_same_mpz_value  (mpz_ptr n1, mpz_ptr n2);
+ int     tpl_same_mpfr_value (mpfr_ptr x1, mpfr_ptr x2, int known_sign);
+-- 
+2.39.0
+
+From 8cd19d81f3e2aebbd58d8204da8ada50e8e8dfc1 Mon Sep 17 00:00:00 2001
+From: Andreas Enge <andreas.enge@inria.fr>
+Date: Mon, 12 Dec 2022 11:23:40 +0100
+Subject: [PATCH 4/6] Do not explicitly include stdio.h in mpc-impl.h.
+
+Several files include it on their own for MPC_ASSERT.
+
+* src/mpc-impl.h, src/radius.c: Do not include stdio.h.
+* tests/teta.c: Include mpc-tests.h instead of mpc-impl.h.
+* src/balls.c (mpcb_out_str, mpcr_out_str): Define only when
+  _GMP_H_HAVE_FILE is defined, in accordance with mpc.h.
+* NEWS: Add entry for bug fix.
+---
+ NEWS           | 4 ++++
+ src/balls.c    | 2 ++
+ src/mpc-impl.h | 3 ---
+ src/radius.c   | 4 +++-
+ tests/teta.c   | 2 +-
+ 5 files changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/NEWS b/NEWS
+index ef6ff8b..c113262 100644
+--- a/NEWS
++++ b/NEWS
+@@ -1,3 +1,7 @@
++Changes in version 1.3.1, released in December 2022:
++  - Bug fix: It is again possible to include mpc.h without including
++    stdio.h.
++
+ Changes in version 1.3.0 ("Ipomoea batatas"), released in December 2022:
+   - New function: mpc_agm
+   - New rounding modes "away from zero", indicated by the letter "A" and
+diff --git a/src/balls.c b/src/balls.c
+index ecaecd5..03a44a8 100644
+--- a/src/balls.c
++++ b/src/balls.c
+@@ -21,6 +21,7 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ #include "mpc-impl.h"
+ 
+ 
++#ifdef _GMP_H_HAVE_FILE
+ void mpcb_out_str (FILE *f, mpcb_srcptr op)
+ {
+    mpc_out_str (f, 10, 0, op->c, MPC_RNDNN);
+@@ -28,6 +29,7 @@ void mpcb_out_str (FILE *f, mpcb_srcptr op)
+    mpcr_out_str (f, op->r);
+    fprintf (f, "\n");
+ }
++#endif
+ 
+ 
+ void
+diff --git a/src/mpc-impl.h b/src/mpc-impl.h
+index a915751..3f46121 100644
+--- a/src/mpc-impl.h
++++ b/src/mpc-impl.h
+@@ -27,9 +27,6 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ #ifdef HAVE_STDLIB_H
+ #include <stdlib.h>
+ #endif
+-#ifndef DONT_INCLUDE_STDIO
+-#include <stdio.h>
+-#endif
+ #include "mpc.h"
+ 
+ /*
+diff --git a/src/radius.c b/src/radius.c
+index 98ae8d5..88c7d71 100644
+--- a/src/radius.c
++++ b/src/radius.c
+@@ -18,7 +18,6 @@ You should have received a copy of the GNU Lesser General Public License
+ along with this program. If not, see http://www.gnu.org/licenses/ .
+ */
+ 
+-#include <stdio.h>
+ #include <math.h>
+ #include <inttypes.h> /* for the PRIi64 format modifier */
+ #include "mpc-impl.h"
+@@ -405,6 +404,8 @@ int64_t mpcr_get_exp (mpcr_srcptr r)
+    return MPCR_EXP (r) + 31;
+ }
+ 
++
++#ifdef _GMP_H_HAVE_FILE
+ void mpcr_out_str (FILE *f, mpcr_srcptr r)
+ {
+    if (mpcr_inf_p (r))
+@@ -415,6 +416,7 @@ void mpcr_out_str (FILE *f, mpcr_srcptr r)
+       fprintf (f, "±(%" PRIi64 ", %" PRIi64 ")", MPCR_MANT (r), MPCR_EXP (r));
+    }
+ }
++#endif
+ 
+ 
+ static void mpcr_mul_rnd (mpcr_ptr r, mpcr_srcptr s, mpcr_srcptr t,
+diff --git a/tests/teta.c b/tests/teta.c
+index 1154d66..a8bb317 100644
+--- a/tests/teta.c
++++ b/tests/teta.c
+@@ -19,7 +19,7 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ */
+ 
+ #include <math.h>
+-#include "mpc-impl.h"
++#include "mpc-tests.h"
+ 
+ static void
+ mpcb_j_err (mpcb_ptr j, mpc_srcptr z, unsigned long int err_re,
+-- 
+2.39.0
+
+From 2bf963605442b2693c7adc06f37957984e0ced56 Mon Sep 17 00:00:00 2001
+From: Andreas Enge <andreas.enge@inria.fr>
+Date: Mon, 12 Dec 2022 11:46:31 +0100
+Subject: [PATCH 5/6] Simplify tdummy test.
+
+* tests/tdummy.c: Include mpc.h without stdio.h; the test always succeeds
+  at run time, but may fail during compilation if there is an error in
+  mpc.h.
+* tests/mpc-tests.h: Drop DONT_INCLUDE_STDIO macro.
+---
+ tests/mpc-tests.h | 6 ------
+ tests/tdummy.c    | 7 +------
+ 2 files changed, 1 insertion(+), 12 deletions(-)
+
+diff --git a/tests/mpc-tests.h b/tests/mpc-tests.h
+index c6b5679..ecd10b7 100644
+--- a/tests/mpc-tests.h
++++ b/tests/mpc-tests.h
+@@ -22,9 +22,7 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ #define __MPC_TESTS_H
+ 
+ #include "config.h"
+-#ifndef DONT_INCLUDE_STDIO
+ #include <stdio.h>
+-#endif
+ #include <ctype.h>
+ #include <stdlib.h>
+ #include <inttypes.h> /* for the PRIi64 format modifier */
+@@ -141,7 +139,6 @@ extern int same_mpc_value  (mpc_ptr got, mpc_ptr ref,
+                             known_signs_t known_signs);
+ 
+ /** READ FILE WITH TEST DATA SET **/
+-#ifndef DONT_INCLUDE_STDIO
+ extern FILE * open_data_file         (const char *file_name);
+ extern void   close_data_file        (FILE *fp);
+ 
+@@ -156,7 +153,6 @@ extern size_t read_string            (FILE *fp, char **buffer_ptr,
+                                       size_t buffer_length, const char *name);
+ extern void read_mpfr                (FILE *fp, mpfr_ptr x, int *known_sign);
+ extern void read_mpc                 (FILE *fp, mpc_ptr z, known_signs_t *ks);
+-#endif
+ 
+ void set_mpfr_flags   (int counter);
+ void check_mpfr_flags (int counter);
+@@ -289,7 +285,6 @@ typedef struct {
+ void        read_description    (mpc_fun_param_t* param, const char *file);
+ const char* read_description_findname (mpc_param_t e);
+ 
+-#ifndef DONT_INCLUDE_STDIO
+ /* file functions */
+ typedef struct {
+   char *pathname;
+@@ -342,7 +337,6 @@ void    tpl_read_mpc        (mpc_datafile_context_t* datafile_context,
+                              mpc_data_t* z);
+ void    tpl_read_mpc_rnd    (mpc_datafile_context_t* datafile_context,
+                              mpc_rnd_t* rnd);
+-#endif
+ 
+ int     tpl_same_mpz_value  (mpz_ptr n1, mpz_ptr n2);
+ int     tpl_same_mpfr_value (mpfr_ptr x1, mpfr_ptr x2, int known_sign);
+diff --git a/tests/tdummy.c b/tests/tdummy.c
+index 23072f5..e525609 100644
+--- a/tests/tdummy.c
++++ b/tests/tdummy.c
+@@ -18,16 +18,11 @@ You should have received a copy of the GNU Lesser General Public License
+ along with this program. If not, see http://www.gnu.org/licenses/ .
+ */
+ 
+-#define DONT_INCLUDE_STDIO
+-#include "mpc-tests.h"
++#include "mpc.h"
+ 
+ int
+ main (void)
+ {
+-  test_start ();
+-
+-  test_end ();
+-
+   return 0;
+ }
+ 
+-- 
+2.39.0
+
+From 8fe31f02431b3680f09bf1346787276ddb2274a2 Mon Sep 17 00:00:00 2001
+From: Andreas Enge <andreas.enge@inria.fr>
+Date: Mon, 12 Dec 2022 15:30:57 +0100
+Subject: [PATCH 6/6] Include header file.
+
+This was detected by trying to compile with gmp-5.0.0 and mpfr-4.1.0.
+
+* src/balls.c, src/eta.c: Include limits.h.
+---
+ src/balls.c | 1 +
+ src/eta.c   | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/src/balls.c b/src/balls.c
+index 03a44a8..a18d37f 100644
+--- a/src/balls.c
++++ b/src/balls.c
+@@ -18,6 +18,7 @@ You should have received a copy of the GNU Lesser General Public License
+ along with this program. If not, see http://www.gnu.org/licenses/ .
+ */
+ 
++#include <limits.h> /* for CHAR_BIT */
+ #include "mpc-impl.h"
+ 
+ 
+diff --git a/src/eta.c b/src/eta.c
+index 7d397f0..0651e15 100644
+--- a/src/eta.c
++++ b/src/eta.c
+@@ -19,6 +19,7 @@ along with this program. If not, see http://www.gnu.org/licenses/ .
+ */
+ 
+ #include <math.h>
++#include <limits.h> /* for CHAR_BIT */
+ #include "mpc-impl.h"
+ 
+ static void
+-- 
+2.39.0
+
