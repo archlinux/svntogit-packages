@@ -1,0 +1,48 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Contributor: Tobias Kieslich <tobias@justdreams.de>
+
+pkgname=gthumb
+pkgver=3.12.2
+pkgrel=2
+pkgdesc="Image browser and viewer for the GNOME Desktop"
+url="https://wiki.gnome.org/Apps/gthumb"
+arch=(x86_64)
+license=(GPL)
+depends=(dconf librsvg clutter-gtk gst-plugins-base-libs gsettings-desktop-schemas libwebp
+         libsecret libsoup webkit2gtk json-glib gst-plugin-gtk libjxl libheif)
+makedepends=(libchamplain exiv2 brasero libraw liboauth docbook-xsl yelp-tools meson git)
+optdepends=('libraw: read RAW files'
+            'exiv2: metadata support'
+            'libchamplain: map viewer'
+            'brasero: burn discs'
+            'liboauth: web albums')
+options=(debug)
+_commit=3132c5f25ffe6f22314ab0fbfb08e63ba523afab  # tags/3.12.2^0
+source=("git+https://gitlab.gnome.org/GNOME/gthumb.git#commit=$_commit"
+         gthumb-libraw-0.21.patch)
+sha256sums=('SKIP'
+            '6af50b3f6df26ecc2e6e288e6d4151baa3cdc2b84cdb60d76fd0062757a4d8e4')
+
+pkgver() {
+  cd gthumb
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd gthumb
+  patch -p1 < ../gthumb-libraw-0.21.patch # Fix build with libraw 0.21
+}
+
+build() {
+  arch-meson gthumb build -D libchamplain=true
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
