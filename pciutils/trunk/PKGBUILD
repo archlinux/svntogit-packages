@@ -1,13 +1,16 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=pciutils
 pkgver=3.9.0
-pkgrel=1
+pkgrel=2
 pkgdesc="PCI bus configuration space access library and tools"
 arch=(x86_64)
 license=('GPL2')
 url="https://mj.ucw.cz/sw/pciutils/"
 depends=('glibc' 'hwdata' 'kmod')
 makedepends=('git')
+optdepends=('which: for update-pciids'
+            'grep: for update-pciids'
+	    'curl: for update-pciids')	
 source=(#ftp://ftp.kernel.org/pub/software/utils/${pkgname}/${pkgname}-${pkgver}.tar.bz2
         https://mj.ucw.cz/download/linux/pci/${pkgname}-${pkgver}.tar.gz{,.sign})
         #git+https://github.com/pciutils/pciutils.git#tag=v$pkgver?signed)
