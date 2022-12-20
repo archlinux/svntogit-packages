@@ -2,8 +2,8 @@
 
 pkgbase=libcamera
 pkgname=(libcamera libcamera-docs libcamera-tools gst-plugin-libcamera)
-pkgver=0.0.2
-_commit=a089adda68890fee1edfdfb96caeef268df99ff0  # refs/tags/v0.0.2
+pkgver=0.0.3
+_commit=3c3f20d05113f5f2abbad233e4c792f84328001a  # refs/tags/v0.0.3
 pkgrel=1
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
