@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.74.3
+pkgver=2.74.4
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -35,14 +35,16 @@ options=(
   debug
   staticlibs
 )
-_commit=a8ad6347a404962c3b83aca1bf50610a76618c0f  # tags/2.74.3^0
+_commit=e35768fe299d6389f8f5eef15593762389d2c07d  # tags/2.74.4^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
+  "git+https://gitlab.gnome.org/GNOME/gvdb.git"
   0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
   gio-querymodules.{hook,script}
   glib-compile-schemas.hook
 )
 b2sums=('SKIP'
+        'SKIP'
         '4d5cb5ad1222a5e8d06e79736170cd694a6277e0da71ffd55560d74cf5c3273551d302a35bd2ff43f09070d61c1de147bb312428fce98347d232ac3d44406511'
         'cd3a7817193ca985be5aff0813e78cc59c39ad8d4a2171c1c719267e4f51beda47c58a44c6d5afead64e9fa1b854430ac935976d02158e927ba3ec8f36fce282'
         '4b90eb8d582509b09aab401313d4399cc139ad21b5dd7d45d79860d0764c7494c60714e0794e09823e51d1894ac032a994f27d79d1499abf24ee6f59bdb0c243'
@@ -57,8 +59,15 @@ pkgver() {
 prepare() {
   cd glib
 
+  # Fix build (missing include)
+  git cherry-pick -n 03cb4261e00cf505790f4fd4e69f97b2ef4fcccd
+
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+
+  git submodule init
+  git submodule set-url subprojects/gvdb "$srcdir/gvdb"
+  git -c protocol.file.allow=always submodule update
 }
 
 build() {
