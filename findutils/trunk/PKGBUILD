@@ -2,7 +2,7 @@
 
 pkgname=findutils
 pkgver=4.9.0
-pkgrel=1
+pkgrel=2
 pkgdesc="GNU utilities to locate files"
 arch=('x86_64')
 license=('GPL3')
@@ -10,8 +10,8 @@ groups=('base-devel')
 depends=('glibc' 'sh')
 url='https://www.gnu.org/software/findutils/'
 source=("https://ftp.gnu.org/pub/gnu/findutils/${pkgname}-${pkgver}.tar.xz"{,.sig})
-sha1sums=('2a7830f1c25c3c7179150084748099c3c31f819b'
-          'SKIP')
+sha256sums=('a2bfb8c09d436770edc59f50fa483e785b161a3b7b9d547573cb08065fd462fe'
+            'SKIP')
 validpgpkeys=('A5189DB69C1164D33002936646502EF796917195') # Bernhard Voelker <mail@bernhard-voelker.de>
 
 build() {
