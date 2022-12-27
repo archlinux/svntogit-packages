@@ -8,18 +8,51 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
 pkgver=1.40.8
-pkgrel=1
+pkgrel=2
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
 arch=(x86_64)
 license=(GPL)
 _pppver=2.4.9
-makedepends=(dhclient dhcpcd iptables-nft gobject-introspection gtk-doc
-             "ppp=$_pppver" modemmanager iproute2 nss polkit wpa_supplicant curl
-             systemd libmm-glib libnewt libndp libteam nftables vala perl-yaml
-             python-gobject git vala jansson bluez-libs glib2-docs iwd dnsmasq
-             openresolv libpsl audit meson)
-checkdepends=(libx11 python-dbus)
+makedepends=(
+  audit
+  bluez-libs
+  curl
+  dhclient
+  dhcpcd
+  dnsmasq
+  git
+  glib2-docs
+  gobject-introspection
+  gtk-doc
+  iproute2
+  iptables-nft
+  iwd
+  jansson
+  libmm-glib
+  libndp
+  libnewt
+  libpsl
+  libteam
+  meson
+  modemmanager
+  nftables
+  nss
+  openresolv
+  pacrunner
+  perl-yaml
+  polkit
+  "ppp=$_pppver"
+  python-gobject
+  systemd
+  vala
+  vala
+  wpa_supplicant
+)
+checkdepends=(
+  libx11
+  python-dbus
+)
 options=(debug)
 _commit=56e29666629b4de98121acd50f0dc364f2066384  # tags/1.40.8^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
@@ -90,21 +123,34 @@ _pick() {
 }
 
 package_networkmanager() {
-  depends=(libnm iproute2 wpa_supplicant libmm-glib libnewt libndp libteam curl
-           bluez-libs libpsl audit mobile-broadband-provider-info)
+  depends=(
+    audit
+    bluez-libs
+    curl
+    iproute2
+    libmm-glib
+    libndp
+    libnewt
+    libnm
+    libpsl
+    libteam
+    mobile-broadband-provider-info
+    wpa_supplicant
+  )
   optdepends=(
-    'polkit: let non-root users control networking'
-    'dnsmasq: connection sharing'
-    'nftables: connection sharing'
-    'iptables: connection sharing'
     'bluez: Bluetooth support'
-    'ppp: dialup connection support'
-    'modemmanager: cellular network support'
-    'iwd: wpa_supplicant alternative'
     'dhclient: alternative DHCP client'
     'dhcpcd: alternative DHCP client'
-    'openresolv: alternative resolv.conf manager'
+    'dnsmasq: connection sharing'
     'firewalld: firewall support'
+    'iptables: connection sharing'
+    'iwd: wpa_supplicant alternative'
+    'modemmanager: cellular network support'
+    'nftables: connection sharing'
+    'openresolv: alternative resolv.conf manager'
+    'pacrunner: PAC proxy support'
+    'polkit: let non-root users control networking'
+    'ppp: dialup connection support'
   )
   backup=(etc/NetworkManager/NetworkManager.conf)
 
@@ -149,7 +195,13 @@ END
 package_libnm() {
   pkgdesc="NetworkManager client library"
   license=(LGPL)
-  depends=(glib2 nss util-linux-libs jansson systemd-libs)
+  depends=(
+    glib2
+    jansson
+    nss
+    systemd-libs
+    util-linux-libs
+  )
   provides=(libnm.so)
 
   mv libnm/* "$pkgdir"
