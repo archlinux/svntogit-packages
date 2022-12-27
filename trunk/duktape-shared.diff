@@ -1,0 +1,120 @@
+ Makefile.am  | 23 ++++++++++++++++++-----
+ configure.ac | 11 ++++++++++-
+ 2 files changed, 28 insertions(+), 6 deletions(-)
+
+diff --git c/Makefile.am i/Makefile.am
+index 819abab..964f4c2 100644
+--- c/Makefile.am
++++ i/Makefile.am
+@@ -28,20 +28,28 @@ builtin_cflags += @CURL_CFLAGS@
+ builtin_libadd += @CURL_LIBS@
+ endif
+ 
+-if DUKTAPE
++if DUKTAPE_STATIC
+ js_sources = src/js_funcs.c
+ builtin_modules += duktape
+ builtin_sources += plugins/duktape.c
+ builtin_libadd += duktape/libduktape.a -lm
+ 
+ noinst_LIBRARIES += duktape/libduktape.a
+ 
+ duktape_libduktape_a_SOURCES = duktape/duk_config.h \
+ 				duktape/duktape.h \
+ 				duktape/duktape.c
+-endif
+ 
+ duktape_libduktape_a_SHORTNAME = libduktape
++endif
++
++if DUKTAPE_SHARED
++js_sources = src/js_funcs.c
++builtin_modules += duktape
++builtin_sources += plugins/duktape.c
++builtin_cflags += @DUKTAPE_CFLAGS@
++builtin_libadd += @DUKTAPE_LIBS@ -lm
++endif
+ 
+ sbin_PROGRAMS = src/pacrunner
+ 
+@@ -102,50 +110,55 @@ noinst_PROGRAMS = unit/test-pacrunner
+ unit_test_pacrunner_SOURCES = unit/test-pacrunner.c src/pacrunner.h \
+ 			src/proxy.c src/manual.c src/download.c \
+ 			src/js.c src/log.c src/plugin.c $(js_sources)
+-
+ unit_test_pacrunner_LDADD = @GLIB_LIBS@ @CUNIT_LIBS@ -ldl
+ 
+ if CURL
+ 
+ unit_test_pacrunner_SOURCES += plugins/curl.c
+ 
+ unit_test_pacrunner_LDADD += @CURL_LIBS@
+ 
+ endif
+ 
+-if DUKTAPE
++if DUKTAPE_STATIC
+ unit_test_pacrunner_SOURCES += plugins/duktape.c
+ 
+ unit_test_pacrunner_LDADD += duktape/libduktape.a -lm
+ endif
+ 
++if DUKTAPE_SHARED
++unit_test_pacrunner_SOURCES += plugins/duktape.c
++
++unit_test_pacrunner_LDADD += @DUKTAPE_LIBS@ -lm
++endif
++
+ endif #UNIT
+ 
+ AM_CFLAGS = @GLIB_CFLAGS@ @PTHREAD_LIBS@ @DBUS_CFLAGS@ @CUNIT_CFLAGS@ \
+ 				$(builtin_cflags) \
+ 				-DPACRUNNER_PLUGIN_BUILTIN \
+ 				-DPLUGINDIR=\""$(plugindir)"\"
+ 
+ AM_CXXFLAGS = $(AM_CFLAGS) -fno-exceptions
+ 
+ AM_CPPFLAGS = -I$(builddir)/src -I$(srcdir)/src -I$(srcdir)/gdbus
+ 
+ test_scripts = test/find-proxy-for-url test/create-proxy-config
+ 
+ if TEST
+ testdir = $(pkglibdir)/test
+ test_SCRIPTS = $(test_scripts)
+ endif
+ 
+ CLEANFILES = src/builtin.h
+ 
+ EXTRA_DIST = src/genbuiltin src/pacrunner.conf $(test_scripts) \
+ 			doc/architecture.txt doc/libproxy.txt \
+ 			doc/manager-api.txt doc/client-api.txt \
+ 			doc/manual-configuration.txt
+ 
+ DISTCHECK_CONFIGURE_FLAGS = --enable-libproxy --disable-datafiles \
+-				--enable-duktape --enable-curl
++				--enable-duktape=static --enable-curl
+ 
+ MAINTAINERCLEANFILES = Makefile.in \
+ 	aclocal.m4 configure config.h.in config.sub config.guess \
+diff --git c/configure.ac i/configure.ac
+index 0f041bd..971d2d1 100644
+--- c/configure.ac
++++ i/configure.ac
+@@ -67,7 +67,16 @@ AC_ARG_ENABLE(pie, AS_HELP_STRING([--enable-pie],
+ 
+ AC_ARG_ENABLE(duktape, AS_HELP_STRING([--enable-duktape],
+ 		[enable Duktape Javascript plugin support]))
+-AM_CONDITIONAL(DUKTAPE, test "${enable_duktape}" = "yes")
++if (test "${enable_duktape}" = "yes"); then
++	DUKTAPE_CFLAGS=""
++	DUKTAPE_LIBS=""
++	PKG_CHECK_MODULES(DUKTAPE, duktape >= 2.7.0, enable_duktape=shared,
++			enable_duktape=static)
++	AC_SUBST(DUKTAPE_CFLAGS)
++	AC_SUBST(DUKTAPE_LIBS)
++fi
++AM_CONDITIONAL(DUKTAPE_STATIC, test "${enable_duktape}" = "static")
++AM_CONDITIONAL(DUKTAPE_SHARED, test "${enable_duktape}" = "shared")
+ 
+ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.16, dummy=yes,
+ 				AC_MSG_ERROR(GLib >= 2.16 is required))
