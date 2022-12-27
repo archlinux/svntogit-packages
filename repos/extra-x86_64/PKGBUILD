@@ -5,7 +5,7 @@
 pkgname=lua
 pkgver=5.4.4
 _majorver=${pkgver%.*}
-pkgrel=2
+pkgrel=3
 pkgdesc='Powerful lightweight programming language designed for extending applications'
 arch=('x86_64')
 url='https://www.lua.org/'
@@ -16,10 +16,10 @@ source=(https://www.lua.org/ftp/lua-$pkgver.tar.gz
         liblua.so.patch
         lua.pc
         LICENSE)
-sha1sums=('03c27684b9d5d9783fb79a7c836ba1cdc5f309cd'
-          'cdfa66057f43aaf4b5914496aa6a4556f3a6e7a0'
-          '1aee8d1a219639d0efc534e483ffa1ee236fb393'
-          '05f5f3b7bef0258bd617c505b8992de639af4551')
+sha256sums=('164c7849653b80ae67bec4b7473b884bf5cc8d2dca05653475ec2ed27b9ebf61'
+            'a8a7f89ab0c03b4bc1d58a935c54df792ad628edb4d1788c5ac66e4fc2d9f800'
+            'ca9252633e782b8f85d6a94ea4f6babd4fe30bd759085b373160b1878e36ff78'
+            '142fb08b41a807b192b4b2c166696a1830a1c97967e5099ad0e579bf500e1da4')
 
 prepare() {
   cd lua-$pkgver
