@@ -4,7 +4,7 @@
 
 pkgname=btrfs-progs
 pkgver=6.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs' 'python-sphinx')
@@ -22,7 +22,10 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
         'initcpio-install-btrfs'
         'initcpio-hook-btrfs'
         'btrfs-scrub@.service'
-        'btrfs-scrub@.timer')
+        'btrfs-scrub@.timer'
+        # fix #76955
+        'fd1388678808717635a145832c1b13320ce6cd2.patch'
+      )
 install=btrfs-progs.install
 options=(!staticlibs debug)
 sha256sums=('SKIP'
