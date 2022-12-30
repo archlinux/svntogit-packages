@@ -24,7 +24,7 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
         'btrfs-scrub@.service'
         'btrfs-scrub@.timer'
         # fix #76955
-        'fd1388678808717635a145832c1b13320ce6cd2.patch'
+        'fd138f8678808717635a145832c1b13320ce6cd2.patch'
       )
 install=btrfs-progs.install
 options=(!staticlibs debug)
@@ -33,7 +33,8 @@ sha256sums=('SKIP'
             'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
             '35efeee8590d6d60c711ae9cdc918e4841ab61d10cb02359e65e36ebff95ffc5'
             'eaa7af92d28bfa8940bb551560fd7be777f9f175292eaa72b5f6ef00fb240252'
-            '9a0b6cc23f7bd97b83b6c38dd2b4e4373fead8bd3ccfb82a47c72971e9d6f8ad')
+            '9a0b6cc23f7bd97b83b6c38dd2b4e4373fead8bd3ccfb82a47c72971e9d6f8ad'
+            '037147213e18d03931aae7bc54ef826e6847fafa4bb642f099a1cc5a782f3a75')
 
 prepare() {
   cd $pkgname-v$pkgver
