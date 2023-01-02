@@ -1,35 +1,33 @@
 # Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
 
-# Careful when upgrading this package! It usually breaks ABI without bumping soname.
+# Careful when upgrading this package! It usually breaks ABI without bumping
+# soname. Also, be very mindful of the version of spirv-tools that this links
+# to. Upstream actually expects the uae of the particular commits of
+# spirv-tools and spirv-headers that are provided in known_good.json. However,
+# if we went that route, we'd have to vendor the resulting spirv-tools libs
+# from this glslang build and they would be incompatible with system libs,
+# resulting in us having to ship both. Instead, I recommend just waiting until
+# upstream releases a compatible version of spirv-tools, then updating the
+# spriv-tools system package and only then building glslang against that.
 pkgname=glslang
 pkgver=11.13.0
-pkgrel=1
+pkgrel=2
 pkgdesc='OpenGL and OpenGL ES shader front end and validator'
 arch=('x86_64')
 url='https://github.com/KhronosGroup/glslang'
 license=('BSD')
 depends=('gcc-libs' 'python')
-makedepends=('cmake' 'ninja' 'git')
+makedepends=('cmake' 'ninja' 'git' 'spirv-tools' 'spirv-headers')
 options=('staticlibs')
 # Get the commits from known_good.json for every release
-source=(${pkgname}-${pkgver}.tar.gz::https://github.com/KhronosGroup/glslang/archive/${pkgver}.tar.gz
-        git+https://github.com/KhronosGroup/SPIRV-Tools.git#commit=40f5bf59c6acb4754a0bffd3c53a715732883a12
-        git+https://github.com/KhronosGroup/SPIRV-Headers.git#commit=1d31a100405cf8783ca7a31e31cdd727c9fc54c3)
-sha256sums=('592c98aeb03b3e81597ddaf83633c4e63068d14b18a766fd11033bad73127162'
-            'SKIP'
-            'SKIP')
-
-prepare() {
-  # Sadly, glslang requires super specific versions of SPIRV headers and
-  # spirv-tools and so I'm afraid that for the time being we'll have to use
-  # their vendored version until we figure out a good way to use system
-  # libraries.
-  cp -r SPIRV-Tools ${pkgname}-${pkgver}/External/spirv-tools
-  cp -r SPIRV-Headers ${pkgname}-${pkgver}/External/spirv-tools/external/spirv-headers
-}
+source=(${pkgname}-${pkgver}.tar.gz::https://github.com/KhronosGroup/glslang/archive/${pkgver}.tar.gz)
+sha256sums=('592c98aeb03b3e81597ddaf83633c4e63068d14b18a766fd11033bad73127162')
 
 build() {
   cd ${pkgname}-${pkgver}
+
+  # we need fat LTO objects to not break consumers during linking
+  CXXFLAGS+=" -ffat-lto-objects"
   cmake \
     -Bbuild-shared \
     -GNinja \
@@ -62,11 +60,6 @@ package() {
   for lib in *.so; do
     ln -sf "${lib}" "${lib}.0"
   done
-
-  # Delete the stuff that's been vendored in. It's not ideal but that's we'll deal with for now.
-  mv "${pkgdir}"/usr/bin/spirv-remap .
-  rm -r "${pkgdir}"/usr/{bin/spirv*,include/spirv-tools,lib/cmake/SPIRV-Tools*,lib/libSPIRV-*,lib/pkgconfig}
-  mv spirv-remap "${pkgdir}"/usr/bin/spirv-remap
 }
 
 # vim: ts=2 sw=2 et:
