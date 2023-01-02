@@ -1,0 +1,50 @@
+# Maintainer: Daniel Isenmann <daniel@archlinux.org>
+
+pkgname=gegl
+_tag='1d26feb07a7221b9d386b54bcdad963c8421e594'
+pkgver=0.4.40
+pkgrel=4
+pkgdesc='Graph based image processing framework'
+arch=('x86_64')
+url='https://www.gegl.org/'
+license=('GPL3' 'LGPL3')
+depends=('babl' 'jasper' 'json-glib' 'lensfun' 'libgexiv2' 'libraw' 'librsvg' 'libspiro'
+         'libtiff' 'luajit' 'openexr' 'poppler-glib' 'suitesparse')
+makedepends=('exiv2' 'ffmpeg' 'git' 'glu' 'gobject-introspection' 'intltool' 'mesa'
+             'meson' 'python-gobject' 'ruby' 'vala')
+options=('debug')
+optdepends=('ffmpeg: ffmpeg plugin'
+            'graphviz: for gegl-introspect')
+source=("git+https://gitlab.gnome.org/GNOME/gegl.git#tag=$_tag"
+         gegl-libraw-0.21.patch)
+sha256sums=('SKIP'
+            '16bfd56e3139dba47f4839e46d27df339a1ed9f57c63b58cb071713c5741c8c7')
+
+pkgver() {
+  cd "${pkgname}"
+  git describe --tags | sed 's/^GEGL_//;s/_$//;s/_/./g;s/-/+/g'
+}
+
+prepare() {
+  patch -d $pkgname -p1 < gegl-libraw-0.21.patch # Fix build with libraw 0.21
+}
+
+build() {
+  mkdir -p build
+  cd build
+  arch-meson ../"${pkgname}" \
+    -Dworkshop=true \
+    -Dmrg=disabled \
+    -Dmaxflow=disabled
+  ninja
+}
+
+check() {
+  cd build
+  ninja test || :
+}
+
+package() {
+  cd build
+  DESTDIR="${pkgdir}" ninja install
+}
