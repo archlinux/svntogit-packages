@@ -1,0 +1,70 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=evince
+pkgname=(evince evince-lib-docs)
+pkgver=43.1
+pkgrel=2
+pkgdesc="Document viewer (PDF, PostScript, XPS, djvu, dvi, tiff, cbr, cbz, cb7, cbt)"
+url="https://wiki.gnome.org/Apps/Evince"
+arch=(x86_64)
+license=(GPL)
+depends=(gtk3 libgxps libspectre gsfonts poppler-glib djvulibre dconf libsecret libsynctex
+         gsettings-desktop-schemas gnome-desktop libarchive gst-plugins-base-libs gspell libhandy
+         gvfs)
+makedepends=(texlive-bin gobject-introspection gi-docgen git meson appstream-glib yelp-tools)
+options=(debug)
+_commit=47461d6dfbf2bb5d183f8db5dc43d205b68241e6  # tags/43.1^0
+source=("git+https://gitlab.gnome.org/GNOME/evince.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd evince
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd evince
+}
+  
+build() {
+  local meson_options=(
+    -D ps=enabled
+  )
+
+  arch-meson evince build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_evince() {
+  provides=(libev{document,view}3.so)
+  optdepends=('texlive-bin: DVI support')
+  groups=(gnome)
+
+  meson install -C build --destdir "$pkgdir"
+
+  _pick lib-docs "$pkgdir"/usr/share/doc/lib*
+}
+
+package_evince-lib-docs() {
+  pkgdesc+=" (library API documentation)"
+  depends=()
+
+  mv lib-docs/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
