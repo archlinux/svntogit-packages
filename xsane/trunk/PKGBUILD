@@ -4,7 +4,7 @@
 pkgbase=xsane
 pkgname=('xsane' 'xsane-gimp')
 pkgver=0.999
-pkgrel=5
+pkgrel=6
 arch=(x86_64)
 url="https://gitlab.com/sane-project/frontend/xsane"
 license=('GPL2')
