@@ -6,7 +6,7 @@
 pkgbase=emacs
 pkgname=(emacs emacs-nativecomp emacs-nox)
 pkgver=28.2
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.gnu.org/software/emacs/emacs.html'
 license=('GPL3')
