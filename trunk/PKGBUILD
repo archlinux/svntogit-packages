@@ -5,7 +5,7 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.6.0
-pkgrel=6
+pkgrel=7
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
