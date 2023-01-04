@@ -3,8 +3,8 @@
 
 pkgname=qt5-webengine
 _basever=5.15.7
-pkgver=5.15.11
-pkgrel=3
+pkgver=5.15.12
+pkgrel=1
 arch=('x86_64')
 url='https://www.qt.io'
 license=('LGPL3' 'LGPL2.1' 'BSD')
