@@ -1,0 +1,154 @@
+From ed82950776e0eb59e7a5c32287ca488256883ba8 Mon Sep 17 00:00:00 2001
+From: Thiago Macieira <thiago.macieira@intel.com>
+Date: Fri, 23 Dec 2022 08:42:37 -0300
+Subject: Fix improper ELF versions of certain symbols
+
+They got marked as Qt6_PRIVATE_API because of these private header
+defining classes that don't follow Qt's naming convention ("mutex",
+"condition_variable", "ControlElement"). We have an exclusion for
+classes whose name start with Q.
+
+Introduced by 5d903a64aca37ee7c2836e479e175336e9b7ca87 in the old Perl
+syncqt and ported over.
+
+Fixes: QTBUG-109605
+Fixes: QTBUG-109604
+Change-Id: I69ecc04064514f939896fffd173369623c960bcc
+Reviewed-by: Alexey Edelev <alexey.edelev@qt.io>
+(cherry picked from commit 41b38c802b2b6251bdd65f8bf0d2031c304d70f6)
+Reviewed-by: Qt Cherry-pick Bot <cherrypick_bot@qt-project.org>
+---
+ src/corelib/thread/qwaitcondition_p.h | 5 +++++
+ src/widgets/widgets/qmdisubwindow_p.h | 4 ++--
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/corelib/thread/qwaitcondition_p.h b/src/corelib/thread/qwaitcondition_p.h
+index 0893e9dd35..cfb36ca30b 100644
+--- a/src/corelib/thread/qwaitcondition_p.h
++++ b/src/corelib/thread/qwaitcondition_p.h
+@@ -19,6 +19,11 @@
+ #include <QtCore/QDeadlineTimer>
+ #include <QtCore/private/qglobal_p.h>
+ 
++// This header always defines a class called "mutex" and one called
++// "condition_variable", so those mustn't be used to mark ELF symbol
++// visibility. Don't add more classes to this header!
++// ELFVERSION:stop
++
+ #include <condition_variable>
+ #include <mutex>
+ 
+diff --git a/src/widgets/widgets/qmdisubwindow_p.h b/src/widgets/widgets/qmdisubwindow_p.h
+index 60909eb3bc..2a1f83269a 100644
+--- a/src/widgets/widgets/qmdisubwindow_p.h
++++ b/src/widgets/widgets/qmdisubwindow_p.h
+@@ -39,7 +39,7 @@ class QMouseEvent;
+ 
+ namespace QMdi {
+ template<typename T>
+-class ControlElement : public T
++class ControlElement : public T             // ELFVERSION:ignore
+ {
+ public:
+     ControlElement(QMdiSubWindow *child) : T(child, nullptr)
+@@ -58,7 +58,7 @@ public:
+     QPointer<QMdiSubWindow> mdiChild;
+ };
+ 
+-class ControlContainer : public QObject
++class ControlContainer : public QObject     // ELFVERSION:ignore
+ {
+ public:
+     ControlContainer(QMdiSubWindow *mdiChild);
+-- 
+cgit v1.2.1
+
+From 4ddb97d2a187e2e32c6c564d64ef53b8e8090369 Mon Sep 17 00:00:00 2001
+From: Alexey Edelev <alexey.edelev@qt.io>
+Date: Tue, 03 Jan 2023 18:49:09 +0100
+Subject: [PATCH] Avoid breaking version script generator state
+
+Pass every line to parseVersionScriptContent to not break the
+version script generator state. The parser doesn't collect characters
+from comment block, so the line containing the 'ignore-next' ELFVERSION
+tag produces empty buffer for the further parsing process. Call the
+parseVersionScriptContent function even on empty buffers to make sure
+that 'ignore-next' counts lines correcly.
+
+Pick-to: 6.5
+Fixes: QTBUG-109790
+Change-Id: I5f77893462d397f6738a5da1af6ed8dd8a2df70a
+---
+
+diff --git a/src/tools/syncqt/main.cpp b/src/tools/syncqt/main.cpp
+index 4567f7c4..4a82f9b 100644
+--- a/src/tools/syncqt/main.cpp
++++ b/src/tools/syncqt/main.cpp
+@@ -882,6 +882,9 @@
+             break;
+         }
+ 
++        if (buffer.empty())
++            return;
++
+         std::smatch match;
+         std::string symbol;
+         if (std::regex_match(buffer, match, VersionScriptSymbolRegex) && match[2].str().empty())
+@@ -1103,14 +1106,15 @@
+             }
+             line.clear();
+ 
+-            if (buffer.empty())
+-                continue;
+             scannerDebug() << m_currentFilename << ": " << buffer << std::endl;
+ 
+             if (m_currentFileType & PrivateHeader) {
+                 parseVersionScriptContent(buffer, result);
+             }
+ 
++            if (buffer.empty())
++                continue;
++
+             ++linesProcessed;
+ 
+             bool skipSymbols =
+From fc54d8661d305eab0a52a1c34a71c79bd3d7c6ae Mon Sep 17 00:00:00 2001
+From: Thiago Macieira <thiago.macieira@intel.com>
+Date: Tue, 03 Jan 2023 11:13:05 -0300
+Subject: [PATCH] Fix improper ELF versions of two more classes
+
+They got marked as Qt6_PRIVATE_API because of these ARE private classes,
+however their pointers are used in user code. For QMutexPrivate, because
+we manipulate the pointer in inline code; for QPostEventList, because
+it's used in a virtual member function's parameter list.
+
+Pick-to: 6.5
+Fixes: QTBUG-109605
+Change-Id: I69ecc04064514f939896fffd1736d1fa8d3f1768
+---
+
+diff --git a/src/corelib/thread/qmutex_p.h b/src/corelib/thread/qmutex_p.h
+index e5932d0..565de31 100644
+--- a/src/corelib/thread/qmutex_p.h
++++ b/src/corelib/thread/qmutex_p.h
+@@ -36,6 +36,8 @@
+ 
+ QT_BEGIN_NAMESPACE
+ 
++// We manipulate the pointer to this class in inline, atomic code,
++// so syncqt mustn't mark them as private, so ELFVERSION:ignore-next
+ class QMutexPrivate
+ {
+ public:
+diff --git a/src/corelib/thread/qthread_p.h b/src/corelib/thread/qthread_p.h
+index b647964..9aa0b3e 100644
+--- a/src/corelib/thread/qthread_p.h
++++ b/src/corelib/thread/qthread_p.h
+@@ -58,6 +58,7 @@
+ 
+ // This class holds the list of posted events.
+ //  The list has to be kept sorted by priority
++// It's used in a virtual in QCoreApplication, so ELFVERSION:ignore-next
+ class QPostEventList : public QList<QPostEvent>
+ {
+ public:
