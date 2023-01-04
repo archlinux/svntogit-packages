@@ -1,37 +1,52 @@
 # Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
 
-# Careful when upgrading this package! It usually breaks ABI without bumping soname.
+# Careful when upgrading this package! It usually breaks ABI without bumping
+# soname. Also, be very mindful of the version of spirv-tools that this links
+# to. Upstream actually expects the uae of the particular commits of
+# spirv-tools and spirv-headers that are provided in known_good.json. However,
+# if we went that route, we'd have to vendor the resulting spirv-tools libs
+# from this glslang build and they would be incompatible with system libs,
+# resulting in us having to ship both. Instead, I recommend just waiting until
+# upstream releases a compatible version of spirv-tools, then updating the
+# spriv-tools system package and only then building glslang against that.
 pkgname=glslang
-pkgver=11.11.0
-pkgrel=1
+pkgver=11.13.0
+pkgrel=2
 pkgdesc='OpenGL and OpenGL ES shader front end and validator'
 arch=('x86_64')
 url='https://github.com/KhronosGroup/glslang'
 license=('BSD')
-depends=('gcc-libs')
-makedepends=('cmake' 'ninja' 'git' 'python' 'spirv-tools' 'spirv-headers')
+depends=('gcc-libs' 'python')
+makedepends=('cmake' 'ninja' 'git' 'spirv-tools' 'spirv-headers')
 options=('staticlibs')
 # Get the commits from known_good.json for every release
 source=(${pkgname}-${pkgver}.tar.gz::https://github.com/KhronosGroup/glslang/archive/${pkgver}.tar.gz)
-sha256sums=('26c216c3062512c018cbdd752224b8dad703b7e5bb90bf338ba2dbb5d4f11438')
+sha256sums=('592c98aeb03b3e81597ddaf83633c4e63068d14b18a766fd11033bad73127162')
 
 build() {
   cd ${pkgname}-${pkgver}
-  export CXXFLAGS+=" -ffat-lto-objects"
+
+  # we need fat LTO objects to not break consumers during linking
+  CXXFLAGS+=" -ffat-lto-objects"
   cmake \
     -Bbuild-shared \
     -GNinja \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=None \
     -DBUILD_SHARED_LIBS=ON
   ninja -Cbuild-shared
   cmake \
     -Bbuild-static \
     -GNinja \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=None \
     -DBUILD_SHARED_LIBS=OFF
   ninja -Cbuild-static
+}
+
+check() {
+  cd ${pkgname}-${pkgver}
+  ninja -Cbuild-shared test
 }
 
 package() {
