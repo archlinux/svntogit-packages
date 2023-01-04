@@ -1,0 +1,45 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=qt5-script
+_basever=5.15.8
+pkgver=5.15.12
+pkgrel=2
+arch=('x86_64')
+url='https://www.qt.io'
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
+pkgdesc='Classes for making Qt applications scriptable. Provided for Qt 4.x compatibility'
+depends=('qt5-base')
+makedepends=('git')
+groups=('qt' 'qt5')
+_pkgfqn=${pkgname/5-/}
+source=(git+https://code.qt.io/qt/$_pkgfqn.git#tag=v${pkgver}-lts)
+sha256sums=('SKIP')
+options=(!lto debug)
+
+prepare() {
+  mkdir -p build
+}
+
+build() {
+  cd build
+
+# Disable LTO, see FS#73264
+  qmake ../${_pkgfqn} CONFIG-=ltcg
+  make
+}
+
+package() {
+  cd build
+  make INSTALL_ROOT="$pkgdir" install
+
+  # Drop QMAKE_PRL_BUILD_DIR because reference the build dir
+  find "$pkgdir/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+
+  # Fix cmake dependency versions
+  sed -e "s|$pkgver\ |$_basever |" -i "$pkgdir"/usr/lib/cmake/*/*Config.cmake
+}
