@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=compiler-rt
-pkgver=14.0.6
+pkgver=15.0.6
 pkgrel=1
 pkgdesc="Compiler runtime libraries for clang"
 arch=('x86_64')
@@ -15,18 +15,18 @@ makedepends_x86_64=('lib32-gcc-libs')
 options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/compiler-rt-$pkgver.src.tar.xz{,.sig}
-        remove-include-linux-fs.h.patch)
-sha256sums=('88df303840ca8fbff944e15e61c141226fe79f5d2b8e89fb024264d77841a02e'
+        $_source_base/cmake-$pkgver.src.tar.xz{,.sig})
+sha256sums=('b46f5b5b02402ef3acd92e7adf2d551e0b2a8ed19fce66800472dc0ad2a81fbc'
             'SKIP'
-            '34ed866e313e4580130a50118a4410d36fa0159123982521b6ef049439fc32ad')
-validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+            '7613aeeaba9b8b12b35224044bc349b5fa45525919625057fa54dc882dcb4c86'
+            'SKIP')
+validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
+              'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
 
 prepare() {
+  mv cmake{-$pkgver.src,}
   cd compiler-rt-$pkgver.src
   mkdir build
-
-  # https://github.com/llvm/llvm-project/issues/56421
-  patch -Np2 -i ../remove-include-linux-fs.h.patch
 }
 
 build() {
