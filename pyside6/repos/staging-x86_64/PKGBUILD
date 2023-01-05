@@ -1,0 +1,88 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgbase=pyside6
+pkgname=(shiboken6 pyside6)
+_qtver=6.4.1
+_clangver=15.0.6
+pkgver=${_qtver/-/}
+pkgrel=3
+arch=(x86_64)
+url='https://www.qt.io'
+license=(LGPL)
+makedepends=(cmake ninja clang llvm python-setuptools vulkan-headers python-numpy
+             qt6-tools qt6-svg qt6-3d qt6-scxml qt6-datavis3d qt6-charts qt6-multimedia qt6-quick3d
+             qt6-positioning qt6-networkauth qt6-remoteobjects qt6-sensors qt6-serialport qt6-connectivity
+             qt6-webchannel qt6-webengine qt6-websockets qt6-shadertools qt6-speech qt6-httpserver)
+_pkgfn=pyside-setup-opensource-src-$_qtver
+source=(https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-$pkgver-src/${_pkgfn}.tar.xz
+        designer-plugin-install-dir.patch
+        pysidebug-2127.patch)
+sha256sums=('807954ce284e1137475f78faf3bcf0ae9d17ec3690d1a43d09c98e973a3d556b'
+            '66e895e07d5b01c64a94092353854c946fd7fc445b6181068dca290b5a3887e0'
+            '54e5968cf36083c454cfc86453122276c865203b846db153a276e69a0a8a7121')
+options=(debug)
+
+prepare() {
+  patch -d $_pkgfn -p1 < designer-plugin-install-dir.patch # Fix designer plugin install dir
+  patch -d $_pkgfn -p1 < pysidebug-2127.patch # Fix build
+}
+
+build() {
+  cmake -B build -S $_pkgfn -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=None \
+    -DBUILD_TESTS=OFF
+  PYTHONPATH="$PWD"/build/sources \
+  cmake --build build
+}
+
+package_shiboken6() {
+  pkgdesc='Generates bindings for C++ libraries using CPython source code'
+  depends=(clang=$_clangver llvm libxslt qt6-base)
+  optdepends=('python: Python bindings')
+
+  DESTDIR="$pkgdir" cmake --install build/sources/shiboken6
+
+# Install egg-info
+  export PATH="/usr/lib/qt6/bin:$PATH"
+  export SETUPTOOLS_USE_DISTUTILS=stdlib
+  cd $_pkgfn
+  python setup.py egg_info --build-type=shiboken6
+  _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
+  cp -r shiboken6.egg-info "$pkgdir"/$_pythonpath
+}
+
+package_pyside6() {
+  pkgdesc='Enables the use of Qt6 APIs in Python applications'
+  depends=(qt6-declarative shiboken6)
+  optdepends=('qt6-tools: QtHelp, QtUiTools bindings'
+              'qt6-svg: QtSvg bindings'
+              'qt6-3d: Qt3D bindings'
+              'qt6-quick3d: QtQuick3D bindings'
+              'qt6-scxml: QtScxml bindings'
+              'qt6-datavis3d: QtDataVisualization bindings'
+              'qt6-charts: QtCharts bindings'
+              'qt6-httpserver: QtHttpServer bindings'
+              'qt6-multimedia: QtMultimedia bindings'
+              'qt6-serialport: QtSerialPort bindings'
+              'qt6-speech: QtTextToSpeech bindings'
+              'qt6-webengine: QtWebEngine bindings'
+              'qt6-remoteobjects: QtRemoteObjects bindings'
+              'qt6-sensors: QtSensors bindings'
+              'qt6-websockets: QtWebSockets bindings'
+              'qt6-networkauth: QtNetworkAuth bindings')
+
+  DESTDIR="$pkgdir" cmake --install build/sources/pyside6
+
+# Install egg-info
+  export PATH="/usr/lib/qt6/bin:$PATH"
+  export SETUPTOOLS_USE_DISTUTILS=stdlib
+  cd $_pkgfn
+  python setup.py egg_info --build-type=pyside6
+  _pythonpath=`python -c "from sysconfig import get_path; print(get_path('platlib'))"`
+  cp -r PySide6.egg-info "$pkgdir"/$_pythonpath
+
+# Install pyi files
+  install -Dm644 "$srcdir"/build/sources/pyside6/PySide6/*.pyi -t "$pkgdir"/usr/lib/python*/site-packages/PySide6
+}
