@@ -2,31 +2,31 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs')
-pkgver=14.0.6
-pkgrel=4
+pkgver=15.0.6
+pkgrel=1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
-makedepends=('cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
-             'python-setuptools' 'python-psutil' 'python-sphinx'
+makedepends=('cmake' 'ninja' 'zlib' 'zstd' 'libffi' 'libedit' 'ncurses'
+             'libxml2' 'python-setuptools' 'python-psutil' 'python-sphinx'
              'python-recommonmark')
 options=('staticlibs' 'debug' '!lto') # Getting thousands of test failures with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
-        llvm-coroutines-ubsan.patch
+        $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('050922ecaaca5781fdf6631ea92bc715183f202f9d2f15147226f023414f619a'
+sha256sums=('0b32199401f27e2e0353846a8c5fbadd77beca2570654fb9ef7ac9b7f26967e3'
             'SKIP'
-            'ee9baf6df05474083857044d92f26f59d3ee709cdf82ba3bdb2792e6645f71d9'
+            '7613aeeaba9b8b12b35224044bc349b5fa45525919625057fa54dc882dcb4c86'
+            'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
-validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
+              'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
 
 prepare() {
+  mv cmake{-$pkgver.src,}
   cd llvm-$pkgver.src
   mkdir build
-
-  # https://github.com/llvm/llvm-project/issues/49689
-  patch -Np2 -i ../llvm-coroutines-ubsan.patch
 }
 
 build() {
@@ -98,7 +98,7 @@ package_llvm() {
 
 package_llvm-libs() {
   pkgdesc="LLVM runtime libraries"
-  depends=('gcc-libs' 'zlib' 'libffi' 'libedit' 'ncurses' 'libxml2')
+  depends=('gcc-libs' 'zlib' 'zstd' 'libffi' 'libedit' 'ncurses' 'libxml2')
 
   install -d "$pkgdir/usr/lib"
   cp -P \
