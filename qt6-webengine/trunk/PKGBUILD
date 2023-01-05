@@ -2,9 +2,9 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=qt6-webengine
-_qtver=6.4.1
+_qtver=6.4.2
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=1
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -17,7 +17,7 @@ groups=(qt6)
 options=(debug)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
-sha256sums=('2c59c011d1f39855f8e444f6eaaabd0bb0f560355de125c03456a681fd30a782')
+sha256sums=('ffa945518d1cc8d9ee73523e8d9c2090844f5a2d9c7eac05c4ad079472a119c9')
 
 build() {
   cmake -B build -S $_pkgfn -G Ninja \
