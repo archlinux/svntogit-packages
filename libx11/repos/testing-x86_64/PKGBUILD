@@ -1,0 +1,53 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=libx11
+pkgver=1.8.3
+pkgrel=4
+pkgdesc="X11 client-side library"
+arch=(x86_64)
+url="https://xorg.freedesktop.org/"
+# keep xorgproto runtime dependency
+# https://lists.archlinux.org/pipermail/arch-dev-public/2019-December/029767.html
+depends=('libxcb' 'xorgproto')
+makedepends=('xorg-util-macros' 'xtrans')
+license=('custom')
+options=('debug')
+source=(${url}/releases/individual/lib/libX11-${pkgver}.tar.xz{,.sig}
+	0001-Revert_Update_XPutBackEvent.diff)
+sha512sums=('bc862338fed855986659e9ffa641db6b36c3ac9abced590d1b164e3cc24446671936e3688cdca18393129c4ea41777977eeb37e87d8edc14d6cc5d194a9c0325'
+            'SKIP'
+            '1db742e84c6373d6ce2273c82e5e9b72d7943eea4ffedc9b99570037072ae2cfdf7cd318bf4d5fc6da908304286068e8ba181f6a12cb21b15d47699e77b51341')
+validpgpkeys=('4A193C06D35E7C670FA4EF0BA2FB9E081F2D130E') # Alan Coopersmith <alanc@freedesktop.org>
+#validpgpkeys=('C41C985FDCF1E5364576638B687393EE37D128F8') # Matthieu Herrb <matthieu.herrb@laas.fr>
+#validpgpkeys=('3BB639E56F861FA2E86505690FDD682D974CA72A') # Matt Turner <mattst88@gmail.com>
+#validpgpkeys=('995ED5C8A6138EB0961F18474C09DD83CAAA50B2') # Adam Jackson <ajax@nwnk.net>
+#validpgpkeys=('C383B778255613DFDB409D91DB221A6900000011') # "Keith Packard <keithp@keithp.com>"
+
+prepare() {
+  cd libX11-${pkgver}
+  # https://gitlab.freedesktop.org/xorg/lib/libx11/-/merge_requests/180 // fixes also MR #176/#187
+  # should fix FS#76669; FS#69295; FS#76860
+  patch -Np1 -i ../0001-Revert_Update_XPutBackEvent.diff
+}
+
+build() {
+  cd libX11-${pkgver}
+  ./configure --prefix=/usr \
+    --disable-static \
+    --disable-xf86bigfont
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd libX11-${pkgver}
+  make check
+}
+
+package() {
+  cd "${srcdir}/libX11-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+
+  install -d -m755 "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -m644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
