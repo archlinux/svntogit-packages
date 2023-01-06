@@ -1,0 +1,56 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=gnome-builder
+pkgname=(gnome-builder)
+pkgver=43.4
+pkgrel=2
+pkgdesc="An IDE for writing GNOME-based software"
+url="https://wiki.gnome.org/Apps/Builder"
+arch=(x86_64)
+license=(GPL3)
+depends=(gtk4 gtksourceview5 devhelp libgit2-glib gjs python-gobject sysprof
+         desktop-file-utils ctags libpeas vte4 vala autoconf-archive libadwaita
+         gspell libpanel template-glib jsonrpc-glib python-sphinx webkit2gtk-5.0
+         python-lxml meson libportal-gtk4 cmark clang flatpak-builder
+         editorconfig-core-c d-spy)
+makedepends=(llvm gobject-introspection yelp-tools appstream-glib git mm-common
+             python-sphinx_rtd_theme jedi-language-server)
+checkdepends=(xorg-server-xvfb)
+options=(debug)
+_commit=febd059c2330d9987f5afc7d0db66da552c7c09f  # tags/43.4^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-builder.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+}
+
+build() {
+  local meson_options=(
+    -D help=true
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  dbus-run-session xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
+}
+
+package_gnome-builder() {
+  depends+=(libgit2.so)
+  optdepends=('jedi-language-server: Python code assistance'
+              'bash-language-server: Shell code assistance')
+  groups=(gnome-extra)
+
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
