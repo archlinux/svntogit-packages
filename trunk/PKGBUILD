@@ -2,9 +2,10 @@
 # Contributor: Alexander Rødseth
 # Contributor: Alois Nespor <alois.nespor@gmail.com>
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
+
 pkgname=clucene
 pkgver=2.3.3.4
-pkgrel=12
+pkgrel=13
 pkgdesc="C++ port of the high-performance text search engine Lucene"
 arch=('x86_64')
 url="http://clucene.sourceforge.net/"
@@ -15,6 +16,7 @@ source=(https://downloads.sourceforge.net/$pkgname/$pkgname-core-$pkgver.tar.gz
         # Fedora patches
         clucene-core-2.3.3.4-pkgconfig.patch
         clucene-core-2.3.3.4-install_contribs_lib.patch
+        0001-Fix-missing-include-time.h.patch
         # upstream patch
         fix_zlib_detections.diff
         # LibreOffice patches
@@ -26,6 +28,7 @@ source=(https://downloads.sourceforge.net/$pkgname/$pkgname-core-$pkgver.tar.gz
 sha512sums=('1c9da9077edcebd46563bd9e47d330518e0b30061016650a759cfe051e9748fdad8932a472b1cca53a6adafed5f41656527271fc5f55ddfcefb558f0d83286b4'
             'b357cb5a1c5d66219f3168724a71af3ebf5c45c752a612d3a69c170b739acc065dc17c261c3a730298ea6c637fe820637a100f73ab03d931734f80bb598fbf55'
             '0aa92635949089196e4e7c579e78761e8751987ef5036320a161a4aaa67da3c63756398c903419c76ea0fbdc8a949e871fcb65be98179a9853a24a5a4cacfde3'
+            'f606481b3bae44487a05e81da1e19dfa0bc5db8b10832d5b84c4e269fecb99ad010b90c5132e618c300f32b8c5bf28cfd0038c4ca2ddb4870c5a3f5113a18e64'
             '883cdd389a1f6f9483250cf55030b944f5a0b5e82607f9a71ead0abaa2a9a0f08bc339ffe0518c78b65ad543e659a9eee35555a7bd9abbdae9d5204499ac039f'
             'd74c3e4cccbb05b576c063c8e25a67546b70c5bc59f2ee62be8a7095ae90020278709df79316b0f233153a76968abf465d933a81706ee2e68583f6bf921e6604'
             'c2ed8a7e7612a47e1f49266f0ea07a2a29a9d5db2b7d6f5079c031cd6edef7f39b0d771ee6f88665957d798be05ff83fd8a93cc9a84b414d84ed3344034bd0de'
@@ -33,7 +36,7 @@ sha512sums=('1c9da9077edcebd46563bd9e47d330518e0b30061016650a759cfe051e9748fdad8
             'f39f36b385f09722026a7759ee49b89ec6b5f06db0d56b472628cc68fd9badd35cc6b977122eb8e6ae108fa71b075315377ee83e9fc85e2d1722c434cfdc18b4'
             '07c8b496045e5d9d4256ad854734d6228abb67455f2349b20173d42fc733cb0663559818542c257ef2cdd84e6d08f673bfea38591087498e2e2466f555af3b04')
 
-build() {
+prepare() {
   cd "$srcdir"/$pkgname-core-$pkgver
 
   # add missing contrib-libs needed by LibO 3.6, patch by FC
@@ -49,7 +52,17 @@ build() {
   patch -Np0 -i "${srcdir}"/clucene-narrowing-conversions.patch
   patch -Np0 -i "${srcdir}"/clucene-multimap-put.patch
 
+  # FS#77036 / https://sourceforge.net/p/clucene/bugs/235/ 
+  patch -Np1 -i ../0001-Fix-missing-include-time.h.patch
+
+  # nuke bundled code
+  rm -rfv src/ext/{boost/,zlib/}
+
   mkdir build
+}
+
+build() {
+  cd "$srcdir"/$pkgname-core-$pkgver
   pushd build
   cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
