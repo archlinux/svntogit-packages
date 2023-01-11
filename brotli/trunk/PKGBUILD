@@ -41,7 +41,8 @@ build() {
 
 check() {
   cd ${pkgbase}
-  python setup.py test
+  local python_version=$(python -c 'import sys; print("".join(map(str, sys.version_info[:2])))')
+  PYTHONPATH="$PWD/bin/lib.linux-$CARCH-cpython-${python_version}" python -m unittest discover python "*_test.py"
   cd build
   ctest --output-on-failure --stop-on-failure -j$(nproc)
 }
