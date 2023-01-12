@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs')
-pkgver=15.0.6
+pkgver=15.0.7
 pkgrel=1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -15,9 +15,9 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         llvm-config.h)
-sha256sums=('0b32199401f27e2e0353846a8c5fbadd77beca2570654fb9ef7ac9b7f26967e3'
+sha256sums=('4ad8b2cc8003c86d0078d15d987d84e3a739f24aae9033865c027abae93ee7a4'
             'SKIP'
-            '7613aeeaba9b8b12b35224044bc349b5fa45525919625057fa54dc882dcb4c86'
+            '8986f29b634fdaa9862eedda78513969fe9788301c9f2d938f4c10a3e7a3e7ea'
             'SKIP'
             '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
