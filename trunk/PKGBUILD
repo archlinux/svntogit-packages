@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=compiler-rt
-pkgver=15.0.6
+pkgver=15.0.7
 pkgrel=1
 pkgdesc="Compiler runtime libraries for clang"
 arch=('x86_64')
@@ -16,9 +16,9 @@ options=('staticlibs')
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/compiler-rt-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig})
-sha256sums=('b46f5b5b02402ef3acd92e7adf2d551e0b2a8ed19fce66800472dc0ad2a81fbc'
+sha256sums=('353832c66cce60931ea0413b3c071faad59eefa70d02c97daa8978b15e4b25b7'
             'SKIP'
-            '7613aeeaba9b8b12b35224044bc349b5fa45525919625057fa54dc882dcb4c86'
+            '8986f29b634fdaa9862eedda78513969fe9788301c9f2d938f4c10a3e7a3e7ea'
             'SKIP')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
