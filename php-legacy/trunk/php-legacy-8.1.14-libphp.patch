@@ -1,0 +1,168 @@
+diff -ruN a/build/Makefile.global b/build/Makefile.global
+--- a/build/Makefile.global	2023-01-04 18:23:14.000000000 +0100
++++ b/build/Makefile.global	2023-01-14 23:56:35.211229430 +0100
+@@ -15,22 +15,22 @@
+ 
+ build-binaries: $(PHP_BINARIES)
+ 
+-libphp.la: $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS)
++libphp-legacy.la: $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS)
+ 	$(LIBTOOL) --mode=link $(CC) $(LIBPHP_CFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -rpath $(phptempdir) $(EXTRA_LDFLAGS) $(LDFLAGS) $(PHP_RPATHS) $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS) $(EXTRA_LIBS) $(ZEND_EXTRA_LIBS) -o $@
+ 	-@$(LIBTOOL) --silent --mode=install cp $@ $(phptempdir)/$@ >/dev/null 2>&1
+ 
+-libs/libphp.bundle: $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS)
+-	$(CC) $(MH_BUNDLE_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(PHP_GLOBAL_OBJS:.lo=.o) $(PHP_SAPI_OBJS:.lo=.o) $(PHP_FRAMEWORKS) $(EXTRA_LIBS) $(ZEND_EXTRA_LIBS) -o $@ && cp $@ libs/libphp.so
++libs/libphp-legacy.bundle: $(PHP_GLOBAL_OBJS) $(PHP_SAPI_OBJS)
++	$(CC) $(MH_BUNDLE_FLAGS) $(CFLAGS_CLEAN) $(EXTRA_CFLAGS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(PHP_GLOBAL_OBJS:.lo=.o) $(PHP_SAPI_OBJS:.lo=.o) $(PHP_FRAMEWORKS) $(EXTRA_LIBS) $(ZEND_EXTRA_LIBS) -o $@ && cp $@ libs/libphp-legacy.so
+ 
+ install: $(all_targets) $(install_targets)
+ 
+ install-sapi: $(OVERALL_TARGET)
+ 	@echo "Installing PHP SAPI module:       $(PHP_SAPI)"
+ 	-@$(mkinstalldirs) $(INSTALL_ROOT)$(bindir)
+-	-@if test ! -r $(phptempdir)/libphp.$(SHLIB_DL_SUFFIX_NAME); then \
++	-@if test ! -r $(phptempdir)/libphp-legacy.$(SHLIB_DL_SUFFIX_NAME); then \
+ 		for i in 0.0.0 0.0 0; do \
+-			if test -r $(phptempdir)/libphp.$(SHLIB_DL_SUFFIX_NAME).$$i; then \
+-				$(LN_S) $(phptempdir)/libphp.$(SHLIB_DL_SUFFIX_NAME).$$i $(phptempdir)/libphp.$(SHLIB_DL_SUFFIX_NAME); \
++			if test -r $(phptempdir)/libphp-legacy.$(SHLIB_DL_SUFFIX_NAME).$$i; then \
++				$(LN_S) $(phptempdir)/libphp-legacy.$(SHLIB_DL_SUFFIX_NAME).$$i $(phptempdir)/libphp-legacy.$(SHLIB_DL_SUFFIX_NAME); \
+ 				break; \
+ 			fi; \
+ 		done; \
+@@ -118,7 +118,7 @@
+ 	find . -name \*.la -o -name \*.a | xargs rm -f
+ 	find . -name \*.so | xargs rm -f
+ 	find . -name .libs -a -type d|xargs rm -rf
+-	rm -f libphp.la $(SAPI_CLI_PATH) $(SAPI_CGI_PATH) $(SAPI_LITESPEED_PATH) $(SAPI_FPM_PATH) $(OVERALL_TARGET) modules/* libs/*
++	rm -f libphp-legacy.la $(SAPI_CLI_PATH) $(SAPI_CGI_PATH) $(SAPI_LITESPEED_PATH) $(SAPI_FPM_PATH) $(OVERALL_TARGET) modules/* libs/*
+ 	rm -f ext/opcache/jit/zend_jit_x86.c
+ 	rm -f ext/opcache/jit/zend_jit_arm64.c
+ 
+@@ -141,7 +141,7 @@
+ 	find . -name \*.lo -o -name \*.o | xargs rm -f
+ 	find . -name \*.la -o -name \*.a | xargs rm -f
+ 	find . -name \*.so | xargs rm -f
+-	rm -f libphp.la $(SAPI_CLI_PATH) $(SAPI_CGI_PATH) $(SAPI_LITESPEED_PATH) $(SAPI_FPM_PATH) $(OVERALL_TARGET) modules/* libs/*
++	rm -f libphp-legacy.la $(SAPI_CLI_PATH) $(SAPI_CGI_PATH) $(SAPI_LITESPEED_PATH) $(SAPI_FPM_PATH) $(OVERALL_TARGET) modules/* libs/*
+ 
+ prof-use:
+ 	CCACHE_DISABLE=1 $(MAKE) PROF_FLAGS=-fprofile-use all
+diff -ruN a/build/php.m4 b/build/php.m4
+--- a/build/php.m4	2023-01-04 18:23:14.000000000 +0100
++++ b/build/php.m4	2023-01-14 23:58:18.896075014 +0100
+@@ -752,7 +752,7 @@
+ dnl
+ AC_DEFUN([PHP_BUILD_SHARED],[
+   PHP_BUILD_PROGRAM
+-  OVERALL_TARGET=libphp.la
++  OVERALL_TARGET=libphp-legacy.la
+   php_sapi_module=shared
+ 
+   php_c_pre=$shared_c_pre
+@@ -769,7 +769,7 @@
+ dnl
+ AC_DEFUN([PHP_BUILD_STATIC],[
+   PHP_BUILD_PROGRAM
+-  OVERALL_TARGET=libphp.la
++  OVERALL_TARGET=libphp-legacy.la
+   php_sapi_module=static
+ ])
+ 
+@@ -778,7 +778,7 @@
+ dnl
+ AC_DEFUN([PHP_BUILD_BUNDLE],[
+   PHP_BUILD_PROGRAM
+-  OVERALL_TARGET=libs/libphp.bundle
++  OVERALL_TARGET=libs/libphp-legacy.bundle
+   php_sapi_module=static
+ ])
+ 
+diff -ruN a/configure.ac b/configure.ac
+--- a/configure.ac	2023-01-04 18:23:14.000000000 +0100
++++ b/configure.ac	2023-01-14 23:55:03.043248853 +0100
+@@ -283,9 +283,9 @@
+ dnl ----------------------------------------------------------------------------
+ 
+ dnl Paths to the targets are relative to the build directory.
+-SAPI_SHARED=libs/libphp.[]$SHLIB_DL_SUFFIX_NAME
+-SAPI_STATIC=libs/libphp.a
+-SAPI_LIBTOOL=libphp.la
++SAPI_SHARED=libs/libphp-legacy.[]$SHLIB_DL_SUFFIX_NAME
++SAPI_STATIC=libs/libphp-legacy.a
++SAPI_LIBTOOL=libphp-legacy.la
+ 
+ PHP_CONFIGURE_PART(Configuring SAPI modules)
+ 
+diff -ruN a/ext/odbc/config.m4 b/ext/odbc/config.m4
+--- a/ext/odbc/config.m4	2023-01-04 18:23:14.000000000 +0100
++++ b/ext/odbc/config.m4	2023-01-14 23:55:30.129278492 +0100
+@@ -428,7 +428,7 @@
+       AC_MSG_RESULT([yes (static)])
+       PHP_ADD_LIBRARY_WITH_PATH(dmapic, $ODBC_LIBDIR)
+       PHP_ADD_INCLUDE($ODBC_INCDIR)
+-      ODBC_STATIC="libphpext_odbc.la"
++      ODBC_STATIC="libphp-legacyext_odbc.la"
+     fi
+   else
+     AC_MSG_RESULT(no)
+diff -ruN a/sapi/apache2handler/config.m4 b/sapi/apache2handler/config.m4
+--- a/sapi/apache2handler/config.m4	2023-01-04 18:23:14.000000000 +0100
++++ b/sapi/apache2handler/config.m4	2023-01-14 23:57:41.753344693 +0100
+@@ -99,7 +99,7 @@
+     MH_BUNDLE_FLAGS="-bundle -bundle_loader $APXS_HTTPD $MH_BUNDLE_FLAGS"
+     PHP_SUBST(MH_BUNDLE_FLAGS)
+     PHP_SELECT_SAPI(apache2handler, bundle, mod_php.c sapi_apache2.c apache_config.c php_functions.c, $APACHE_CFLAGS)
+-    SAPI_SHARED=libs/libphp.so
++    SAPI_SHARED=libs/libphp-legacy.so
+     INSTALL_IT="$INSTALL_IT $SAPI_SHARED"
+     ;;
+   *)
+diff -ruN a/sapi/embed/README.md b/sapi/embed/README.md
+--- a/sapi/embed/README.md	2023-01-04 18:23:14.000000000 +0100
++++ b/sapi/embed/README.md	2023-01-14 23:58:00.646364793 +0100
+@@ -33,7 +33,7 @@
+ 
+ To compile this, we must point the compiler to the PHP header files. The paths to the header files are listed from `php-config --includes`.
+ 
+-We must also point the linker and the runtime loader to the `libphp.so` shared lib for linking PHP (`-lphp`) which is located at `$(php-config --prefix)/lib`. So the complete command to compile ends up being:
++We must also point the linker and the runtime loader to the `libphp-legacy.so` shared lib for linking PHP (`-lphp`) which is located at `$(php-config --prefix)/lib`. So the complete command to compile ends up being:
+ 
+ ```bash
+ $  gcc \
+@@ -44,12 +44,12 @@
+ 	-Wl,-rpath=$(php-config --prefix)/lib
+ ```
+ 
+-> :memo: The embed SAPI is disabled by default. In order for the above example to compile, PHP must be built with the embed SAPI enabled. To see what SAPIs are installed, run `php-config --php-sapis`. If you don't see `embed` in the list, you'll need to rebuild PHP with `./configure --enable-embed`. The PHP shared library `libphp.so` is built when the embed SAPI is enabled.
++> :memo: The embed SAPI is disabled by default. In order for the above example to compile, PHP must be built with the embed SAPI enabled. To see what SAPIs are installed, run `php-config --php-sapis`. If you don't see `embed` in the list, you'll need to rebuild PHP with `./configure --enable-embed`. The PHP shared library `libphp-legacy.so` is built when the embed SAPI is enabled.
+ 
+ If all goes to plan you should be able to run the program.
+ 
+ ```bash
+-$ ./a.out 
++$ ./a.out
+ Number of functions loaded: 1046
+ ```
+ 
+diff -ruN a/sapi/phpdbg/config.m4 b/sapi/phpdbg/config.m4
+--- a/sapi/phpdbg/config.m4	2023-01-04 18:23:14.000000000 +0100
++++ b/sapi/phpdbg/config.m4	2023-01-14 23:58:49.758945668 +0100
+@@ -53,7 +53,7 @@
+   PHP_SELECT_SAPI(phpdbg, program, $PHP_PHPDBG_FILES, $PHP_PHPDBG_CFLAGS, [$(SAPI_PHPDBG_PATH)])
+ 
+   BUILD_BINARY="sapi/phpdbg/phpdbg"
+-  BUILD_SHARED="sapi/phpdbg/libphpdbg.la"
++  BUILD_SHARED="sapi/phpdbg/libphp-legacydbg.la"
+ 
+   BUILD_PHPDBG="\$(LIBTOOL) --mode=link \
+         \$(CC) -export-dynamic \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(EXTRA_LDFLAGS_PROGRAM) \$(LDFLAGS) \$(PHP_RPATHS) \
+@@ -67,7 +67,7 @@
+          -o \$(BUILD_BINARY)"
+ 
+   BUILD_PHPDBG_SHARED="\$(LIBTOOL) --mode=link \
+-        \$(CC) -shared -Wl,-soname,libphpdbg.so -export-dynamic \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(EXTRA_LDFLAGS_PROGRAM) \$(LDFLAGS) \$(PHP_RPATHS) \
++        \$(CC) -shared -Wl,-soname,libphp-legacydbg.so -export-dynamic \$(CFLAGS_CLEAN) \$(EXTRA_CFLAGS) \$(EXTRA_LDFLAGS_PROGRAM) \$(LDFLAGS) \$(PHP_RPATHS) \
+                 \$(PHP_GLOBAL_OBJS) \
+                 \$(PHP_BINARY_OBJS) \
+                 \$(PHP_PHPDBG_OBJS) \
