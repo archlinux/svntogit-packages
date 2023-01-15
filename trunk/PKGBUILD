@@ -10,7 +10,6 @@ url='https://github.com/besser82/libxcrypt/'
 license=('GPL')
 depends=('glibc')
 provides=('libcrypt.so')
-options=('debug')
 install=libxcrypt.install
 validpgpkeys=('678CE3FEE430311596DB8C16F52E98007594C21D') # Björn 'besser82' Esser
 source=("${url}/releases/download/v${pkgver}/${pkgbase}-${pkgver}.tar.xz"{,.asc})
