@@ -13,7 +13,6 @@ depends=(glibc)
 makedepends=(doxygen git glib2 graphviz gst-plugins-base gtest libdrm
 libjpeg-turbo libtiff libyaml meson python-jinja python-ply python-sphinx
 python-pyyaml qt5-base qt5-tools sdl2 systemd texlive-core)
-options=(debug)
 source=(git+https://git.libcamera.org/$pkgname/$pkgname.git#tag=$_commit)
 sha256sums=('SKIP')
 
