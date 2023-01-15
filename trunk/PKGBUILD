@@ -16,7 +16,6 @@ optdepends=('rrdtool: for logging with sensord'
 makedepends=('rrdtool' 'perl' 'git')
 provides=('libsensors.so')
 backup=('etc/sensors3.conf' 'etc/healthd.conf' 'etc/conf.d/sensord')
-options=('debug')
 #source=(lm_sensors-${pkgver}.tar.gz::https://github.com/lm-sensors/lm-sensors/archive/V${_pkgver}.tar.gz
 source=("git+https://github.com/groeck/lm-sensors.git#commit=${_commit}"
 	healthd healthd.conf healthd.service sensord.conf)
