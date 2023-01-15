@@ -11,7 +11,6 @@ license=('custom:icu')
 depends=('gcc-libs' 'sh')
 makedepends=('python')
 provides=(libicu{data,i18n,io,test,tu,uc}.so)
-options=('debug')
 source=(https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/${pkgname}4c-${pkgver//./_}-src.tgz{,.asc})
 # https://github.com/unicode-org/icu/releases/download/release-71-1/SHASUM512.txt
 sha512sums=('848c341b37c0ff077e34a95d92c6200d5aaddd0ee5e06134101a74e04deb08256a5e817c8aefab020986abe810b7827dd7b2169a60dacd250c298870518dcae8'
