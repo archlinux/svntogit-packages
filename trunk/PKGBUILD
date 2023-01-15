@@ -24,7 +24,6 @@ backup=(
   etc/apparmor/parser.conf
   etc/apparmor/severity.db
 )
-options=(debug)
 source=(https://launchpad.net/$pkgname/${pkgver%.[0-9]}/$pkgver/+download/$pkgname-$pkgver.tar.gz{,.asc})
 sha512sums=('e4fa8e0985472c00d3b68044f4150659787cf15b384b901af32b5aba3f0b2839f33bfe0b0675bf8ea7a1f5727152756a276c75b1dec383a33b92b0a1b8615a11'
             'SKIP')
