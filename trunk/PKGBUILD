@@ -12,7 +12,6 @@ license=(LGPL MPL)
 depends=(lzo zlib libpng fontconfig freetype2 libx11 libxext libxrender libxcb
          glib2 pixman)
 makedepends=(valgrind git meson gtk-doc)
-options=(debug)
 _commit=b43e7c6f3cf7855e16170a06d3a9c7234c60ca94  # tags/1.17.6^0
 source=("git+https://gitlab.freedesktop.org/cairo/cairo.git#commit=$_commit")
 sha256sums=('SKIP')
