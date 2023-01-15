@@ -16,7 +16,7 @@ url='https://people.redhat.com/sgrubb/audit'
 arch=(x86_64)
 makedepends=(glibc krb5 libcap-ng libldap linux-api-headers python swig)
 license=(GPL2 LGPL2.1)
-options=(debug emptydirs)
+options=(emptydirs)
 source=(
   $pkgbase-userspace-$pkgver.tar.gz::https://github.com/linux-audit/audit-userspace/archive/refs/tags/v$pkgver.tar.gz
   $pkgbase-3.0.8-config_paths.patch
