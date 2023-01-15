@@ -13,11 +13,14 @@ url="https://sourceware.org/elfutils/"
 license=(LGPL3 GPL3)
 makedepends=(bzip2 curl gcc-libs libarchive libmicrohttpd sqlite xz zlib zstd)
 options=(staticlibs)
-source=(https://sourceware.org/$pkgbase/ftp/$pkgver/$pkgbase-$pkgver.tar.bz2{,.sig})
+source=(https://sourceware.org/$pkgbase/ftp/$pkgver/$pkgbase-$pkgver.tar.bz2{,.sig}
+        curl_7.85_compat.patch)
 sha512sums=('585551b2d937d19d1becfc2f28935db1dd1a3d25571a62f322b70ac8da98c1a741a55d070327705df6c3e2ee026652e0b9a3c733b050a0b0ec5f2fc75d5b74b5'
-            'SKIP')
+            'SKIP'
+            '8f731bf2451ffd195a7da939d469486272873fa9fd19c2dc03a5311814840d7a7242b82de42162efc36404bee9a4fb3a6b85e0eb9fbb81e3c15f989cdd288c37')
 b2sums=('6b0474f1436eaf6af73b735b9b2ddd5448ab9c03fbaa0be745a31c89ae8f15b0e21a651409c38643ca125794ce82c19d7b46db4a079f3e72cb919d643560e7a4'
-        'SKIP')
+        'SKIP'
+        '92b92aefc011b4be7ed00baca28c3447003baa864be58482bf0c220dcd6ad75133c6e34731eaf7e3cc97dbb3e1f85d1fce88cb532c3da37b36802d2c6e7a9e36')
 validpgpkeys=(
   '47CC0331081B8BC6D0FD4DA08370665B57816A6A'  # Mark J. Wielaard <mark@klomp.org>
   'EC3CFE88F6CA0788774F5C1D1AA44BE649DE760A'  # Mark Wielaard <mjw@gnu.org>
@@ -34,17 +37,22 @@ _pick() {
 }
 
 prepare() {
+  cd $pkgbase-$pkgver
+  # Use CURLOPT_PROTOCOLS_STR for libcurl >= 7.85.0
+  # https://sourceware.org/git/?p=elfutils.git;a=commit;h=6560fb26a62ef135a804357ef4f15a47de3e49b3
+  patch -Np1 < ../curl_7.85_compat.patch
+  cd ..
+
   # remove failing test due to missing glibc debug package during test: https://bugs.archlinux.org/task/74875
   sed -e 's/run-backtrace-native.sh//g' -i $pkgbase-$pkgver/tests/Makefile.am
-
   (
     cd $pkgbase-$pkgver
     autoreconf -fiv
   )
 
   cp -av $pkgbase-$pkgver $pkgbase-test-$pkgver
-
 }
+
 
 build() {
   local configure_options=(
