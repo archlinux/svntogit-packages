@@ -12,7 +12,6 @@ depends=('acl' 'libacl.so' 'lz4' 'openssl' 'popt' 'xxhash' 'libxxhash.so'
          'zlib' 'zstd')
 optdepends=('python: for rrsync')
 makedepends=('git' 'python-commonmark')
-options=('debug')
 backup=('etc/rsyncd.conf'
         'etc/xinetd.d/rsync')
 validpgpkeys=('0048C8B026D4C96F0E589C2F6C859FB14B96A8C5') # Wayne Davison <wayned@users.sourceforge.net>
