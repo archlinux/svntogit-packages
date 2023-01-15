@@ -13,7 +13,6 @@ license=(MIT)
 depends=(glibc)
 makedepends=(cmake)
 provides=(libexpat.so)
-options=(debug)
 source=(https://github.com/libexpat/libexpat/releases/download/R_${pkgver//./_}/$pkgname-$pkgver.tar.bz2{,.asc})
 sha512sums=('22fd904d75aab7506a85c03519b9cf79e44898c8e1ba6abf6cb7f95de71b8e63a7e2d5cf4395e3627d46035ea29342b3e631a8809fef8aad3f59976dc075ad17'
             'SKIP')
