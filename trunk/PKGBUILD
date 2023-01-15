@@ -13,7 +13,7 @@ url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
 makedepends=('asciidoctor' 'libcap-ng' 'libxcrypt' 'python' 'systemd')
 license=('GPL2')
-options=('debug' 'strip')
+options=('strip')
 validpgpkeys=('B0C64D14301CC6EFAEDF60E4E4B71D5EEC39C284')  # Karel Zak
 source=("https://www.kernel.org/pub/linux/utils/util-linux/v${_pkgmajor}/${pkgbase}-${_realver}.tar."{xz,sign}
         pam-{login,common,runuser,su}
