@@ -22,7 +22,6 @@ b2sums=('dd88ae3a6a910ad8faeb791b49c3b1085de5d0d4c49c637c124bf4d9bc79fb621d0d1d6
         'SKIP')
 validpgpkeys=('07F3DBBECC1A39605078094D980C197698C3739D'
               'A534BE3F83E241D918280AEB5831D11A0D4DB02A') # Vincent Lefevre <vincent@vinc17.net>
-options=(debug)
 
 prepare() {
   cd $pkgname-${_pkgver}

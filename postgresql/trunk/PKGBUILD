@@ -13,7 +13,6 @@ license=('custom:PostgreSQL')
 makedepends=('krb5' 'libxml2' 'python' 'perl' 'tcl>=8.6.0' 'openssl>=1.0.0'
              'pam' 'zlib' 'icu' 'systemd' 'libldap' 'llvm' 'clang' 'libxslt'
              'util-linux')
-options=('debug')
 source=(https://ftp.postgresql.org/pub/source/v${pkgver}/postgresql-${pkgver}.tar.bz2
         postgresql-run-socket.patch
         postgresql-perl-rpath.patch

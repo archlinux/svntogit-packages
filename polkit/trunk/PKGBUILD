@@ -24,7 +24,6 @@ makedepends=(
 checkdepends=(python-dbusmock)
 provides=(libpolkit-{agent,gobject}-1.so)
 backup=(etc/pam.d/polkit-1)
-options=(debug)
 _commit=da87c5698019897dd731bb2cbb54ebd9c9481f52  # tags/122
 source=(
   "git+https://gitlab.freedesktop.org/polkit/polkit.git#commit=$_commit"

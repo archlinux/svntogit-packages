@@ -11,7 +11,6 @@ license=('GPL')
 groups=('base-devel')
 depends=('sh' 'glibc' 'mpfr')
 provides=('awk')
-options=('debug')
 source=(https://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.gz{,.sig})
 validpgpkeys=('D1967C63788713177D861ED7DF597815937EC0D2') # Arnold Robbins
 sha256sums=('529e7c8c6acf21ff3a6183f4d763c632810908989c24675c77995d51ac37b79c'

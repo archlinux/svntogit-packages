@@ -24,7 +24,6 @@ optdepends=('tk: gitk and git gui'
             'subversion: git svn'
             'org.freedesktop.secrets: keyring credential helper'
             'libsecret: libsecret credential helper')
-options=('debug')
 install=git.install
 validpgpkeys=('96E07AF25771955980DAD10020D04E5A713660A7') # Junio C Hamano
 source=("https://www.kernel.org/pub/software/scm/git/git-$pkgver.tar."{xz,sign}

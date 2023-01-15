@@ -12,7 +12,6 @@ license=(GPL)
 depends=(glibc)
 makedepends=(git)
 provides=(libmspack.so)
-options=(debug)
 _commit=ec93021025f27983027c1bc101f674cb14a85c0d  # tags/v0.10.1alpha^0
 source=("git+https://github.com/kyz/libmspack#commit=$_commit")
 sha256sums=('SKIP')

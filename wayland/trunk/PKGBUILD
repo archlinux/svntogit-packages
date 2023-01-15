@@ -12,7 +12,6 @@ url='https://wayland.freedesktop.org/'
 license=('MIT')
 depends=('glibc' 'libffi' 'expat' 'libxml2' 'default-cursors')
 makedepends=('meson' 'libxslt' 'doxygen' 'xmlto' 'graphviz' 'docbook-xsl')
-options=('debug')
 validpgpkeys=('C7223EBE4EF66513B892598911A30156E0E67611'  # Bryce Harrington
               'C0066D7DB8E9AC6844D728715E54498E697F11D7'  # Derek Foreman
               '34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48') # emersion <contact@emersion.fr>

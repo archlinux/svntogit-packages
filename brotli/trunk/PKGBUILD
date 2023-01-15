@@ -14,7 +14,6 @@ url='https://github.com/google/brotli'
 arch=('x86_64')
 license=('MIT')
 makedepends=('git' 'glibc' 'gcc-libs' 'cmake' 'python-setuptools')
-options=('debug')
 source=(${pkgname}::"git+${url}#commit=${_gitcommit}")
 sha512sums=('SKIP')
 

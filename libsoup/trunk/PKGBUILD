@@ -31,7 +31,6 @@ checkdepends=(
   apache
   php-apache
 )
-options=(debug)
 _commit=4a6b9178ded85e269872ffedfb2b18f2754a75d9  # tags/2.74.3^0
 source=("git+https://gitlab.gnome.org/GNOME/libsoup.git#commit=$_commit"
         disable-flaky-test.diff)

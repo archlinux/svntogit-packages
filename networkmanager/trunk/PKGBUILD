@@ -53,7 +53,6 @@ checkdepends=(
   libx11
   python-dbus
 )
-options=(debug)
 _commit=5a82c141562dc3a23c73514f7981d76c8b55ea19  # tags/1.40.10^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 b2sums=('SKIP')

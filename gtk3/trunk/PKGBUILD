@@ -59,7 +59,6 @@ makedepends=(
   sassc
   wayland-protocols
 )
-options=(debug)
 _commit=35516a5e866cd77390eb71d72d5b67f45dc4302c  # tags/3.24.36^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gtk.git#commit=$_commit"

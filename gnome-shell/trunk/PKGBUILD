@@ -24,7 +24,6 @@ optdepends=('gnome-control-center: System settings'
             'gnome-bluetooth-3.0: Bluetooth support'
             'power-profiles-daemon: Power profile switching')
 groups=(gnome)
-options=(debug)
 _commit=e9b26eac0c0d66b87201874ce2b704268ee99be6  # tags/43.2^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")

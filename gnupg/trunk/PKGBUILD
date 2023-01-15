@@ -34,7 +34,6 @@ optdepends=(
   'libusb-compat: scdaemon'
   'pcsclite: scdaemon'
 )
-options=('debug')
 install=$pkgname.install
 source=(
   "https://gnupg.org/ftp/gcrypt/${pkgname}/${pkgname}-${pkgver}.tar.bz2"{,.sig}

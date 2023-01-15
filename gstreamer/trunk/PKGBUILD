@@ -67,7 +67,6 @@ makedepends=(
   python-gobject
 )
 checkdepends=(xorg-server-xvfb)
-options=(debug)
 _commit=f7806a854aad960eae3288db4a67a574f92428fe  # tags/1.20.5^0
 source=(
   "git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git#commit=$_commit"

@@ -9,7 +9,6 @@ url="https://gitlab.archlinux.org/archlinux/pyalpm"
 license=('GPL')
 makedepends=('git' 'python-setuptools' 'python-pytest' 'python-pkgconfig' 'python-pytest-pacman')
 depends=('python' 'pacman')
-options=(debug)
 source=("git+https://gitlab.archlinux.org/archlinux/pyalpm.git#tag=$pkgver")
 validpgpkeys=('E499C79F53C96A54E572FEE1C06086337C50773E')
 sha512sums=('SKIP')

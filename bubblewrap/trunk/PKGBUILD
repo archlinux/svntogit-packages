@@ -10,7 +10,6 @@ arch=(x86_64)
 license=(GPL)
 depends=(glibc libcap)
 makedepends=(libxslt docbook-xsl git meson bash-completion)
-options=(debug)
 _commit=aa0fb696ab4b7482fa54a0422b8a19c87407350e  # tags/v0.7.0^0
 source=("git+$url#commit=$_commit")
 sha256sums=('SKIP')

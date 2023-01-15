@@ -11,7 +11,6 @@ arch=(x86_64)
 license=(MPL GPL)
 depends=('nspr>=4.35' sqlite zlib sh 'p11-kit>=0.23.19')
 makedepends=(perl python gyp mercurial)
-options=(debug)
 _revision=41b6d2645ead825e78816487b58c4fff54d1193c
 source=("hg+https://hg.mozilla.org/projects/nss#revision=$_revision"
         certdata2pem.py bundle.sh)

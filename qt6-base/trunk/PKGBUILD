@@ -24,7 +24,6 @@ optdepends=('qt6-wayland: to run Qt6 applications in a Wayland session'
             'gtk3: GTK platform plugin'
             'perl: for syncqt')
 groups=(qt6)
-options=(debug)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
         qt6-base-cflags.patch

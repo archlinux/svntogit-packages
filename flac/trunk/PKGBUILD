@@ -11,7 +11,6 @@ arch=('x86_64')
 license=('BSD' 'GPL')
 depends=('gcc-libs' 'libogg')
 makedepends=('nasm' 'cmake' 'ninja' 'doxygen' 'git' 'pandoc')
-options=('debug')
 _commit=b32e5cbf9818ca23dd22aaa75522042c16ea7d17  # tags/1.4.2
 source=("git+https://github.com/xiph/flac?signed#commit=$_commit")
 b2sums=('SKIP')

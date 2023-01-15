@@ -9,7 +9,6 @@ pkgdesc='Ext2/3/4 filesystem utilities'
 arch=('x86_64')
 license=('GPL' 'LGPL' 'MIT')
 url='http://e2fsprogs.sourceforge.net'
-options=('debug')
 makedepends=('systemd' 'util-linux' 'fuse')
 validpgpkeys=('3AB057B7E78D945C8C5591FBD36F769BC11804F0') # Theodore Ts'o <tytso@mit.edu>
 source=("https://www.kernel.org/pub/linux/kernel/people/tytso/${pkgbase}/v${pkgver}/${pkgbase}-${pkgver}.tar."{xz,sign}

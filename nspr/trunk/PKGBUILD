@@ -11,7 +11,6 @@ arch=(x86_64)
 license=(MPL GPL)
 depends=(glibc sh)
 makedepends=(zip mercurial)
-options=(debug)
 _revision=b563bfc16c887c48b038b7b441fcc4e40a126d3b
 source=("hg+https://hg.mozilla.org/projects/nspr#revision=$_revision")
 sha256sums=('SKIP')

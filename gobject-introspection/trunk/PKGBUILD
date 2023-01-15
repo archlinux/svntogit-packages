@@ -12,7 +12,6 @@ license=(LGPL GPL)
 _glibver=2.74.0
 depends=(python-mako python-markdown)
 makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
-options=(debug)
 _commit=37bde613a7cb77e7399dafb25731e13208f0ae0b  # tags/1.74.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
         "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver")

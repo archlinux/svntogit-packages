@@ -14,7 +14,6 @@ depends=(qt6-webchannel qt6-positioning libxcomposite libxrandr libxkbfile
 makedepends=(cmake ninja python-html5lib gperf jsoncpp qt6-tools pipewire nodejs qt6-websockets libepoxy git)
 optdepends=('pipewire: WebRTC desktop sharing under Wayland')
 groups=(qt6)
-options=(debug)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
 source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
 sha256sums=('ffa945518d1cc8d9ee73523e8d9c2090844f5a2d9c7eac05c4ad079472a119c9')
