@@ -8,9 +8,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
-pkgver=12.2.0
+pkgver=12.2.1
 _majorver=${pkgver%%.*}
-_commit=2ee5e4300186a92ad73f1a1a64cb918dc76c8d67
+_commit=eec3a65ed638a1c58fa08ddf508d2d60b64d311d
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
