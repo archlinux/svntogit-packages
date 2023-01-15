@@ -34,7 +34,6 @@ makedepends=(
   python-tappy
   systemd
 )
-options=(debug)
 _commit=0de82e325639c567353ca68ccc421d12e5f1de86  # tags/3.4.2^0
 source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit"
         hotdoc.diff)
