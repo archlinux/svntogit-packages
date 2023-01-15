@@ -10,7 +10,7 @@ license=('custom:Apache 2.0 with LLVM Exception')
 makedepends=('cmake' 'ninja' 'zlib' 'zstd' 'libffi' 'libedit' 'ncurses'
              'libxml2' 'python-setuptools' 'python-psutil' 'python-sphinx'
              'python-recommonmark')
-options=('staticlibs' 'debug' '!lto') # Getting thousands of test failures with LTO
+options=('staticlibs' '!lto') # Getting thousands of test failures with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
