@@ -31,7 +31,6 @@ sha256sums=('SKIP'
             'c50d3019626183e753c53a997dc8a55938847543aa3178d4c51f377be741c693'
             '5e3a3c4711d964d5152a04059a2b5c1d14bb13dd29bce370120f60e85b476b6f'
             'cf9be3ffcc3b3cd9450b1ff13535ff7d76284f73173412d097a6ab487463a379')
-options=(debug)
 
 prepare() {
   mkdir -p build
