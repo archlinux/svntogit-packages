@@ -23,7 +23,7 @@ backup=(
   etc/login.defs
   etc/pam.d/{chage,{,ch,chg}passwd,group{add,del,mems,mod},newusers,shadow,user{add,del,mod}}
 )
-options=(debug !emptydirs)
+options=(!emptydirs)
 # NOTE: distribution patches are taken from https://gitlab.archlinux.org/archlinux/packaging/upstream/shadow/-/commits/v4.13.0.arch1
 source=(
   https://github.com/shadow-maint/shadow/releases/download/$pkgver/shadow-$pkgver.tar.xz{,.asc}
