@@ -10,7 +10,6 @@ license=('GPL3')
 url='https://www.gnu.org/software/parted/parted.html'
 depends=('device-mapper' 'util-linux-libs')
 makedepends=('pkg-config')
-options=('debug')
 validpgpkeys=('1B49F933916A37A3F45A1812015F4DD4A70FB705'  # Phillip Susi <psusi@ubuntu.com>
               'B4C6B451E4FA8B4232CA191E117E8C168EFE3A7F') # Brian C. Lane <bcl@redhat.com>
 source=("https://ftp.gnu.org/gnu/${pkgname}/${pkgname}-${pkgver}.tar.xz"{,.sig})
