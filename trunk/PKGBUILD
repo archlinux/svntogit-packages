@@ -11,7 +11,7 @@ arch=('x86_64')
 url='https://www.lua.org/'
 depends=('readline')
 license=('MIT')
-options=('!emptydirs' 'debug')
+options=('!emptydirs')
 source=(https://www.lua.org/ftp/lua-$pkgver.tar.gz
         liblua.so.patch
         lua.pc
