@@ -20,7 +20,7 @@ makedepends=('intltool' 'python')
 checkdepends=('python-flask')
 optdepends=('python: tncc-wrapper')
 provides=('libopenconnect.so')
-options=('!emptydirs' 'debug')
+options=('!emptydirs')
 source=(https://www.infradead.org/openconnect/download/openconnect-${pkgver}.tar.gz{,.asc})
 sha256sums=('b3d7faf830e9793299d6a41e81d84cd4a3e2789c148c9e598e4585010090e4c7'
             'SKIP')

@@ -14,7 +14,7 @@ url='https://www.pcre.org/'
 license=('BSD')
 depends=('gcc-libs' 'readline' 'zlib' 'bzip2' 'bash')
 provides=(libpcre2-{8,16,32,posix}.so)
-options=(debug staticlibs)
+options=(staticlibs)
 source=("https://github.com/PhilipHazel/pcre2/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2"{,.sig})
 sha512sums=('328f331a56f152424f6021b37f8dcf660842c55d43ff39f1b49115f0d05ed651d0bbb66b43c0ed61d65022030615768b92ce5e6218a54e4e17152ec473cca68d'
             'SKIP')

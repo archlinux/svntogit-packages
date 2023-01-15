@@ -23,7 +23,7 @@ makedepends=(
   systemd
   vala
 )
-options=(debug !lto)
+options=(!lto)
 _commit=bfabb63d2f8d0f9846dc0a0a7d768d8bf6da3531  # tags/0.70.2^0
 source=("git+https://gitlab.gnome.org/GNOME/vte.git#commit=$_commit")
 sha256sums=('SKIP')

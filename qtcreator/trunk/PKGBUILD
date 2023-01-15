@@ -31,7 +31,7 @@ optdepends=('qt6-doc: integrated Qt documentation'
             'mlocate: locator filter')
 source=(https://download.qt.io/official_releases/qtcreator/${pkgver%.*}/$pkgver/qt-creator-opensource-src-$pkgver.tar.xz)
 sha256sums=('4e4e881b2635bac07e785c9e889ab9a253ad47a00074e260cbccdb3c0aef189f')
-options=(docs debug)
+options=(docs)
 
 build() {
   cmake -B build -S qt-creator-opensource-src-$pkgver \

@@ -25,7 +25,7 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
         'btrfs-scrub@.timer'
       )
 install=btrfs-progs.install
-options=(!staticlibs debug)
+options=(!staticlibs)
 sha256sums=('SKIP'
             '6be667d97f3d65c0ba57c331c98b0bd3b13cf60d8d31fa8ad25882aad9d79d7a'
             'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
