@@ -97,7 +97,6 @@ makedepends=(
   zlib
   zstd
 )
-options=(debug)
 source=(
   https://download.qemu.org/qemu-$pkgver.tar.xz{,.sig}
   bridge.conf
