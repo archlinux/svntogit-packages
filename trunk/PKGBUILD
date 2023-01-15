@@ -14,7 +14,7 @@ url="https://github.com/jackaudio/jack2"
 license=(GPL2)
 makedepends=(alsa-lib db5.3 dbus doxygen expat git libffado libsamplerate opus systemd waf)
 # jack breaks when built with LTO: https://github.com/jackaudio/jack2/issues/485
-options=(debug !lto)
+options=(!lto)
 source=(git+https://github.com/jackaudio/$pkgbase.git#tag=v$pkgver?signed
         bdb_5.3.patch)
 validpgpkeys=('62B11043D2F6EB6672D93103CDBAA37ABC74FBA0') # falkTX <falktx@falktx.com>
