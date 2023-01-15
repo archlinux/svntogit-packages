@@ -45,7 +45,6 @@ depends=(
   zlib
 )
 makedepends=(libgccjit)
-options=(debug)
 source=(https://ftp.gnu.org/gnu/emacs/${pkgname}-${pkgver}.tar.xz{,.sig})
 b2sums=('a7e4990658b5e7306510f8dded93aaf0b82cdd9306df8b786526d038c3249ef9579287075f2235eb01a71ae1699db555254f137b86ab2d2305b45895053df552'
         'SKIP')
