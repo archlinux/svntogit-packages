@@ -12,7 +12,6 @@ depends=(glib2 libfprint polkit dbus dbus-glib systemd)
 makedepends=(gtk-doc git meson pam_wrapper python-cairo python-dbus
              python-dbusmock)
 groups=(fprint)
-options=(debug)
 _commit=0d2e2a6742cbec847aa756da25afd4b73d9ec53f  # tags/v1.94.2^0
 source=("git+https://gitlab.freedesktop.org/libfprint/fprintd.git#commit=$_commit")
 sha256sums=('SKIP')
