@@ -4,37 +4,70 @@
 pkgbase=libpst
 pkgname=(libpst libpst-docs)
 pkgver=0.6.76
-pkgrel=8
+pkgrel=9
 pkgdesc="Outlook .pst file converter"
 url="https://www.five-ten-sg.com/libpst/"
 arch=(x86_64)
 license=(GPL)
-depends=(gcc-libs libgsf)
-makedepends=(python boost)
-options=(debug)
-source=(https://www.five-ten-sg.com/libpst/packages/${pkgbase}-${pkgver}.tar.gz
-        python310.patch)
-sha256sums=('3d291beebbdb48d2b934608bc06195b641da63d2a8f5e0d386f2e9d6d05a0b42'
-            '8bd2cf189719fa98831b26b28ed68098a82fe6f31a1e23d8576faa27fc4e819f')
+depends=(
+  gcc-libs
+  libgsf
+)
+makedepends=(
+  autoconf-archive
+  docbook-xsl
+  doxygen
+  git
+  graphviz
+  xmlto
+)
+_commit=d963f2adf9fb7e65cdccbf7d35ceb06c63100f80  # tags/libpst-0.6.76
+source=("git+https://github.com/pst-format/libpst#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/^libpst-//;s/[^-]*-g/r&/;s/-/+/g'
+}
 
 prepare() {
-  cd $pkgbase-$pkgver
-  patch -Np1 -i ../python310.patch
+  cd $pkgbase
+
+  # Build fixes
+  git cherry-pick -n df169eaeaa3a0aad7244c081497a01ceee15da72 \
+                     81252ea84b5a6a1e0d3cbcfaf4505729a1057018 \
+                     db5933678ac44f9153d0c3dd20a6cb91a6887096 \
+                     52adecb804f4d8fa1697692e177e972eb891fcb2
+
+  # Fix _FORTIFY_SOURCE warnings
+  git cherry-pick -n b34d3d8eb679e3598dd9970bb35e6ab60fdd9805
+
+  autoreconf -fvi
 }
 
 build() {
-  cd $pkgbase-$pkgver
-  ./configure --prefix=/usr --mandir=/usr/share/man \
-      --disable-static --enable-libpst-shared --disable-dii
+  local configure_options=(
+    --prefix=/usr
+    --sysconfdir=/etc
+    --localstatedir=/var
+    --mandir=/usr/share/man
+    --disable-dii
+    --disable-python
+    --disable-static
+    --enable-libpst-shared
+  )
+
+  cd $pkgbase
+  ./configure "${configure_options[@]}"
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make -C xml all
   make
 }
 
 package_libpst() {
-  optdepends=('boost-libs: for libpst python interface')
   provides=(libpst.so)
 
-  make -C $pkgbase-$pkgver DESTDIR="$pkgdir" install
+  make -C $pkgbase DESTDIR="$pkgdir" install
 
   mkdir -p doc/usr/share
   mv {"$pkgdir",doc}/usr/share/doc
@@ -47,4 +80,4 @@ package_libpst-docs() {
   mv doc/* "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
