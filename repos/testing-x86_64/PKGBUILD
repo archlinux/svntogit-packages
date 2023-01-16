@@ -1,0 +1,276 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Jakub Schmidtke <sjakub@gmail.com>
+
+pkgname=firefox
+pkgver=109.0
+pkgrel=1
+pkgdesc="Standalone web browser from mozilla.org"
+url="https://www.mozilla.org/firefox/"
+arch=(x86_64)
+license=(
+  GPL
+  LGPL
+  MPL
+)
+depends=(
+  dbus-glib
+  ffmpeg
+  gtk3
+  libpulse
+  libxt
+  mime-types
+  nss
+  ttf-font
+)
+makedepends=(
+  cbindgen
+  clang
+  diffutils
+  dump_syms
+  imake
+  inetutils
+  jack
+  lld
+  llvm
+  mesa
+  nasm
+  nodejs
+  python
+  rust
+  unzip
+  wasi-compiler-rt
+  wasi-libc
+  wasi-libc++
+  wasi-libc++abi
+  xorg-server-xvfb
+  yasm
+  zip
+)
+optdepends=(
+  'hunspell-en_US: Spell checking, American English'
+  'libnotify: Notification integration'
+  'networkmanager: Location detection via available WiFi networks'
+  'pulseaudio: Audio support'
+  'speech-dispatcher: Text-to-Speech'
+  'xdg-desktop-portal: Screensharing with Wayland'
+)
+options=(
+  !debug
+  !emptydirs
+  !lto
+  !makeflags
+  !strip
+)
+source=(
+  https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
+  $pkgname.desktop
+  identity-icons-brand.svg
+  0001-libwebrtc-screen-cast-sync.patch
+  0002-Bug-1804973-Wayland-Check-size-for-valid-EGLWindows-.patch
+)
+validpgpkeys=(
+  '14F26682D0916CDD81E37B6D61B7B526D98F0353'  # Mozilla Software Releases <release@mozilla.com>
+)
+sha256sums=('0678a03b572b5992fb85f0923a25b236acf81e5ea2c08e549b63a56076a69351'
+            'SKIP'
+            '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
+            'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9'
+            'b1ce6936749ab1614bbce4fddc87058341ed207dde77af609fdc5ac83538517a'
+            '34439dfb17371520e5e99444096ded97325ab2559b9039ae16055975d015ac51')
+b2sums=('56ec8c49f0dd1cb4ba29afb5d68fd724614b993b2a1a59b9c03bf6349bae980d558ef18dbe2170af59f3e690308b753a88619e2abe48db58af5b7fcbecfa03f5'
+        'SKIP'
+        'e18f2c22e394ca3b6758bc130245b254947e4d15921be3da443d6d7c3c4b0d22ead1b39fbc10a4f896edd19e2a1dffbd1cbb34dc4beb0621a6ddb70ccc53b3a7'
+        '63a8dd9d8910f9efb353bed452d8b4b2a2da435857ccee083fc0c557f8c4c1339ca593b463db320f70387a1b63f1a79e709e9d12c69520993e26d85a3d742e34'
+        '3a7de17f0a56c4ccbbd4754a63a8798f787e87acc947b0fc0c1e5086c99337979b7f66a741fdc5475b34085eaf80dbc99d742c22a95d6ed412e38012794a44c9'
+        'ad4618e6c0e6ac8cca387579f26e8f9a0eaab8e6f8ac8f9e2ad179bce09f5247848a9ce78d4042f3e400771f9c0914e8d6504f792d002481529e755f5eaf8916')
+
+# Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
+# Note: These are for Arch Linux use ONLY. For your own distribution, please
+# get your own set of keys. Feel free to contact foutrelis@archlinux.org for
+# more information.
+_google_api_key=AIzaSyDwr302FpOSkGRpLlUpPThNTDPbXcIn_FM
+
+# Mozilla API keys (see https://location.services.mozilla.com/api)
+# Note: These are for Arch Linux use ONLY. For your own distribution, please
+# get your own set of keys. Feel free to contact heftig@archlinux.org for
+# more information.
+_mozilla_api_key=e05d56db0a694edc8b5aaebda3f2db6a
+
+prepare() {
+  mkdir mozbuild
+  cd firefox-$pkgver
+
+  # https://bugs.archlinux.org/task/76231
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1790496
+  # https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-screen-cast-sync.patch
+  patch -Np1 -i ../0001-libwebrtc-screen-cast-sync.patch
+
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1804973
+  patch -Np1 -i ../0002-Bug-1804973-Wayland-Check-size-for-valid-EGLWindows-.patch
+
+  echo -n "$_google_api_key" >google-api-key
+  echo -n "$_mozilla_api_key" >mozilla-api-key
+
+  cat >../mozconfig <<END
+ac_add_options --enable-application=browser
+mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
+
+ac_add_options --prefix=/usr
+ac_add_options --enable-release
+ac_add_options --enable-hardening
+ac_add_options --enable-optimize
+ac_add_options --enable-rust-simd
+ac_add_options --enable-linker=lld
+ac_add_options --disable-elf-hack
+ac_add_options --disable-bootstrap
+ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+
+# Branding
+ac_add_options --enable-official-branding
+ac_add_options --enable-update-channel=release
+ac_add_options --with-distribution-id=org.archlinux
+ac_add_options --with-unsigned-addon-scopes=app,system
+ac_add_options --allow-addon-sideload
+export MOZILLA_OFFICIAL=1
+export MOZ_APP_REMOTINGNAME=${pkgname//-/}
+
+# Keys
+ac_add_options --with-google-location-service-api-keyfile=${PWD@Q}/google-api-key
+ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
+ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
+
+# System libraries
+ac_add_options --with-system-nspr
+ac_add_options --with-system-nss
+
+# Features
+ac_add_options --enable-alsa
+ac_add_options --enable-jack
+ac_add_options --enable-crashreporter
+ac_add_options --disable-updater
+ac_add_options --disable-tests
+END
+}
+
+build() {
+  cd firefox-$pkgver
+
+  export MOZ_NOSPAM=1
+  export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
+  export MOZ_ENABLE_FULL_SYMBOLS=1
+  export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
+
+  # LTO needs more open files
+  ulimit -n 4096
+
+  # Do 3-tier PGO
+  echo "Building instrumented browser..."
+  cat >.mozconfig ../mozconfig - <<END
+ac_add_options --enable-profile-generate=cross
+END
+  ./mach build
+
+  echo "Profiling instrumented browser..."
+  ./mach package
+  LLVM_PROFDATA=llvm-profdata \
+    JARLOG_FILE="$PWD/jarlog" \
+    xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
+    ./mach python build/pgo/profileserver.py
+
+  stat -c "Profile data found (%s bytes)" merged.profdata
+  test -s merged.profdata
+
+  stat -c "Jar log found (%s bytes)" jarlog
+  test -s jarlog
+
+  echo "Removing instrumented browser..."
+  ./mach clobber
+
+  echo "Building optimized browser..."
+  cat >.mozconfig ../mozconfig - <<END
+ac_add_options --enable-lto=cross
+ac_add_options --enable-profile-use=cross
+ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
+ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
+END
+  ./mach build
+
+  echo "Building symbol archive..."
+  ./mach buildsymbols
+}
+
+package() {
+  cd firefox-$pkgver
+  DESTDIR="$pkgdir" ./mach install
+
+  local vendorjs="$pkgdir/usr/lib/$pkgname/browser/defaults/preferences/vendor.js"
+  install -Dvm644 /dev/stdin "$vendorjs" <<END
+// Use LANG environment variable to choose locale
+pref("intl.locale.requested", "");
+
+// Use system-provided dictionaries
+pref("spellchecker.dictionary_path", "/usr/share/hunspell");
+
+// Disable default browser checking.
+pref("browser.shell.checkDefaultBrowser", false);
+
+// Don't disable extensions in the application directory
+pref("extensions.autoDisableScopes", 11);
+END
+
+  local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
+  install -Dvm644 /dev/stdin "$distini" <<END
+[Global]
+id=archlinux
+version=1.0
+about=Mozilla Firefox for Arch Linux
+
+[Preferences]
+app.distributor=archlinux
+app.distributor.channel=$pkgname
+app.partner.archlinux=archlinux
+END
+
+  local i theme=official
+  for i in 16 22 24 32 48 64 128 256; do
+    install -Dvm644 browser/branding/$theme/default$i.png \
+      "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/$pkgname.png"
+  done
+  install -Dvm644 browser/branding/$theme/content/about-logo.png \
+    "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
+  install -Dvm644 browser/branding/$theme/content/about-logo@2x.png \
+    "$pkgdir/usr/share/icons/hicolor/384x384/apps/$pkgname.png"
+  install -Dvm644 browser/branding/$theme/content/about-logo.svg \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/$pkgname.svg"
+  install -Dvm644 ../identity-icons-brand.svg \
+    "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.svg"
+
+  install -Dvm644 ../$pkgname.desktop \
+    "$pkgdir/usr/share/applications/$pkgname.desktop"
+
+  # Install a wrapper to avoid confusion about binary path
+  install -Dvm755 /dev/stdin "$pkgdir/usr/bin/$pkgname" <<END
+#!/bin/sh
+exec /usr/lib/$pkgname/firefox "\$@"
+END
+
+  # Replace duplicate binary with wrapper
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=658850
+  ln -srfv "$pkgdir/usr/bin/$pkgname" "$pkgdir/usr/lib/$pkgname/firefox-bin"
+
+  # Use system certificates
+  local nssckbi="$pkgdir/usr/lib/$pkgname/libnssckbi.so"
+  if [[ -e $nssckbi ]]; then
+    ln -srfv "$pkgdir/usr/lib/libnssckbi.so" "$nssckbi"
+  fi
+
+  export SOCORRO_SYMBOL_UPLOAD_TOKEN_FILE="$startdir/.crash-stats-api.token"
+  if [[ -f $SOCORRO_SYMBOL_UPLOAD_TOKEN_FILE ]]; then
+    make -C obj uploadsymbols
+  else
+    cp -fvt "$startdir" obj/dist/*crashreporter-symbols-full.tar.zst
+  fi
+}
+
+# vim:set sw=2 sts=-1 et:
