@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=6.1.6.hardened2
-pkgrel=1
+pkgrel=2
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -22,6 +22,7 @@ source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${_srctag}/${pkgbase}-${_srctag}.patch{,.sig}
   config         # the main kernel config file
+  fix-docgen.patch::https://github.com/archlinux/linux/commit/a3b216b0a5c2628624de605599aa6c16675578de.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
@@ -32,7 +33,8 @@ sha256sums=('3e4d8e561da5703a205ae8d7b2bed6c5c64fc4299eebcbfd20481e63b57d5ee3'
             'SKIP'
             'a6be8c952c38734e0c5bb17ac1ea4a482be4fbf62f586be41c18be0b9e87333c'
             'SKIP'
-            '51eb56858ff53d03c8f664bb6c68fe216316871d39f6c1872ee7f1df697b84fa')
+            '51eb56858ff53d03c8f664bb6c68fe216316871d39f6c1872ee7f1df697b84fa'
+            '51fd12d921a296e2ccc1fc5cefcb4f0c16ee62245b9f40f6973d5f7abfe58be9')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
