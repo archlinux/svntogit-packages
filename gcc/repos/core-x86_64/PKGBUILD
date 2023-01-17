@@ -8,9 +8,9 @@
 # NOTE: libtool requires rebuilt with each new gcc version
 
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
-pkgver=12.2.0
+pkgver=12.2.1
 _majorver=${pkgver%%.*}
-_commit=2ee5e4300186a92ad73f1a1a64cb918dc76c8d67
+_commit=eec3a65ed638a1c58fa08ddf508d2d60b64d311d
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -37,10 +37,8 @@ checkdepends=(
   python-pytest
   tcl
 )
-options=(!emptydirs !lto debug)
+options=(!emptydirs !lto)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-# _commit=6beb39ee6c465c21d0cc547fd66b445100cdcc35
-# source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
 source=(git+https://sourceware.org/git/gcc.git#commit=${_commit}
         c89 c99
         gcc-ada-repro.patch
@@ -209,7 +207,7 @@ package_gcc() {
   optdepends=('lib32-gcc-libs: for generating code for 32-bit ABI')
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
-  options=(!emptydirs staticlibs debug)
+  options=(!emptydirs staticlibs)
 
   cd gcc-build
 
@@ -266,6 +264,12 @@ package_gcc() {
 
   # many packages expect this symlink
   ln -s gcc "$pkgdir"/usr/bin/cc
+
+  # create cc-rs compatible symlinks
+  # https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2578-L2581
+  for binary in {c++,g++,gcc,gcc-ar,gcc-nm,gcc-ranlib}; do
+    ln -s /usr/bin/${binary} "${pkgdir}"/usr/bin/x86_64-linux-gnu-${binary}
+  done
 
   # POSIX conformance launcher scripts for c89 and c99
   install -Dm755 "$srcdir/c89" "$pkgdir/usr/bin/c89"
@@ -332,7 +336,7 @@ package_gcc-ada() {
   depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=($pkgname-multilib)
   replaces=($pkgname-multilib)
-  options=(!emptydirs staticlibs debug)
+  options=(!emptydirs staticlibs)
 
   cd gcc-build/gcc
   make DESTDIR="$pkgdir" ada.install-{common,info}
@@ -430,7 +434,7 @@ package_gcc-d() {
   depends=("gcc=$pkgver-$pkgrel" libisl.so)
   provides=(gdc)
   replaces=(gdc)
-  options=(staticlibs debug)
+  options=(staticlibs)
 
   cd gcc-build
   make -C gcc DESTDIR="$pkgdir" d.install-{common,man,info}
