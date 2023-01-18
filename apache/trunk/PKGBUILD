@@ -3,8 +3,8 @@
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=apache
-pkgver=2.4.54
-pkgrel=3
+pkgver=2.4.55
+pkgrel=1
 pkgdesc='A high performance Unix-based HTTP server'
 arch=('x86_64')
 url='https://www.apache.org/dist/httpd'
@@ -22,7 +22,7 @@ provides=('mod_proxy_uwsgi')
 conflicts=('mod_proxy_uwsgi')
 replaces=('mod_proxy_uwsgi')
 depends=('zlib' 'apr-util' 'pcre2' 'libnghttp2' 'openssl' 'libxcrypt')
-makedepends=('libxml2' 'lua' 'curl' 'brotli' 'jansson')
+makedepends=('libxml2' 'lua' 'curl' 'brotli' 'jansson' 'db')
 optdepends=(
     'lua: for mod_lua module'
     'libxml2: for mod_proxy_html, mod_xml2enc modules'
@@ -40,7 +40,7 @@ source=(
     httpd.service
     arch.layout
 )
-sha256sums=('eb397feeefccaf254f8d45de3768d9d68e8e73851c49afd5b7176d1ecf80c340'
+sha256sums=('11d6ba19e36c0b93ca62e47e6ffc2d2f2884942694bce0f23f39c71bdc5f69ac'
             'SKIP'
             '63da1a420f4714a3e7af2672d28384419cc7eedbe7bf35baebd02938fabc15bf'
             '0bbbfae23a917b2fce0bf8f900f60319b50769224a96314e9301a75ccd078e16'
@@ -51,7 +51,8 @@ validpgpkeys=('A93D62ECC3C8EA12DB220EC934EA76E6791485A8' # Jim Jagielski
               'B9E8213AEFB861AF35A41F2C995E35221AD84DFF'
               'C55AB7B9139EB2263CD1AABC19B033D1760C227B' # christophe.jaillet@wanadoo.fr
 	      '26F51EF9A82F4ACB43F1903ED377C9E7D1944C66' # Stefan Eissing (icing) <stefan@eissing.org>
-              'E3480043595621FE56105F112AB12A7ADC55C003') # Daniel Ruggeri 
+              'E3480043595621FE56105F112AB12A7ADC55C003' # Daniel Ruggeri
+	      '65B2D44FE74BD5E3DE3AC3F082781DE46D5954FA')  # Eric Covener <covener@apache.org>
 
 prepare() {
   cd httpd-${pkgver}
