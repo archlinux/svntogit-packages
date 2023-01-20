@@ -26,7 +26,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.2.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -313,7 +313,8 @@ package_qemu-common() {
     --systemd ALL
     --exportdir "$pkgdir/usr/lib/binfmt.d/"
     --qemu-path "/usr/bin"
-    --preserve-argv0
+    --persistent yes
+    --preserve-argv0 yes
   )
 
   license+=(BSD MIT)
