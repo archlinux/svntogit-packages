@@ -18,8 +18,8 @@ _GRUB_EMU_BUILD="0"
 pkgname='grub'
 pkgdesc='GNU GRand Unified Bootloader (2)'
 epoch=2
-_commit='1a241e050652472efa62b2b36ad2fa7f82427b83'
-_pkgver=2.06.r415.g1a241e050
+_commit='4de39a2af6521631d24978eb23035b7608949174'
+_pkgver=2.06.r440.g4de39a2af
 _unifont_ver='15.0.01'
 pkgver=${_pkgver/-/}
 pkgrel=1
@@ -62,7 +62,6 @@ source=("git+https://git.savannah.gnu.org/git/grub.git#commit=${_commit}"
         "https://ftp.gnu.org/gnu/unifont/unifont-${_unifont_ver}/unifont-${_unifont_ver}.bdf.gz"{,.sig}
         '0001-00_header-add-GRUB_COLOR_-variables.patch'
         '0002-10_linux-detect-archlinux-initramfs.patch'
-        '0003-fix-f2fs.patch'
         'grub.default'
         'sbat.csv')
 
@@ -72,7 +71,6 @@ sha256sums=('SKIP'
             'SKIP'
             '5dee6628c48eef79812bb9e86ee772068d85e7fcebbd2b2b8d1e19d24eda9dab'
             '8488aec30a93e8fe66c23ef8c23aefda39c38389530e9e73ba3fbcc8315d244d'
-            'b783ec919b22e628d3db91ede4571272ffa833d20ab42eccace15258a884c26b'
             '7df3f5cb5df7d2dfb17f4c9b5c5dedc9519ddce6f8d2c6cd43d1be17cecb65cb'
             '98b23d41e223bdc0a6e20bdcb3aa77e642f29b64081b1fd2f575314172fc89df')
 
@@ -129,9 +127,6 @@ prepare() {
 
 	echo "Patch to detect of Arch Linux initramfs images by grub-mkconfig..."
 	patch -Np1 -i "${srcdir}/0002-10_linux-detect-archlinux-initramfs.patch"
-
-	echo "Patch to fix f2fs..."
-	patch -Np1 -i "${srcdir}/0003-fix-f2fs.patch"
 
 	echo "Fix DejaVuSans.ttf location so that grub-mkfont can create *.pf2 files for starfield theme..."
 	sed 's|/usr/share/fonts/dejavu|/usr/share/fonts/dejavu /usr/share/fonts/TTF|g' -i "configure.ac"
