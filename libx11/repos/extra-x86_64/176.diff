@@ -1,5 +1,18 @@
+From eb1c272ab5230d548077b9f59aca4b3457c3a8f8 Mon Sep 17 00:00:00 2001
+From: GaryOderNichts <garyodernichts@gmail.com>
+Date: Sat, 17 Dec 2022 16:28:40 +0100
+Subject: [PATCH] Fix a9e845 and 797755 Allow X*IfEvent() to reenter libX11
+
+---
+ include/X11/Xlibint.h |  9 +++++-
+ src/ChkIfEv.c         |  5 +++-
+ src/IfEvent.c         |  5 +++-
+ src/PeekIfEv.c        |  5 +++-
+ src/locking.c         | 65 +++++++++----------------------------------
+ 5 files changed, 33 insertions(+), 56 deletions(-)
+
 diff --git a/include/X11/Xlibint.h b/include/X11/Xlibint.h
-index e20c4833c16c6d3518e4b7feb9bdbc606584bfcc..b570bd01c657f4d86f06b414a43e96da4319f729 100644
+index e20c4833..50099b43 100644
 --- a/include/X11/Xlibint.h
 +++ b/include/X11/Xlibint.h
 @@ -43,6 +43,10 @@ from The Open Group.
@@ -20,13 +33,13 @@ index e20c4833c16c6d3518e4b7feb9bdbc606584bfcc..b570bd01c657f4d86f06b414a43e96da
 -        CARD32 in_ifevent;
 +	CARD32 in_ifevent;
 +#ifdef XTHREADS
-+    xthread_t ifevent_thread;
++	xthread_t ifevent_thread;
 +#endif
  };
  
  #define XAllocIDs(dpy,ids,n) (*(dpy)->idlist_alloc)(dpy,ids,n)
 diff --git a/src/ChkIfEv.c b/src/ChkIfEv.c
-index b32c2d3ebcb1aad0e704a3e5dce52dc31971afd2..666366966a0e81bf413a64e015a84da1fcf5cdf0 100644
+index b32c2d3e..66636696 100644
 --- a/src/ChkIfEv.c
 +++ b/src/ChkIfEv.c
 @@ -49,8 +49,11 @@ Bool XCheckIfEvent (
@@ -43,7 +56,7 @@ index b32c2d3ebcb1aad0e704a3e5dce52dc31971afd2..666366966a0e81bf413a64e015a84da1
  	for (n = 3; --n >= 0;) {
  	    for (qelt = prev ? prev->next : dpy->head;
 diff --git a/src/IfEvent.c b/src/IfEvent.c
-index 54c37f0031b27f3d7eb629ec2ea16b615b29e734..35c592e3a54d89f1d2ac1efa40c43a04eab1c0c5 100644
+index 54c37f00..35c592e3 100644
 --- a/src/IfEvent.c
 +++ b/src/IfEvent.c
 @@ -48,8 +48,11 @@ XIfEvent (
@@ -60,7 +73,7 @@ index 54c37f0031b27f3d7eb629ec2ea16b615b29e734..35c592e3a54d89f1d2ac1efa40c43a04
  	while (1) {
  	    for (qelt = prev ? prev->next : dpy->head;
 diff --git a/src/PeekIfEv.c b/src/PeekIfEv.c
-index 68c028b70705968c6757c1e70a238886a94adecb..754749a77c0835c0ba3c1aa6edded15dab7fb478 100644
+index 68c028b7..754749a7 100644
 --- a/src/PeekIfEv.c
 +++ b/src/PeekIfEv.c
 @@ -49,8 +49,11 @@ XPeekIfEvent (
@@ -77,7 +90,7 @@ index 68c028b70705968c6757c1e70a238886a94adecb..754749a77c0835c0ba3c1aa6edded15d
  	while (1) {
  	    for (qelt = prev ? prev->next : dpy->head;
 diff --git a/src/locking.c b/src/locking.c
-index c550603e1f5d0601af3fa19c0b8486ef5b1bc30f..642cf9894268dfbbb79a104b42b4097cfd293d82 100644
+index c550603e..3625bd27 100644
 --- a/src/locking.c
 +++ b/src/locking.c
 @@ -240,7 +240,9 @@ static void _XUnlockDisplay(
@@ -86,7 +99,7 @@ index c550603e1f5d0601af3fa19c0b8486ef5b1bc30f..642cf9894268dfbbb79a104b42b4097c
  #endif /* XTHREADS_WARN */
 -    xmutex_unlock(dpy->lock->mutex);
 +
-+    if (dpy->in_ifevent == 0 || dpy->ifevent_thread != xthread_self())
++    if (dpy->in_ifevent == 0 || !xthread_equal(dpy->ifevent_thread, xthread_self()))
 +        xmutex_unlock(dpy->lock->mutex);
  }
  
@@ -113,7 +126,7 @@ index c550603e1f5d0601af3fa19c0b8486ef5b1bc30f..642cf9894268dfbbb79a104b42b4097c
 -    Bool wskip
 -    XTHREADS_FILE_LINE_ARGS
 -    );
-+    if (dpy->in_ifevent && dpy->ifevent_thread == xthread_self())
++    if (dpy->in_ifevent && xthread_equal(dpy->ifevent_thread, xthread_self()))
 +        return;
  
 -static void _XIfEventInternalLockDisplay(
@@ -181,9 +194,12 @@ index c550603e1f5d0601af3fa19c0b8486ef5b1bc30f..642cf9894268dfbbb79a104b42b4097c
      XTHREADS_FILE_LINE_ARGS
      )
  {
-+    if (dpy->in_ifevent && dpy->ifevent_thread == xthread_self())
++    if (dpy->in_ifevent && xthread_equal(dpy->ifevent_thread, xthread_self()))
 +        return;
 +
  #ifdef XTHREADS_WARN
      _XLockDisplayWarn(dpy, file, line);
  #else
+-- 
+GitLab
+
