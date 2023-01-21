@@ -1,0 +1,44 @@
+# Maintainer: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+
+pkgname=source-highlight
+pkgver=3.1.9
+pkgrel=10
+pkgdesc="Convert source code to syntax highlighted document"
+arch=('x86_64')
+url="https://www.gnu.org/software/src-highlite/"
+license=('GPL')
+depends=('bash' 'boost-libs')
+makedepends=('ctags' 'boost')
+optdepends=('lesspipe: src-hilite-lesspipe.sh')
+source=(https://ftp.gnu.org/gnu/src-highlite/${pkgname}-${pkgver}.tar.gz{,.sig}
+        source-highlight-gcc11.patch)
+validpgpkeys=('E9FE8AE950CB07F5BEB2E805036A75309D33E5B5')
+sha512sums=('d8e154e9a5d62c77807e4e5d36c0faed5ce2964291be5f8b83e2968a6de52229503689a4ca2109a717ae2632a14b63ec937ca0430c91684c72063f6bc0294195'
+            'SKIP'
+            '55f22121a2e7501c437f305790b34d330b9ad475a87ed4482527386c23424ed2eb8c1a563da41995573f0598e4a5c9096abbf414938f7e1305354bcc720944ec')
+
+prepare() {
+  patch -d $pkgname-$pkgver -p1 < source-highlight-gcc11.patch # Fix build with GCC 11
+
+  cd ${pkgname}-${pkgver}
+  sed -i 's/lesspipe/lesspipe.sh/' src/src-hilite-lesspipe.sh.in
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+
+  ./configure --prefix=/usr \
+              --sysconfdir=/etc \
+              --with-bash-completion=/usr/share/bash-completion/completions
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+
+  make prefix="${pkgdir}/usr" bash_completiondir="${pkgdir}/usr/share/bash-completion/completions" install
+
+  # PKGBUILD syntax highlighting
+  echo -e "\npkgbuild = sh.lang" >> "${pkgdir}"/usr/share/${pkgname}/lang.map
+}
