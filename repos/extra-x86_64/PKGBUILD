@@ -4,24 +4,23 @@
 # Contributor: Dave Reisner <d@falconindy.com>
 
 pkgname=libgit2
-pkgver=1.5.0
+pkgver=1.5.1
 pkgrel=2
 epoch=1
 pkgdesc="A linkable library for Git"
 arch=(x86_64)
 url="https://github.com/libgit2/libgit2"
 license=(GPL2)
-depends=(glibc http-parser openssl pcre zlib)
-makedepends=(cmake libssh2 python)
+depends=(gcc-libs glibc http-parser zlib)
+makedepends=(cmake libssh2 openssl python pcre2)
 provides=(libgit2.so)
-options=(debug)
 source=(
   $pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz
   $pkgname-1.5.0-remove_http-parse_incompatible_tests.patch
 )
-sha512sums=('7a32b27cd32bd03ce7be6c127317f82a4ac6f16615c3234699676781f4858d057edb0410b2fe36fd2e634b00748a8b0be17f23809e09a7602ba48185134300f7'
+sha512sums=('04cf389e30cd9fb787704e3c8997acaaeea5c13e1e2f9eaf9f5598d35c2e85f3cf04b47312cae9e7278236ecb089c2d33addd852e38d3c7d2daa87929b077f39'
             'f9bb9ad7eb0f43003f5f72c81575ef5751b893fdf257d888b56818ee2c136b496b7cf72627a53dbd01319e33d0dd373e9d6df887360f7bec367419ef0c7ab711')
-b2sums=('4108de0e8fc6a02e4172f47cb69cdfe8c85a0a72235432ca58b02d94e0bcb8390caf0c710060772551cc3a392291778ae14b561256c6d88058d0ae5a277f2fbf'
+b2sums=('4df80216523f4065e46c1ce99fd0747d2f8516571691c8c2b5638e32c805f5ce08d3add769e6d5ce29ac69b35419db82ce56c6b3019e70573c4ad63aca2e440d'
         'b3c2386ba84664318573e5c24797d28db914d60782397d8b39a21b54b4fb19502945fa8fcc0d8bbe8949349b5ec705d3e1345b0cbbb51b7d9631fec922f3ac41')
 
 prepare() {
@@ -31,25 +30,32 @@ prepare() {
 }
 
 build() {
-  cmake -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_BUILD_TYPE=None \
-        -DUSE_HTTP_PARSER=system \
-        -DUSE_SSH=ON \
-        -DTHREADSAFE=ON \
-        -Wno-dev \
-        -B build \
-        -S $pkgname-$pkgver
-  cmake --build build
+  local cmake_options=(
+    -B build
+    -DCMAKE_BUILD_TYPE=None
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DREGEX_BACKEND=pcre2
+    -DUSE_HTTP_PARSER=system
+    -DUSE_SSH=ON
+    -S $pkgname-$pkgver
+    -Wno-dev
+  )
+  cmake "${cmake_options[@]}"
+  cmake --build build --verbose
 }
 
 check() {
   # NOTE: disable tests requiring the internet and relying on non-existent resources
-  ctest --test-dir build --output-on-failure -E "invasive|online"
+  ctest --test-dir build --output-on-failure -E "invasive|online|ssh"
 }
 
 package() {
-  depends+=(libssh2.so)
+  depends+=(
+    libssh2 libssh2.so
+    openssl libcrypto.so libssl.so
+    pcre2 libpcre2-8.so
+  )
 
   DESTDIR="$pkgdir" cmake --install build
-  install -vDm 644 $pkgname-$pkgver/{AUTHORS,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
+  install -vDm 644 $pkgname-$pkgver/{AUTHORS,README.md} -t "$pkgdir/usr/share/doc/$pkgname/"
 }
