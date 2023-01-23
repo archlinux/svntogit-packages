@@ -1,17 +1,17 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-validate-pyproject
-pkgver=0.10.1
-pkgrel=2
+pkgver=0.11
+pkgrel=1
 pkgdesc="Validation library and CLI tool for checking on 'pyproject.toml' files using JSON Schema"
 url="https://github.com/abravalheri/validate-pyproject"
 license=('MPL')
 arch=('any')
-depends=('python-packaging' 'python-trove-classifiers' 'python-tomli')
+depends=('python-fastjsonschema' 'python-packaging' 'python-trove-classifiers' 'python-tomli')
 makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools-scm')
 checkdepends=('python-pytest')
 source=("https://github.com/abravalheri/validate-pyproject/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('e8212813a782e305b53a89104f16f45b357ab1bbfaf7f6652ac848581102df4bf534d5d408acb8d910ebd7dc4b88e3c9fea3b2dcf41eeb14907cfbc5c9b8ad56')
+sha512sums=('4be3213d491e6aa82875141befb4173287701d1c8ba43a092427840d73a1ac5488121b3a0acbde52df175f6cc79ff9a1bb2d8ed65048c13c76c3c4ba8e733e6b')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -22,16 +22,6 @@ prepare() {
   echo "recursive-include src *.template *.json LICENSE LICENSE.*" > MANIFEST.in
 
   sed -i '/--cov/d' setup.cfg
-
-  # Devendor fastjsonschema
-  # Disabled: functional differences due to changes in vendored copy
-  # rm -r src/validate_pyproject/_vendor
-  # sed -e 's/from validate_pyproject._vendor.fastjsonschema import/from fastjsonschema import/' \
-  #     -e 's/from validate_pyproject._vendor import fastjsonschema/import fastjsonschema/' \
-  #     -e 's/from .._vendor import fastjsonschema/import fastjsonschema/' \
-  #     -e 's/from ._vendor.fastjsonschema import/from fastjsonschema import/' \
-  #     -e 's/from ._vendor import fastjsonschema/import fastjsonschema/' \
-  #     -i src/validate_pyproject/*.py tests/*.py src/validate_pyproject/pre_compile/*.template src/validate_pyproject/pre_compile/*.py
 }
 
 build() {
