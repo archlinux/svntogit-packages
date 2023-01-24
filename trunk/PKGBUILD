@@ -26,7 +26,6 @@ makedepends=(
   lib32-gcc-libs
   libisl
   libmpc
-  libxcrypt
   python
   zstd
 )
