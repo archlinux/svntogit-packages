@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.74.4
+pkgver=2.74.5
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -35,7 +35,7 @@ options=(
   debug
   staticlibs
 )
-_commit=e35768fe299d6389f8f5eef15593762389d2c07d  # tags/2.74.4^0
+_commit=39a71aff372ed491a24ca84409d9f93bc7c5d6d4  # tags/2.74.5^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git"
