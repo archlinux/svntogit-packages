@@ -26,7 +26,7 @@ pkgname=(
   gstreamer-docs
 )
 pkgver=1.22.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Multimedia graph framework"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
@@ -100,34 +100,38 @@ prepare() {
 
 build() {
   local meson_options=(
+    # Superproject options
     -D devtools=disabled
     -D doc=disabled
     -D examples=disabled
+    -D gobject-cast-checks=disabled
     -D gpl=enabled
     -D gst-examples=disabled
     -D libnice=disabled
     -D orc-source=system
+    -D package-origin="https://www.archlinux.org/"
     -D vaapi=enabled
-    -D gstreamer:dbghelp=disabled
-    -D gstreamer:gobject-cast-checks=disabled
+
+    # Package names
     -D gstreamer:package-name="Arch Linux gstreamer $pkgver-$pkgrel"
-    -D gstreamer:package-origin="https://www.archlinux.org/"
-    -D gstreamer:ptp-helper-permissions=capabilities
-    -D gst-plugins-base:gobject-cast-checks=disabled
-    -D gst-plugins-base:libvisual=disabled
     -D gst-plugins-base:package-name="Arch Linux gst-plugins-base $pkgver-$pkgrel"
-    -D gst-plugins-base:package-origin="https://www.archlinux.org/"
-    -D gst-plugins-base:tremor=disabled
-    -D gst-plugins-good:gobject-cast-checks=disabled
     -D gst-plugins-good:package-name="Arch Linux gst-plugins-good $pkgver-$pkgrel"
-    -D gst-plugins-good:package-origin="https://www.archlinux.org/"
+    -D gst-plugins-bad:package-name="Arch Linux gst-plugins-bad $pkgver-$pkgrel"
+    -D gst-plugins-ugly:package-name="Arch Linux gst-plugins-ugly $pkgver-$pkgrel"
+    -D gst-libav:package-name="Arch Linux gst-libav $pkgver-$pkgrel"
+    -D gst-rtsp-server:package-name="Arch Linux gst-rtsp-server $pkgver-$pkgrel"
+
+    # Subproject options
+    -D gstreamer:dbghelp=disabled
+    -D gstreamer:ptp-helper-permissions=capabilities
+    -D gst-plugins-base:libvisual=disabled
+    -D gst-plugins-base:tremor=disabled
     -D gst-plugins-good:rpicamsrc=disabled
     -D gst-plugins-bad:amfcodec=disabled
     -D gst-plugins-bad:directfb=disabled
     -D gst-plugins-bad:directshow=disabled
     -D gst-plugins-bad:directsound=disabled
     -D gst-plugins-bad:flite=disabled
-    -D gst-plugins-bad:gobject-cast-checks=disabled
     -D gst-plugins-bad:gs=disabled
     -D gst-plugins-bad:iqa=disabled
     -D gst-plugins-bad:isac=disabled
@@ -136,8 +140,6 @@ build() {
     -D gst-plugins-bad:openh264=disabled
     -D gst-plugins-bad:openni2=disabled
     -D gst-plugins-bad:opensles=disabled
-    -D gst-plugins-bad:package-name="Arch Linux gst-plugins-bad $pkgver-$pkgrel"
-    -D gst-plugins-bad:package-origin="https://www.archlinux.org/"
     -D gst-plugins-bad:tinyalsa=disabled
     -D gst-plugins-bad:voaacenc=disabled
     -D gst-plugins-bad:voamrwbenc=disabled
@@ -145,16 +147,7 @@ build() {
     -D gst-plugins-bad:wasapi=disabled
     -D gst-plugins-bad:wic=disabled
     -D gst-plugins-bad:win32ipc=disabled
-    -D gst-plugins-ugly:gobject-cast-checks=disabled
-    -D gst-plugins-ugly:package-name="Arch Linux gst-plugins-ugly $pkgver-$pkgrel"
-    -D gst-plugins-ugly:package-origin="https://www.archlinux.org/"
-    -D gst-libav:package-name="Arch Linux gst-libav $pkgver-$pkgrel"
-    -D gst-libav:package-origin="https://www.archlinux.org/"
-    -D gst-rtsp-server:gobject-cast-checks=disabled
-    -D gst-rtsp-server:package-name="Arch Linux gst-rtsp-server $pkgver-$pkgrel"
-    -D gst-rtsp-server:package-origin="https://www.archlinux.org/"
     -D gst-editing-services:validate=disabled
-    -D gstreamer-vaapi:package-origin="https://www.archlinux.org/"
   )
 
   arch-meson gstreamer build "${meson_options[@]}"
@@ -168,7 +161,7 @@ check() (
 
   # Flaky due to timeouts
   xvfb-run -s '-nolisten local' \
-    meson test -C build --print-errorlogs
+    meson test -C build --print-errorlogs -t 3
 )
 
 _install() {
