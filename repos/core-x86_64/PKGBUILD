@@ -4,7 +4,7 @@
 pkgbase=iptables
 pkgname=(iptables iptables-nft)
 pkgver=1.8.8
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
@@ -18,23 +18,23 @@ source=(https://www.netfilter.org/projects/iptables/files/$pkgbase-$pkgver.tar.b
         {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush
         iptables-format-security.patch::https://git.netfilter.org/iptables/patch/?id=b72eb12e
         iptables-apply-default-path.patch)
-sha1sums=('98783621a5e58ff55f83b1350523f3de41af621d'
-          'SKIP'
-          '83b3363878e3660ce23b2ad325b53cbd6c796ecf'
-          'f085a71f467e4d7cb2cf094d9369b0bcc4bab6ec'
-          'd9f9f06b46b4187648e860afa0552335aafe3ce4'
-          'c45b738b5ec4cfb11611b984c21a83b91a2d58f3'
-          '1694d79b3e6e9d9d543f6a6e75fed06066c9a6c6'
-          '7db53bb882f62f6c677cc8559cff83d8bae2ef73'
-          'ebbd1424a1564fd45f455a81c61ce348f0a14c2e'
-          '95b0ee26f03132a948fea9f2136b2e2e6a4b40fe'
-          'b668ba50d55030c68431a95756bc1f291d74b2b2'
-          '8d66d21fa4cbfe2a80478301af94ba54f65e4ea0'
-          '9cec592787e32451f58fa608ea057870e07aa704'
-          'd10af7780d1634778d898c709e2d950aa1561856'
-          '15c1684f3e671f4d0ede639a7c9c08e1a841511c'
-          'df4b0a31dfa01cff65926d439ab1475f246d4e74'
-          '454d0a6d3bca14b8702e7c5e2672f5bc0c832b85')
+sha256sums=('71c75889dc710676631553eb1511da0177bbaaf1b551265b912d236c3f51859f'
+            'SKIP'
+            '630d774f089703c2c7370db6d7c188dae25d00c26feaa3d3de8eb52519033948'
+            '9e83d7ae39d31881790f814930d44acbaeab1520adb2fb4fcb80f0bbfab174b9'
+            '09b90da35c2c8cb0fbda63b300f06d2387a102ca53a40980ef0b49829e249528'
+            '92755648f456e235d17a8faeb5f46d27af66eb4db10ea4bac0abd3e35e2dae07'
+            '52bd70dff3e1e1a64127ad7ed86840834b79756c3bdb6947b7c6279ffe95dd48'
+            '5768a471c0559848635c39d270e456bfa5c43eda65f5f6f666fea2d277183a37'
+            '91161a73f323016a9efc5eabd16243d20f8ca2467995cf0eabfb95f845090121'
+            'dd1a867085900eec1f1d4e12f97a1f44707c717246f6787ed42d4225343920d6'
+            '82e09b4151d5c1dd0fc212189c670f8f29e8ec85e7e9cdc57f49dcea00d7e9ca'
+            '78f090812b5bb9aec597ce2cf757da1c58ec772c60bf55f10267f06459aefd9b'
+            'c37c69db5077a061fd72fc3b199712f1bed8688de8008f219223fadd6fa6c06f'
+            '40680b3c877926a2bac698ea58f52d1d4b3ab152ee68ccd7fa7ca51aeedc3b2d'
+            '6d3e7bdeebdaeaf83ed448f4d42a979c8c59fb5e919f6f860ed340c2c9afef1a'
+            '9d9e23d6452632e7944d942ccbf6c82deb327780a084611aa7444eb88c596a70'
+            '770ceaedce26d05eb1b9d0c4c65f5b8e92facd1dc0652a29c859336d6bc347f6')
 validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4'
               '37D964ACC04981C75500FB9BD55D978A8A1420E4') # Netfilter Core Team
 
