@@ -7,13 +7,13 @@
 pkgbase=rust
 pkgname=(rust lib32-rust-libs rust-musl rust-wasm rust-src)
 epoch=1
-pkgver=1.66.1
-pkgrel=2
+pkgver=1.67.0
+pkgrel=1
 pkgdesc="Systems programming language focused on safety, speed and concurrency"
 url=https://www.rust-lang.org/
 arch=(x86_64)
 license=(MIT Apache)
-options=(!emptydirs !strip !lto)
+options=(!emptydirs !lto)
 depends=(gcc-libs llvm-libs curl libssh2 gcc)
 makedepends=(rust llvm libffi lib32-gcc-libs perl python cmake musl ninja
              wasi-libc lld)
@@ -25,12 +25,12 @@ source=(
   0002-compiler-Change-LLVM-targets.patch
   0003-compiler-Use-wasm-ld-for-wasm-targets.patch
 )
-sha256sums=('5b3c933a94c72187705d4ee293198babfdd09442f5937fbd685db3a81f4959ba'
+sha256sums=('d029f14fce45a2ec7a9a605d2a0a40aae4739cb2fdae29ee9f7a6e9025a7fde4'
             'SKIP'
-            'c901a9bb036c29ca092f7dbc8b447efdd9aa1044a902a88f9d024cb22681dc19'
-            '874c96cb43a5cc1170674771705deb1c72e95ec5f6ede860cd658111db3cda48'
-            '4a4ff5c294acc0b1ca800856218770f6330a878acee72193aa456d82846a8a28'
-            'c9abbbc8e3a97b0e43fa5f948ae4df51320d9cc5243b5d0c575470271932f783')
+            'b2ef8c3bca5d72ed58ff8930e69947602f875a639c2b01de5943b1ecb1b5c3c3'
+            '6a4e09671cd96a854cf0fc9a1f43651ac5a0fdc8dca571730131ae272b630cfe'
+            'e32fd355330e6c1ca4f0c630a3e254d261c48516128243a5d5d49f612cd217ed'
+            'f83bf98daee94d3e592fd2d96eecc25dc92b6b20575a3e3df7841a90a5b9f965')
 validpgpkeys=(108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               474E22316ABF4785A88C6E8EA2C794A986419D8A) # Tom Stellard <tstellar@redhat.com>
 
