@@ -8,29 +8,56 @@ pkgbase=rust
 pkgname=(rust lib32-rust-libs rust-musl rust-wasm rust-src)
 epoch=1
 pkgver=1.67.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Systems programming language focused on safety, speed and concurrency"
 url=https://www.rust-lang.org/
 arch=(x86_64)
 license=(MIT Apache)
-options=(!emptydirs !lto)
-depends=(gcc-libs llvm-libs curl libssh2 gcc)
-makedepends=(rust llvm libffi lib32-gcc-libs perl python cmake musl ninja
-             wasi-libc lld)
-checkdepends=(procps-ng gdb)
+options=(
+  !debug
+  !emptydirs
+  !lto
+  !strip
+)
+depends=(
+  curl
+  gcc
+  gcc-libs
+  libssh2
+  llvm-libs
+)
+makedepends=(
+  cmake
+  lib32-gcc-libs
+  libffi
+  lld
+  llvm
+  musl
+  ninja
+  perl
+  python
+  rust
+  wasi-libc
+)
+checkdepends=(
+  gdb
+  procps-ng
+)
 source=(
   "https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
   0001-cargo-Change-libexec-dir.patch
   0001-bootstrap-Change-libexec-dir.patch
   0002-compiler-Change-LLVM-targets.patch
   0003-compiler-Use-wasm-ld-for-wasm-targets.patch
+  0004-Revert-back-to-LlvmArchiveBuilder-on-all-platforms.patch
 )
 sha256sums=('d029f14fce45a2ec7a9a605d2a0a40aae4739cb2fdae29ee9f7a6e9025a7fde4'
             'SKIP'
             'b2ef8c3bca5d72ed58ff8930e69947602f875a639c2b01de5943b1ecb1b5c3c3'
             '6a4e09671cd96a854cf0fc9a1f43651ac5a0fdc8dca571730131ae272b630cfe'
             'e32fd355330e6c1ca4f0c630a3e254d261c48516128243a5d5d49f612cd217ed'
-            'f83bf98daee94d3e592fd2d96eecc25dc92b6b20575a3e3df7841a90a5b9f965')
+            'f83bf98daee94d3e592fd2d96eecc25dc92b6b20575a3e3df7841a90a5b9f965'
+            '307c1ea2a7394ee166bc48fe3ba3d9e940dbd38d33d56824300407518df011cf')
 validpgpkeys=(108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
               474E22316ABF4785A88C6E8EA2C794A986419D8A) # Tom Stellard <tstellar@redhat.com>
 
@@ -47,6 +74,11 @@ prepare() {
 
   # Use our wasm-ld
   patch -Np1 -i ../0003-compiler-Use-wasm-ld-for-wasm-targets.patch
+
+  # Fix mesa build
+  # https://github.com/rust-lang/rust/issues/107334
+  # https://github.com/rust-lang/rust/pull/107360
+  patch -Np1 -i ../0004-Revert-back-to-LlvmArchiveBuilder-on-all-platforms.patch
 
   cat >config.toml <<END
 changelog-seen = 2
@@ -68,7 +100,15 @@ rustc = "/usr/bin/rustc"
 rustfmt = "/usr/bin/rustfmt"
 locked-deps = true
 vendor = true
-tools = ["cargo", "rls", "clippy", "rustfmt", "analysis", "src", "rust-demangler"]
+tools = [
+  "cargo",
+  "rls",
+  "clippy",
+  "rustfmt",
+  "analysis",
+  "src",
+  "rust-demangler",
+]
 sanitizers = true
 profiler = true
 
@@ -169,18 +209,35 @@ build() {
 }
 
 package_rust() {
-  optdepends=('lldb: rust-lldb script'
-              'gdb: rust-gdb script')
-  provides=(cargo rustfmt)
-  conflicts=(cargo rustfmt 'rust-docs<1:1.56.1-3')
-  replaces=(cargo rustfmt cargo-tree 'rust-docs<1:1.56.1-3')
+  optdepends=(
+    'gdb: rust-gdb script'
+    'lldb: rust-lldb script'
+  )
+  provides=(
+    cargo
+    rustfmt
+  )
+  conflicts=(
+    cargo
+    'rust-docs<1:1.56.1-3'
+    rustfmt
+  )
+  replaces=(
+    cargo
+    cargo-tree
+    'rust-docs<1:1.56.1-3'
+    rustfmt
+  )
 
   cp -a dest-rust/* "$pkgdir"
 }
 
 package_lib32-rust-libs() {
   pkgdesc="32-bit target and libraries for Rust"
-  depends=(rust lib32-gcc-libs)
+  depends=(
+    lib32-gcc-libs
+    rust
+  )
   provides=(lib32-rust)
   conflicts=(lib32-rust)
   replaces=(lib32-rust)
@@ -203,7 +260,10 @@ package_rust-musl() {
 
 package_rust-wasm() {
   pkgdesc="WebAssembly targets for Rust"
-  depends=(rust lld)
+  depends=(
+    lld
+    rust
+  )
 
   cp -a dest-wasm/* "$pkgdir"
 
