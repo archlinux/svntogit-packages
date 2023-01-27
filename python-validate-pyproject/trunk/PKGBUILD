@@ -1,7 +1,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-validate-pyproject
-pkgver=0.11
+pkgver=0.12
 pkgrel=1
 pkgdesc="Validation library and CLI tool for checking on 'pyproject.toml' files using JSON Schema"
 url="https://github.com/abravalheri/validate-pyproject"
@@ -11,7 +11,7 @@ depends=('python-fastjsonschema' 'python-packaging' 'python-trove-classifiers' '
 makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools-scm')
 checkdepends=('python-pytest')
 source=("https://github.com/abravalheri/validate-pyproject/archive/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('4be3213d491e6aa82875141befb4173287701d1c8ba43a092427840d73a1ac5488121b3a0acbde52df175f6cc79ff9a1bb2d8ed65048c13c76c3c4ba8e733e6b')
+sha512sums=('ff627ae2a38871c422aa8f79c9935cc7cdca938f64a60d06ba5e2628ccf78ae32d40d892181c02ca339a418a3a4b4fcd00b7ba22a2b28150289e6a8e4138907d')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
