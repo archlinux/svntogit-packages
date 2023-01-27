@@ -3,8 +3,8 @@
 
 pkgbase=iptables
 pkgname=(iptables iptables-nft)
-pkgver=1.8.8
-pkgrel=3
+pkgver=1.8.9
+pkgrel=1
 epoch=1
 pkgdesc='Linux kernel packet control tool'
 arch=(x86_64)
@@ -13,12 +13,12 @@ url='https://www.netfilter.org/projects/iptables/index.html'
 depends=(libnftnl libpcap libnfnetlink libnetfilter_conntrack bash)
 makedepends=(linux-api-headers)
 backup=(etc/ethertypes etc/iptables/{ip,ip6}tables.rules)
-source=(https://www.netfilter.org/projects/iptables/files/$pkgbase-$pkgver.tar.bz2{,.sig}
+source=(https://www.netfilter.org/projects/iptables/files/$pkgbase-$pkgver.tar.xz{,.sig}
         empty.rules simple_firewall.rules empty-{filter,mangle,nat,raw,security}.rules
         {arp,eb,ip,ip6}tables.service iptables-{legacy,nft}-flush
-        iptables-format-security.patch::https://git.netfilter.org/iptables/patch/?id=b72eb12e
+        iptables-format-security-libxt_NAT.patch::https://git.netfilter.org/iptables/patch/?id=ed4082a7405a5838c205a34c1559e289949200cc
         iptables-apply-default-path.patch)
-sha256sums=('71c75889dc710676631553eb1511da0177bbaaf1b551265b912d236c3f51859f'
+sha256sums=('ef6639a43be8325a4f8ea68123ffac236cb696e8c78501b64e8106afb008c87f'
             'SKIP'
             '630d774f089703c2c7370db6d7c188dae25d00c26feaa3d3de8eb52519033948'
             '9e83d7ae39d31881790f814930d44acbaeab1520adb2fb4fcb80f0bbfab174b9'
@@ -33,7 +33,7 @@ sha256sums=('71c75889dc710676631553eb1511da0177bbaaf1b551265b912d236c3f51859f'
             'c37c69db5077a061fd72fc3b199712f1bed8688de8008f219223fadd6fa6c06f'
             '40680b3c877926a2bac698ea58f52d1d4b3ab152ee68ccd7fa7ca51aeedc3b2d'
             '6d3e7bdeebdaeaf83ed448f4d42a979c8c59fb5e919f6f860ed340c2c9afef1a'
-            '9d9e23d6452632e7944d942ccbf6c82deb327780a084611aa7444eb88c596a70'
+            '3784e61958cf96a8e5e04df885defadf1cd70caa1e9d6c6f144bdbc64441eabe'
             '770ceaedce26d05eb1b9d0c4c65f5b8e92facd1dc0652a29c859336d6bc347f6')
 validpgpkeys=('C09DB2063F1D7034BA6152ADAB4655A126D292E4'
               '37D964ACC04981C75500FB9BD55D978A8A1420E4') # Netfilter Core Team
@@ -46,7 +46,7 @@ prepare() {
   rm include/linux/types.h
 
   ln -rs libiptc/linux_list.h include/libiptc
-  patch -p1 -i ../iptables-format-security.patch # Fix build with -Werror=format-security
+  patch -p1 -i ../iptables-format-security-libxt_NAT.patch # Fix build with -Werror=format-security
 
   # use Arch path
   patch -p0 -i ../iptables-apply-default-path.patch
