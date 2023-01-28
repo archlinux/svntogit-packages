@@ -107,6 +107,7 @@ package_util-linux() {
 
 package_util-linux-libs() {
   pkgdesc="util-linux runtime libraries"
+  depends=('glibc')
   provides=('libutil-linux' 'libblkid.so' 'libfdisk.so' 'libmount.so' 'libsmartcols.so' 'libuuid.so')
   conflicts=('libutil-linux')
   replaces=('libutil-linux')
