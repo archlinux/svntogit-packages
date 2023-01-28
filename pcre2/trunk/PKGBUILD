@@ -7,12 +7,12 @@
 
 pkgname=pcre2
 pkgver=10.42
-pkgrel=1
+pkgrel=2
 pkgdesc='A library that implements Perl 5-style regular expressions. 2nd version'
 arch=('x86_64')
 url='https://www.pcre.org/'
 license=('BSD')
-depends=('gcc-libs' 'readline' 'zlib' 'bzip2' 'bash')
+depends=('readline' 'zlib' 'bzip2' 'bash')
 provides=(libpcre2-{8,16,32,posix}.so)
 options=(staticlibs)
 source=("https://github.com/PhilipHazel/pcre2/releases/download/$pkgname-$pkgver/$pkgname-$pkgver.tar.bz2"{,.sig})
