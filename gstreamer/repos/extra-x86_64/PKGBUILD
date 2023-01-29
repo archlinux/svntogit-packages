@@ -26,7 +26,7 @@ pkgname=(
   gstreamer-docs
 )
 pkgver=1.22.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Multimedia graph framework"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
@@ -215,6 +215,7 @@ package_gst-plugins-bad-libs() {
   depends=(
     "gst-plugins-base-libs=$pkgver"
     orc libdrm libx11 libgudev libusb libxkbcommon-x11 libva libnice
+    vulkan-icd-loader wayland
   )
 
   cd root; local files=(
@@ -302,6 +303,8 @@ package_gst-plugins-bad-libs() {
     usr/lib/gstreamer-1.0/libgstvideoparsersbad.so
     usr/lib/gstreamer-1.0/libgstvideosignal.so
     usr/lib/gstreamer-1.0/libgstvmnc.so
+    usr/lib/gstreamer-1.0/libgstvulkan.so
+    usr/lib/gstreamer-1.0/libgstwaylandsink.so
     usr/lib/gstreamer-1.0/libgsty4mdec.so
 
     usr/share/gstreamer-1.0/encoding-profiles
@@ -317,7 +320,7 @@ package_gst-plugins-base-libs() {
   pkgdesc+=" - base"
   depends=(
     "gstreamer=$pkgver"
-    orc libxv iso-codes libgudev libgl mesa libxi
+    orc libxv iso-codes libgudev libgl mesa libxi wayland
   )
 
   cd root; local files=(
@@ -480,9 +483,9 @@ package_gst-plugins-bad() {
     libde265 openssl libdca faac faad2 libfdk-aac fluidsynth libgme nettle
     libkate liblrdf lilv libmodplug mjpegtools libmpcdec neon openal openexr
     openjpeg2 opus libdvdnav libdvdread librsvg rtmpdump sbc libsndfile libltc
-    soundtouch spandsp srt libsrtp zvbi vulkan-icd-loader libxcb wayland libwebp
-    webrtc-audio-processing wildmidi x265 zbar gsm libopenmpt libldac
-    libfreeaptx qrencode json-glib libavtp libmicrodns svt-hevc zxing-cpp
+    soundtouch spandsp srt libsrtp zvbi libwebp webrtc-audio-processing wildmidi
+    x265 zbar gsm libopenmpt libldac libfreeaptx qrencode json-glib libavtp
+    libmicrodns svt-hevc zxing-cpp
   )
 
   cd root; local files=(
@@ -540,8 +543,6 @@ package_gst-plugins-bad() {
     usr/lib/gstreamer-1.0/libgstteletext.so
     usr/lib/gstreamer-1.0/libgsttimecode.so
     usr/lib/gstreamer-1.0/libgstttmlsubs.so
-    usr/lib/gstreamer-1.0/libgstvulkan.so
-    usr/lib/gstreamer-1.0/libgstwaylandsink.so
     usr/lib/gstreamer-1.0/libgstwebp.so
     usr/lib/gstreamer-1.0/libgstwebrtc.so
     usr/lib/gstreamer-1.0/libgstwebrtcdsp.so
