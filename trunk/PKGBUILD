@@ -1,16 +1,16 @@
 # Maintainer: Antonio Rojas <arojas@archlinux.org>
 
 pkgbase=noto-fonts
-pkgname=(noto-fonts noto-fonts-extra ttf-croscore)
-pkgver=20220810
-_commit=2725c70baa8b0176c7577093ba1fc6179aa79478
+pkgname=(noto-fonts noto-fonts-extra)
+pkgver=20230117
+_commit=2d6dba256614623346cf4891d8798484bf98fe8c
 pkgrel=1
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
 url='https://fonts.google.com/noto'
 license=(custom:SIL)
 makedepends=(git python-fonttools)
-source=(git+https://github.com/notofonts/noto-fonts#commit=$_commit
+source=(git+https://github.com/notofonts/notofonts.github.io#commit=$_commit
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
         46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
 sha256sums=('SKIP'
@@ -21,25 +21,14 @@ sha256sums=('SKIP'
             'c94368b24506770767d003e5bcba589a8e402e489c240ee52453bf3ac7e9b5fa'
             'f5c09b37280d7569b6c99a78511639be4ae25b8c5406464422fe0421fe13a884')
 
-prepare() {
-# Fix weight of Arimo-BoldItalic.ttf https://github.com/googlefonts/noto-fonts/issues/2350
-  cd $pkgbase/hinted/ttf/Arimo
-  ttx Arimo-BoldItalic.ttf
-  sed -e 's|usWeightClass value=\"400\"|usWeightClass value=\"700\"|' -i Arimo-BoldItalic.ttx
-  ttx -f Arimo-BoldItalic.ttx
-}
-
 package_noto-fonts() {
   optdepends=('noto-fonts-cjk: CJK characters' 'noto-fonts-emoji: Emoji characters'
               'noto-fonts-extra: additional variants (condensed, semi-bold, extra-light)')
   provides=(ttf-font)
 
-  cd $pkgbase
-  # Remove duplicated fonts
-  rm {un,}hinted/ttf/NotoSansTifinagh/NotoSansTifinagh[AGHRST]*.ttf
-
-  install -Dm644 unhinted/ttf/Noto*/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
-  install -Dm644 hinted/ttf/Noto*/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
+  cd notofonts
+  install -Dm644 fonts/*/unhinted/ttf/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
+  install -Dm644 fonts/*/hinted/ttf/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/noto-fonts
 
   # Move to noto-fonts-extra
@@ -49,31 +38,13 @@ package_noto-fonts() {
   install -Dm644 "$srcdir"/*.conf -t "$pkgdir"/usr/share/fontconfig/conf.avail/
   install -d "$pkgdir"/usr/share/fontconfig/conf.default
   ln -rs "$pkgdir"/usr/share/fontconfig/conf.avail/* "$pkgdir"/usr/share/fontconfig/conf.default
-
-  # Remove duplicate Display fonts https://github.com/googlefonts/noto-fonts/issues/2315
-  rm "$pkgdir"/usr/share/fonts/noto/NotoSans-Display*
-
-  # Remove broken file which isn't even a font
-  rm "$pkgdir"/usr/share/fonts/noto/NotoSerifCJK-Regular.ttc
 }
 
 package_noto-fonts-extra() {
   pkgdesc+=' - additional variants'
   depends=(noto-fonts)
   
-  cd $pkgbase
+  cd notofonts
   mkdir -p "$pkgdir"/usr/share/fonts/noto
-  cp hinted/ttf/Noto*/*{Condensed,SemiBold,Extra}*.tt[fc] "$pkgdir"/usr/share/fonts/noto
-
-  # Remove duplicate Display fonts https://github.com/googlefonts/noto-fonts/issues/2315
-  rm "$pkgdir"/usr/share/fonts/noto/NotoSans-Display*
-}
-
-package_ttf-croscore() {
-  pkgdesc='Chrome OS core fonts'
-  provides=(ttf-font)
-
-  cd $pkgbase
-  install -Dm644 hinted/ttf/{Arimo,Cousine,Tinos}/*.ttf -t "$pkgdir"/usr/share/fonts/croscore
-  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/ttf-croscore
+  cp fonts/*/hinted/ttf/*{Condensed,SemiBold,Extra}*.tt[fc] "$pkgdir"/usr/share/fonts/noto
 }
