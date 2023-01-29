@@ -1,7 +1,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-packaging
-pkgver=22.0
+pkgver=23.0
 pkgrel=1
 pkgdesc="Core utilities for Python packages"
 arch=('any')
@@ -11,7 +11,7 @@ depends=('python')
 makedepends=('python-build' 'python-installer' 'python-flit-core')
 checkdepends=('python-pytest' 'python-pretend')
 source=("https://github.com/pypa/packaging/archive/$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('2189dec11dd9fd78a6d816bda08f881e5aa54fde09d51450ceb460a37ba87231fcfdb5ad4f58d262face44dfb0f1c4b420f759491008f8c26cef7e8317c414a8')
+sha512sums=('5dd2f4a596e5a1ed01b461a37e063573f5ae08e181df40377a167fe2483205b3d965e10dc403cd173d0f87e0bdcae3cde05bd39024783fbe44541d0f777d94de')
 
 build() {
   cd packaging-$pkgver
@@ -20,7 +20,7 @@ build() {
 
 check() {
   cd packaging-$pkgver
-  python -m pytest
+  PYTHONPATH=src pytest
 }
 
 package() {
