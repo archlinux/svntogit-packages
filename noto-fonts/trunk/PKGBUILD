@@ -4,12 +4,12 @@ pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra)
 pkgver=20230117
 _commit=2d6dba256614623346cf4891d8798484bf98fe8c
-pkgrel=1
+pkgrel=2
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
 url='https://fonts.google.com/noto'
 license=(custom:SIL)
-makedepends=(git python-fonttools)
+makedepends=(git)
 source=(git+https://github.com/notofonts/notofonts.github.io#commit=$_commit
         66-noto-sans.conf 66-noto-serif.conf 66-noto-mono.conf
         46-noto-sans.conf 46-noto-serif.conf 46-noto-mono.conf)
@@ -27,12 +27,11 @@ package_noto-fonts() {
   provides=(ttf-font)
 
   cd notofonts
-  install -Dm644 fonts/*/unhinted/ttf/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
-  install -Dm644 fonts/*/hinted/ttf/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
+  install -Dm644 fonts/*/full/ttf/*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/noto-fonts
 
   # Move to noto-fonts-extra
-  rm -f "$pkgdir"/usr/share/fonts/noto/Noto*{Condensed,SemiBold,Extra}*.ttf
+  rm -f "$pkgdir"/usr/share/fonts/noto/Noto*{-Condensed,-Semi,-Extra}*.ttf
 
   # Install fontconfig files
   install -Dm644 "$srcdir"/*.conf -t "$pkgdir"/usr/share/fontconfig/conf.avail/
@@ -45,6 +44,5 @@ package_noto-fonts-extra() {
   depends=(noto-fonts)
   
   cd notofonts
-  mkdir -p "$pkgdir"/usr/share/fonts/noto
-  cp fonts/*/hinted/ttf/*{Condensed,SemiBold,Extra}*.tt[fc] "$pkgdir"/usr/share/fonts/noto
+  install -Dm644 fonts/*/full/ttf/*{-Condensed,-Semi,-Extra}*.tt[fc] -t "$pkgdir"/usr/share/fonts/noto
 }
