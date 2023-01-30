@@ -50,6 +50,7 @@ optdepends=(
   'gst-plugin-pipewire: Screen recording'
   'gst-plugins-good: Screen recording'
   'power-profiles-daemon: Power profile switching'
+  'switcheroo-control: Multi-GPU support'
 )
 groups=(gnome)
 _commit=e9b26eac0c0d66b87201874ce2b704268ee99be6  # tags/43.2^0
