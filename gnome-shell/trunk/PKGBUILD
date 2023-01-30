@@ -10,25 +10,55 @@ pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
 arch=(x86_64)
 license=(GPL)
-depends=(accountsservice gcr-4 gjs upower gnome-session gtk4
-         gnome-settings-daemon gsettings-desktop-schemas libcanberra-pulse
-         libgdm libsecret mutter libnma unzip libibus gnome-autoar
-         gnome-disk-utility libsoup3 libgweather-4)
-makedepends=(gtk-doc gnome-control-center evolution-data-server
-             gobject-introspection git meson sassc asciidoc bash-completion)
+depends=(
+  accountsservice
+  gcr-4
+  gjs
+  gnome-autoar
+  gnome-disk-utility
+  gnome-session
+  gnome-settings-daemon
+  gsettings-desktop-schemas
+  gtk4
+  libcanberra-pulse
+  libgdm
+  libgweather-4
+  libibus
+  libnma
+  libsecret
+  libsoup3
+  mutter
+  unzip
+  upower
+)
+makedepends=(
+  asciidoc
+  bash-completion
+  evolution-data-server
+  git
+  gnome-control-center
+  gobject-introspection
+  gtk-doc
+  meson
+  sassc
+)
 checkdepends=(xorg-server-xvfb)
-optdepends=('gnome-control-center: System settings'
-            'evolution-data-server: Evolution calendar integration'
-            'gst-plugins-good: Screen recording'
-            'gst-plugin-pipewire: Screen recording'
-            'gnome-bluetooth-3.0: Bluetooth support'
-            'power-profiles-daemon: Power profile switching')
+optdepends=(
+  'evolution-data-server: Evolution calendar integration'
+  'gnome-bluetooth-3.0: Bluetooth support'
+  'gnome-control-center: System settings'
+  'gst-plugin-pipewire: Screen recording'
+  'gst-plugins-good: Screen recording'
+  'power-profiles-daemon: Power profile switching'
+)
 groups=(gnome)
 _commit=e9b26eac0c0d66b87201874ce2b704268ee99be6  # tags/43.2^0
-source=("git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
-        "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git")
-sha256sums=('SKIP'
-            'SKIP')
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
+  "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+)
+b2sums=('SKIP'
+        'SKIP')
 
 pkgver() {
   cd gnome-shell
