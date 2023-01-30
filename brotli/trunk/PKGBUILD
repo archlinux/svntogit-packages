@@ -8,12 +8,12 @@ pkgbase=brotli
 pkgname=('brotli' 'python-brotli' 'brotli-testdata')
 _gitcommit=e61745a6b7add50d380cfd7d3883dd6c62fc2c71
 pkgver=1.0.9
-pkgrel=9
+pkgrel=10
 pkgdesc='Generic-purpose lossless compression algorithm'
 url='https://github.com/google/brotli'
 arch=('x86_64')
 license=('MIT')
-makedepends=('git' 'glibc' 'gcc-libs' 'cmake' 'python-setuptools')
+makedepends=('git' 'cmake' 'python-setuptools')
 source=(${pkgname}::"git+${url}#commit=${_gitcommit}")
 sha512sums=('SKIP')
 
@@ -47,7 +47,7 @@ check() {
 }
 
 package_brotli() {
-  depends=('gcc-libs' 'glibc')
+  depends=('glibc')
   provides=(libbrotlicommon.so libbrotlidec.so libbrotlienc.so)
 
   cd ${pkgbase}
@@ -61,7 +61,7 @@ package_brotli() {
 
 package_python-brotli() {
   pkgdesc+=' - python library'
-  depends=('python' 'glibc' 'gcc-libs')
+  depends=('python')
 
   cd ${pkgbase}
   python setup.py install --skip-build -O1 --root="$pkgdir"
