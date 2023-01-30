@@ -10,7 +10,7 @@
 pkgbase=audit
 pkgname=(audit python-audit)
 pkgver=3.0.9
-pkgrel=1
+pkgrel=2
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
 arch=(x86_64)
@@ -95,7 +95,9 @@ package_audit() {
   rm -v "$pkgdir/usr/include/libaudit.h.orig"
 
   # add log dir
-  install -vdm 700 "$pkgdir/var/log/$pkgname"
+  install -vdm 700 "$pkgdir/var/log/$pkgname/"
+  # add rules.d dir to satisfy augenrules
+  install -vdm 755 "$pkgdir/etc/audit/rules.d/"
 
   # remove legacy files
   rm -frv "$pkgdir/usr/lib/audit"
