@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=109.0
+pkgver=109.0.1
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 url="https://www.mozilla.org/firefox/"
@@ -67,23 +67,20 @@ source=(
   $pkgname.desktop
   identity-icons-brand.svg
   0001-libwebrtc-screen-cast-sync.patch
-  0002-Bug-1804973-Wayland-Check-size-for-valid-EGLWindows-.patch
 )
 validpgpkeys=(
   '14F26682D0916CDD81E37B6D61B7B526D98F0353'  # Mozilla Software Releases <release@mozilla.com>
 )
-sha256sums=('0678a03b572b5992fb85f0923a25b236acf81e5ea2c08e549b63a56076a69351'
+sha256sums=('5e43fdfb3923ee3a7ae7bc91ef3377a3fc6f8a0c1b87436c19b29458b0d731d9'
             'SKIP'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9'
-            'b1ce6936749ab1614bbce4fddc87058341ed207dde77af609fdc5ac83538517a'
-            '34439dfb17371520e5e99444096ded97325ab2559b9039ae16055975d015ac51')
-b2sums=('56ec8c49f0dd1cb4ba29afb5d68fd724614b993b2a1a59b9c03bf6349bae980d558ef18dbe2170af59f3e690308b753a88619e2abe48db58af5b7fcbecfa03f5'
+            'b1ce6936749ab1614bbce4fddc87058341ed207dde77af609fdc5ac83538517a')
+b2sums=('37370cced42da5850ad8cc4d90c0e7c1a700b9fa5c281c57ef7c3c243898b7ac55a8f183360585b24b164b8572816c9e216114594371bac3f2e3c1d85c2f6408'
         'SKIP'
         'e18f2c22e394ca3b6758bc130245b254947e4d15921be3da443d6d7c3c4b0d22ead1b39fbc10a4f896edd19e2a1dffbd1cbb34dc4beb0621a6ddb70ccc53b3a7'
         '63a8dd9d8910f9efb353bed452d8b4b2a2da435857ccee083fc0c557f8c4c1339ca593b463db320f70387a1b63f1a79e709e9d12c69520993e26d85a3d742e34'
-        '3a7de17f0a56c4ccbbd4754a63a8798f787e87acc947b0fc0c1e5086c99337979b7f66a741fdc5475b34085eaf80dbc99d742c22a95d6ed412e38012794a44c9'
-        'ad4618e6c0e6ac8cca387579f26e8f9a0eaab8e6f8ac8f9e2ad179bce09f5247848a9ce78d4042f3e400771f9c0914e8d6504f792d002481529e755f5eaf8916')
+        '3a7de17f0a56c4ccbbd4754a63a8798f787e87acc947b0fc0c1e5086c99337979b7f66a741fdc5475b34085eaf80dbc99d742c22a95d6ed412e38012794a44c9')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -105,9 +102,6 @@ prepare() {
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1790496
   # https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-screen-cast-sync.patch
   patch -Np1 -i ../0001-libwebrtc-screen-cast-sync.patch
-
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1804973
-  patch -Np1 -i ../0002-Bug-1804973-Wayland-Check-size-for-valid-EGLWindows-.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
