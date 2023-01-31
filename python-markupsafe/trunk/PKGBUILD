@@ -3,31 +3,31 @@
 # Contributor: Alex Anthony <alex.anthony28991@gmail.com>
 
 pkgname=python-markupsafe
-pkgver=2.1.1
+pkgver=2.1.2
+_commit=c0254f0cfe51720ecc9e72e8896022af29af5b44
 pkgrel=1
 pkgdesc="Implements a XML/HTML/XHTML Markup safe string for Python"
 arch=('x86_64')
 url="https://pypi.python.org/pypi/MarkupSafe"
 license=('BSD')
 depends=('python')
-makedepends=('python-setuptools')
-checkdepends=('python-pytest-runner')
-source=("https://github.com/pallets/markupsafe/archive/$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('6b06a5f470858409eb186d20edd129be90f31030be91fcc73e989b0a4ee51c3755cce0938edd9a7c73471d307385260f868101b5e11cc4d97c309420b5a573da')
+makedepends=('git' 'python-setuptools')
+checkdepends=('python-pytest')
+source=("git+https://github.com/pallets/markupsafe.git#commit=$_commit")
+sha512sums=('SKIP')
 
 build() {
-  cd markupsafe-$pkgver
+  cd markupsafe
   python setup.py build
 }
 
 check() {
-  cd markupsafe-$pkgver
-  python setup.py pytest
+  cd markupsafe
+  PYTHONPATH=src pytest
 }
 
 package() {
-  cd markupsafe-$pkgver
+  cd markupsafe
   python setup.py install --root="$pkgdir" --optimize=1
-
-  install -D -m644 LICENSE.rst "$pkgdir"/usr/share/licenses/python-markupsafe/LICENSE.rst
+  install -Dm644 LICENSE.rst -t "$pkgdir"/usr/share/licenses/$pkgname/
 }
