@@ -19,4 +19,6 @@ case ${TERM} in
     ;;
 esac
 
-[ -r /usr/share/bash-completion/bash_completion   ] && . /usr/share/bash-completion/bash_completion
+if [[ -r /usr/share/bash-completion/bash_completion ]];
+  . /usr/share/bash-completion/bash_completion
+fi
