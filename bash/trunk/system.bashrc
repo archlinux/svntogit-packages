@@ -10,7 +10,7 @@
 PS1='[\u@\h \W]\$ '
 
 case ${TERM} in
-  xterm*|rxvt*|Eterm|aterm|kterm|gnome*)
+  Eterm*|alacritty*|aterm*|foot*|gnome*|konsole*|kterm*|putty*|rxvt*|tmux*|xterm*)
     PROMPT_COMMAND=${PROMPT_COMMAND:+$PROMPT_COMMAND; }'printf "\033]0;%s@%s:%s\007" "${USER}" "${HOSTNAME%%.*}" "${PWD/#$HOME/\~}"'
 
     ;;
