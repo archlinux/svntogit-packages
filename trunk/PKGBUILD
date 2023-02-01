@@ -106,7 +106,6 @@ _pick() {
 
 package_mutter() {
   provides=(libmutter-11.so)
-  groups=(gnome)
 
   meson install -C build --destdir "$pkgdir"
 
