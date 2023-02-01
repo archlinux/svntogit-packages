@@ -1,0 +1,86 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Dan McGee <dan@archlinux.org>
+# Contributor: Eli Schwartz <eschwartz@archlinux.org>
+# Contributor: Sebastien Binet <binet@lblbox>
+
+_name=pip
+pkgname=python-pip
+pkgver=23.0
+pkgrel=1
+pkgdesc="The PyPA recommended tool for installing Python packages"
+url="https://pip.pypa.io/"
+arch=(any)
+license=(MIT)
+depends=(
+  python
+  python-attrs  # for vendored rich
+  python-cryptography  # for vendored requests and urllib3
+  python-wheel  # for internal misc utils
+)
+makedepends=(
+  python-build
+  python-installer
+  python-myst-parser
+  python-setuptools
+  python-sphinx
+  python-sphinx-copybutton
+  python-sphinx-inline-tabs
+  python-sphinxcontrib-towncrier
+)
+checkdepends=(
+  git
+  python-freezegun
+  python-pytest
+  python-pytest-rerunfailures
+  python-pytest-xdist
+  python-scripttest
+  python-tomli-w
+  python-virtualenv
+  python-werkzeug
+  subversion
+)
+source=(https://github.com/pypa/$_name/archive/$pkgver/$_name-$pkgver.tar.gz)
+sha512sums=('9b791ed15b4e5dd768351043929dc6ee18eeab251a26fb2b0d712dec578101f1620a13d5914d44f2761ecb95e64bc47e6b07096126404ca70345268028524d43')
+b2sums=('693623292e498ec939ce931063bccc8079fc313a0a9f30d406a99a2084fcd84b5b5a17566602c53bb96090920bc2d0615f28b8f9c165022c2b0de62fa9355b21')
+
+build() {
+  cd $_name-$pkgver
+
+  python -m build --wheel --no-isolation
+
+  cd docs/
+  PYTHONPATH="$srcdir/$_name-$pkgver/src/" python pip_sphinxext.py
+  PYTHONPATH="$srcdir/$_name-$pkgver/src/" sphinx-build -b man -d build/doctrees/man man build/man -c html
+}
+
+check() {
+  local _site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  local _deselected=(
+    # deselect tests that would require python-pip in checkdepends (may or may not work due to devendored dependencies when python-pip is updated)
+    --deselect tests/unit/test_direct_url_helpers.py::test_from_link_vcs_with_source_dir_obtains_commit_id
+    --deselect tests/unit/test_direct_url_helpers.py::test_from_link_vcs_without_source_dir
+    --deselect tests/unit/test_wheel_builder.py::test_should_cache_git_sha
+  )
+
+  cd $_name-$pkgver
+  # install to temporary location
+  python -m installer --destdir=test_dir dist/*.whl
+  export PYTHONPATH="test_dir/$_site_packages:$PYTHONPATH"
+  pytest -vv -m unit "${_deselected[@]}" tests/
+}
+
+package() {
+  local _site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+
+  cd $_name-$pkgver
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+  install -vDm 644 LICENSE.txt -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -vDm 644 docs/build/man/*.1 -t "$pkgdir/usr/share/man/man1/"
+  install -vDm 644 {NEWS,README}.rst -t "$pkgdir/usr/share/doc/$pkgname/"
+
+  # NOTE: zsh completion does not work: https://bugs.archlinux.org/task/65349#comment187166
+  PYTHONPATH="$pkgdir/$_site_packages" "$pkgdir"/usr/bin/pip completion --bash | install -vDm 644 /dev/stdin "$pkgdir"/usr/share/bash-completion/completions/pip
+  PYTHONPATH="$pkgdir/$_site_packages" "$pkgdir"/usr/bin/pip completion --fish | install -vDm 644 /dev/stdin "$pkgdir"/usr/share/fish/vendor_completions.d/pip.fish
+}
