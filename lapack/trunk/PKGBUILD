@@ -4,9 +4,9 @@
 # Contributor: Jason Taylor <jftaylor21@gmail.com>
 
 pkgbase=lapack
-pkgname=(lapack blas cblas lapacke lapack-doc)
+pkgname=(lapack blas cblas lapacke lapack64 blas64 cblas64 lapacke64 lapack-doc)
 pkgver=3.11.0
-pkgrel=1
+pkgrel=2
 url='https://www.netlib.org/lapack'
 pkgdesc='Linear Algebra PACKage'
 makedepends=(gcc-fortran cmake python doxygen)
@@ -28,6 +28,18 @@ build() {
     -DBUILD_DEPRECATED=ON
   cmake --build build
 
+  cmake -B build64 -S $pkgname-$pkgver \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DBUILD_SHARED_LIBS=ON \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_Fortran_COMPILER=gfortran \
+    -DLAPACKE_WITH_TMG=ON \
+    -DCBLAS=ON \
+    -DBUILD_DEPRECATED=ON \
+    -DBUILD_INDEX64=ON
+  cmake --build build64
+
 # Build man pages
   cd $pkgname-$pkgver
   doxygen DOCS/Doxyfile_man
@@ -45,7 +57,7 @@ package_lapack() {
 }
 
 package_blas() {
-  pkgdesc="Basic Linear Algebra Subprograms"
+  pkgdesc='Basic Linear Algebra Subprograms'
   depends=(gcc-libs)
 
   DESTDIR="$pkgdir" cmake --install build/BLAS
@@ -54,21 +66,60 @@ package_blas() {
 }
 
 package_cblas() {
-  pkgdesc="C interface to BLAS"
+  pkgdesc='C interface to BLAS'
   depends=(blas)
 
   DESTDIR="$pkgdir" cmake --install build/CBLAS
 }
 
 package_lapacke() {
-  pkgdesc="C interface to LAPACK"
+  pkgdesc='C interface to LAPACK'
   depends=(lapack)
 
   DESTDIR="$pkgdir" cmake --install build/LAPACKE
 }
 
+package_lapack64() {
+  pkgdesc='Linear Algebra PACKage (64-bit integers)'
+  depends=(blas64)
+
+  DESTDIR="$pkgdir" cmake --install build64
+
+  rm -r "$pkgdir"/usr/lib/{libblas64.*,libcblas64.*,liblapacke64.*}
+  rm -r "$pkgdir"/usr/lib/pkgconfig/{blas64.*,cblas64.*,lapacke64.*}
+  rm -r "$pkgdir"/usr/lib/cmake/{cblas*,lapacke*}
+  rm -r "$pkgdir"/usr/include
+}
+
+package_blas64() {
+  pkgdesc='Basic Linear Algebra Subprograms (64-bit integers)'
+  depends=(gcc-libs)
+
+  DESTDIR="$pkgdir" cmake --install build64/BLAS
+
+  install -Dm644 LICENSE.blas -t "$pkgdir"/usr/share/licenses/$pkgname/
+}
+
+package_cblas64() {
+  pkgdesc='C interface to BLAS (64-bit integers)'
+  depends=(blas64)
+  optdepends=('cblas: development headers')
+
+  DESTDIR="$pkgdir" cmake --install build64/CBLAS
+  rm -r "$pkgdir"/usr/include # Provided by cblas
+}
+
+package_lapacke64() {
+  pkgdesc='C interface to LAPACK (64-bit integers)'
+  depends=(lapack64)
+  optdepends=('lapacke: development headers')
+ 
+  DESTDIR="$pkgdir" cmake --install build64/LAPACKE
+  rm -r "$pkgdir"/usr/include # Provided by lapacke
+}
+
 package_lapack-doc() {
-  pkgdesc="Man pages for BLAS/LAPACK"
+  pkgdesc='Man pages for BLAS/LAPACK'
 
   mkdir -p "$pkgdir"/usr/share
   cp -r lapack-$pkgver/DOCS/man "$pkgdir"/usr/share
