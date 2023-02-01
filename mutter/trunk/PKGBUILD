@@ -10,16 +10,47 @@ pkgdesc="A window manager for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
 license=(GPL)
-depends=(dconf gobject-introspection-runtime gsettings-desktop-schemas
-         libcanberra startup-notification libsm gnome-desktop libxkbcommon-x11
-         gnome-settings-daemon libgudev libinput pipewire xorg-xwayland graphene
-         libxkbfile libsysprof-capture lcms2 colord)
-makedepends=(gobject-introspection git egl-wayland meson xorg-server
-             wayland-protocols sysprof gi-docgen)
-checkdepends=(xorg-server-xvfb wireplumber python-dbusmock zenity)
+depends=(
+  colord
+  dconf
+  gnome-desktop
+  gnome-settings-daemon
+  gobject-introspection-runtime
+  graphene
+  gsettings-desktop-schemas
+  lcms2
+  libcanberra
+  libgudev
+  libinput
+  libsm
+  libsysprof-capture
+  libxkbcommon-x11
+  libxkbfile
+  pipewire
+  startup-notification
+  xorg-xwayland
+)
+makedepends=(
+  egl-wayland
+  gi-docgen
+  git
+  gobject-introspection
+  meson
+  sysprof
+  wayland-protocols
+  xorg-server
+)
+checkdepends=(
+  python-dbusmock
+  wireplumber
+  xorg-server-xvfb
+  zenity
+)
 _commit=46f4143619734ec2b95503ba96e444f61f27e18e  # tags/43.2^0
-source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
-sha256sums=('SKIP')
+source=(
+  "git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit"
+)
+b2sums=('SKIP')
 
 pkgver() {
   cd mutter
