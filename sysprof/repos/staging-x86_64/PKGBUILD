@@ -1,0 +1,82 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Geoffroy Carrier <geoffroy.carrier@aur.archlinux.org>
+# Contributor: Eric Belanger <belanger@astro.umontreal.ca>
+# Contributor: aeolist <aeolist@hotmail.com>
+# Contributor: Gabriel Rauter <rauter.gabriel@gmail.com>
+
+pkgbase=sysprof
+pkgname=(sysprof libsysprof-capture)
+pkgver=3.46.0
+pkgrel=4
+pkgdesc="Kernel based performance profiler"
+url="https://wiki.gnome.org/Apps/Sysprof"
+license=(GPL)
+arch=(x86_64)
+depends=(libadwaita polkit)
+makedepends=(yelp-tools git meson)
+_commit=d2b678d1d558d4ea7ec3de72a79f5a17cf5c2c2f  # tags/3.46.0^0
+source=("git+https://gitlab.gnome.org/GNOME/sysprof.git#commit=$_commit"
+        0001-libsysprof-Actually-set-spawnable-flags-to-inherit-s.patch)
+sha256sums=('SKIP'
+            'd772d116eb1e49a2aeefb22d1474314d84a07900cb2eaf449ce8cb3e75ebd8f1')
+
+pkgver() {
+  cd sysprof
+  git describe --tags | sed 's/^sysprof-//;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd sysprof
+
+  # https://gitlab.gnome.org/GNOME/sysprof/-/merge_requests/55
+  git apply -3 ../0001-libsysprof-Actually-set-spawnable-flags-to-inherit-s.patch
+}
+
+build() {
+  # Ensure static library is non-LTO compatible
+  CFLAGS+=" -ffat-lto-objects"
+
+  arch-meson sysprof build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_sysprof() {
+  depends+=(libsysprof-capture)
+  groups=(gnome-extra)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick capture usr/lib/libsysprof-capture-*
+  _pick capture usr/lib/pkgconfig/sysprof-capture-*
+  _pick capture usr/include/sysprof-*/sysprof-{address,capture,clock,collector,macros}.h
+  _pick capture usr/include/sysprof-*/sysprof-{platform,version,version-macros}.h
+  _pick capture usr/include/sysprof-*/sysprof-capture-{condition,cursor,reader,types,writer}.h
+}
+
+package_libsysprof-capture() {
+  pkgdesc+=" - capture library"
+  depends=()
+  license=(BSD)
+
+  mv capture/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 \
+    sysprof/src/libsysprof-capture/COPYING
+}
