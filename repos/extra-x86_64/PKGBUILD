@@ -3,8 +3,9 @@
 # Contributor: Yejun Yang <yejunx AT gmail DOT com>
 # Contributor: Michal Krenek <mikos@sg1.cz>
 
-pkgname=libsrtp
-pkgver=2.4.2
+pkgbase=libsrtp
+pkgname=(libsrtp libsrtp-docs)
+pkgver=2.5.0
 pkgrel=1
 epoch=1
 pkgdesc="Library for SRTP (Secure Realtime Transport Protocol)"
@@ -12,20 +13,24 @@ url="https://github.com/cisco/libsrtp"
 arch=(x86_64)
 license=(BSD)
 depends=(nss)
-makedepends=(git meson libpcap doxygen)
+makedepends=(
+  doxygen
+  git
+  libpcap
+  meson
+)
 checkdepends=(procps-ng)
-provides=("libsrtp${pkgver%%.*}.so")
-_commit=90d05bf8980d16e4ac3f16c19b77e296c4bc207b  # tags/v2.4.2
+_commit=a566a9cfcd619e8327784aa7cff4a1276dc1e895  # tags/v2
 source=("git+https://github.com/cisco/libsrtp#commit=$_commit")
-sha256sums=('SKIP')
+b2sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
-  git describe --tags | sed 's/^v//;s/-/+/g'
+  cd libsrtp
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd libsrtp
 
   # Fixup pkgver: There are proper tags like v2.4.4
   # but also "moving tags" like v2 and v2.4 that aren't stable
@@ -33,10 +38,13 @@ prepare() {
 }
 
 build() {
-  arch-meson $pkgname build \
-    --buildtype release \
-    -D crypto-library=nss \
+  local meson_options=(
+    --buildtype release
+    -D crypto-library=nss
     -D crypto-library-kdf=disabled
+  )
+
+  arch-meson libsrtp build "${meson_options[@]}"
   meson compile -C build
   meson compile -C build doc
 }
@@ -45,11 +53,21 @@ check() {
   meson test -C build --print-errorlogs
 }
 
-package() {
+package_libsrtp() {
+  provides=("libsrtp${pkgver%%.*}.so")
+
   meson install -C build --destdir "$pkgdir"
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 libsrtp/LICENSE
+}
+
+package_libsrtp-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
 
   mkdir -p "$pkgdir/usr/share/doc"
-  cp -a build/html "$pkgdir/usr/share/doc/$pkgname"
+  cp -a build/html "$pkgdir/usr/share/doc/libsrtp"
 
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname/LICENSE
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 libsrtp/LICENSE
 }
+
+# vim:set sw=2 sts=-1 et:
