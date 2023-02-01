@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=43.2
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -57,9 +57,11 @@ _commit=e9b26eac0c0d66b87201874ce2b704268ee99be6  # tags/43.2^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+  0001-main-Leak-the-GJS-context-and-ShellGlobal.patch
 )
 b2sums=('SKIP'
-        'SKIP')
+        'SKIP'
+        '5636fd813bc0aeafbdd52eb6335ef79b5801b800e332119b3d127a6cd188aa24051ebc718449f22bea7bedc37347ff98c7d491b35d84f573f0e4cff2046117d4')
 
 pkgver() {
   cd gnome-shell
@@ -68,6 +70,10 @@ pkgver() {
 
 prepare() {
   cd gnome-shell
+
+  # https://bugs.archlinux.org/task/71250
+  # https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/5560#note_1636124
+  git apply -3 ../0001-main-Leak-the-GJS-context-and-ShellGlobal.patch
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
