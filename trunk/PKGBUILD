@@ -2,17 +2,36 @@
 
 pkgbase=libcamera
 pkgname=(libcamera libcamera-docs libcamera-tools gst-plugin-libcamera)
-pkgver=0.0.3
-_commit=3c3f20d05113f5f2abbad233e4c792f84328001a  # refs/tags/v0.0.3
-pkgrel=4
+pkgver=0.0.4
+_commit=6a57d964abdb3f24608c0fc2839d96e02eebddeb  # refs/tags/v0.0.4
+pkgrel=1
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
 url="https://libcamera.org/"
 license=(LGPL2.1 GPL2)
 depends=(glibc)
-makedepends=(doxygen git glib2 graphviz gst-plugins-base gtest libdrm
-libjpeg-turbo libtiff libyaml meson python-jinja python-ply python-sphinx
-python-pyyaml qt5-base qt5-tools sdl2 systemd texlive-core)
+makedepends=(
+  doxygen
+  git
+  glib2
+  graphviz
+  gst-plugins-base
+  gtest
+  libdrm
+  libjpeg-turbo
+  libtiff
+  libyaml
+  meson
+  python-jinja
+  python-ply
+  python-sphinx
+  python-pyyaml
+  qt5-base
+  qt5-tools
+  sdl2
+  systemd
+  texlive-core
+)
 source=(git+https://git.libcamera.org/$pkgname/$pkgname.git#tag=$_commit)
 sha256sums=('SKIP')
 
