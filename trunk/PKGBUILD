@@ -5,7 +5,7 @@
 pkgbase=mutter
 pkgname=(mutter mutter-docs)
 pkgver=43.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Window manager and compositor for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -15,7 +15,6 @@ depends=(
   dconf
   gnome-desktop
   gnome-settings-daemon
-  gobject-introspection-runtime
   graphene
   gsettings-desktop-schemas
   lcms2
