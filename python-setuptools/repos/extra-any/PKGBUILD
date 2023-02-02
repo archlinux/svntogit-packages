@@ -3,7 +3,8 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=67.0.0
+pkgver=67.1.0
+_commit=8032430d75cdfad9f9826d302d90cd7b23dea3ca
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -19,17 +20,17 @@ checkdepends=('python-jaraco.envs' 'python-jaraco.path' 'python-pip' 'python-pip
               'python-build' 'python-ini2toml' 'python-tomli-w')
 provides=('python-distribute')
 replaces=('python-distribute')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/pypa/setuptools/archive/v$pkgver.tar.gz"
+source=("git+https://github.com/pypa/setuptools.git#commit=$_commit"
         system-validate-pyproject.patch
         add-dependency.patch)
-sha512sums=('17ffb92f3a1008b13943f69d2dc934a9f7e91f0f4298244bb049893830373fe7519a573ac82eebdba4051588aaefe7db5e6d0aa32cdc22e4fb2c9a842bc73aff'
+sha512sums=('SKIP'
             '390fea2c575a0042054f51d33e629b04a48f832f0a4a2dd07d34e23cdf330c382dba0f54bfb7c8a6a253bb248a4940f2a789672f715e4dc2aeb395fa185cae7a'
             '9c5d80c753e78bf613572fb789a234984087d0ce96d0bad22b5ed731d83c77bf6d8acfa65c78f6c78f9063be7819c2b58988fdf8e7fc89b55339f94a87b3b21f')
 
 export SETUPTOOLS_INSTALL_WINDOWS_SPECIFIC_FILES=0
 
 prepare() {
-  cd setuptools-$pkgver
+  cd setuptools
 
   patch -p1 -i ../system-validate-pyproject.patch
 
@@ -69,7 +70,7 @@ prepare() {
 }
 
 build() {
-  cd setuptools-$pkgver
+  cd setuptools
   python setup.py build
 }
 
@@ -80,7 +81,7 @@ check() { (
   # https://github.com/pypa/setuptools/pull/810
   export PYTHONDONTWRITEBYTECODE=1
 
-  cd setuptools-$pkgver
+  cd setuptools
   # 1: subtle difference introduced by devendoring
   # 2: pip failures related to devendoring, 
   # 3: TODO
@@ -91,6 +92,6 @@ check() { (
 )}
 
 package() {
-  cd setuptools-$pkgver
+  cd setuptools
   python setup.py install --prefix=/usr --root="$pkgdir" --optimize=1 --skip-build
 }
