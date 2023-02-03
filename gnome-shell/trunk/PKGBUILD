@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=43.2
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -15,7 +15,6 @@ depends=(
   gcr-4
   gjs
   gnome-autoar
-  gnome-disk-utility
   gnome-session
   gnome-settings-daemon
   gsettings-desktop-schemas
@@ -47,6 +46,7 @@ optdepends=(
   'evolution-data-server: Evolution calendar integration'
   'gnome-bluetooth-3.0: Bluetooth support'
   'gnome-control-center: System settings'
+  'gnome-disk-utility: Mount with keyfiles'
   'gst-plugin-pipewire: Screen recording'
   'gst-plugins-good: Screen recording'
   'power-profiles-daemon: Power profile switching'
@@ -70,6 +70,10 @@ pkgver() {
 
 prepare() {
   cd gnome-shell
+
+  # https://bugs.archlinux.org/task/74434
+  # https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2621
+  git cherry-pick -n 266a19f05cad26d97c659493cd34ba196ef6eeb2
 
   # https://bugs.archlinux.org/task/71250
   # https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/5560#note_1636124
