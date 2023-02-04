@@ -7,19 +7,22 @@
 pkgbase=jack2
 pkgname=(jack2 jack2-dbus jack2-docs)
 pkgdesc="The JACK low-latency audio server"
-pkgver=1.9.21
-pkgrel=3
+pkgver=1.9.22
+_commit=80149e552b56d6d57d754dc04d119b8170d27313  # refs/tags/v1.9.22
+pkgrel=1
 arch=(x86_64)
 url="https://github.com/jackaudio/jack2"
 license=(GPL2)
 makedepends=(alsa-lib db5.3 dbus doxygen expat git libffado libsamplerate opus systemd waf)
 # jack breaks when built with LTO: https://github.com/jackaudio/jack2/issues/485
 options=(!lto)
-source=(git+https://github.com/jackaudio/$pkgbase.git#tag=v$pkgver?signed
-        bdb_5.3.patch)
+source=(
+  git+$url#tag=$_commit?signed
+  $pkgbase-1.9.22-db-5.3.patch
+)
 validpgpkeys=('62B11043D2F6EB6672D93103CDBAA37ABC74FBA0') # falkTX <falktx@falktx.com>
 sha512sums=('SKIP'
-            '3d2842899de395e48ef6d4307905fc3633eaac02f4987032594084573991450566b592e30069c19dca4a5cb0b07e1962bbfc7b9cd7c8a174990190147481823f')
+            'f5a5abaf6a0c0a7326b60b8bfe2eff84251d27037cfec7e6dc3194c7ceb296290779fdb26dca188cfbcf49f0a8a62707506584a1f7b0ed36c39f8a794154c4eb')
 
 _pick() {
   local p="$1" f d; shift
@@ -32,35 +35,44 @@ _pick() {
 }
 
 prepare() {
-  cd "${pkgbase}"
+  patch -Np1 -d $pkgbase -i ../$pkgbase-1.9.22-db-5.3.patch
+
   # remove custom waflib, as we are using system provided waf
-  (
-    touch __init__.py
-    rm -rv waflib
-  )
-  patch -Np1 -i ../bdb_5.3.patch  
+  rm -rv $pkgbase/waflib
 }
 
 build() {
+  local waf_options=(
+    --prefix=/usr
+    --htmldir=/usr/share/doc/$pkgbase/html
+    --autostart=none
+    --doxygen=yes
+    --systemd-unit
+    --classic
+    --dbus
+  )
+
   cd $pkgbase
   export CXXFLAGS="$CXXFLAGS -I/usr/include/db5.3"
   export LDFLAGS="$LDFLAGS -ldb-5.3"
   export LINKFLAGS="$LDFLAGS"
   export PYTHONPATH="$PWD:$PYTHONPATH"
-  waf configure --prefix=/usr \
-                --htmldir=/usr/share/doc/$pkgbase/html \
-                --autostart=none \
-                --doxygen=yes \
-                --systemd-unit \
-                --classic \
-                --dbus
+  waf configure "${waf_options[@]}"
   waf build
 }
 
 package_jack2() {
   license+=(LGPL2.1)
-  depends=(db5.3 gcc-libs glibc opus libasound.so libdbus-1.so libsamplerate.so
-  libsystemd.so )
+  depends=(
+    alsa-lib libasound.so
+    db5.3
+    dbus libdbus-1.so
+    gcc-libs
+    glibc
+    libsamplerate libsamplerate.so
+    opus libopus.so
+    systemd-libs libsystemd.so
+  )
   optdepends=(
     'a2jmidid: for ALSA MIDI to JACK MIDI bridging'
     'libffado: for firewire support using FFADO'
@@ -72,22 +84,29 @@ package_jack2() {
   conflicts=(jack)
   provides=(jack libjack.so libjacknet.so libjackserver.so)
 
-  cd "${pkgbase}"
+  cd $pkgbase
   export PYTHONPATH="$PWD:$PYTHONPATH"
   waf install --destdir="$pkgdir"
 
-  ( cd "$pkgdir"
+  (
+    cd $pkgdir
 
-  _pick jack2-dbus usr/bin/jack{dbus,_control}
-  _pick jack2-dbus usr/share/dbus-1/services/*
-  _pick jack2-docs usr/share/doc/$pkgbase/html
+    _pick jack2-dbus usr/bin/jack{dbus,_control}
+    _pick jack2-dbus usr/share/dbus-1/services/*
+    _pick jack2-docs usr/share/doc/$pkgbase/html
   )
 }
 
 package_jack2-dbus() {
   pkgdesc+=" (dbus integration)"
-  depends=(gcc-libs glibc jack2 libdbus-1.so libexpat.so libjackserver.so
-  python-dbus)
+  depends=(
+    dbus libdbus-1.so
+    expat libexpat.so
+    gcc-libs
+    glibc
+    jack2 libjackserver.so
+    python-dbus
+  )
 
   mv -v jack2-dbus/* "$pkgdir"
 }
