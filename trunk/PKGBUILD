@@ -3,7 +3,7 @@
 
 pkgbase=e2fsprogs
 pkgname=('e2fsprogs' 'fuse2fs')
-pkgver=1.46.6
+pkgver=1.47.0
 pkgrel=1
 pkgdesc='Ext2/3/4 filesystem utilities'
 arch=('x86_64')
@@ -13,7 +13,7 @@ makedepends=('systemd' 'util-linux' 'fuse')
 validpgpkeys=('3AB057B7E78D945C8C5591FBD36F769BC11804F0') # Theodore Ts'o <tytso@mit.edu>
 source=("https://www.kernel.org/pub/linux/kernel/people/tytso/${pkgbase}/v${pkgver}/${pkgbase}-${pkgver}.tar."{xz,sign}
         'MIT-LICENSE')
-sha256sums=('a77517f19ff5e4e97ede63536566865dd5d48654e13fc145f5f2249ef7c4f4fc'
+sha256sums=('144af53f2bbd921cef6f8bea88bb9faddca865da3fbc657cc9b4d2001097d5db'
             'SKIP'
             'cc45386c1d71f438ad648fd7971e49e3074ad9dbacf9dd3a5b4cb61fd294ecbb')
 
