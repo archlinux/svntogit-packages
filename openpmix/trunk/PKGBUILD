@@ -1,45 +1,80 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 _name=pmix
-pkgname=openpmix
-pkgver=4.2.2
+pkgbase=openpmix
+pkgname=(openpmix openpmix-docs)
+pkgver=4.2.3
 pkgrel=1
 pkgdesc="Extended version of the PMI standard"
 arch=(x86_64)
 url="https://github.com/openpmix/openpmix"
 license=(BSD)
-depends=(curl glibc hwloc jansson libevent zlib)
-makedepends=(perl python)
-provides=(libpmix.so pmix)
-backup=(etc/$pkgname/pmix-mca-params.conf)
-source=($pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/refs/tags/v$pkgver.tar.gz)
-sha512sums=('7b07b7be82899cf27efbbeaca4a2fa176ca194e0b8dd1c57557892ba437e3c00a3ce5dcfd57ba4d9d637858d8345eea2553eaf4e5bfc7f0999f97c15334f6ef8')
-b2sums=('376346bd05eac5c2bfc705bc5de2217da8241bd2cc607208b242acebf26efbe15758ec9999d62a2388e3c48737d6035d33774e52e80a105ad03294597b24f105')
+makedepends=(curl glibc hwloc jansson perl libevent libevent python zlib)
+source=($url/releases/download/v$pkgver/$_name-$pkgver.tar.gz)
+sha512sums=('824c318848abf7a7c6dbb2a4cb06ec75d573b40c360798b6d35671135fbb63d42dba7c16c65a3261fb31ad902ff10d8256a387ead1e6afd65f65329b0b6a4dda')
+b2sums=('b916c2dc3143d95309c8a1698a7477563d5faec1014a3cd4ae56cbbad74be3fc6310b28be87bd2e15bc759a6b9b281cf9e1e19449dbdbfe16d0c1b088d5d724d')
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
 
 prepare() {
-  cd $pkgname-$pkgver
+  cd $_name-$pkgver
   ./autogen.pl
 }
 
 build() {
-  cd $pkgname-$pkgver
-  ./configure \
-    --prefix=/usr \
-    --sysconfdir=/etc/$pkgname \
-    --with-curl \
+  local configure_options=(
+    --prefix=/usr
+    --sysconfdir=/etc/$pkgname
+    --with-curl
     --with-jansson
+  )
+
+  cd $_name-$pkgver
+  ./configure "${configure_options[@]}"
   # prevent excessive overlinking due to libtool
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make V=1
 }
 
 check() {
-  make -k check -C $pkgname-$pkgver
+  make -k check -C $_name-$pkgver
 }
 
-package() {
-  depends+=(libcurl.so)
+package_openpmix() {
+  depends=(
+    curl libcurl.so
+    glibc
+    hwloc
+    jansson
+    libevent libevent_{core,pthreads}-2.1.so
+    zlib
+  )
+  optdepends=(
+    'openpmix-docs: for documentation'
+  )
+  provides=(libpmix.so pmix)
+  backup=(etc/$pkgname/pmix-mca-params.conf)
 
-  make DESTDIR="$pkgdir" install -C $pkgname-$pkgver
-  install -vDm 644 $pkgname-$pkgver/LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+  make DESTDIR="$pkgdir" install -C $_name-$pkgver
+
+  (
+    cd "$pkgdir"
+    _pick $pkgbase-docs usr/share/doc/
+  )
+
+  install -vDm 644 $_name-$pkgver/LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_openpmix-docs() {
+  pkgdesc+=" - documentation"
+
+  mv -v $pkgname/* "$pkgdir/"
 }
