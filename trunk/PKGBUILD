@@ -1,35 +1,31 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-trove-classifiers
-pkgver=2023.1.20
+pkgver=2023.2.8
+_commit=15fe7624cc89b69d187b0f5e316b8be4a8eb1922
 pkgrel=1
 pkgdesc="Canonical source for classifiers on PyPI (pypi.org)"
 url="https://github.com/pypa/trove-classifiers"
 license=('Apache')
 arch=('any')
 depends=('python')
-makedepends=('python-calver' 'python-setuptools')
+makedepends=('git' 'python-calver' 'python-setuptools')
 checkdepends=('python-pytest')
-source=("https://github.com/pypa/trove-classifiers/archive/$pkgver/$pkgname-$pkgver.tar.gz")
-sha512sums=('f99dee6f42ef3d1e42d0d1f520d882af2d430133a317de693464a526849bf6d9990307c189b5bacf2fa97c316d0c806ecfe9cfcd05a6734e79992763f597dfd2')
-
-prepare() {
-  cd trove-classifiers-$pkgver
-  echo "Version: $pkgver" > PKG-INFO
-}
+source=("git+https://github.com/pypa/trove-classifiers.git#commit=$_commit")
+sha512sums=('SKIP')
 
 build() {
-  cd trove-classifiers-$pkgver
+  cd trove-classifiers
   python setup.py build
 }
 
 check() {
-  cd trove-classifiers-$pkgver
+  cd trove-classifiers
   pytest
   PYTHONPATH="$PWD"/build/lib python -m tests.lib
 }
 
 package() {
-  cd trove-classifiers-$pkgver
+  cd trove-classifiers
   python setup.py install --root="$pkgdir" --optimize=1
 }
