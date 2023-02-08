@@ -5,11 +5,12 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=525.85.05
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
 options=('!strip')
+makedepends=('patchelf')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-utils.sysusers'
@@ -114,7 +115,6 @@ package_nvidia-utils() {
     ln -sr "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/gbm/nvidia-drm_gbm.so"
 
     # firmware
-    ls -lha firmware
     install -Dm644 -t "${pkgdir}/usr/lib/firmware/nvidia/${pkgver}/" firmware/*.bin
 
     # GLX extension module for X
@@ -145,8 +145,7 @@ package_nvidia-utils() {
     install -Dm755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}"
     install -Dm755 "libnvidia-vulkan-producer.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-vulkan-producer.so.${pkgver}"
     # Sigh libnvidia-vulkan-producer.so has no SONAME set so create_links doesn't catch it. NVIDIA please fix!
-    ln -s "libnvidia-vulkan-producer.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-vulkan-producer.so.1"
-    ln -s "libnvidia-vulkan-producer.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-vulkan-producer.so"
+    patchelf --set-soname "libnvidia-vulkan-producer.so.1" "${pkgdir}/usr/lib/libnvidia-vulkan-producer.so.${pkgver}"
 
     # Vulkan ICD
     install -Dm644 "nvidia_icd.json" "${pkgdir}/usr/share/vulkan/icd.d/nvidia_icd.json"
