@@ -5,7 +5,7 @@
 pkgbase=cairo
 pkgname=(cairo cairo-docs)
 pkgver=1.17.8
-pkgrel=1
+pkgrel=2
 pkgdesc="2D graphics library with support for multiple output devices"
 url="https://cairographics.org/"
 arch=(x86_64)
@@ -43,6 +43,10 @@ pkgver() {
 
 prepare() {
   cd cairo
+
+  # https://bugs.archlinux.org/task/77432
+  # https://gitlab.freedesktop.org/cairo/cairo/-/issues/639
+  git revert -n 47a21c6e30eef91db503a5a183d5c8cf558aaa56
 }
 
 build() {
