@@ -1,0 +1,47 @@
+# Maintainer:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Jochem Kossen <j.kossen@home.nl>
+
+pkgname=fakeroot
+pkgver=1.31
+pkgrel=2
+pkgdesc='Tool for simulating superuser privileges'
+arch=('x86_64')
+license=('GPL')
+url='https://tracker.debian.org/pkg/fakeroot'
+install=fakeroot.install
+depends=('glibc' 'filesystem' 'sed' 'util-linux' 'sh')
+makedepends=('systemd' 'po4a')
+checkdepends=('sharutils')
+source=("https://deb.debian.org/debian/pool/main/f/$pkgname/${pkgname}_${pkgver}.orig.tar.gz")
+sha256sums=('63886d41e11c56c7170b9d9331cca086421b350d257338ef14daad98f77e202f')
+
+build() {
+  cd $pkgname-$pkgver
+
+  ./configure --prefix=/usr \
+    --libdir=/usr/lib/libfakeroot \
+    --disable-static \
+    --with-ipc=sysv
+
+  make
+
+  cd doc
+  po4a -k 0 --rm-backups --variable 'srcdir=../doc/' po4a/po4a.cfg
+}
+
+check() {
+  cd $pkgname-$pkgver
+  make check
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+
+  install -dm0755 "$pkgdir/etc/ld.so.conf.d/"
+  echo '/usr/lib/libfakeroot' > "$pkgdir/etc/ld.so.conf.d/fakeroot.conf"
+
+  # install README for sysv/tcp usage
+  install -Dm0644 README "$pkgdir/usr/share/doc/$pkgname/README"
+}
