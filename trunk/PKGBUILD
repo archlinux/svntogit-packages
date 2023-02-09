@@ -9,7 +9,6 @@ pkgdesc='Arch Linux PGP keyring'
 arch=('any')
 url='https://gitlab.archlinux.org/archlinux/archlinux-keyring/'
 license=('GPL3')
-groups=('base-devel')
 install=$pkgname.install
 depends=('pacman')
 makedepends=('git' 'python' 'sequoia-sq' 'pkgconf' 'systemd')
