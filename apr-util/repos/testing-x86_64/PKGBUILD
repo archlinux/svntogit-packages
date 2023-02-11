@@ -1,0 +1,60 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgname=apr-util
+pkgver=1.6.3
+pkgrel=1
+pkgdesc="The Apache Portable Runtime"
+arch=('x86_64')
+url="https://apr.apache.org/"
+depends=('apr' 'expat' 'libxcrypt')
+makedepends=('gdbm' 'libldap' 'unixodbc' 'openssl' 'nss' 'sqlite' 'mariadb-libs' 'db' 'postgresql-libs' 'python')
+optdepends=(
+  'gdbm: enable gdbm support'
+  'libldap: enable ldap support'
+  'unixodbc: enable odbc support'
+  'mariadb-libs: enable mysql/mariadb support'
+  'postgresql-libs: enable postgres support'
+  'db: enable berkley db support'
+  'sqlite: enable sqlite support'
+  'nss: enable nss crypto support'
+  'openssl: enable openssl crypto support'
+)
+license=('APACHE')
+source=(https://www.apache.org/dist/apr/apr-util-${pkgver}.tar.bz2{,.asc}
+        disable_failing_test.patch   # TODO: figure out why dbm test fails
+        buildconf_config.guess_sub_location.patch)
+sha512sums=('8050a481eeda7532ef3751dbd8a5aa6c48354d52904a856ef9709484f4b0cc2e022661c49ddf55ec58253db22708ee0607dfa7705d9270e8fee117ae4f06a0fe'
+            'SKIP'
+            'f3de06f845972e5fc85c0d01847bcd0cfbbdd5015798970c73e5ef1b2699c54118f00ba5b939d84bbdf748bd1a5088c1393289b1e62c005fa77878436c165802'
+            'd19024b8a19e46e85dd03e2c06afae13b527e56c0e2864e5b92652c8ed558f155647f50b9cfaddb6e919b5a60922970b1d9f6c7fc62cd5872b3d22e787f99c65')
+validpgpkeys=('5B5181C2C0AB13E59DA3F7A3EC582EB639FF092C' # Jeff Trawick
+              'B1B96F45DFBDCCF974019235193F180AB55D9977' # William A. Rowe, Jr. <wrowe@rowe-clan.net> 
+              '3CE3BAC2EB7BBC624D1D22D8F3B9D88CB87F79A9' # Nick Kew <niq@apache.org>
+              '65B2D44FE74BD5E3DE3AC3F082781DE46D5954FA') # "Eric Covener <covener@apache.org>"
+
+prepare() {
+  cd apr-util-$pkgver
+  #patch -Np1 -i ../buildconf_config.guess_sub_location.patch
+  patch -Np1 -i ../disable_failing_test.patch
+  #./buildconf --with-apr=`apr-1-config --srcdir`
+}
+
+build() {
+  cd "${srcdir}/apr-util-${pkgver}"
+  ./configure --prefix=/usr --with-apr=/usr --with-ldap --with-crypto \
+    --with-gdbm=/usr --with-sqlite3=/usr --with-nss=/usr --with-odbc=/usr \
+    --with-berkeley-db=/usr --with-pgsql=/usr --with-mysql=/usr --with-oracle=/usr \
+    --with-openssl=/usr
+  make
+}
+
+check() {
+  cd "${srcdir}/apr-util-${pkgver}"
+  make -j1 check
+}
+
+package() {
+  cd "${srcdir}/apr-util-${pkgver}"
+  make DESTDIR="${pkgdir}" install
+}
