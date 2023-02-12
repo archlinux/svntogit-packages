@@ -2,12 +2,12 @@
 
 pkgname=acl
 pkgver=2.3.1
-pkgrel=2
+pkgrel=3
 pkgdesc='Access control list utilities, libraries and headers'
 arch=('x86_64')
 url='https://savannah.nongnu.org/projects/acl'
 license=('LGPL')
-depends=('attr' 'libattr.so')
+makedepends=('attr')
 replaces=('xfsacl')
 provides=('xfsacl' 'libacl.so')
 conflicts=('xfsacl')
