@@ -5,21 +5,26 @@
 # Contributor: royrocks <royrocks13@gmail.com>
 
 pkgname=libpaper
-pkgver=1.1.28
-pkgrel=2
-pkgdesc='Library for handling paper characteristics'
+pkgver=2.0.8
+pkgrel=1
+pkgdesc="Library for handling paper characteristics"
 arch=('x86_64')
-url='https://packages.debian.org/unstable/source/libpaper'
-license=('GPL')
-depends=('sh' 'run-parts')
+url="https://github.com/rrthomas/libpaper"
+license=('LGPL2.1' 'GPL3')
+depends=('glibc')
 backup=('etc/papersize')
-#source=("https://debian.org/debian/pool/main/libp/$pkgname/${pkgname}_$pkgver+nmu5.tar.gz") # broken cert
-source=("http://ftp.de.debian.org/debian/pool/main/libp/$pkgname/${pkgname}_$pkgver.tar.gz")
-sha256sums=('c8bb946ec93d3c2c72bbb1d7257e90172a22a44a07a07fb6b802a5bb2c95fddc')
+source=(https://github.com/rrthomas/libpaper/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz
+        localepaper.c)
+sha256sums=('e543bdfdcdd8935e09da6a0ebc1ea154ee565055bc06cc936631ee49fc8baf5f'
+            '7e49c6ce67fbaea77929ab5849026412d0f91f692a902805c0134a071cccde22')
+provides=('paper')
+replaces=('paper')
+conflicts=('paper')
 
 prepare() {
   cd "$pkgname-$pkgver"
-  autoreconf -vfi
+  cp ../localepaper.c src/
+  #autoreconf -vfi
 }
 
 build() {
@@ -29,12 +34,24 @@ build() {
     --sysconfdir=/etc \
     --sbindir=/usr/bin
   make
+  # localepaper
+  pushd src
+  gcc $CFLAGS -I.. -Ilibgnu -o localepaper localepaper.c libgnu/.libs/libgnupaper.a
+  popd
 }
 
+check() {
+  cd "$pkgname-$pkgver"
+  make -k check
+}
 package() {
   cd "$pkgname-$pkgver"
   make DESTDIR="$pkgdir" install
   
+  # localepaper
+  install -Dt "$pkgdir/usr/lib" -m0755 src/localepaper 
+  
+
   # add systemwide default papersize read by many office applications
   install -dm 755 "$pkgdir"/etc
   echo '# Simply write the paper name. See papersize(5) for possible values' > "$pkgdir"/etc/papersize
@@ -42,11 +59,11 @@ package() {
   # add libpaper.d directory other packages can use to store files
   install -dm 755 "$pkgdir"/etc/libpaper.d
 
-  # add localisation
-  pushd debian/po
-  for i in `ls *.po`; do
-	install -dm 755 "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/;
-	msgfmt $i -o "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/${pkgname}.mo;
-  done
-  popd
+  # currently no localisation available
+#  pushd debian/po
+#  for i in `ls *.po`; do
+#	install -dm 755 "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/;
+#	msgfmt $i -o "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/${pkgname}.mo;
+#  done
+#  popd
 }
