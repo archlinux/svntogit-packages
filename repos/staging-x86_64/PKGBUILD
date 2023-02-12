@@ -1,0 +1,71 @@
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+
+pkgname=a2ps
+pkgver=4.14
+pkgrel=14
+pkgdesc="An Any to PostScript filter"
+arch=('x86_64')
+url="https://www.gnu.org/software/a2ps/"
+license=('GPL3')
+depends=('psutils' 'imagemagick' 'perl')
+makedepends=('gperf')
+backup=('etc/a2ps/a2ps.cfg' 'etc/a2ps/a2ps-site.cfg')
+source=(https://ftp.gnu.org/gnu/a2ps/${pkgname}-${pkgver}.tar.gz{,.sig}
+        a2ps-4.13c-fnmatch-replacement.patch a2ps-4.13c-emacs.patch
+	a2ps-4.13-manpage-chmod.patch a2ps-4.14-check-mempcpy.patch
+	a2ps-4.14-fix-stpcpy-proto.patch a2ps-texinfo5.patch
+	a2ps-4.13-security.patch
+	CVE-2014-0466.patch
+	CVE-2015-8107.patch
+	a2ps-texinfo67.patch
+        a2ps-adhere-source-date-epoch.patch
+        a2ps-format-security.patch)
+sha256sums=('f3ae8d3d4564a41b6e2a21f237d2f2b104f48108591e8b83497500182a3ab3a4'
+            'SKIP'
+            '5d1b8a8791fa2a36c23f43ef153a724cce1f8eec8fb92ab886f52fae7f8f3be3'
+            '943739a788db47f10942477754f42c8c9b22cdaad4463bea4103c31a330de76a'
+            '032c4698c1dabb1a72978b9aefef7a8895098fb5a7e46e81d861fedfef3b11ab'
+            '7ec2164888d1621a8406d431ed3accd137ec8f92e0ca885175bc1c17010519a1'
+            '3707120fbbbd8306f01fec785c18b9fa2eee02ec689cde5ad251a9337af6573e'
+            'c0a3277c29b95ba583fce0113b67677583defe7f98b528c9d9a781f4d65e19dc'
+            'fbfeb3d421e81540839e25f7a3efdab977e86e3c5748442eefe4560c85816a12'
+            'e05f6ae6ad35a16f40a34ce8ecb25ef86e53dcadab99fa867d8e6b49ecf1c51c'
+            '8bb829c7f54b6c6c194f4cd7eedc7bdc12f134f825668de0d794a7184bfa8633'
+            '838c4d31c1a756b541c0ad6ace57ff980edfe77f7d76d0ad9f1d938d9dfaeb8b'
+            '305ba7b9a44e7d6480a23098efb27aab5daedde71defcfe2f1b01b70d025e3db'
+            'b21f514df2b395089fbc8228d71f7f5d04afcbcd7b7ed3e1318c0eaf5f5f802a')
+validpgpkeys=('6EB39358D8328FE3CDC903A8CB6FA340E7075A54')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+  sed -i -e '/^AM_C_PROTOTYPES/d' -e '/^AUTOMAKE_OPTIONS.*ansi2knr/d' \
+    -e 's:AM_CONFIG_HEADER:AC_CONFIG_HEADERS:' -e 's:AM_PROG_CC_STDC:AC_PROG_CC:' \
+    configure.in {contrib/sample,lib,src}/Makefile.am m4/protos.m4
+  sed -i "s:^countdictstack: \0:" contrib/psset.in
+  patch -p1 -i "${srcdir}/a2ps-4.13c-fnmatch-replacement.patch"
+  patch -p1 -i "${srcdir}/a2ps-4.13c-emacs.patch"
+  patch -p1 -i "${srcdir}/a2ps-4.13-manpage-chmod.patch"
+  patch -p1 -i "${srcdir}/a2ps-4.14-check-mempcpy.patch"
+  patch -p0 -i "${srcdir}/a2ps-4.14-fix-stpcpy-proto.patch"
+  patch -p1 -i "${srcdir}/a2ps-texinfo5.patch"
+  patch -p1 -i "${srcdir}/a2ps-4.13-security.patch"
+  patch -p1 -i "${srcdir}/CVE-2014-0466.patch"
+  patch -p1 -i "${srcdir}/CVE-2015-8107.patch"
+  patch -p1 -i "${srcdir}/a2ps-texinfo67.patch"
+  patch -p1 -i "${srcdir}/a2ps-adhere-source-date-epoch.patch"
+  patch -p1 -i "${srcdir}/a2ps-format-security.patch"
+}
+
+build() {
+  cd ${pkgname}-${pkgver}
+  libtoolize --force --copy
+  autoreconf --force --install -I m4 
+  LIBS+="-lm" ./configure --prefix=/usr --sysconfdir=/etc/a2ps \
+    --includedir=/usr/include --enable-shared --enable-nls
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+}
