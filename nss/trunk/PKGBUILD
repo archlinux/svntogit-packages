@@ -3,7 +3,7 @@
 
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
-pkgver=3.88
+pkgver=3.88.1
 pkgrel=1
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
@@ -25,7 +25,7 @@ makedepends=(
   perl
   python
 )
-_revision=da9f14b8cc9d7a01afea2ccaba8ba86503c871bb
+_revision=35df50f6b6157ab6ba5ce567dba2558ba9e56077
 source=(
   "hg+https://hg.mozilla.org/projects/nss#revision=$_revision"
   bundle.sh
