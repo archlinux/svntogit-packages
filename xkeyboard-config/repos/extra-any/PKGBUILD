@@ -1,7 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=xkeyboard-config
-pkgver=2.37
+pkgver=2.38
 pkgrel=1
 pkgdesc="X keyboard configuration files"
 arch=(any)
@@ -14,7 +14,7 @@ conflicts=('xkbdata')
 # https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config
 source=(https://xorg.freedesktop.org/archive/individual/data/${pkgname}/${pkgname}-${pkgver}.tar.xz{,.sig})
 validpgpkeys=('FFB4CCD275AAA422F5F9808E0661D98FC933A145') # Sergey Udaltsov <sergey.udaltsov@gmail.com> 
-sha256sums=('eb1383a5ac4b6210d7c7302b9d6fab052abdf51c5d2c9b55f1f779997ba68c6c'
+sha256sums=('0690a91bab86b18868f3eee6d41e9ec4ce6894f655443d490a2184bfac56c872'
             'SKIP')
 
 build() {
