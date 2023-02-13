@@ -5,7 +5,7 @@ pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
 _tag='94baad65b1ded3443e21a01135164aeb52664795' # git rev-parse v${_tag_name}
 _tag_name=253-rc3
 pkgver="${_tag_name/-/}"
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -62,6 +62,8 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
+  # git main
+  "v${_tag_name}..0da4cc97b446b43802692f2415e5a774771b0ca9"
 )
 
 _reverts=(
@@ -161,8 +163,8 @@ package_systemd() {
            'iptables' 'kbd' 'kmod' 'libkmod.so' 'hwdata' 'libcap' 'libcap.so'
            'libgcrypt' 'libxcrypt' 'libcrypt.so' 'systemd-libs' 'libidn2' 'lz4' 'pam'
            'libelf' 'libseccomp' 'libseccomp.so' 'util-linux' 'libblkid.so'
-           'libmount.so' 'xz' 'pcre2' 'audit' 'libaudit.so' 'libp11-kit'
-           'libp11-kit.so' 'openssl' 'libcrypto.so' 'libssl.so')
+           'libmount.so' 'xz' 'pcre2' 'audit' 'libaudit.so' 
+           'openssl' 'libcrypto.so' 'libssl.so')
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
@@ -174,6 +176,7 @@ package_systemd() {
               'gnutls: systemd-journal-gatewayd and systemd-journal-remote'
               'libbpf: support BPF programs'
               'libfido2: unlocking LUKS2 volumes with FIDO2 token'
+              'libp11-kit: support PKCS#11'
               'tpm2-tss: unlocking LUKS2 volumes with TPM2')
   backup=(etc/pam.d/systemd-user
           etc/systemd/coredump.conf
@@ -247,7 +250,7 @@ package_systemd() {
 
 package_systemd-libs() {
   pkgdesc='systemd client libraries'
-  depends=('glibc' 'libcap' 'libgcrypt' 'libp11-kit' 'lz4' 'xz' 'zstd')
+  depends=('glibc' 'gcc-libs' 'libcap' 'libgcrypt' 'lz4' 'xz' 'zstd')
   license=('LGPL2.1')
   provides=('libsystemd' 'libsystemd.so' 'libudev.so')
   conflicts=('libsystemd')
