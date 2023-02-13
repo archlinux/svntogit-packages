@@ -1,6 +1,6 @@
 # Maintainer: Tobias Powalowski <tpowa@archlinux.org>
 pkgname=hwdata
-pkgver=0.366
+pkgver=0.367
 pkgrel=1
 pkgdesc="hardware identification databases"
 makedepends=('git')
