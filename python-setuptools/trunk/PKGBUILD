@@ -3,8 +3,8 @@
 # Contributor: Eli Schwartz <eschwartz@archlinux.org>
 
 pkgname=python-setuptools
-pkgver=67.2.0
-_commit=f75c6289666ae845b80f1666ea68ec0f28afcc73
+pkgver=67.3.0
+_commit=bd37bfc622a6f2220c2e4e30b18f2cd2904b7da6
 pkgrel=1
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
@@ -82,13 +82,14 @@ check() { (
   export PYTHONDONTWRITEBYTECODE=1
 
   cd setuptools
-  # 1: subtle difference introduced by devendoring
+  # 1,4: subtle difference introduced by devendoring
   # 2: pip failures related to devendoring, 
   # 3: TODO
   PYTHONPATH="$PWD"/build/lib python -m pytest \
     --deselect setuptools/tests/config/test_apply_pyprojecttoml.py::test_apply_pyproject_equivalent_to_setupcfg \
     --deselect setuptools/tests/test_virtualenv.py \
-    --deselect setuptools/tests/test_editable_install.py::test_editable_with_prefix
+    --deselect setuptools/tests/test_editable_install.py::test_editable_with_prefix \
+    --deselect setuptools/_normalization.py::setuptools._normalization.safe_version
 )}
 
 package() {
