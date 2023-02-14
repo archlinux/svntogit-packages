@@ -3,7 +3,7 @@
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
 pkgname=firefox
-pkgver=109.0.1
+pkgver=110.0
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org"
 url="https://www.mozilla.org/firefox/"
@@ -71,16 +71,16 @@ source=(
 validpgpkeys=(
   '14F26682D0916CDD81E37B6D61B7B526D98F0353'  # Mozilla Software Releases <release@mozilla.com>
 )
-sha256sums=('5e43fdfb3923ee3a7ae7bc91ef3377a3fc6f8a0c1b87436c19b29458b0d731d9'
+sha256sums=('d3882492190e4fdcfa142772cf35de5403effb011d24357b315d643ed9168a39'
             'SKIP'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
             'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9'
-            'b1ce6936749ab1614bbce4fddc87058341ed207dde77af609fdc5ac83538517a')
-b2sums=('37370cced42da5850ad8cc4d90c0e7c1a700b9fa5c281c57ef7c3c243898b7ac55a8f183360585b24b164b8572816c9e216114594371bac3f2e3c1d85c2f6408'
+            '43c83101b7ad7dba6f5fffeb89b70a661a547d506a031ea2beada42ccf04eec7')
+b2sums=('aae3b34f1642ddab5f0fcd104b4168c9d9856a1bbbc197ff3c8e1bbae0c8d1c033db6e974e10b5352f4457e890c50f1f9d5099a6b7200c3474b71ac7e6317113'
         'SKIP'
         'e18f2c22e394ca3b6758bc130245b254947e4d15921be3da443d6d7c3c4b0d22ead1b39fbc10a4f896edd19e2a1dffbd1cbb34dc4beb0621a6ddb70ccc53b3a7'
         '63a8dd9d8910f9efb353bed452d8b4b2a2da435857ccee083fc0c557f8c4c1339ca593b463db320f70387a1b63f1a79e709e9d12c69520993e26d85a3d742e34'
-        '3a7de17f0a56c4ccbbd4754a63a8798f787e87acc947b0fc0c1e5086c99337979b7f66a741fdc5475b34085eaf80dbc99d742c22a95d6ed412e38012794a44c9')
+        '2bf65874c8c1f41c9273b68d74f4fe5c81dca5acbad0b9a5f917df1d46e1b2a1fb25d42a419eb885e76f4d193483cdeb6294e14ed4b2e241c34b84565b6ffd72')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
