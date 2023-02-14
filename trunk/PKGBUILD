@@ -5,20 +5,20 @@
 
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
-pkgver=5.26.5
-pkgrel=3
+pkgver=5.27.0
+pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
 license=(LGPL)
 depends=(knotifyconfig ksystemstats ktexteditor libqalculate kde-cli-tools appstream-qt
          xorg-xrdb xorg-xsetroot kactivitymanagerd kholidays xorg-xmessage milou prison kwin
-         plasma-integration kpeople kactivities-stats libkscreen kquickcharts kuserfeedback kpipewire
+         plasma-integration kpeople kactivities-stats kquickcharts kuserfeedback kpipewire
          accountsservice kio-extras kio-fuse qt5-tools oxygen-sounds)
-makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt plasma-wayland-protocols kunitconversion)
+makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt plasma-wayland-protocols wayland-protocols kunitconversion)
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$pkgver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
-sha256sums=('4cb2926fcd661ab827205b76a3f29efd820b9a787fd9707d5d88dcf530b55220'
+sha256sums=('01244ed2df75960192cf810a263410a7b2c9b34c3c237b14429d028ba10b073b'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
@@ -30,7 +30,6 @@ build() {
   cmake -B build -S $pkgbase-$pkgver \
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DGLIBC_LOCALE_GEN=OFF \
-    -DGLIBC_LOCALE_GENERATED=ON \
     -DBUILD_TESTING=OFF
   cmake --build build
 }
