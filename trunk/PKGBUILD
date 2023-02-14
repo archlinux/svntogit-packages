@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=43.2
-pkgrel=3
+pkgver=43.3
+pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -53,7 +53,7 @@ optdepends=(
   'switcheroo-control: Multi-GPU support'
 )
 groups=(gnome)
-_commit=e9b26eac0c0d66b87201874ce2b704268ee99be6  # tags/43.2^0
+_commit=85f141fabd427fea597dfd87f9a2dedcf8695809  # tags/43.3^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
