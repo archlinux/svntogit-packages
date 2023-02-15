@@ -3,8 +3,8 @@
 # Contributor: Tom Newsom <Jeepster@gmx.co.uk>
 
 pkgname=sudo
-_sudover=1.9.12p2
-pkgrel=2
+_sudover=1.9.13
+pkgrel=1
 pkgver=${_sudover/p/.p}
 pkgdesc="Give certain users the ability to run some commands as root"
 arch=('x86_64')
@@ -18,15 +18,25 @@ backup=('etc/pam.d/sudo'
 install=$pkgname.install
 source=(https://www.sudo.ws/sudo/dist/$pkgname-$_sudover.tar.gz{,.sig}
         sudo_logsrvd.service
+        $pkgname-configure-add-missing-bracket.patch::https://github.com/sudo-project/sudo/commit/defec5d46eec.patch
+        $pkgname-tests-pick-first-utf-8-locale.patch::https://github.com/sudo-project/sudo/commit/2845ceafb06d.patch
         sudo.pam)
-sha256sums=('b9a0b1ae0f1ddd9be7f3eafe70be05ee81f572f6f536632c44cd4101bb2a8539'
+sha256sums=('3f55455b46edb0a129d925dcc39972f12f7c7fb78d0ccab6017ee16c8177e436'
             'SKIP'
             '8b91733b73171827c360a3e01f4692772b78e62ceca0cf0fd4b770aba35081a1'
+            'c6a19646f5dada64977ffa942803f17e6772911f4e62436652455525a45f8f5f'
+            '8d8e44bee9bf9aeda194ab5ea789dd73f361498755295bc73a9ffd4b931b64aa'
             'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2')
 validpgpkeys=('59D1E9CCBA2B376704FDD35BA9F4C021CEA470FB')
 
 prepare() {
   cd $pkgname-$_sudover
+
+  # https://github.com/sudo-project/sudo/issues/238
+  patch -Np1 -i ../$pkgname-configure-add-missing-bracket.patch
+
+  # https://github.com/sudo-project/sudo/issues/241
+  patch -Np1 -i ../$pkgname-tests-pick-first-utf-8-locale.patch
 }
 
 build() {
