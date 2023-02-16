@@ -1,0 +1,31 @@
+diff --git a/setuptools/config/pyprojecttoml.py b/setuptools/config/pyprojecttoml.py
+index d4024956..2c3bd6bf 100644
+--- a/setuptools/config/pyprojecttoml.py
++++ b/setuptools/config/pyprojecttoml.py
+@@ -27,16 +27,22 @@ def load_file(filepath: _Path) -> dict:
+ 
+ 
+ def validate(config: dict, filepath: _Path) -> bool:
+-    from . import _validate_pyproject as validator
++    import validate_pyproject.api, validate_pyproject.errors, validate_pyproject.cli, validate_pyproject.plugins
+ 
+-    trove_classifier = validator.FORMAT_FUNCTIONS.get("trove-classifier")
++    trove_classifier = validate_pyproject.api.FORMAT_FUNCTIONS.get("trove-classifier")
+     if hasattr(trove_classifier, "_disable_download"):
+         # Improve reproducibility by default. See issue 31 for validate-pyproject.
+         trove_classifier._disable_download()  # type: ignore
+ 
++    plugins = validate_pyproject.plugins.list_from_entry_points()
++    validator = validate_pyproject.api.Validator(
++        validate_pyproject.cli.select_plugins(plugins, ('setuptools', 'distutils'), ()),
++        validate_pyproject.api.FORMAT_FUNCTIONS,
++    )
++
+     try:
+-        return validator.validate(config)
+-    except validator.ValidationError as ex:
++        return validator(config)
++    except validate_pyproject.errors.ValidationError as ex:
+         summary = f"configuration error: {ex.summary}"
+         if ex.name.strip("`") != "project":
+             # Probably it is just a field missing/misnamed, not worthy the verbosity...
