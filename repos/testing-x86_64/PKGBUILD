@@ -6,51 +6,72 @@
 
 pkgbase=curl
 pkgname=(curl libcurl-compat libcurl-gnutls)
-pkgver=7.88.0
-pkgrel=2
+_tag='67c55cb8b3f5a530478201fd780a533fce92b2eb' # git rev-parse v${_tag_name}
+_tag_name='7_88_0'
+pkgver="${_tag_name//_/.}"
+pkgrel=3
 pkgdesc='An URL retrieval utility and library'
 arch=('x86_64')
-url='https://curl.haxx.se'
+url='https://curl.haxx.se/'
 license=('MIT')
 depends=('ca-certificates' 'brotli' 'libbrotlidec.so' 'krb5' 'libgssapi_krb5.so'
          'libidn2' 'libidn2.so' 'libnghttp2' 'libpsl' 'libpsl.so' 'libssh2' 'libssh2.so'
          'openssl' 'zlib' 'zstd' 'libzstd.so')
-makedepends=('patchelf')
+makedepends=('git' 'patchelf')
 provides=('libcurl.so')
-source=("https://curl.haxx.se/download/${pkgname}-${pkgver}.tar.gz"{,.asc}
-        '0001-Revert-http2-minor-buffer-and-error-path-fixes.patch')
-sha512sums=('bfaac71e97a45d884be410872a55fdb365f9d03c11620fb12e82c7f26dbbb6a417b51dd0dc2a3631e95fb36e37a72c7f73fd6cf5f796c154f1424395c03c22cb'
-            'SKIP'
-            'c06b5738290394e20c666fbb9d0f4b08ce5a3c668dd1ae2d6271b42235526b929c1caac1238aa05bc541a82eb6c9678a81f7d8dc2c3ad282188f934b9b036699')
 validpgpkeys=('27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2') # Daniel Stenberg
+source=("git+https://github.com/bagder/curl.git#tag=${_tag}?signed")
+sha512sums=('SKIP')
 
-_configure_options=(
-  --prefix='/usr'
-  --mandir='/usr/share/man'
-  --disable-ldap
-  --disable-ldaps
-  --disable-manual
-  --enable-ipv6
-  --enable-threaded-resolver
-  --with-gssapi
-  --with-libssh2
-  --with-random='/dev/urandom'
-  --with-ca-bundle='/etc/ssl/certs/ca-certificates.crt'
+_backports=(
+  # git master
+  'curl-7_88_0..8c939453f587b8565af33927361edf40b48544ea'
+)
+
+_reverts=(
 )
 
 prepare() {
-  cd "${srcdir}/${pkgbase}-${pkgver}"
+  cd "$pkgbase"
 
-  patch -Np1 < ../0001-Revert-http2-minor-buffer-and-error-path-fixes.patch
+  local _c
+  for _c in "${_backports[@]}"; do
+    if [[ $_c == *..* ]]; then
+      git log --oneline --reverse "${_c}"
+    else
+      git log --oneline -1 "${_c}"
+    fi
+    git cherry-pick -n -m1 "${_c}"
+  done
+  for _c in "${_reverts[@]}"; do
+    git log --oneline -1 "${_c}"
+    git revert -n "${_c}"
+  done
+
+  autoreconf -fi
 }
 
 build() {
+  local _configure_options=(
+    --prefix='/usr'
+    --mandir='/usr/share/man'
+    --disable-ldap
+    --disable-ldaps
+    --disable-manual
+    --enable-ipv6
+    --enable-threaded-resolver
+    --with-gssapi
+    --with-libssh2
+    --with-random='/dev/urandom'
+    --with-ca-bundle='/etc/ssl/certs/ca-certificates.crt'
+  )
+
   mkdir build-curl{,-compat,-gnutls}
 
   # build curl
   cd "${srcdir}"/build-curl
 
-  "${srcdir}/${pkgbase}-${pkgver}"/configure \
+  "${srcdir}/${pkgbase}"/configure \
     "${_configure_options[@]}" \
     --with-openssl \
     --enable-versioned-symbols
@@ -60,7 +81,7 @@ build() {
   # build libcurl-compat
   cd "${srcdir}"/build-curl-compat
 
-  "${srcdir}/${pkgbase}-${pkgver}"/configure \
+  "${srcdir}/${pkgbase}"/configure \
     "${_configure_options[@]}" \
     --with-openssl \
     --disable-versioned-symbols
@@ -70,7 +91,7 @@ build() {
   # build libcurl-gnutls
   cd "${srcdir}"/build-curl-gnutls
 
-  "${srcdir}/${pkgbase}-${pkgver}"/configure \
+  "${srcdir}/${pkgbase}"/configure \
     "${_configure_options[@]}" \
     --disable-versioned-symbols \
     --without-openssl \
@@ -86,15 +107,16 @@ package_curl() {
   make DESTDIR="${pkgdir}" install
   make DESTDIR="${pkgdir}" install -C scripts
 
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}"
 
   # license
-  install -Dt "${pkgdir}/usr/share/licenses/$pkgname" -m0644 COPYING
+  install -Dt "${pkgdir}/usr/share/licenses/${pkgname}" -m0644 COPYING
 }
 
 package_libcurl-compat() {
   pkgdesc='An URL retrieval library (without versioned symbols)'
   depends=('curl' 'openssl')
+  provides=('libcurl-compat.so')
 
   cd "${srcdir}"/build-curl-compat
 
@@ -113,6 +135,7 @@ package_libcurl-compat() {
 package_libcurl-gnutls() {
   pkgdesc='An URL retrieval library (without versioned symbols and linked against gnutls)'
   depends=('curl' 'gnutls')
+  provides=('libcurl-gnutls.so')
 
   cd "${srcdir}"/build-curl-gnutls
 
