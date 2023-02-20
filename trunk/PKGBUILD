@@ -41,7 +41,10 @@ makedepends=(
   meson
   sassc
 )
-checkdepends=(xorg-server-xvfb)
+checkdepends=(
+  appstream-glib
+  xorg-server-xvfb
+)
 optdepends=(
   'evolution-data-server: Evolution calendar integration'
   'gnome-bluetooth-3.0: Bluetooth support'
