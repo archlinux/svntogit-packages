@@ -8,7 +8,7 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
 pkgver=1.42.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
 arch=(x86_64)
@@ -64,6 +64,9 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
+
+  # Fix IPv4 DNS addresses in dispatcher
+  git cherry-pick -n a2026a8b248791b0199a8fe4e16fcb34b8a0d7b5
 }
 
 build() {
