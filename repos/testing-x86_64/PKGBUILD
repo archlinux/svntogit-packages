@@ -5,6 +5,7 @@
 pkgbase=pipewire
 pkgname=(
   pipewire
+  libpipewire
   alsa-card-profiles
   pipewire-docs
   pipewire-audio
@@ -19,7 +20,7 @@ pkgname=(
 )
 _commit=08b0ed65765a1033424a5c0d897a392a61f8a2a3  # tags/0.3.66
 pkgver=0.3.66
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Low-latency audio/video router and processor"
 url="https://pipewire.org"
@@ -115,11 +116,13 @@ _ver=${pkgver:0:3}
 package_pipewire() {
   license+=(LGPL)  # libspa-alsa
   depends=(
+    "libpipewire=$epoch:$pkgver-$pkgrel"
     libcamera-base.so
     libcamera.so
     libdbus-1.so
     libglib-2.0.so
     libncursesw.so
+    libpipewire-$_ver.so
     libreadline.so
     libsystemd.so
     libudev.so
@@ -139,7 +142,6 @@ package_pipewire() {
     'realtime-privileges: realtime privileges with rt module'
     'rtkit: realtime privileges with rtkit module'
   )
-  provides=(libpipewire-$_ver.so)
   install=pipewire.install
 
   meson install -C build --destdir "$pkgdir"
@@ -152,6 +154,10 @@ package_pipewire() {
       cmp usr/bin/pipewire usr/bin/$_f
       ln -sf pipewire usr/bin/$_f
     done
+
+    _pick lib usr/include/{pipewire-$_ver,spa-0.2}
+    _pick lib usr/lib/libpipewire-$_ver.so*
+    _pick lib usr/lib/pkgconfig/lib{pipewire-$_ver,spa-0.2}.pc
 
     _pick acp usr/lib/udev
     _pick acp usr/share/alsa-card-profile
@@ -210,6 +216,18 @@ package_pipewire() {
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 pipewire/COPYING
 }
 
+package_libpipewire() {
+  pkgdesc+=" - client library"
+  depends=(
+    gcc-libs
+  )
+  provides=(libpipewire-$_ver.so)
+
+  mv lib/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 pipewire/COPYING
+}
+
 package_alsa-card-profiles() {
   pkgdesc+=" - ALSA card profiles"
   license=(LGPL)
@@ -259,6 +277,7 @@ package_pipewire-audio() {
 package_pipewire-alsa() {
   pkgdesc+=" - ALSA configuration"
   depends=(
+    pipewire
     pipewire-audio
     pipewire-session-manager
   )
@@ -280,6 +299,7 @@ package_pipewire-jack() {
   license+=(GPL2)  # libjackserver
   depends=(
     libpipewire-$_ver.so
+    pipewire
     pipewire-audio
     pipewire-session-manager
     sh
@@ -306,6 +326,7 @@ package_pipewire-pulse() {
     libglib-2.0.so
     libpipewire-$_ver.so
     libpulse.so
+    pipewire
     pipewire-audio
     pipewire-session-manager
   )
@@ -328,7 +349,10 @@ package_pipewire-roc() {
   pkgdesc+=" - ROC streaming support"
   depends=(
     libpipewire-$_ver.so
-    roc-toolkit libroc.so
+    libroc.so
+    pipewire
+    pipewire-audio
+    roc-toolkit
   )
 
   mv roc/* "$pkgdir"
@@ -341,6 +365,7 @@ package_gst-plugin-pipewire() {
   depends=(
     gst-plugins-base-libs
     libpipewire-$_ver.so
+    pipewire
     pipewire-session-manager
   )
 
@@ -367,6 +392,7 @@ package_pipewire-v4l2() {
   pkgdesc+=" - V4L2 interceptor"
   depends=(
     libpipewire-$_ver.so
+    pipewire
     pipewire-session-manager
     sh
   )
@@ -384,6 +410,7 @@ package_pipewire-x11-bell() {
     libx11
     libxfixes
     pipewire
+    pipewire-audio
   )
 
   mv x11-bell/* "$pkgdir"
