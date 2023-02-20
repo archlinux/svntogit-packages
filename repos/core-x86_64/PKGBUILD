@@ -1,15 +1,15 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=5.15.94
+pkgver=6.1.12
 pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
 arch=(x86_64)
 license=(GPL2)
 makedepends=(
-  bc libelf pahole cpio perl tar xz
-  xmlto 'python-sphinx<6.0.0' python-sphinx_rtd_theme graphviz imagemagick texlive-latexextra
+  bc libelf pahole cpio perl tar xz gettext
+  xmlto python-sphinx python-sphinx_rtd_theme graphviz imagemagick texlive-latexextra
 )
 options=('!strip')
 _srcname=linux-$pkgver
@@ -17,24 +17,16 @@ source=(
   https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   config         # the main kernel config file
   0001-ZEN-Add-sysctl-and-CONFIG-to-disallow-unprivileged-C.patch
-  0002-PCI-Add-more-NVIDIA-controllers-to-the-MSI-masking-q.patch
-  0003-iommu-intel-do-deep-dma-unmapping-to-avoid-kernel-fl.patch
-  0004-Bluetooth-btintel-Fix-bdaddress-comparison-with-garb.patch
-  0005-lg-laptop-Recognize-more-models.patch
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
-# https://www.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc
-sha256sums=('da9270dbe64ddf1db13c70470957ff6796eb996d867bb4aed7d14a70e1c65a72'
+# https://www.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc
+sha256sums=('d47aa675170904dcc93eeaa7c96db54d476a11c5d3e8cf3d3b96e364e2a0edea'
             'SKIP'
-            '94938015bb01b2e4ea8d5b771f833946d6442622fd5603baee63d78abecd5d20'
-            '3b5cfc9ca9cf778ea2c4b619b933cda26519969df2d764b5a687f63cf59974cd'
-            'c175fbb141c3cec013c799f694d88310375ac5456042f6a4a1adc7667836d786'
-            '8357f000b2b622e73dcfd41c2bad42b5e99fffe8f7ee64f774aa771f86cef43c'
-            '5c1ee81fdd5818442af6081de987f9c1a9ce3c8d183566b3dfc19a8433aa3dde'
-            '067e8995fcd6f6ed25e0253e9374c0e179a000c154da3e59ce62634945ac5be9')
+            '43505921269200b6dc3dd2b693423a05717094004eb2f34ff291945559e4d452'
+            '1bd8388fcb6ed4eec46450c65eb7a0889a8c541f164a39e3064633981a7a4a3d')
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -161,7 +153,7 @@ _package-headers() {
   echo "Stripping build tools..."
   local file
   while read -rd '' file; do
-    case "$(file -bi "$file")" in
+    case "$(file -Sib "$file")" in
       application/x-sharedlib\;*)      # Libraries (.so)
         strip -v $STRIP_SHARED "$file" ;;
       application/x-archive\;*)        # Libraries (.a)
