@@ -6,7 +6,7 @@
 pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'vulkan-virtio' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
-pkgver=22.3.6
+pkgver=23.0.0
 pkgrel=1
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
@@ -22,11 +22,11 @@ source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
         0002-iris-Retry-DRM_IOCTL_I915_GEM_EXECBUFFER2-on-ENOMEM.patch
         0003-Revert-iris-Avoid-abort-if-kernel-can-t-allocate-mem.patch
         LICENSE)
-sha512sums=('506fc69ace128504fe45b7ca0b6b1d1d2a33837d74bff7ae7310fef5100b162136ca77ee6a50745a5bda270d0b8cb1ee99ecc19190eddd83cc78039bd02b1bb7'
+sha512sums=('127e2759a2a31cacd65a0891719ab7bb4a9188844022b4bccaebbedce9c550b9ccb160ad519178ea0d851c4bcb8f0f56febda248ed2ba82b5ddf804855e4694b'
             'SKIP'
-            '44981f1f86b72eec0a358d1764546443a7e6734a074e1e15929dc4312fe660eab1a04b8a8359c5f57b6f5815cbe149677f5b3f0e3919112e78c6ec1f64a97b61'
-            'c181cc258a3a96817f9733be53e0ddf3f5b093ec8d7b731e37c095077c1b423d13ddb902993e1056aed29c4163421e4873b64f7593ef5e39d8cba11516651724'
-            '4f3ef686b2244c5da033596336bdffa42f9f55061be7125cba47a5ae3c16037523d1ba9d17269d141498b8ad2e020f25d9d778fdf307329809fc25d30d59c470'
+            'fb89a3cc9801f259faa7da81b12b8e003fcef10b64a30abf5592a159859c9f39941c8042f89fa93dee4d4e107c139ccdb48f255f45a72b6f9c7ce0da5bd0bd56'
+            '27018f163dd93e492c5d6080690ee6aae7f63de80c014e941a2e42a5eca87cf14de5ec8a35a51472f9b204839b43b14ac663a6095c1c7ef8dd7f8a3861fb936a'
+            'd7a54efea5a4be9d893c67b97fc846a45ef148c1bc1057ed91c377086d8f18aaa49eab5f9b3f3557e82457f8e23c2b8727b62880003529e1fe364b7ea15daccf'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
