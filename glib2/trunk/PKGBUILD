@@ -3,7 +3,7 @@
 
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
-pkgver=2.74.5
+pkgver=2.74.6
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
@@ -35,7 +35,7 @@ options=(
   debug
   staticlibs
 )
-_commit=39a71aff372ed491a24ca84409d9f93bc7c5d6d4  # tags/2.74.5^0
+_commit=a5dde6304670af590f25a2992104c0880003acf0  # tags/2.74.6^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git"
@@ -59,8 +59,8 @@ pkgver() {
 prepare() {
   cd glib
 
-  # Fix build (missing include)
-  git cherry-pick -n 03cb4261e00cf505790f4fd4e69f97b2ef4fcccd
+  # Fix tests: GLibC 2.37's vasprintf segfaults when passed a NULL format
+  git cherry-pick -n c4203f740ced1f1fc576caf1550441b57107fd00
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
