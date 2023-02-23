@@ -7,8 +7,8 @@
 
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
-pkgver=1.42.0
-pkgrel=2
+pkgver=1.42.2
+pkgrel=1
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
 arch=(x86_64)
@@ -53,7 +53,7 @@ checkdepends=(
   libx11
   python-dbus
 )
-_commit=119ed52038f8b6e8cebb92314acf6e6bb5813fb0  # tags/1.42.0^0
+_commit=58928a3188f54f4f09f9945b3737d0c996e3643f  # tags/1.42.2^0
 source=("git+https://gitlab.freedesktop.org/NetworkManager/NetworkManager.git#commit=$_commit")
 b2sums=('SKIP')
 
@@ -64,9 +64,6 @@ pkgver() {
 
 prepare() {
   cd NetworkManager
-
-  # Fix IPv4 DNS addresses in dispatcher
-  git cherry-pick -n a2026a8b248791b0199a8fe4e16fcb34b8a0d7b5
 }
 
 build() {
