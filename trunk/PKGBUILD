@@ -7,7 +7,7 @@
 # Contributor: Judd Vinet <jvinet@zeroflux.org>
 
 pkgname=gnupg
-pkgver=2.2.40
+pkgver=2.2.41
 pkgrel=1
 pkgdesc='Complete and free implementation of the OpenPGP standard'
 arch=('x86_64')
@@ -40,11 +40,11 @@ source=(
   'drop-import-clean.patch'
   'avoid-beta-warning.patch'
 )
-sha256sums=('1164b29a75e8ab93ea15033300149e1872a7ef6bdda3d7c78229a735f8204c28'
+sha256sums=('13f3291007a5e8546fcb7bc0c6610ce44aaa9b3995059d4f8145ba09fd5be3e1'
             'SKIP'
             '02d375f0045f56f7dd82bacdb5ce559afd52ded8b75f6b2673c39ec666e81abc'
             '22fdf9490fad477f225e731c417867d9e7571ac654944e8be63a1fbaccd5c62d')
-b2sums=('c9a077e28b22888573bdd12029205eb5f79a463a297e400a623bc86a39eeb6454cd884d05bd96734998613c695f2c9dcc68963c7275b89938ac38ddc7ba1e229'
+b2sums=('0be2965a646a8636a127f89329030860908b0bbc447381782527459aed85f5276c29e7a2c89f87cb715407d9f1aabbf3ae1765073764d05e422035e8d5962569'
         'SKIP'
         'd598015e7f27b27840667d1656c083b4ad85d6acdd312e9929854067313a5f28415ee7eecf4d84a4b8da0385b667aaa01a9743461f5c785402a56c238274e376'
         '7ea069e81e2d91a3154bcb62516b4b599f34596de277f95ad1ccaba73869c4f84f94f063b65026ba0bc8a72c0fd8e8e182b82346964f67ea78166b6399c923c5')
