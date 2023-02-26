@@ -5,7 +5,7 @@
 
 pkgbase=transmission
 pkgname=(transmission-cli transmission-gtk transmission-qt libtransmission)
-pkgver=4.0.0
+pkgver=4.0.1
 pkgrel=1
 arch=(x86_64)
 url="http://www.transmissionbt.com/"
@@ -31,21 +31,11 @@ makedepends=(
 	systemd
 )
 source=(https://github.com/transmission/transmission/releases/download/$pkgver/transmission-$pkgver.tar.xz
-		$pkgname-PR-4808.patch::https://patch-diff.githubusercontent.com/raw/transmission/transmission/pull/4808.patch
         transmission-cli.sysusers
         transmission-cli.tmpfiles)
-sha256sums=('af4f023c0b3f2417f62b314d84ea7f329ca080f86664f24b44246a8c50c6b10a'
-            '247951146c2c193643616e18c76e25e39bf5304fce58e843e1003b198ec031e1'
+sha256sums=('8fc5aef23638c983406f6a3ee9918369e4cdc84e3228bd2fb3d01dd55cdad900'
             '641310fb0590d40e00bea1b5b9c843953ab78edf019109f276be9c6a7bdaf5b2'
             '1266032bb07e47d6bcdc7dabd74df2557cc466c33bf983a5881316a4cc098451')
-
-prepare() {
-  cd $pkgbase-$pkgver
-
-  # Disable some broken tests https://github.com/transmission/transmission/issues/4747
-  patch -p1 -i "$srcdir/$pkgname-PR-4808.patch"
-}
-
 build() {
   export CFLAGS+=" -ffat-lto-objects"
   cd $pkgbase-$pkgver
@@ -57,10 +47,10 @@ build() {
 	  -DENABLE_GTK=ON \
 	  -DENABLE_MAC=OFF \
 	  -DENABLE_QT=ON \
+	  -DREBUILD_WEB=ON \
 	  -DENABLE_TESTS=ON \
 	  -DENABLE_UTILS=ON \
 	  -DENABLE_UTP=ON \
-	  -DENABLE_WEB=ON \
 	  -DINSTALL_LIB=ON \
       -DUSE_SYSTEM_B64=ON \
       -DUSE_SYSTEM_DEFLATE=ON \
