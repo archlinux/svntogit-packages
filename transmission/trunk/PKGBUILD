@@ -6,7 +6,7 @@
 pkgbase=transmission
 pkgname=(transmission-cli transmission-gtk transmission-qt libtransmission)
 pkgver=4.0.1
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url="http://www.transmissionbt.com/"
 license=(GPL)
@@ -86,6 +86,9 @@ package_transmission-cli() {
   for dir in daemon cli web utils; do
     _install_component $dir
   done
+
+  install -d "$pkgdir"/usr/share/transmission
+  cp -a build/web/public_html/ "$pkgdir"/usr/share/transmission
 
   install -Dm644 daemon/transmission-daemon.service \
     "$pkgdir/usr/lib/systemd/system/transmission.service"
