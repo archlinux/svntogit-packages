@@ -1,7 +1,7 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 pkgname=apparmor
-pkgver=3.1.2
+pkgver=3.1.3
 pkgrel=1
 pkgdesc="Mandatory Access Control (MAC) using Linux Security Module (LSM)"
 arch=(x86_64)
@@ -25,9 +25,9 @@ backup=(
   etc/apparmor/severity.db
 )
 source=(https://launchpad.net/$pkgname/${pkgver%.[0-9]}/$pkgver/+download/$pkgname-$pkgver.tar.gz{,.asc})
-sha512sums=('e4fa8e0985472c00d3b68044f4150659787cf15b384b901af32b5aba3f0b2839f33bfe0b0675bf8ea7a1f5727152756a276c75b1dec383a33b92b0a1b8615a11'
+sha512sums=('88ffb21813d1874e640ad407aa566d898fb47b65f819e321d2d451845be86088af7e1bcb4abac6601bedf353ef5d3cb6a07a7f57d0a666449a5f768ea0e49c94'
             'SKIP')
-b2sums=('595bef3e1f62bcd4f0ffb4bf1a662ac77c78bfc3f2b4743c5606849e71cba0d844b0c45a9f3107e0f1eee34f2f5a757553c70a8ceeadea70235256332f7364a7'
+b2sums=('a2aaec3e5439bc75509b6810c477df55ba837fc595b772bd884ded4860db32e8ce9d5fb015b269ce1597b84d69d78d5ebb45d775f658b4d05d51ed392aad7549'
         'SKIP')
 validpgpkeys=('3ECDCBA5FB34D254961CC53F6689E64E3D3664BB') # AppArmor Development Team (AppArmor signing key) <apparmor@lists.ubuntu.com>
 _core_perl="/usr/bin/core_perl"
@@ -38,6 +38,14 @@ prepare() {
 }
 
 build() {
+  local configure_options=(
+    --prefix=/usr
+    --sbindir=/usr/bin
+    --with-perl
+    --with-python
+    --with-ruby
+  )
+
   cd $pkgname-$pkgver
 
   # export required perl executable locations
@@ -47,12 +55,7 @@ build() {
   export MAKEFLAGS+=" PROVE=$_core_perl/prove"
   (
     cd libraries/libapparmor/
-    ./configure \
-      --prefix=/usr \
-      --sbindir=/usr/bin \
-      --with-perl \
-      --with-python \
-      --with-ruby
+    ./configure "${configure_options[@]}"
     make
   )
   make -C binutils
