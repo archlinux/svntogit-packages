@@ -5,13 +5,14 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.7.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
 url='https://opencv.org/'
 depends=(tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg protobuf)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment pugixml openmpi cudnn fmt)
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment
+             pugixml openmpi cudnn fmt nlohmann-json)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
             'glew: for the viz module'
