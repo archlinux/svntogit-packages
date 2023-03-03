@@ -205,6 +205,7 @@ package_systemd() {
   mv "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so* systemd-libs/lib/
   mv "$pkgdir"/usr/include systemd-libs/include
   mv "$pkgdir"/usr/share/pkgconfig systemd-libs/pkgconfig
+  mv "$pkgdir"/usr/share/man/man3 systemd-libs/man3
 
   # manpages shipped with systemd-sysvcompat
   rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,shutdown}.8
@@ -257,10 +258,11 @@ package_systemd-libs() {
   conflicts=('libsystemd')
   replaces=('libsystemd')
 
-  install -d -m0755 "$pkgdir"/usr/share
+  install -d -m0755 "$pkgdir"/usr/share/man
   mv systemd-libs/lib "$pkgdir"/usr/lib
   mv systemd-libs/include "$pkgdir"/usr/include
   mv systemd-libs/pkgconfig "$pkgdir"/usr/share/pkgconfig
+  mv systemd-libs/man3 "$pkgdir"/usr/share/man/man3
 }
 
 package_systemd-resolvconf() {
