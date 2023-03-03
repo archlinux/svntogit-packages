@@ -7,7 +7,7 @@ pkgname=(util-linux util-linux-libs)
 _pkgmajor=2.38
 _realver=${_pkgmajor}.1
 pkgver=${_realver/-/}
-pkgrel=1
+pkgrel=2
 pkgdesc='Miscellaneous system utilities for Linux'
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -70,38 +70,42 @@ package_util-linux() {
           etc/pam.d/su
           etc/pam.d/su-l)
 
-  cd "${pkgbase}-${_realver}"
+  make -C "${pkgbase}-${_realver}" DESTDIR="${pkgdir}" usrsbin_execdir=/usr/bin install
 
-  make DESTDIR="${pkgdir}" usrsbin_execdir=/usr/bin install
+  # remove static libraries
+  rm "${pkgdir}"/usr/lib/lib*.a*
 
   # setuid chfn and chsh
   chmod 4755 "${pkgdir}"/usr/bin/{newgrp,ch{sh,fn}}
 
   # install PAM files for login-utils
-  install -Dm0644 "${srcdir}/pam-common" "${pkgdir}/etc/pam.d/chfn"
-  install -m0644 "${srcdir}/pam-common" "${pkgdir}/etc/pam.d/chsh"
-  install -m0644 "${srcdir}/pam-login" "${pkgdir}/etc/pam.d/login"
-  install -m0644 "${srcdir}/pam-runuser" "${pkgdir}/etc/pam.d/runuser"
-  install -m0644 "${srcdir}/pam-runuser" "${pkgdir}/etc/pam.d/runuser-l"
-  install -m0644 "${srcdir}/pam-su" "${pkgdir}/etc/pam.d/su"
-  install -m0644 "${srcdir}/pam-su" "${pkgdir}/etc/pam.d/su-l"
+  install -Dm0644 pam-common "${pkgdir}/etc/pam.d/chfn"
+  install -m0644 pam-common "${pkgdir}/etc/pam.d/chsh"
+  install -m0644 pam-login "${pkgdir}/etc/pam.d/login"
+  install -m0644 pam-runuser "${pkgdir}/etc/pam.d/runuser"
+  install -m0644 pam-runuser "${pkgdir}/etc/pam.d/runuser-l"
+  install -m0644 pam-su "${pkgdir}/etc/pam.d/su"
+  install -m0644 pam-su "${pkgdir}/etc/pam.d/su-l"
 
   # TODO(dreisner): offer this upstream?
   sed -i '/ListenStream/ aRuntimeDirectory=uuidd' "${pkgdir}/usr/lib/systemd/system/uuidd.socket"
 
-  ### runtime libs are shipped as part of util-linux-libs
-  rm "${pkgdir}"/usr/lib/lib*.{a,so}*
+  # runtime libs are shipped as part of util-linux-libs
+  install -d -m0755 util-linux-libs/lib/
+  mv "$pkgdir"/usr/lib/lib*.so* util-linux-libs/lib/
+  mv "$pkgdir"/usr/lib/pkgconfig util-linux-libs/lib/pkgconfig
+  mv "$pkgdir"/usr/include util-linux-libs/include
 
-  ### install systemd-sysusers
-  install -Dm0644 "${srcdir}/util-linux.sysusers" \
+  # install systemd-sysusers
+  install -Dm0644 util-linux.sysusers \
     "${pkgdir}/usr/lib/sysusers.d/util-linux.conf"
 
-  install -Dm0644 "${srcdir}/60-rfkill.rules" \
+  install -Dm0644 60-rfkill.rules \
     "${pkgdir}/usr/lib/udev/rules.d/60-rfkill.rules"
 
-  install -Dm0644 "${srcdir}/rfkill-unblock_.service" \
+  install -Dm0644 rfkill-unblock_.service \
     "${pkgdir}/usr/lib/systemd/system/rfkill-unblock@.service"
-  install -Dm0644 "${srcdir}/rfkill-block_.service" \
+  install -Dm0644 rfkill-block_.service \
     "${pkgdir}/usr/lib/systemd/system/rfkill-block@.service"
 }
 
@@ -112,5 +116,7 @@ package_util-linux-libs() {
   conflicts=('libutil-linux')
   replaces=('libutil-linux')
 
-  make -C "${pkgbase}-${_realver}" DESTDIR="${pkgdir}" install-usrlib_execLTLIBRARIES
+  install -d -m0755 "$pkgdir"/usr
+  mv util-linux-libs/lib "$pkgdir"/usr/lib
+  mv util-linux-libs/include "$pkgdir"/usr/include
 }
