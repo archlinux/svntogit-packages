@@ -2,8 +2,8 @@
 
 pkgbase=systemd
 pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
-_tag='eb0f8fc41511dda1f9e0d19e830cc8c6668a2628' # git rev-parse v${_tag_name}
-_tag_name=253
+_tag='199399bb283701b6a4aaf5ace49f56f30f38e9a3' # git rev-parse v${_tag_name}
+_tag_name=253.1
 pkgver="${_tag_name/-/}"
 pkgrel=1
 arch=('x86_64')
@@ -166,7 +166,7 @@ package_systemd() {
   provides=('nss-myhostname' "systemd-tools=$pkgver" "udev=$pkgver")
   replaces=('nss-myhostname' 'systemd-tools' 'udev')
   conflicts=('nss-myhostname' 'systemd-tools' 'udev')
-  optdepends=('libmicrohttpd: remote journald capabilities'
+  optdepends=('libmicrohttpd: systemd-journal-gatewayd and systemd-journal-remote'
               'quota-tools: kernel-level quota management'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
               'polkit: allow administration as unprivileged user'
