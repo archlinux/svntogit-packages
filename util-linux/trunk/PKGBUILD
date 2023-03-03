@@ -60,8 +60,7 @@ package_util-linux() {
   depends=('pam' 'shadow' 'coreutils' 'systemd-libs' 'libsystemd.so'
            'libudev.so' 'libcap-ng' 'libxcrypt' 'libcrypt.so' 'util-linux-libs'
            'libmagic.so' 'libncursesw.so')
-  optdepends=('python: python bindings to libmount'
-              'words: default dictionary for look')
+  optdepends=('words: default dictionary for look')
   backup=(etc/pam.d/chfn
           etc/pam.d/chsh
           etc/pam.d/login
@@ -96,6 +95,7 @@ package_util-linux() {
   mv "$pkgdir"/usr/lib/pkgconfig util-linux-libs/lib/pkgconfig
   mv "$pkgdir"/usr/include util-linux-libs/include
   mv "$pkgdir"/usr/lib/python3.10/site-packages util-linux-libs/site-packages
+  rmdir "$pkgdir"/usr/lib/python3.10
   mv "$pkgdir"/usr/share/man/man3 util-linux-libs/man3
 
   # install systemd-sysusers
@@ -117,6 +117,7 @@ package_util-linux-libs() {
   provides=('libutil-linux' 'libblkid.so' 'libfdisk.so' 'libmount.so' 'libsmartcols.so' 'libuuid.so')
   conflicts=('libutil-linux')
   replaces=('libutil-linux')
+  optdepends=('python: python bindings to libmount')
 
   install -d -m0755 "$pkgdir"/usr/{lib/python3.10/,share/man/}
   mv util-linux-libs/lib/* "$pkgdir"/usr/lib/
