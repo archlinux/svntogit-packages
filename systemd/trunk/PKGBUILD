@@ -201,8 +201,10 @@ package_systemd() {
   rmdir "$pkgdir"/var/log/journal/remote
 
   # runtime libraries shipped with systemd-libs
-  install -d -m0755 systemd-libs
-  mv "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so* systemd-libs
+  install -d -m0755 systemd-libs/lib/
+  mv "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so* systemd-libs/lib/
+  mv "$pkgdir"/usr/include systemd-libs/include
+  mv "$pkgdir"/usr/share/pkgconfig systemd-libs/pkgconfig
 
   # manpages shipped with systemd-sysvcompat
   rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,shutdown}.8
@@ -255,8 +257,10 @@ package_systemd-libs() {
   conflicts=('libsystemd')
   replaces=('libsystemd')
 
-  install -d -m0755 "$pkgdir"/usr
-  mv systemd-libs "$pkgdir"/usr/lib
+  install -d -m0755 "$pkgdir"/usr/share
+  mv systemd-libs/lib "$pkgdir"/usr/lib
+  mv systemd-libs/include "$pkgdir"/usr/include
+  mv systemd-libs/pkgconfig "$pkgdir"/usr/share/pkgconfig
 }
 
 package_systemd-resolvconf() {
