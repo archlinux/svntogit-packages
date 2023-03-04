@@ -1,0 +1,78 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=cups-filters
+_commit=378a821080ecb140a1319ee2be4cacc1150e82d6 # master 2020-11-16
+pkgver=1.27.5+260+g378a8210
+pkgrel=1
+pkgdesc="OpenPrinting CUPS Filters"
+arch=('x86_64')
+url="https://wiki.linuxfoundation.org/openprinting/cups-filters"
+license=('custom')
+depends=('lcms2' 'poppler' 'qpdf' 'imagemagick' 'liblouis' 'ijs' 'libcups' 'systemd')
+makedepends=('ghostscript' 'ttf-dejavu' 'python' 'mupdf-tools' 'psutils' 'git') # ttf-dejavu for make check
+optdepends=('ghostscript: for non-PostScript printers to print with CUPS to convert PostScript to raster images'
+	    'foomatic-db: drivers use Ghostscript to convert PostScript to a printable form directly'
+	    'foomatic-db-engine: drivers use Ghostscript to convert PostScript to a printable form directly'
+	    'foomatic-db-nonfree: drivers use Ghostscript to convert PostScript to a printable form directly'
+	    'antiword: to convert MS Word documents'
+	    'docx2txt: to convert Microsoft OOXML text from DOCX files')
+backup=(etc/cups/cups-browsed.conf)
+#source=(https://www.openprinting.org/download/cups-filters/$pkgname-$pkgver.tar.xz)
+source=("git+https://github.com/OpenPrinting/cups-filters#commit=$_commit"
+	buildfix.diff)
+sha256sums=('SKIP'
+            '4dcb21b719df28f1b275aef091014420dce2b57fbb1dacabd1eb067167629bd0')
+
+pkgver() {
+  cd $pkgname
+  #git describe --tags | sed 's/-/+/g' | sed 's/v//'
+  git describe --tags | sed 's/release-1-27-5/1.27.5/;s/-/+/g'
+  #git rev-list --count HEAD # = 25
+  #printf "0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)" # 0.r25.2e43897
+}
+
+prepare() {
+  cd "$pkgname" 
+  patch -Np1 -i ../buildfix.diff
+  autoreconf -vfi
+}
+
+build() {
+  cd "$pkgname" #-$pkgver
+  ./configure --prefix=/usr  \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin \
+    --localstatedir=/var \
+    --with-rcdir=no \
+    --enable-avahi \
+    --with-browseremoteprotocols=DNSSD,CUPS \
+    --with-test-font-path=/usr/share/fonts/TTF/DejaVuSans.ttf
+
+#  make -qp | awk -F':' '/^[a-zA-Z0-9][^$#\/\t=]*:([^=]|$)/ {split($1,A,/ /);for(i in A)print A[i]}' | grep ^install
+#  return 1
+
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make #V=1
+}
+
+check() {
+  cd "$pkgname" #-$pkgver
+  make check
+}
+
+package() {
+  cd "$pkgname" #-$pkgver
+  make DESTDIR="$pkgdir/" install
+  
+  # add upstream systemd support file
+  install -Dm644 utils/cups-browsed.service "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
+  sed -i "s|/usr/sbin/cups-browsed|/usr/bin/cups-browsed|" "${pkgdir}"/usr/lib/systemd/system/cups-browsed.service
+  
+  # use cups group from cups pkg FS#56818
+  chgrp -R 209 "${pkgdir}"/etc/cups
+
+  # license
+  mkdir -p "${pkgdir}"/usr/share/licenses/${pkgname}
+  #install -m644 "${srcdir}"/${pkgname}-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+  install -m644 "${srcdir}"/${pkgname}/COPYING "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
