@@ -1,0 +1,90 @@
+From 69faba79256faeee8d564298855eebe8c5e9c870 Mon Sep 17 00:00:00 2001
+From: Colin Watson <cjwatson@debian.org>
+Date: Fri, 6 Nov 2015 11:40:37 +0000
+Subject: Always use UTC times for display
+
+Using localtime is problematic for reproducible builds.  For now, always
+use UTC times (gmtime etc.) for display.  (Note that this changes the
+semantics of \n[hours] etc., so may need further work.)
+
+Forwarded: no
+Last-Update: 2018-03-05
+
+Patch-Name: display-utc-times.patch
+---
+ src/devices/grohtml/post-html.cpp | 4 ++--
+ src/devices/gropdf/gropdf.pl      | 4 ++--
+ src/devices/grops/ps.cpp          | 2 +-
+ src/roff/troff/input.cpp          | 2 +-
+ 4 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/devices/grohtml/post-html.cpp b/src/devices/grohtml/post-html.cpp
+index 7bc017e0..ad7ca54f 100644
+--- a/src/devices/grohtml/post-html.cpp
++++ b/src/devices/grohtml/post-html.cpp
+@@ -5016,7 +5016,7 @@ void html_printer::do_file_components (void)
+ 
+       t = current_time();
+       html.begin_comment("CreationDate: ")
+-	.put_string(ctime(&t), strlen(ctime(&t))-1)
++	.put_string(asctime(gmtime(&t)), strlen(asctime(gmtime(&t)))-1)
+ 	.end_comment();
+ 
+       if (dialect == html4)
+@@ -5129,7 +5129,7 @@ html_printer::~html_printer()
+ 
+   t = current_time();
+   html.begin_comment("CreationDate: ")
+-    .put_string(ctime(&t), strlen(ctime(&t))-1)
++    .put_string(asctime(gmtime(&t)), strlen(asctime(gmtime(&t)))-1)
+     .end_comment();
+ 
+   if (dialect == html4)
+diff --git a/src/devices/gropdf/gropdf.pl b/src/devices/gropdf/gropdf.pl
+index 2ec52d06..134b0962 100644
+--- a/src/devices/gropdf/gropdf.pl
++++ b/src/devices/gropdf/gropdf.pl
+@@ -280,7 +280,7 @@ elsif (exists($ppsz{$papersz}))
+     @defaultmb=@mediabox=(0,0,$ppsz{$papersz}->[0],$ppsz{$papersz}->[1]);
+ }
+ 
+-my (@dt)=localtime($ENV{SOURCE_DATE_EPOCH} || time);
++my (@dt)=gmtime($ENV{SOURCE_DATE_EPOCH} || time);
+ my $dt=PDFDate(\@dt);
+ 
+ my %info=('Creator' => "(groff version $cfg{GROFF_VERSION})",
+@@ -538,7 +538,7 @@ sub GetObj
+ sub PDFDate
+ {
+     my $dt=shift;
+-    return(sprintf("D:%04d%02d%02d%02d%02d%02d%+03d'00'",$dt->[5]+1900,$dt->[4]+1,$dt->[3],$dt->[2],$dt->[1],$dt->[0],( localtime time() + 3600*( 12 - (gmtime)[2] ) )[2] - 12));
++    return(sprintf("D:%04d%02d%02d%02d%02d%02d+00'00'",$dt->[5]+1900,$dt->[4]+1,$dt->[3],$dt->[2],$dt->[1],$dt->[0]));
+ }
+ 
+ sub ToPoints
+diff --git a/src/devices/grops/ps.cpp b/src/devices/grops/ps.cpp
+index ab3b1d73..b0fb78e1 100644
+--- a/src/devices/grops/ps.cpp
++++ b/src/devices/grops/ps.cpp
+@@ -1392,7 +1392,7 @@ ps_printer::~ps_printer()
+     time_t
+ #endif
+     t = current_time();
+-    fputs(ctime(&t), out.get_file());
++    fputs(asctime(gmtime(&t)), out.get_file());
+   }
+   for (font_pointer_list *f = font_list; f; f = f->next) {
+     ps_font *psf = (ps_font *)(f->p);
+diff --git a/src/roff/troff/input.cpp b/src/roff/troff/input.cpp
+index a1bd8eaf..f415aa6d 100644
+--- a/src/roff/troff/input.cpp
++++ b/src/roff/troff/input.cpp
+@@ -8084,7 +8084,7 @@ static void init_registers()
+ #endif /* not LONG_FOR_TIME_T */
+     t = current_time();
+   // Use struct here to work around misfeature in old versions of g++.
+-  struct tm *tt = localtime(&t);
++  struct tm *tt = gmtime(&t);
+   set_number_reg("seconds", int(tt->tm_sec));
+   set_number_reg("minutes", int(tt->tm_min));
+   set_number_reg("hours", int(tt->tm_hour));
