@@ -25,8 +25,8 @@ pkgname=(
   gst-python
   gstreamer-docs
 )
-pkgver=1.22.0
-pkgrel=5
+pkgver=1.22.1
+pkgrel=1
 pkgdesc="Multimedia graph framework"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
@@ -78,21 +78,15 @@ source=(
   0003-imagesequencesrc-Properly-set-default-location.patch
 )
 b2sums=('SKIP'
-        '78152f7dccbefa6a8bb2c844b4ef4e1eab97c6e54a017bbe896fe3afb646942449a87387c66499f454e968b63f00a8040c9360ca7248c6dd7819228cf22fd94f'
+        '9f8e55732a60aebc8f0f50ba41ef06a739c80290f552f19c80ce71206e1094aadec5dcc57c908a277b33770f505b8f6b6e0e196abc8237778a3d4880bcd6d89a'
         'SKIP'
-        '84a85c03a51343ef5be3ca8911b6204ec634409f12838ad258ff8ff8074fec374ce72e2432b2a0911435b52978fa5e5a52b849bb008c4aecba0f903df5159081'
+        '7fa36829d5ebfb7b673a0fc36b8606d7e8e23975158e59406e9e31c2d82a6c774221b21ae6a49ef234f109e3a352ca04bf50d15f0e66b30667dd5df8cb80bc48'
         '9934ab83fb55e2c8b48ede8d1d018d3757725dc869bb9fe20bd66982d04ca164f41a07968c83105be96e4262fd05d9917ed365cd7eb360259174ee9ba6d8f1ad'
         'fd5bfeaf5a08f225bfb81df1beac55c3d7332aa4ffb1ba0a3e662dccea6b5ca43eecee92578c54d2fc1e3aa2edc73eb09a02e9c0a8ac3ad2002995a6a0396fa2')
 validpgpkeys=(D637032E45B8C6585B9456565D2EEE6F6F349D7C) # Tim Müller <tim@gstreamer-foundation.org>
 
 prepare() {
   cd gstreamer
-
-  # Fix install
-  git cherry-pick -n bfe16f29a70d9fd0799472cc224620db239e27d9
-
-  # Fix build with ffmpeg 6.0
-  git cherry-pick -n cde31d23c071ee93fae96331805f696856084254
 
   # Disable broken tests
   git apply -3 ../0001-HACK-meson-Disable-broken-tests.patch
