@@ -1,0 +1,86 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Eric Bélanger <eric@archlinux.org>
+
+pkgname=libtiff
+pkgver=4.5.0
+pkgrel=3
+pkgdesc='Library for manipulation of TIFF images'
+url='http://www.simplesystems.org/libtiff/'
+arch=('x86_64')
+license=('custom')
+depends=('glibc' 'libjpeg-turbo' 'libjpeg.so' 'zlib' 'xz' 'zstd')
+makedepends=('freeglut' 'glu' 'mesa' 'jbigkit')
+optdepends=('freeglut: for using tiffgt')
+provides=('libtiff.so' 'libtiffxx.so')
+source=(
+  "https://download.osgeo.org/libtiff/tiff-${pkgver}.tar.gz"{,.sig}
+  # fix CVE-2022-48281
+  https://gitlab.com/libtiff/libtiff/-/commit/97d65859bc29ee334012e9c73022d8a8e55ed586.patch
+  # correctly update buffersize after rotateImage()
+  https://gitlab.com/libtiff/libtiff/-/commit/9c22495e5eeeae9e00a1596720c969656bb8d678.patch
+  # TIFFClose() avoid NULL pointer dereference
+  https://gitlab.com/libtiff/libtiff/-/commit/d63de61b1ec3385f6383ef9a1f453e4b8b11d536.patch
+  # fix CVE-2023-0795, CVE-2023-0796, CVE-2023-0797, CVE-2023-0798, CVE-2023-0799
+  https://gitlab.com/libtiff/libtiff/-/commit/69818e2f2d246e6631ac2a2da692c3706b849c38.patch
+  # fix CVE-2023-0800, CVE-2023-0801, CVE-2023-0802, CVE-2023-0803, CVE-2023-0804
+  https://gitlab.com/libtiff/libtiff/-/commit/82a7fbb1fa7228499ffeb3a57a1d106a9626d57c.patch
+)
+sha256sums=('c7a1d9296649233979fa3eacffef3fa024d73d05d589cb622727b5b08c423464'
+            'SKIP'
+            'a65cd779fc514b89a7747e6f849d8583410f8e97139da06ff41958620503aa3c'
+            'd74373e414ef6f82969c1df8d85a251eaf4fb5dccd021b4fe43404a8f5e3c71d'
+            '9dc12d840d5f9e8ab45eb7ac1ee3f8a718bca8597dd25fa9faf56eea5e9a46b9'
+            '6dbed029e656df394289153daf885fd0f0422a6a82711118e4cc47143135ae09'
+            '54bd330114fc0d18d6c3d5897adb651eef542d2e45ff88bc4efd8b036e64a823')
+b2sums=('732556614886678435781bc91796eda17aae03dc8eb2b488d297e2700a51fd93d9cc8d2b895fd9b14dbed9a992d6a7f59d2f260ff60cf6344da1e1478f9bb4f0'
+        'SKIP'
+        'a2001b5fa5531c52dee71301ae43efc56d1f8a654b0f1e367560a5818d5449c1ff7b8aa327392475935d93fe3f7298af0c1abf5c3995f23fe25907d2b2350e8c'
+        '5e6710313ece577b6838aa864e2e9d5a1c3d444dddfbe483163a601524789874f6463c56d1cebfa759201939550fc87079cf626ff569a929e761ed1ae4e0c046'
+        '604899f28ca3251edc755aff4ae911987fc1d33a2717be19c2c62f7a0f3e2556de55b17f9b9a2a1d1cc8cf9843d38e750d55d9a7cbdc5f8a63e8b35ee09c650e'
+        '89d8f50fb8380ad11251b3f8c3f9837fcf05d679fabc56f76f1af5f246a6eae2e464dc3d968a45d25130501ff9b7204f1ba4acd739e4b075bed1742a1d335021'
+        '948b94b9a4289156301b8685efdc7f2a6e3f9699a4e1972dbe5f94744444b18f58c7b7de645ba93a1a9df7d94b1b73dd685f097947e52a1d5ad897970176eab0')
+validpgpkeys=(
+  'EBDFDB21B020EE8FD151A88DE301047DE1198975' # Bob Friesenhahn <bfriesen@simple.dallas.tx.us>
+  'B1FA7D81EEB8E66399178B9733EBBFC47B3DD87D' # Even Rouault <even.rouault@spatialys.com>
+)
+
+prepare() {
+  cd tiff-${pkgver//rc*/}
+  # apply patch from the source array (should be a pacman feature)
+  local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
+  done
+}
+
+build() {
+  local configure_options=(
+    --prefix=/usr
+    --sysconfdir=/etc
+    --enable-ld-version-script
+    --mandir=/usr/share/man
+    --with-docdir=/usr/share/doc/${pkgname}
+  )
+
+  cd tiff-${pkgver//rc*/}
+  ./configure "${configure_options[@]}"
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd tiff-${pkgver//rc*/}
+  make check
+}
+
+package() {
+  cd tiff-${pkgver//rc*/}
+  make DESTDIR="${pkgdir}" install
+  install -Dm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
+
+# vim: ts=2 sw=2 et:
