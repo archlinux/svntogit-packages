@@ -2,21 +2,36 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=gobject-introspection
-pkgname=(gobject-introspection gobject-introspection-runtime)
+pkgname=(
+  gobject-introspection
+  gobject-introspection-runtime
+  libgirepository
+  gobject-introspection-docs
+)
 pkgver=1.74.0
 pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
-_glibver=2.74.0
-depends=(python-mako python-markdown)
-makedepends=(cairo git gtk-doc python-sphinx meson "glib2=$_glibver")
+_glibver=2.74.6
+makedepends=(
+  cairo
+  git
+  "glib2=$_glibver"
+  gtk-doc
+  meson
+  python-mako
+  python-markdown
+  python-sphinx
+)
 _commit=37bde613a7cb77e7399dafb25731e13208f0ae0b  # tags/1.74.0^0
-source=("git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
-        "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver")
-sha512sums=('SKIP'
-            'SKIP')
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
+  "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver"
+)
+b2sums=('SKIP'
+        'SKIP')
 validpgpkeys=('923B7025EE03C1C59F42684CF0942E894B2EAFA0'  # Philip Withnall <philip@tecnocode.co.uk>
               'D4C501DA48EB797A081750939449C2F50996635F') # Marco Trevisan <marco@trevi.me>
 
@@ -30,14 +45,17 @@ prepare() {
 }
   
 build() {
-  arch-meson $pkgbase build \
-    -D gtk_doc=true \
+  local meson_options=(
     -D glib_src_dir="$srcdir/glib"
+    -D gtk_doc=true
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
   meson compile -C build
 }
 
 check() {
-  meson test -C build
+  meson test -C build --print-errorlogs
 }
 
 _pick() {
@@ -51,7 +69,11 @@ _pick() {
 }
 
 package_gobject-introspection() {
-  depends+=("gobject-introspection-runtime=$pkgver-$pkgrel")
+  depends=(
+    "gobject-introspection-runtime=$pkgver-$pkgrel"
+    python-mako
+    python-markdown
+  )
 
   meson install -C build --destdir "$pkgdir"
 
@@ -60,14 +82,39 @@ package_gobject-introspection() {
   python -m compileall -d /usr/lib/$pkgbase usr/lib/$pkgbase
   python -O -m compileall -d /usr/lib/$pkgbase usr/lib/$pkgbase
 
-  _pick runtime usr/lib/lib*
-  _pick runtime usr/lib/girepository-*
+  _pick libg usr/include/gobject-introspection-1.0
+  _pick libg usr/lib/libgirepository-1.0.so*
+  _pick libg usr/lib/pkgconfig/gobject-introspection*-1.0.pc
+  _pick libg usr/lib/girepository-1.0/GIRepository-2.0.typelib
+  _pick libg usr/share/gir-1.0/GIRepository-2.0.gir
+
+  _pick runtime usr/lib/girepository-1.0
+
+  _pick docs usr/share/gtk-doc
 }
 
 package_gobject-introspection-runtime() {
-  pkgdesc+=" (runtime library)"
-  depends=(glib2)
-  provides+=(libgirepository-1.0.so)
+  pkgdesc+=" - runtime"
+  depends=("libgirepository=$pkgver-$pkgrel")
 
   mv runtime/* "$pkgdir"
 }
+
+package_libgirepository() {
+  pkgdesc+=" - runtime library"
+  depends=(
+    libffi.so
+    libg{lib,object,module,io}-2.0.so
+  )
+  provides=(libgirepository-1.0.so)
+
+  mv libg/* "$pkgdir"
+}
+
+package_gobject-introspection-docs() {
+  pkgdesc+=" - documentation"
+
+  mv docs/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
