@@ -119,6 +119,7 @@ package_opencv-cuda() {
   depends+=(cudnn)
   conflicts=(opencv)
   provides=(opencv=$pkgver)
+  options=(!debug)
 
   DESTDIR="$pkgdir" cmake --install build-cuda
 
