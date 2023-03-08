@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=6.0
-pkgrel=1
+pkgrel=2
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -33,7 +33,7 @@ depends=(
   libgl
   libiec61883
   libmfx
-  libopenmpt.so
+  libmodplug
   libpulse
   librav1e.so
   libraw1394
@@ -151,11 +151,11 @@ build() {
     --enable-libiec61883 \
     --enable-libjack \
     --enable-libmfx \
+    --enable-libmodplug \
     --enable-libmp3lame \
     --enable-libopencore_amrnb \
     --enable-libopencore_amrwb \
     --enable-libopenjpeg \
-    --enable-libopenmpt \
     --enable-libopus \
     --enable-libpulse \
     --enable-librav1e \
