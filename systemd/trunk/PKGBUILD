@@ -1,7 +1,11 @@
 # Maintainer: Christian Hesse <mail@eworm.de>
 
 pkgbase=systemd
-pkgname=('systemd' 'systemd-libs' 'systemd-resolvconf' 'systemd-sysvcompat')
+pkgname=('systemd'
+         'systemd-libs'
+         'systemd-resolvconf'
+         'systemd-sysvcompat'
+         'systemd-ukify')
 _tag='199399bb283701b6a4aaf5ace49f56f30f38e9a3' # git rev-parse v${_tag_name}
 _tag_name=253.1
 pkgver="${_tag_name/-/}"
@@ -171,6 +175,7 @@ package_systemd() {
   optdepends=('libmicrohttpd: systemd-journal-gatewayd and systemd-journal-remote'
               'quota-tools: kernel-level quota management'
               'systemd-sysvcompat: symlink package to provide sysvinit binaries'
+              'systemd-ukify: combine kernel and initrd into a signed Unified Kernel Image'
               'polkit: allow administration as unprivileged user'
               'python: Unified Kernel Image with ukify'
               'curl: systemd-journal-upload, machinectl pull-tar and pull-raw'
@@ -208,6 +213,11 @@ package_systemd() {
   mv "$pkgdir"/usr/lib/pkgconfig systemd-libs/lib/pkgconfig
   mv "$pkgdir"/usr/include systemd-libs/include
   mv "$pkgdir"/usr/share/man/man3 systemd-libs/man3
+
+  # ukify shipped in separate package
+  install -d -m0755 systemd-ufify/{systemd,man1}
+  mv "$pkgdir"/usr/lib/systemd/ukify systemd-ufify/systemd/
+  mv "$pkgdir"/usr/share/man/man1/ukify.1 systemd-ufify/man1/
 
   # manpages shipped with systemd-sysvcompat
   rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,shutdown}.8
@@ -294,6 +304,19 @@ package_systemd-sysvcompat() {
   for tool in halt poweroff reboot shutdown; do
     ln -s systemctl "$pkgdir"/usr/bin/$tool
   done
+}
+
+package_systemd-ukify() {
+  pkgdesc='Combine kernel and initrd into a signed Unified Kernel Image'
+  license=('GPL2')
+  provides=('ukify')
+  depends=('binutils' 'python-pefile' 'systemd')
+  optdepends=('python-pillow: Show the size of splash image'
+              'sbsigntools: Sign the embedded kernel')
+
+  install -d -m0755 "$pkgdir"/usr/{lib,share/man}
+  mv systemd-ufify/systemd "$pkgdir"/usr/lib/systemd
+  mv systemd-ufify/man1 "$pkgdir"/usr/share/man/man1
 }
 
 # vim:ft=sh syn=sh et sw=2:
