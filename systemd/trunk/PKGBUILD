@@ -215,9 +215,9 @@ package_systemd() {
   mv "$pkgdir"/usr/share/man/man3 systemd-libs/man3
 
   # ukify shipped in separate package
-  install -d -m0755 systemd-ufify/{systemd,man1}
-  mv "$pkgdir"/usr/lib/systemd/ukify systemd-ufify/systemd/
-  mv "$pkgdir"/usr/share/man/man1/ukify.1 systemd-ufify/man1/
+  install -d -m0755 systemd-ukify/{systemd,man1}
+  mv "$pkgdir"/usr/lib/systemd/ukify systemd-ukify/systemd/
+  mv "$pkgdir"/usr/share/man/man1/ukify.1 systemd-ukify/man1/
 
   # manpages shipped with systemd-sysvcompat
   rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,shutdown}.8
@@ -315,8 +315,8 @@ package_systemd-ukify() {
               'sbsigntools: Sign the embedded kernel')
 
   install -d -m0755 "$pkgdir"/usr/{lib,share/man}
-  mv systemd-ufify/systemd "$pkgdir"/usr/lib/systemd
-  mv systemd-ufify/man1 "$pkgdir"/usr/share/man/man1
+  mv systemd-ukify/systemd "$pkgdir"/usr/lib/systemd
+  mv systemd-ukify/man1 "$pkgdir"/usr/share/man/man1
 }
 
 # vim:ft=sh syn=sh et sw=2:
