@@ -1,0 +1,111 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=wireplumber
+pkgname=(
+  wireplumber
+  libwireplumber
+)
+_commit=6d0c7f7b7f484b3cd2aaf2e2b3cc902c095b4946  # tags/0.4.14
+pkgver=0.4.14
+pkgrel=1
+pkgdesc="Session / policy manager implementation for PipeWire"
+url="https://pipewire.pages.freedesktop.org/wireplumber/"
+arch=(x86_64)
+license=(MIT)
+makedepends=(
+  doxygen
+  git
+  glib2
+  gobject-introspection
+  graphviz
+  lua
+  meson
+  pipewire
+  # python-breathe
+  python-lxml
+  # python-sphinx
+  # python-sphinx_rtd_theme
+  systemd
+)
+checkdepends=(pipewire-audio)
+source=("git+https://gitlab.freedesktop.org/pipewire/$pkgbase.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd $pkgbase
+}
+
+build() {
+  local meson_options=(
+    -D system-lua=true
+    -D doc=disabled
+    -D elogind=disabled
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+_ver=${pkgver:0:3}
+
+package_wireplumber() {
+  depends=(
+    "libwireplumber=$pkgver-$pkgrel"
+    libsystemd.so
+    lua
+    pipewire
+  )
+  provides=(pipewire-session-manager)
+  conflicts=(pipewire-media-session)
+  install=wireplumber.install
+
+  meson install -C build --destdir "$pkgdir"
+
+  (
+    cd "$pkgdir"
+
+    _pick libw usr/lib/libwireplumber-$_ver.so*
+    _pick libw usr/lib/girepository-1.0
+    _pick libw usr/lib/pkgconfig
+    _pick libw usr/include
+    _pick libw usr/share/gir-1.0
+  )
+
+  install -Dt "$pkgdir/usr/share/doc/$pkgname" -m644 $pkgbase/{NEWS,README}*
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
+}
+
+package_libwireplumber() {
+  pkgdesc+=" - client library"
+  depends=(
+    libg{lib,module,object,io}-2.0.so
+    libpipewire-0.3.so
+  )
+  provides=(libwireplumber-$_ver.so)
+
+  mv libw/* "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
+}
+
+# vim:set sw=2 sts=-1 et:
