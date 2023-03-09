@@ -4,7 +4,7 @@
 
 pkgname=chromaprint
 pkgver=1.5.1
-pkgrel=6
+pkgrel=7
 pkgdesc="Library for extracting fingerprints from any audio source"
 url="https://acoustid.org/chromaprint"
 arch=('x86_64')
@@ -26,6 +26,7 @@ b2sums=('9f7f030e97d3114cf679df298d313ea826c0fb05e7e7d8a10090d0a27ed0811b380b81b
 prepare() {
   patch -d $pkgname-$pkgver -p1 < 8ccad693.patch
   patch -d $pkgname-$pkgver -p1 < aa67c95b.patch # Port to ffmpeg 5
+  sed -e '/CMAKE_CXX_STANDARD/d' -i $pkgname-$pkgver/CMakeLists.txt # Don't enforce c++11
 }
 
 build() {
@@ -37,16 +38,16 @@ build() {
         -Wno-dev \
         -B build \
         -S $pkgname-$pkgver
-  make VERBOSE=1 -C build
+  cmake --build build
 }
 
 check() {
-  make VERBOSE=1 -C build check
+  cmake --build build --target check
 }
 
 package() {
   depends+=('libavcodec.so' 'libavformat.so' 'libavutil.so' 'libswresample.so')
-  make VERBOSE=1 DESTDIR="$pkgdir" install -C build
+  DESTDIR="$pkgdir" cmake --install build
   install -vDm 644 $pkgname-$pkgver/LICENSE.md -t "$pkgdir/usr/share/licenses/$pkgname"
   install -vDm 644 $pkgname-$pkgver/{NEWS.txt,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
 }
