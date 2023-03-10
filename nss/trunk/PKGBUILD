@@ -3,7 +3,7 @@
 
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
-pkgver=3.88.1
+pkgver=3.89
 pkgrel=1
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
@@ -25,7 +25,7 @@ makedepends=(
   perl
   python
 )
-_revision=35df50f6b6157ab6ba5ce567dba2558ba9e56077
+_revision=4e4ebb9ad0d4391035c76c26967682c148ff0fd7
 source=(
   "hg+https://hg.mozilla.org/projects/nss#revision=$_revision"
   bundle.sh
@@ -114,4 +114,4 @@ package_ca-certificates-mozilla() {
     "$pkgdir/usr/share/ca-certificates/trust-source/mozilla.trust.p11-kit"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
