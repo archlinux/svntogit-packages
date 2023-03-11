@@ -1,7 +1,7 @@
 # Maintainer: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=linux-lts
-pkgver=6.1.16
+pkgver=6.1.17
 pkgrel=1
 pkgdesc='LTS Linux'
 url="https://www.kernel.org/"
@@ -23,9 +23,9 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 # https://www.kernel.org/pub/linux/kernel/v6.x/sha256sums.asc
-sha256sums=('a6849c55580b5515a07b6ad21861c450fa20345c66624eecb89e8873816da3c5'
+sha256sums=('a9bc8d0329304e36777d4cbfaa3f8784d7f915640442ca7c5c025b96818f2199'
             'SKIP'
-            'c3cff17ebe0f20ad260f75879871270d08fe594e7ae7f3d14365ea9b1b0b8b06'
+            '11a0d24bc82f1e0eb7a0a8597ea48ac85894f1802581de5c01662a7027372c23'
             '1bd8388fcb6ed4eec46450c65eb7a0889a8c541f164a39e3064633981a7a4a3d')
 
 export KBUILD_BUILD_HOST=archlinux
