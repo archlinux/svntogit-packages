@@ -1,18 +1,55 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgbase=pulseaudio
-pkgname=(pulseaudio libpulse pulseaudio-{zeroconf,lirc,jack,bluetooth,equalizer,rtp})
-pkgdesc="A featureful, general-purpose sound server"
+pkgname=(
+  pulseaudio
+  libpulse
+  pulseaudio-zeroconf
+  pulseaudio-lirc
+  pulseaudio-jack
+  pulseaudio-bluetooth
+  pulseaudio-equalizer
+  pulseaudio-rtp
+)
 pkgver=16.1
-pkgrel=3
-arch=(x86_64)
+pkgrel=4
+pkgdesc="A featureful, general-purpose sound server"
 url="https://www.freedesktop.org/wiki/Software/PulseAudio/"
+arch=(x86_64)
 license=(GPL)
-makedepends=(libasyncns libcap attr libxtst libsm libsndfile rtkit libsoxr
-             speexdsp tdb systemd dbus avahi bluez bluez-libs jack2 sbc alsa-lib
-             lirc openssl fftw orc gtk3 webrtc-audio-processing check git meson
-             xmltoman valgrind doxygen gst-plugins-base-libs)
-options=(debug)
+makedepends=(
+  alsa-lib
+  attr
+  avahi
+  bluez
+  bluez-libs
+  check
+  dbus
+  doxygen
+  fftw
+  git
+  gst-plugins-base-libs
+  gtk3
+  jack2
+  libasyncns
+  libcap
+  libsm
+  libsndfile
+  libsoxr
+  libxtst
+  lirc
+  meson
+  openssl
+  orc
+  rtkit
+  sbc
+  speexdsp
+  systemd
+  tdb
+  valgrind
+  webrtc-audio-processing
+  xmltoman
+)
 _commit=e5ad31e873eed62bc580a86a61177047f9e8c491  # tags/v16.1^0
 source=("git+https://gitlab.freedesktop.org/pulseaudio/pulseaudio.git#commit=$_commit")
 sha256sums=('SKIP')
@@ -27,6 +64,11 @@ prepare() {
 
   # Freeze version before patching
   ./git-version-gen doesnt-exist >.tarball-version
+
+  # https://bugs.archlinux.org/task/77658
+  # https://gitlab.freedesktop.org/pulseaudio/pulseaudio/-/merge_requests/782
+  git cherry-pick -n aed52c507f345d0b5c4cd2b1d2c58dae2d904b53 \
+                     5ab2b9cb0e32190c3ea12b0f4cb7533d7340bbf1
 }
 
 build() {
@@ -58,18 +100,38 @@ _pick() {
 }
 
 package_pulseaudio() {
-  depends=("libpulse=$pkgver-$pkgrel" rtkit libltdl speexdsp tdb orc libsoxr
-           webrtc-audio-processing libxtst fftw alsa-lib)
-  optdepends=('pulseaudio-alsa: ALSA configuration (recommended)'
-              'pulseaudio-zeroconf: Zeroconf support'
-              'pulseaudio-lirc: IR (lirc) support'
-              'pulseaudio-jack: Jack support'
-              'pulseaudio-bluetooth: Bluetooth support'
-              'pulseaudio-equalizer: Graphical equalizer'
-              'pulseaudio-rtp: RTP and RAOP support')
-  backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
+  depends=(
+    alsa-lib
+    fftw
+    libltdl
+    "libpulse=$pkgver-$pkgrel"
+    libsoxr
+    libxtst
+    orc
+    rtkit
+    speexdsp
+    tdb
+    webrtc-audio-processing
+  )
+  optdepends=(
+    'pulseaudio-alsa: ALSA configuration (recommended)'
+    'pulseaudio-bluetooth: Bluetooth support'
+    'pulseaudio-equalizer: Graphical equalizer'
+    'pulseaudio-jack: Jack support'
+    'pulseaudio-lirc: IR (lirc) support'
+    'pulseaudio-rtp: RTP and RAOP support'
+    'pulseaudio-zeroconf: Zeroconf support'
+  )
+  backup=(
+    etc/pulse/daemon.conf
+    etc/pulse/default.pa
+    etc/pulse/system.pa
+  )
   install=pulseaudio.install
-  replaces=('pulseaudio-xen<=9.0' 'pulseaudio-gconf<=11.1')
+  replaces=(
+    'pulseaudio-gconf<=11.1'
+    'pulseaudio-xen<=9.0'
+  )
 
   meson install -C build --destdir "$pkgdir"
 
@@ -129,9 +191,21 @@ package_pulseaudio() {
 
 package_libpulse() {
   pkgdesc="$pkgdesc (client library)"
-  depends=(dbus libasyncns libcap libxcb libsm libsndfile systemd)
+  depends=(
+    dbus
+    libasyncns
+    libcap
+    libsm
+    libsndfile
+    libxcb
+    systemd
+  )
   optdepends=('glib2: mainloop integration')
-  provides=(libpulse{,-simple,-mainloop-glib}.so)
+  provides=(
+    libpulse-mainloop-glib.so
+    libpulse-simple.so
+    libpulse.so
+  )
   license=(LGPL)
   backup=(etc/pulse/client.conf)
 
@@ -140,29 +214,44 @@ package_libpulse() {
 
 package_pulseaudio-zeroconf() {
   pkgdesc="Zeroconf support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" avahi openssl)
+  depends=(
+    avahi
+    openssl
+    "pulseaudio=$pkgver-$pkgrel"
+  )
 
   mv zeroconf/* "$pkgdir"
 }
 
 package_pulseaudio-lirc() {
   pkgdesc="IR (lirc) support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" lirc)
+  depends=(
+    lirc
+    "pulseaudio=$pkgver-$pkgrel"
+  )
 
   mv lirc/* "$pkgdir"
 }
 
 package_pulseaudio-jack() {
   pkgdesc="Jack support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" jack)
+  depends=(
+    jack
+    "pulseaudio=$pkgver-$pkgrel"
+  )
 
   mv jack/* "$pkgdir"
 }
 
 package_pulseaudio-bluetooth() {
   pkgdesc="Bluetooth support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" bluez bluez-libs sbc
-           gst-plugins-base-libs)
+  depends=(
+    bluez
+    bluez-libs
+    gst-plugins-base-libs
+    "pulseaudio=$pkgver-$pkgrel"
+    sbc
+  )
   optdepends=('gst-plugins-bad: AptX and LDAC support')
 
   mv bluetooth/* "$pkgdir"
@@ -170,15 +259,23 @@ package_pulseaudio-bluetooth() {
 
 package_pulseaudio-equalizer() {
   pkgdesc="Graphical equalizer for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" python-{pyqt5,dbus})
+  depends=(
+    "pulseaudio=$pkgver-$pkgrel"
+    python-dbus
+    python-pyqt5
+  )
 
   mv equalizer/* "$pkgdir"
 }
 
 package_pulseaudio-rtp() {
   pkgdesc="RTP and RAOP support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" gst-plugins-base-libs gst-plugins-base
-           gst-plugins-good)
+  depends=(
+    gst-plugins-base
+    gst-plugins-base-libs
+    gst-plugins-good
+    "pulseaudio=$pkgver-$pkgrel"
+  )
 
   mv rtp/* "$pkgdir"
 }
