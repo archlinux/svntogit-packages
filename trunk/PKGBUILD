@@ -3,19 +3,38 @@
 
 pkgname=accountsservice
 pkgver=22.08.8
-pkgrel=2
+pkgrel=3
 pkgdesc="D-Bus interface for user account query and manipulation"
 url="https://gitlab.freedesktop.org/accountsservice/accountsservice"
 arch=(x86_64)
 license=(GPL3)
-depends=(glib2 polkit systemd shadow libxcrypt)
-makedepends=(gtk-doc gobject-introspection git meson docbook-xsl xmlto vala)
-checkdepends=(python-gobject python-dbusmock)
+depends=(
+  glib2
+  libxcrypt
+  polkit
+  shadow
+  systemd
+)
+makedepends=(
+  docbook-xsl
+  git
+  gobject-introspection
+  gtk-doc
+  meson
+  vala
+  xmlto
+)
+checkdepends=(
+  python-dbusmock
+  python-gobject
+)
 _commit=1ef3add46983af875adfed5d29954cbfb184f688  # tags/22.08.8^0
-source=("git+https://gitlab.freedesktop.org/accountsservice/accountsservice.git#commit=$_commit"
-        fix-tests.diff)
-sha256sums=('SKIP'
-            '2da027faae5e477ed9ff57e3fc3cb8cd607073835118a05dd7b86bb7ff7c47fd')
+source=(
+  "git+https://gitlab.freedesktop.org/accountsservice/accountsservice.git#commit=$_commit"
+  0001-user-manager-Prevent-use-after-free-of-request-user.patch
+)
+b2sums=('SKIP'
+        '249ba2e824a600b4f12030d789c531114699ba4b76957e841c89301d192ddaddc71cd2a9b0f0d432164b6e528132b3f6348e7086a778d372daf6d1de5650e0cd')
 
 pkgver() {
   cd $pkgname
@@ -26,8 +45,13 @@ pkgver() {
 prepare() {
   cd $pkgname
 
-  # Tests are broken: https://github.com/martinpitt/python-dbusmock/issues/118
-  git apply -3 ../fix-tests.diff
+  # Fix tests
+  git cherry-pick -n fea3ecdc8e4877eb1960f5ec3ae319a3fd1aea26 \
+                     c588aea01bcc20353f8d28a78125e211bdc25097
+
+  # https://bugs.archlinux.org/task/77830
+  # https://gitlab.freedesktop.org/accountsservice/accountsservice/-/merge_requests/124
+  git apply -3 ../0001-user-manager-Prevent-use-after-free-of-request-user.patch
 }
 
 build() {
@@ -46,10 +70,14 @@ check() {
 }
 
 package() {
-  depends+=(libg{lib,object,io}-2.0.so libsystemd.so libcrypt.so)
+  depends+=(
+    libcrypt.so
+    libg{lib,object,io}-2.0.so
+    libsystemd.so
+  )
   provides+=(libaccountsservice.so)
 
   meson install -C build --destdir "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
