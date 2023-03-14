@@ -22,7 +22,7 @@ provides=('mod_proxy_uwsgi')
 conflicts=('mod_proxy_uwsgi')
 replaces=('mod_proxy_uwsgi')
 depends=('zlib' 'apr-util' 'pcre2' 'libnghttp2' 'openssl' 'libxcrypt')
-makedepends=('libxml2' 'lua' 'curl' 'brotli' 'jansson' 'db')
+makedepends=('libxml2' 'lua' 'curl' 'brotli' 'jansson' 'db' 'systemd')
 optdepends=(
     'lua: for mod_lua module'
     'libxml2: for mod_proxy_html, mod_xml2enc modules'
@@ -32,6 +32,7 @@ optdepends=(
     'uwsgi: for mod_proxy_uwsgi module'
     'lynx: apachectl status'
     'perl: for apxs and dbmmanage'
+    'systemd-libs: for mod_systemd module'
 )
 source=(
     https://www.apache.org/dist/httpd/httpd-${pkgver}.tar.bz2{,.asc}
@@ -88,7 +89,7 @@ build() {
       --enable-proxy-http --enable-proxy-ftp \
       --enable-dbd --enable-imagemap --enable-ident --enable-cern-meta \
       --enable-lua --enable-xml2enc --enable-http2 \
-      --enable-proxy-http2 --enable-md --enable-brotli \
+      --enable-proxy-http2 --enable-md --enable-brotli --enable-systemd \
       --with-apr=/usr/bin/apr-1-config \
       --with-apr-util=/usr/bin/apu-1-config \
       --with-pcre2
