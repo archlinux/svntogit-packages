@@ -6,15 +6,14 @@ pkgname=(
   gobject-introspection
   gobject-introspection-runtime
   libgirepository
-  gobject-introspection-docs
 )
-pkgver=1.74.0
+pkgver=1.76.0
 pkgrel=1
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
-_glibver=2.74.6
+_glibver=2.76.0
 makedepends=(
   cairo
   git
@@ -25,7 +24,7 @@ makedepends=(
   python-markdown
   python-sphinx
 )
-_commit=37bde613a7cb77e7399dafb25731e13208f0ae0b  # tags/1.74.0^0
+_commit=7aec38488a4d5fbc8539f798a7ce9ae1cb4df711  # tags/1.76.0^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gobject-introspection.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/glib.git?signed#tag=$_glibver"
@@ -87,10 +86,9 @@ package_gobject-introspection() {
   _pick libg usr/lib/pkgconfig/gobject-introspection*-1.0.pc
   _pick libg usr/lib/girepository-1.0/GIRepository-2.0.typelib
   _pick libg usr/share/gir-1.0/GIRepository-2.0.gir
+  _pick libg usr/share/gtk-doc
 
   _pick runtime usr/lib/girepository-1.0
-
-  _pick docs usr/share/gtk-doc
 }
 
 package_gobject-introspection-runtime() {
@@ -109,12 +107,6 @@ package_libgirepository() {
   provides=(libgirepository-1.0.so)
 
   mv libg/* "$pkgdir"
-}
-
-package_gobject-introspection-docs() {
-  pkgdesc+=" - documentation"
-
-  mv docs/* "$pkgdir"
 }
 
 # vim:set sw=2 sts=-1 et:
