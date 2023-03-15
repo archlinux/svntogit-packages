@@ -1,0 +1,135 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <heftig@archlinux.org>
+Date: Mon, 13 Mar 2023 17:07:46 +0000
+Subject: [PATCH] user-manager: Prevent use-after-free of request->user
+
+GNOME Settings 43.4.1 crashes with a segfault when opening the Users
+panel after updating GLib to 2.76.0.
+
+Backtrace:
+
+    g_type_check_instance_cast (type_instance=0x55fd6c6c1290, iface_type=iface_type@entry=0x50) at ../glib/gobject/gtype.c:4198
+    0x00007fc61690e414 in free_fetch_user_request (request=0x55fd6c4943b0) at ../accountsservice/src/libaccountsservice/act-user-manager.c:1708
+    0x00007fc616915f48 in fetch_user_incrementally (request=<optimized out>) at ../accountsservice/src/libaccountsservice/act-user-manager.c:1802
+    0x00007fc616916359 in on_find_user_by_id_finished (object=0x55fd6c49e420, result=0x55fd6c494430, data=0x55fd6c4943b0) at ../accountsservice/src/libaccountsservice/act-user-manager.c:1217
+    0x00007fc617db87f4 in g_task_return_now (task=0x55fd6c494430) at ../glib/gio/gtask.c:1309
+    0x00007fc617dbc5ed in g_task_return (type=<optimized out>, task=0x55fd6c494430) at ../glib/gio/gtask.c:1378
+    g_task_return (task=0x55fd6c494430, type=<optimized out>) at ../glib/gio/gtask.c:1335
+    0x00007fc617e25e9e in reply_cb (connection=<optimized out>, res=<optimized out>, user_data=0x55fd6c494430) at ../glib/gio/gdbusproxy.c:2571
+    0x00007fc617db87f4 in g_task_return_now (task=0x55fd6c4944f0) at ../glib/gio/gtask.c:1309
+    0x00007fc617dbc5ed in g_task_return (type=<optimized out>, task=0x55fd6c4944f0) at ../glib/gio/gtask.c:1378
+    g_task_return (task=0x55fd6c4944f0, type=<optimized out>) at ../glib/gio/gtask.c:1335
+    0x00007fc617e131d3 in g_dbus_connection_call_done (source=<optimized out>, result=<optimized out>, user_data=0x55fd6c4944f0) at ../glib/gio/gdbusconnection.c:5885
+    0x00007fc617db87f4 in g_task_return_now (task=0x55fd6c4945b0) at ../glib/gio/gtask.c:1309
+    0x00007fc617db882d in complete_in_idle_cb (task=0x55fd6c4945b0) at ../glib/gio/gtask.c:1323
+    0x00007fc617bbeafb in g_main_dispatch (context=0x55fd698eea20) at ../glib/glib/gmain.c:3460
+    g_main_context_dispatch (context=0x55fd698eea20) at ../glib/glib/gmain.c:4200
+    0x00007fc617c1b5d9 in g_main_context_iterate.constprop.0 (context=0x55fd698eea20, block=1, dispatch=1, self=<optimized out>) at ../glib/glib/gmain.c:4276
+    0x00007fc617bbc382 in g_main_context_iteration (context=context@entry=0x55fd698eea20, may_block=may_block@entry=1) at ../glib/glib/gmain.c:4343
+    0x00007fc617dedcee in g_application_run (application=0x55fd698cdd10, argc=argc@entry=1, argv=argv@entry=0x7ffeacfcfa58) at ../glib/gio/gapplication.c:2573
+    0x000055fd68490f8d in main (argc=1, argv=0x7ffeacfcfa58) at ../gnome-control-center/shell/main.c:60
+
+Valgrind also complains:
+
+    Invalid read of size 8
+       at 0x4A9BAA8: g_type_check_instance_cast (gtype.c:4193)
+       by 0x5E4D413: free_fetch_user_request (act-user-manager.c:1708)
+       by 0x5E55358: on_find_user_by_id_finished (act-user-manager.c:1217)
+       by 0x49357F3: g_task_return_now (gtask.c:1309)
+       by 0x49395EC: UnknownInlinedFun (gtask.c:1378)
+       by 0x49395EC: g_task_return (gtask.c:1335)
+       by 0x49A2E9D: reply_cb (gdbusproxy.c:2571)
+       by 0x49357F3: g_task_return_now (gtask.c:1309)
+       by 0x49395EC: UnknownInlinedFun (gtask.c:1378)
+       by 0x49395EC: g_task_return (gtask.c:1335)
+       by 0x49901D2: g_dbus_connection_call_done (gdbusconnection.c:5885)
+       by 0x49357F3: g_task_return_now (gtask.c:1309)
+       by 0x493582C: complete_in_idle_cb (gtask.c:1323)
+       by 0x4B1DAFA: UnknownInlinedFun (gmain.c:3460)
+       by 0x4B1DAFA: g_main_context_dispatch (gmain.c:4200)
+     Address 0xf76f7b0 is 0 bytes inside a block of size 64 free'd
+       at 0x484426F: free (vg_replace_malloc.c:884)
+       by 0x4A9A714: g_type_free_instance (gtype.c:2062)
+       by 0x4A87909: UnknownInlinedFun (gobject.c:1556)
+       by 0x4A87909: g_object_notify (gobject.c:1602)
+       by 0x5E54799: UnknownInlinedFun (act-user.c:520)
+       by 0x5E54799: UnknownInlinedFun (act-user.c:515)
+       by 0x5E54799: _act_user_update_from_object_path (act-user.c:1209)
+       by 0x5E54F80: fetch_user_incrementally (act-user-manager.c:1789)
+       by 0x5E55358: on_find_user_by_id_finished (act-user-manager.c:1217)
+       by 0x49357F3: g_task_return_now (gtask.c:1309)
+       by 0x49395EC: UnknownInlinedFun (gtask.c:1378)
+       by 0x49395EC: g_task_return (gtask.c:1335)
+       by 0x49A2E9D: reply_cb (gdbusproxy.c:2571)
+       by 0x49357F3: g_task_return_now (gtask.c:1309)
+       by 0x49395EC: UnknownInlinedFun (gtask.c:1378)
+       by 0x49395EC: g_task_return (gtask.c:1335)
+       by 0x49901D2: g_dbus_connection_call_done (gdbusconnection.c:5885)
+     Block was alloc'd at
+       at 0x4846A73: calloc (vg_replace_malloc.c:1340)
+       by 0x4B26981: g_malloc0 (gmem.c:163)
+       by 0x4A9FA0E: g_type_create_instance (gtype.c:1965)
+       by 0x4A867F0: g_object_new_internal (gobject.c:2246)
+       by 0x4A8804F: g_object_new_with_properties (gobject.c:2409)
+       by 0x4A88E49: g_object_new (gobject.c:2055)
+       by 0x5E4DF64: create_new_user (act-user-manager.c:706)
+       by 0x5E556A5: act_user_manager_get_user_by_id (act-user-manager.c:1963)
+       by 0x22C9B1: show_user.lto_priv.0 (cc-user-panel.c:923)
+       by 0x22DD6B: UnknownInlinedFun (cc-user-panel.c:185)
+       by 0x22DD6B: users_loaded (cc-user-panel.c:1213)
+       by 0x4A7620F: g_closure_invoke (gclosure.c:832)
+       by 0x4AA4427: signal_emit_unlocked_R.isra.0 (gsignal.c:3802)
+
+Prevent the use-after-free by making the request hold onto a ref to the
+user.
+
+Fixes: https://bugs.archlinux.org/task/77830
+---
+ src/libaccountsservice/act-user-manager.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/libaccountsservice/act-user-manager.c b/src/libaccountsservice/act-user-manager.c
+index 3b1a7745d66c..9b3da212a980 100644
+--- a/src/libaccountsservice/act-user-manager.c
++++ b/src/libaccountsservice/act-user-manager.c
+@@ -1718,6 +1718,7 @@ free_fetch_user_request (ActUserManagerFetchUserRequest *request)
+         ActUserManagerPrivate *priv = act_user_manager_get_instance_private (manager);
+ 
+         g_object_set_data (G_OBJECT (request->user), "fetch-user-request", NULL);
++        g_object_unref (request->user);
+ 
+         priv->fetch_user_requests = g_slist_remove (priv->fetch_user_requests, request);
+         if (request->type == ACT_USER_MANAGER_FETCH_USER_FROM_USERNAME_REQUEST) {
+@@ -1827,30 +1828,30 @@ fetch_user_with_username_from_accounts_service (ActUserManager *manager,
+         request->manager = g_object_ref (manager);
+         request->type = ACT_USER_MANAGER_FETCH_USER_FROM_USERNAME_REQUEST;
+         request->username = g_strdup (username);
+-        request->user = user;
++        request->user = g_object_ref (user);
+         request->state = ACT_USER_MANAGER_GET_USER_STATE_UNFETCHED + 1;
+         request->description = g_strdup_printf ("user '%s'", request->username);
+ 
+         priv->fetch_user_requests = g_slist_prepend (priv->fetch_user_requests,
+                                                      request);
+         g_object_set_data (G_OBJECT (user), "fetch-user-request", request);
+         fetch_user_incrementally (request);
+ }
+ 
+ static void
+ fetch_user_with_id_from_accounts_service (ActUserManager *manager,
+                                           ActUser        *user,
+                                           uid_t           id)
+ {
+         ActUserManagerPrivate *priv = act_user_manager_get_instance_private (manager);
+         ActUserManagerFetchUserRequest *request;
+ 
+         request = g_slice_new0 (ActUserManagerFetchUserRequest);
+ 
+         request->manager = g_object_ref (manager);
+         request->type = ACT_USER_MANAGER_FETCH_USER_FROM_ID_REQUEST;
+         request->uid = id;
+-        request->user = user;
++        request->user = g_object_ref (user);
+         request->state = ACT_USER_MANAGER_GET_USER_STATE_UNFETCHED + 1;
+         request->description = g_strdup_printf ("user with id %lu", (gulong) request->uid);
+ 
