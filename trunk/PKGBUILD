@@ -19,6 +19,7 @@ depends=(
   gnome-settings-daemon
   gsettings-desktop-schemas
   gtk4
+  libadwaita
   libcanberra-pulse
   libgdm
   libgweather-4
