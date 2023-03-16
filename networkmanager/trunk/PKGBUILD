@@ -8,7 +8,7 @@
 pkgbase=networkmanager
 pkgname=(networkmanager libnm nm-cloud-setup)
 pkgver=1.42.4
-pkgrel=1
+pkgrel=2
 pkgdesc="Network connection manager and user applications"
 url="https://networkmanager.dev/"
 arch=(x86_64)
@@ -127,6 +127,7 @@ package_networkmanager() {
     bluez-libs
     curl
     iproute2
+    jansson
     libmm-glib
     libndp
     libnewt
@@ -196,7 +197,6 @@ package_libnm() {
   license=(LGPL)
   depends=(
     glib2
-    jansson
     nss
     systemd-libs
     util-linux-libs
