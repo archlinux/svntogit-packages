@@ -4,7 +4,7 @@ pkgbase=libcamera
 pkgname=(libcamera libcamera-docs libcamera-tools gst-plugin-libcamera)
 pkgver=0.0.4
 _commit=6a57d964abdb3f24608c0fc2839d96e02eebddeb  # refs/tags/v0.0.4
-pkgrel=1
+pkgrel=2
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
 url="https://libcamera.org/"
@@ -85,6 +85,10 @@ package_libcamera() {
   provides=(libcamera.so libcamera-base.so)
 
   meson install -C build --destdir "$pkgdir"
+
+  # remove unneeded signatures as they make the package unreproducible
+  rm -frv "$pkgdir/usr/lib/$pkgname/"*.sign
+
   (
     cd "$pkgdir"
     _pick $pkgbase-docs usr/share/doc
