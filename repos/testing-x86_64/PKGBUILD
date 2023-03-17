@@ -1,0 +1,48 @@
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=flex
+pkgver=2.6.4
+pkgrel=5
+pkgdesc="A tool for generating text-scanning programs"
+arch=('x86_64')
+url="https://github.com/westes/flex"
+license=('custom')
+depends=('glibc' 'm4' 'sh')
+makedepends=('help2man')
+source=(
+  "https://github.com/westes/flex/releases/download/v$pkgver/flex-$pkgver.tar.gz"{,.sig}
+  "flex-pie.patch"
+)
+sha256sums=('e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995'
+            'SKIP'
+            '20f3cce6b0ea6ab67a902a46b89c292b959994dedcbe6ee5d187f9bba1408b0e')
+validpgpkeys=('56C67868E93390AA1039AD1CE4B29C8D64885307') # Will Estes
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  patch -p1 -i "$srcdir"/flex-pie.patch
+  autoreconf -fiv
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  make -k check -C $pkgname-$pkgver
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+
+  make DESTDIR="$pkgdir" install
+  ln -s flex "${pkgdir}/usr/bin/lex"
+
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/$pkgname/license.txt"
+}
