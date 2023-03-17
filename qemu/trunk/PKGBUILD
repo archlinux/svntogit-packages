@@ -26,7 +26,7 @@ pkgname=(
   qemu-{base,desktop,emulators-full,full}
 )
 pkgver=7.2.0
-pkgrel=3
+pkgrel=4
 pkgdesc="A generic and open source machine emulator and virtualizer"
 arch=(x86_64)
 url="https://www.qemu.org/"
@@ -211,7 +211,7 @@ _qemu_optdepends=(
   'qemu-user: for user mode emulation of QEMU targets'
   'qemu-user-static: for static user mode emulation of QEMU targets'
   'qemu-vhost-user-gpu: for vhost-user-gpu display device'
-  'qemu-virtiofsd: for virtio-fs shared filesystem daemon'
+  'virtiofsd-provider: for virtio-fs shared filesystem daemon'
   'samba: for SMB/CIFS server support'
 )
 
@@ -1038,6 +1038,7 @@ package_qemu-vhost-user-gpu() {
 package_qemu-virtiofsd() {
   pkgdesc="QEMU virtio-fs shared filesystem daemon"
   depends=(gcc-libs glib2 libglib-2.0.so libgmodule-2.0.so glibc libcap-ng libcap-ng.so libseccomp libseccomp.so numactl libnuma.so qemu-common=$pkgver-$pkgrel)
+  provides=(virtiofsd-provider)
   mv -v $pkgname/* "$pkgdir"
 }
 
@@ -1057,7 +1058,7 @@ package_qemu-base() {
     qemu-system-x86=$pkgver-$pkgrel
     qemu-tools=$pkgver-$pkgrel
     qemu-ui-{curses,spice-{app,core}}=$pkgver-$pkgrel
-    qemu-virtiofsd=$pkgver-$pkgrel
+    virtiofsd-provider
   )
   optdepends=("${_qemu_optdepends[@]}")
   # TODO: remove conflicts/provides/replaces for qemu-headless after 2022-10-01
@@ -1083,7 +1084,7 @@ package_qemu-desktop() {
     qemu-tools=$pkgver-$pkgrel
     qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}=$pkgver-$pkgrel
     qemu-vhost-user-gpu=$pkgver-$pkgrel
-    qemu-virtiofsd=$pkgver-$pkgrel
+    virtiofsd-provider
   )
   optdepends=("${_qemu_optdepends[@]}")
   conflicts=(qemu)
@@ -1122,7 +1123,7 @@ package_qemu-full() {
     qemu-ui-{curses,dbus,egl-headless,gtk,opengl,sdl,spice-{app,core}}=$pkgver-$pkgrel
     qemu-user=$pkgver-$pkgrel
     qemu-vhost-user-gpu=$pkgver-$pkgrel
-    qemu-virtiofsd=$pkgver-$pkgrel
+    virtiofsd-provider
   )
   optdepends=("${_qemu_optdepends[@]}")
   conflicts=(qemu)
