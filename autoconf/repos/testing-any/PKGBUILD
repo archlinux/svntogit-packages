@@ -1,0 +1,49 @@
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=autoconf
+pkgver=2.71
+pkgrel=4
+pkgdesc="A GNU tool for automatically configuring source code"
+arch=('any')
+license=('GPL2' 'GPL3' 'custom')
+url="https://www.gnu.org/software/autoconf"
+depends=('awk' 'm4' 'diffutils' 'perl' 'sh')
+checkdepends=('gcc-fortran')
+source=(
+	"https://ftp.gnu.org/pub/gnu/${pkgname}/${pkgname}-${pkgver}.tar.xz"{,.sig}
+	$pkgname-2.71-bash5.2.patch::https://github.com/autotools-mirror/autoconf/commit/412166e185c00d6eacbe67dfcb0326f622ec4020.patch
+)
+sha256sums=('f14c83cfebcc9427f2c3cea7258bd90df972d92eb26752da4ddad81c87a0faa4'
+            'SKIP'
+            'ee07bb3f9692bed2b7689bd361ae4e2e9a1bd852864a0c98f90b7b4c8beddfe4')
+validpgpkeys=('82F854F3CE73174B8B63174091FCC32B6769AA64')  # Zack Weinberg
+
+prepare() {
+	# fix build for bash >= 5.2
+	patch -Np1 -d $pkgname-$pkgver -i ../$pkgname-2.71-bash5.2.patch
+}
+
+build() {
+	cd "${pkgname}-${pkgver}"
+	./configure --prefix=/usr
+	make
+}
+
+check() {
+	cd "${pkgname}-${pkgver}"
+	# disable test 227 as it is broken
+	make check TESTSUITEFLAGS="1-226 228-"
+}
+
+package() {
+	cd "${pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+
+	# license exception
+	install -Dm644 COPYING.EXCEPTION "$pkgdir"/usr/share/licenses/autoconf/COPYING.EXCEPTION
+
+	# remove unwanted file
+	rm -f "$pkgdir"/usr/share/info/standards.info
+}
