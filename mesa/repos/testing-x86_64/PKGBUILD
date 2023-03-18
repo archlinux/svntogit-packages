@@ -7,7 +7,7 @@ pkgbase=mesa
 pkgname=('vulkan-mesa-layers' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-swrast' 'vulkan-virtio' 'libva-mesa-driver' 'mesa-vdpau' 'mesa')
 pkgdesc="An open-source implementation of the OpenGL specification"
 pkgver=23.0.0
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 makedepends=('python-mako' 'libxml2' 'libx11' 'xorgproto' 'libdrm' 'libxshmfence' 'libxxf86vm'
              'libxdamage' 'libvdpau' 'libva' 'wayland' 'wayland-protocols' 'zstd' 'elfutils' 'llvm'
@@ -23,9 +23,9 @@ source=(https://mesa.freedesktop.org/archive/mesa-${pkgver}.tar.xz{,.sig}
         LICENSE)
 sha512sums=('127e2759a2a31cacd65a0891719ab7bb4a9188844022b4bccaebbedce9c550b9ccb160ad519178ea0d851c4bcb8f0f56febda248ed2ba82b5ddf804855e4694b'
             'SKIP'
-            'fb89a3cc9801f259faa7da81b12b8e003fcef10b64a30abf5592a159859c9f39941c8042f89fa93dee4d4e107c139ccdb48f255f45a72b6f9c7ce0da5bd0bd56'
-            '27018f163dd93e492c5d6080690ee6aae7f63de80c014e941a2e42a5eca87cf14de5ec8a35a51472f9b204839b43b14ac663a6095c1c7ef8dd7f8a3861fb936a'
-            'd7a54efea5a4be9d893c67b97fc846a45ef148c1bc1057ed91c377086d8f18aaa49eab5f9b3f3557e82457f8e23c2b8727b62880003529e1fe364b7ea15daccf'
+            'c7832724bad137461fcdffc3db8ba653ea25c56b5980d7c45955844a543ce57ec4360e88e73ab48f7cb69717a2f467a03aca13ede3591f27e36e20409f8982e8'
+            'b089a84333743f2f69889f99903616a9dab28e45edf2de7b1f64d29bbb321daaf898aa05bf60fea6d2feec6b5ff072b807d76bb21efe122ff1a15e275d8acc97'
+            'ac4f1f98c5f1d0c2f875c2cf964fe60f41385b18a3507fea77f899f0cbbbea0baee92d313936f2d325c2301a7d0dfe3294bf881722fb22fa41defd4e4fbd0f98'
             'f9f0d0ccf166fe6cb684478b6f1e1ab1f2850431c06aa041738563eb1808a004e52cdec823c103c9e180f03ffc083e95974d291353f0220fe52ae6d4897fecc7')
 validpgpkeys=('8703B6700E7EE06D7A39B8D6EDAE37B02CEB490D'  # Emil Velikov <emil.l.velikov@gmail.com>
               '946D09B5E4C9845E63075FF1D961C596A7203456'  # Andres Gomez <tanty@igalia.com>
