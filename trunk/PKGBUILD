@@ -2,16 +2,13 @@
 
 pkgname=kcalendarcore
 pkgver=5.104.0
-pkgrel=1
+pkgrel=2
 pkgdesc='The KDE calendar access library'
 arch=(x86_64)
 url='https://community.kde.org/Frameworks'
 license=(LGPL)
 depends=(libical qt5-base)
 makedepends=(extra-cmake-modules doxygen qt5-tools qt5-doc)
-conflicts=(kcalcore)
-provides=(kcalcore)
-replaces=(kcalcore)
 groups=(kf5)
 source=(https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig})
 sha256sums=('8e1037bf7af35799a33fd0cf05b4dc57b5a07d9cac3f14ba5671beaf66ca1432'
