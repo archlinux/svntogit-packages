@@ -1,0 +1,57 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname=efivar
+pkgdesc="Tools and libraries to work with EFI variables"
+pkgver=38
+pkgrel=3
+arch=(x86_64)
+url="https://github.com/rhboot/efivar"
+license=(LGPL2.1)
+depends=(glibc)
+makedepends=(git mandoc)
+checkdepends=(grub)
+provides=(libefiboot.so libefisec.so libefivar.so)
+# LTO has the linker segfaulting with binutils < 2.38.0: https://github.com/rhboot/efivar/issues/196
+options=(!lto)
+source=(
+  git+$url#tag=${pkgver}?signed
+  $pkgname-38-ld_t.patch::https://github.com/rhboot/efivar/pull/201/commits/197a0874ea4010061b98b4b55eff65b33b1cd741.patch
+)
+sha512sums=('SKIP'
+            '568bc88b182875c37479c49b3dbf5b8ee6edf8090f940176e67c9aa28dd2ff6f417c70b2bef6b5df99ada2afa33db3efd295ba9de5d68b3ecc5ce1dc3361d042')
+b2sums=('SKIP'
+        'ccddc04ab83d4dcf570d5a89e43fc27d36e2010513b36d9eb2fcdea71ceb5dba96a064a1cbca9ffdecf17fb5b9cb22cfe89eae4ee3a188547a4ab6fa6b4e2983')
+validpgpkeys=('B00B48BC731AA8840FED9FB0EED266B70F4FEF10') # Peter Jones <pjones@redhat.com>
+
+prepare() {
+  # fix issues with linker scripts: https://github.com/rhboot/efivar/pull/201
+  patch -Np1 -d $pkgname -i ../$pkgname-38-ld_t.patch
+}
+
+build() {
+  # disable -Werror by default by setting ERRORS to empty string
+  make ERRORS='' all -C "${pkgname}"
+}
+
+check() {
+  make GRUB_PREFIX=grub test -k -C "${pkgname}" || echo "grub related tests are flaky"
+}
+
+package() {
+  local make_options=(
+    V=1
+    DESTDIR="$pkgdir/"
+    libdir=/usr/lib/
+    bindir=/usr/bin/
+    mandir=/usr/share/man/
+    includedir=/usr/include/
+    install
+    -j1
+    -C $pkgname
+  )
+
+  make "${make_options[@]}"
+  install -vDm 644 $pkgname/{README.md,TODO} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
