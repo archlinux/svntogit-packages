@@ -4,12 +4,11 @@
 
 pkgname=pacman
 pkgver=6.0.2
-pkgrel=5
+pkgrel=6
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
 license=('GPL')
-groups=('base-devel')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
          'gettext' 'gawk' 'coreutils' 'gnupg' 'grep')
 makedepends=('meson' 'asciidoc' 'doxygen')
@@ -30,10 +29,10 @@ source=(https://sources.archlinux.org/other/pacman/$pkgname-$pkgver.tar.xz{,.sig
         makepkg.conf)
 sha256sums=('7d8e3e8c5121aec0965df71f59bedf46052c6cf14f96365c4411ec3de0a4c1a5'
             'SKIP'
-            '522b789e442b3bb3afa7ea3fa417a99554f36ec00de3986cbe92c80f09a7db99'
-            'dab7c70fb9d77d702069bb57f5a12496b463d68ae20460fb0a3ffcb4791321a9'
-            '0b56c61eac3d9425d68faa2eccbaefdc5ed422b643974ae829eaca0460043da1'
-            'acd0b149b6324dc1eca3cd2d3b30df6ef64c5653e83523d77200ec593e01d2a7'
+            '6fed94326b9ecfbb438ab17a4576b5e9d52ecc0f4574f29d46adfde3886dee03'
+            'd2bc104788290e3de829a232590b66ad745cf5b4762a01acc1191ebf70fef114'
+            'f3d4f39ef24e312f610cbb3439fb02bc6b8829e37bcf1a50ae50cd0a69bde5d0'
+            'd87d0c9957c613fda272553bee58140349d151ae399f346ddaf6d75ee5916312'
             '606e55f06c297d2b508bc4438890b229a1abaa68b0374a2d7f94c8e7be6792d7'
             '072020e34f2c55b94a9a486829a7eadab0a830ddb4d8e759b0c4e6cf1bde73a6')
 
