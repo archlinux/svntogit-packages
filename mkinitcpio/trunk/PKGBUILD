@@ -4,8 +4,8 @@
 # Contributor: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=mkinitcpio
-pkgver=34
-pkgrel=2
+pkgver=35
+pkgrel=1
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url='https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio'
@@ -21,21 +21,14 @@ optdepends=('gzip: Use gzip compression for the initramfs image'
             'mkinitcpio-nfs-utils: Support for root filesystem on NFS')
 provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
-source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig}
-        '0001-functions-fix-overwriting-of-symlinks-with-regular-f.patch')
+source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
-sha512sums=('cf8ab66d4609911ca6a1d2af1bfcf320eed99d29657c0ccfeca2fdc8ea00cfb6575e55645424de13fcf37aa12a39ac7b43a330c716e73e9c16a75178738ebe70'
-            'SKIP'
-            'a43e66101edc301ae893a25eee6caa83c56a790cbac1685697fb999008c8210e46ca49e0700242f8321731264084462641285954db55d3daa2c7e8b62d1cc66c')
-b2sums=('06a6c6a0951b9b6161e2db01e2956d87da303b2ec029bdd183efed3b074b176a9f107e9a723fc6a7fa157ecd703d7627d8aaa0b9290022a09e30daa46784841c'
-        'SKIP'
-        'a2ed9e8ff4b6fab1d6f6c1dae4dcf890b4434cb31ebdfe73ea54fd4af499849e2b98e565915cc331bd97f15f21d9147ee0499cf75b516562bfd7f1793e838e99')
+sha512sums=('138cef56293882e833577726b9b9399f6af36732571aa351939479588a18d86058730d946903212ce6c92ddc89227e392bef961c5d3c578ed3183479af348fc3'
+            'SKIP')
+b2sums=('249332752badba7703da342d88aae8d55c22c5ed77369dd61b6d8b2aea01c1d4cb2d106d560bd175ddbf80d1aae4b0c1c54261f7e10aeb3daa3d28a83a7e686d'
+        'SKIP')
 validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'    # Giancarlo Razzolini
               'C100346676634E80C940FB9E9C02FF419FECBE16')   # Morten Linderud
-
-prepare() {
-  patch -Np1 -d "$pkgname-$pkgver" < '0001-functions-fix-overwriting-of-symlinks-with-regular-f.patch'
-}
 
 check() {
   make -C "$pkgname-$pkgver" check
