@@ -4,30 +4,30 @@
 # Contributor: Dave Reisner <d@falconindy.com>
 
 pkgname=libgit2
-pkgver=1.5.1
-pkgrel=2
+pkgver=1.6.2
+pkgrel=1
 epoch=1
 pkgdesc="A linkable library for Git"
 arch=(x86_64)
 url="https://github.com/libgit2/libgit2"
 license=(GPL2)
-depends=(gcc-libs glibc http-parser zlib)
-makedepends=(cmake libssh2 openssl python pcre2)
-provides=(libgit2.so)
-source=(
-  $pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz
-  $pkgname-1.5.0-remove_http-parse_incompatible_tests.patch
+depends=(
+  gcc-libs
+  glibc
+  http-parser
+  zlib
 )
-sha512sums=('04cf389e30cd9fb787704e3c8997acaaeea5c13e1e2f9eaf9f5598d35c2e85f3cf04b47312cae9e7278236ecb089c2d33addd852e38d3c7d2daa87929b077f39'
-            'f9bb9ad7eb0f43003f5f72c81575ef5751b893fdf257d888b56818ee2c136b496b7cf72627a53dbd01319e33d0dd373e9d6df887360f7bec367419ef0c7ab711')
-b2sums=('4df80216523f4065e46c1ce99fd0747d2f8516571691c8c2b5638e32c805f5ce08d3add769e6d5ce29ac69b35419db82ce56c6b3019e70573c4ad63aca2e440d'
-        'b3c2386ba84664318573e5c24797d28db914d60782397d8b39a21b54b4fb19502945fa8fcc0d8bbe8949349b5ec705d3e1345b0cbbb51b7d9631fec922f3ac41')
-
-prepare() {
-  # remove tests that are only compatible with the (modified) vendored version
-  # of http-parser, but not with upstream http-parser
-  patch -d $pkgname-$pkgver -Np1 -i ../$pkgname-1.5.0-remove_http-parse_incompatible_tests.patch
-}
+makedepends=(
+  cmake
+  libssh2
+  openssl
+  pcre2
+  python
+)
+provides=(libgit2.so)
+source=($url/archive/v$pkgver/$pkgname-v$pkgver.tar.gz)
+sha512sums=('ef9feef36c5876776f3aa608101115c9e7a0970e6dd752851d930cb85b4b1789ed68f42700ebea51095ff54600e37c18a4de0c0678d9a4d7d4aba83668890c09')
+b2sums=('7a42d8440fbe0afa24057bf53d52bcb04b4e8654f71cfa55871a7e77a150297731879d8f5be51df61ad91556656b66b102536a508cf61d9c11e8658e841fc560')
 
 build() {
   local cmake_options=(
@@ -40,13 +40,30 @@ build() {
     -S $pkgname-$pkgver
     -Wno-dev
   )
+
   cmake "${cmake_options[@]}"
   cmake --build build --verbose
 }
 
 check() {
-  # NOTE: disable tests requiring the internet and relying on non-existent resources
-  ctest --test-dir build --output-on-failure -E "invasive|online|ssh"
+  local ignored_tests=(
+    'invasive|'
+    'online|'
+    'ssh|'
+    'network_url_parse__hostname_implied_root_empty_port|'
+    'network_url_parse__hostname_empty_port|'
+    'network_url_parse__ipv4_implied_root_empty_port|'
+    'network_url_parse__ipv4_empty_port|'
+    'network_url_parse__ipv6_implied_root_empty_port|'
+    'network_url_parse__ipv6_empty_port'
+  )
+  local ifs="$IFS"
+  IFS=
+  # NOTE: disable tests requiring the internet, relying on non-existent
+  # resources, or those that are only compatible with the (modified) vendored
+  # version of http-parser, but not with upstream http-parser
+  ctest --test-dir build --output-on-failure -E "${ignored_tests[*]}"
+  IFS="$ifs"
 }
 
 package() {
