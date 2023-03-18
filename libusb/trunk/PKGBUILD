@@ -4,7 +4,7 @@
 
 pkgname=libusb
 pkgver=1.0.26
-pkgrel=1
+pkgrel=2
 pkgdesc="Library that provides generic access to USB devices"
 arch=(x86_64)
 url="https://libusb.info/"
@@ -24,6 +24,8 @@ prepare() {
 build() {
   cd $pkgname-$pkgver
   ./configure --prefix=/usr
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 }
 
@@ -32,7 +34,9 @@ check() {
 }
 
 package () {
-  depends+=(libudev.so)
+  depends+=(
+    systemd-libs libudev.so
+  )
 
   make DESTDIR="$pkgdir" install -C $pkgname-$pkgver
   install -vDm 644 $pkgname-$pkgver/{AUTHORS,ChangeLog,README} -t "$pkgdir/usr/share/doc/$pkgname/"
