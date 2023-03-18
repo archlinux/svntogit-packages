@@ -394,7 +394,6 @@ package_lib32-gcc-libs() {
   pkgdesc='32-bit runtime libraries shipped by GCC'
   depends=('lib32-glibc>=2.27')
   provides=(libgo.so libgfortran.so libubsan.so libasan.so)
-  groups=(multilib-devel)
   options=(!emptydirs !strip)
 
   cd gcc-build
