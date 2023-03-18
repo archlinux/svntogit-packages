@@ -4,7 +4,7 @@
 
 pkgname=licenses
 pkgver=20220125
-pkgrel=1
+pkgrel=2
 pkgdesc="A set of common license files"
 arch=(any)
 license=(custom:none)
