@@ -3,7 +3,7 @@
 pkgname=rsync
 _tag='b13e7a8ef4fa430223f66403506fb821caae5cfd' # git rev-parse v${pkgver}
 pkgver=3.2.7
-pkgrel=3
+pkgrel=4
 pkgdesc='A fast and versatile file copying tool for remote and local files'
 arch=('x86_64')
 url='https://rsync.samba.org/'
@@ -50,6 +50,7 @@ build() {
   ./configure \
     --prefix=/usr \
     --disable-debug \
+    --with-rrsync \
     --with-included-popt=no \
     --with-included-zlib=no
   make
@@ -70,5 +71,4 @@ package() {
   install -Dm0644 packaging/systemd/rsync.service "$pkgdir/usr/lib/systemd/system/rsyncd.service"
   install -Dm0644 packaging/systemd/rsync.socket "$pkgdir/usr/lib/systemd/system/rsyncd.socket"
   install -Dm0644 packaging/systemd/rsync@.service "$pkgdir/usr/lib/systemd/system/rsyncd@.service"
-  install -Dm0755 support/rrsync "$pkgdir/usr/lib/rsync/rrsync"
 }
