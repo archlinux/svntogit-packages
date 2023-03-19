@@ -4,7 +4,7 @@
 # Contributor: Thomas Bächler <thomas@archlinux.org>
 
 pkgname=mkinitcpio
-pkgver=35
+pkgver=35.1
 pkgrel=1
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
@@ -23,9 +23,9 @@ provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig})
 install=mkinitcpio.install
-sha512sums=('138cef56293882e833577726b9b9399f6af36732571aa351939479588a18d86058730d946903212ce6c92ddc89227e392bef961c5d3c578ed3183479af348fc3'
+sha512sums=('71dd4bcad75c60178e8f152568fbb70b37a983641d4953035aabcbff5bd49571182c9d92383f34ffc0078532674793790b181cf96c1654edb39b4ca94aefc7a4'
             'SKIP')
-b2sums=('249332752badba7703da342d88aae8d55c22c5ed77369dd61b6d8b2aea01c1d4cb2d106d560bd175ddbf80d1aae4b0c1c54261f7e10aeb3daa3d28a83a7e686d'
+b2sums=('50783c27d7fad38ca3e02e1d8f15e42062b32e640ea26bc235ccd603659be5a2c218869fbd9e8491b3e0b027fa4613a599c7ce9768cd17c47e68053215a97f66'
         'SKIP')
 validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'    # Giancarlo Razzolini
               'C100346676634E80C940FB9E9C02FF419FECBE16')   # Morten Linderud
