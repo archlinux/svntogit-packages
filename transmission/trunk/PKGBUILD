@@ -5,8 +5,8 @@
 
 pkgbase=transmission
 pkgname=(transmission-cli transmission-gtk transmission-qt libtransmission)
-pkgver=4.0.1
-pkgrel=2
+pkgver=4.0.2
+pkgrel=1
 arch=(x86_64)
 url="http://www.transmissionbt.com/"
 license=(GPL)
@@ -33,7 +33,7 @@ makedepends=(
 source=(https://github.com/transmission/transmission/releases/download/$pkgver/transmission-$pkgver.tar.xz
         transmission-cli.sysusers
         transmission-cli.tmpfiles)
-sha256sums=('8fc5aef23638c983406f6a3ee9918369e4cdc84e3228bd2fb3d01dd55cdad900'
+sha256sums=('39bf7a104a722805a9dc089cdaaffe33bf90b82230a7ea7f340cae59f00a2ee8'
             '641310fb0590d40e00bea1b5b9c843953ab78edf019109f276be9c6a7bdaf5b2'
             '1266032bb07e47d6bcdc7dabd74df2557cc466c33bf983a5881316a4cc098451')
 build() {
