@@ -1,0 +1,62 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Mico Tischler <mt-ml at gmx dot net>
+# Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname=sbsigntools
+pkgver=0.9.5
+_commit=8445b18f64e60137408a4867fbcbb9ba112c583a  # refs/tags/v0.9.5
+pkgrel=1
+pkgdesc="Tools to add signatures to EFI binaries and Drivers"
+arch=(x86_64)
+url="https://git.kernel.org/pub/scm/linux/kernel/git/jejb/sbsigntools.git/about"
+license=(GPL3)
+depends=(
+  glibc
+  openssl
+)
+makedepends=(
+  git
+  gnu-efi
+  help2man
+  util-linux
+)
+source=(
+  git+https://git.kernel.org/pub/scm/linux/kernel/git/jejb/sbsigntools.git#tag=$_commit?signed
+  git+https://git.ozlabs.org/ccan
+)
+sha256sums=('SKIP'
+            'SKIP')
+validpgpkeys=('D5606E73C8B46271BEAD9ADF814AE47C214854D6') # James Bottomley <jejb@kernel.org>
+
+prepare() {
+  cd $pkgname
+  git submodule init
+  git config submodule."lib/ccan.git".url "$srcdir/ccan"
+  git -c protocol.file.allow=always submodule update
+  ./autogen.sh
+}
+
+build() {
+  local configure_options=(
+    --prefix=/usr
+    --bindir=/usr/bin
+    --sbindir=/usr/bin
+    --libexecdir=/usr/lib
+    --mandir=/usr/share/man
+    --sysconfdir=/etc
+  )
+
+  cd $pkgname
+  ./configure "${configure_options[@]}"
+  make
+}
+
+package() {
+  depends+=(
+    util-linux-libs libuuid.so
+  )
+
+  make DESTDIR="$pkgdir" install -C $pkgname
+  install -vDm 644 $pkgname/{AUTHORS,ChangeLog,NEWS,README} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
