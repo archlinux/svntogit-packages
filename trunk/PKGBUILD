@@ -1,10 +1,16 @@
 # Maintainer: David Runge <dvzrv@archlinux.org>
 
 pkgbase=libcamera
-pkgname=(libcamera libcamera-docs libcamera-tools gst-plugin-libcamera)
+pkgname=(
+  libcamera
+  libcamera-docs
+  libcamera-ipa
+  libcamera-tools
+  gst-plugin-libcamera
+)
 pkgver=0.0.4
 _commit=6a57d964abdb3f24608c0fc2839d96e02eebddeb  # refs/tags/v0.0.4
-pkgrel=2
+pkgrel=3
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
 url="https://libcamera.org/"
@@ -71,10 +77,11 @@ package_libcamera() {
     gcc-libs
     glibc
     gnutls
-    libdrm
+    libcamera-ipa
     libelf
     libunwind
     libyaml
+    sh
     systemd-libs libudev.so
   )
   optdepends=(
@@ -86,12 +93,10 @@ package_libcamera() {
 
   meson install -C build --destdir "$pkgdir"
 
-  # remove unneeded signatures as they make the package unreproducible
-  rm -frv "$pkgdir/usr/lib/$pkgname/"*.sign
-
   (
     cd "$pkgdir"
     _pick $pkgbase-docs usr/share/doc
+    _pick $pkgbase-ipa usr/lib/libcamera/
     _pick $pkgbase-tools usr/bin/{cam,qcam,lc-compliance}
     _pick gst-plugin-$pkgbase usr/lib/gstreamer-*
   )
@@ -105,6 +110,23 @@ package_libcamera-docs() {
   rm -frv "$pkgdir/usr/share/doc/$pkgbase/html/.buildinfo"
 }
 
+package_libcamera-ipa() {
+  pkgdesc+=" - signed IPA"
+  depends=(
+    gcc-libs
+    glibc
+    libcamera libcamera.so libcamera-base.so
+  )
+  # stripping requires re-signing of IPA libs, so we do it manually
+  options=(!strip)
+
+  strip $pkgname/usr/lib/libcamera/*{.so,proxy}
+  for _lib in $pkgname/usr/lib/libcamera/*.so; do
+    $pkgbase/src/ipa/ipa-sign.sh "$(find build -type f -iname "*ipa-priv-key.pem")" "$_lib" "$_lib.sign"
+  done
+  mv -v $pkgname/* "$pkgdir"
+}
+
 package_libcamera-tools() {
   pkgdesc+=" - tools"
   depends=(
@@ -112,6 +134,7 @@ package_libcamera-tools() {
     glibc
     gtest
     libcamera libcamera.so libcamera-base.so
+    libdrm
     libevent libevent-2.1.so libevent_pthreads-2.1.so
     libjpeg-turbo libjpeg.so
     libtiff libtiff.so
