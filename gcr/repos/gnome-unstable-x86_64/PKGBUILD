@@ -1,0 +1,71 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgbase=gcr
+pkgname=(gcr gcr-docs)
+pkgver=3.41.1
+pkgrel=4
+pkgdesc="A library for bits of crypto UI and parsing"
+url="https://gitlab.gnome.org/GNOME/gcr"
+arch=(x86_64)
+license=(GPL2)
+depends=(
+  gtk3
+  libgcrypt
+  libsecret
+  openssh
+  p11-kit
+)
+makedepends=(
+  gi-docgen
+  git
+  gobject-introspection
+  libxslt
+  meson
+  vala
+)
+_commit=664f8d8619cc6d661bd863107824efbac383a9bf  # tags/3.41.1^0
+source=("git+https://gitlab.gnome.org/GNOME/gcr.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd gcr
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd gcr
+}
+
+build() {
+  # ssh-agent moved to gcr-4
+  arch-meson gcr build -D ssh_agent=false
+  meson compile -C build
+}
+
+check() {
+  # Secure memory tests fail
+  dbus-run-session meson test -C build --print-errorlogs || :
+}
+
+package_gcr() {
+  provides=(
+    libgck-1.so
+    libgcr-{base,ui}-3.so
+  )
+  install=gcr.install
+
+  meson install -C build --destdir "$pkgdir"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+}
+
+package_gcr-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
