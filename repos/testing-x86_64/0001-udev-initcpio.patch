@@ -1,0 +1,48 @@
+From d0a716460c389ebf3af034616c507f5e45610ea6 Mon Sep 17 00:00:00 2001
+From: Christian Hesse <mail@eworm.de>
+Date: Mon, 7 Feb 2022 21:12:20 +0100
+Subject: [PATCH 1/1] udev initcpio
+
+apply with:
+patch -Np1 --output='udev/69-dm-lvm-initcpio.rules.in' < ../0001-udev-initcpio.patch
+---
+ udev/69-dm-lvm.rules.in | 26 +-------------------------
+ 1 file changed, 1 insertion(+), 25 deletions(-)
+
+diff --git a/udev/69-dm-lvm.rules.in b/udev/69-dm-lvm.rules.in
+index ff1568145..1d7737a6f 100644
+--- a/udev/69-dm-lvm.rules.in
++++ b/udev/69-dm-lvm.rules.in
+@@ -52,31 +52,7 @@ ACTION!="add", GOTO="lvm_end"
+ 
+ LABEL="lvm_scan"
+ 
+-# pvscan will check if this device completes a VG,
+-# i.e. all PVs in the VG are now present with the
+-# arrival of this PV.  If so, it prints to stdout:
+-# LVM_VG_NAME_COMPLETE='foo'
+-#
+-# When the VG is complete it can be activated, so
+-# vgchange -aay <vgname> is run.  It is run via
+-# systemd since it can take longer to run than
+-# udev wants to block when processing rules.
+-# (if there are hundreds of LVs to activate,
+-# the vgchange can take many seconds.)
+-#
+-# pvscan only reads the single device specified,
+-# and uses temp files under /run/lvm to check if
+-# other PVs in the VG are present.
+-#
+-# If event_activation=0 in lvm.conf, this pvscan
+-# (using checkcomplete) will do nothing, so that
+-# no event-based autoactivation will be happen.
+-#
+-# TODO: adjust the output of vgchange -aay so that
+-# it's better suited to appearing in the journal.
+-
+-IMPORT{program}="(LVM_EXEC)/lvm pvscan --cache --listvg --checkcomplete --vgonline --autoactivation event --udevoutput --journal=output $env{DEVNAME}"
+-ENV{LVM_VG_NAME_COMPLETE}=="?*", RUN+="(SYSTEMDRUN) --no-block --property DefaultDependencies=no --unit lvm-activate-$env{LVM_VG_NAME_COMPLETE} (LVM_EXEC)/lvm vgchange -aay --autoactivation event $env{LVM_VG_NAME_COMPLETE}"
++RUN+="(LVM_EXEC)/lvm pvscan --background --cache --activate ay --major $major --minor $minor", ENV{LVM_SCANNED}="1"
+ GOTO="lvm_end"
+ 
+ LABEL="lvm_end"
