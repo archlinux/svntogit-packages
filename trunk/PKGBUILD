@@ -4,8 +4,8 @@
 
 pkgbase=tracker3
 pkgname=(tracker3 tracker3-docs)
-pkgver=3.4.2
-pkgrel=2
+pkgver=3.5.0
+pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
 arch=(x86_64)
@@ -23,21 +23,24 @@ makedepends=(
   asciidoc
   bash-completion
   dbus
+  gi-docgen
   git
   gobject-introspection
-  hotdoc
   libsoup
   meson
   python-dbus
   python-gobject
   python-tappy
   systemd
+  vala
 )
-_commit=0de82e325639c567353ca68ccc421d12e5f1de86  # tags/3.4.2^0
-source=("git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit"
-        hotdoc.diff)
-sha256sums=('SKIP'
-            '804c682efe02e89349b4269f87bb50f97de5674f58b20bd7895569dbaafc6788')
+_commit=00e9909ada1a79ac775a99f1c089854f0cf7c074  # tags/3.5.0^0
+source=(
+  "git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit"
+  "git+https://gitlab.gnome.org/GNOME/gvdb.git"
+)
+b2sums=('SKIP'
+        'SKIP')
 
 pkgver() {
   cd tracker
@@ -47,8 +50,9 @@ pkgver() {
 prepare() {
   cd tracker
 
-  # Fix docs build
-  git apply -3 ../hotdoc.diff
+  git submodule init
+  git submodule set-url subprojects/gvdb "$srcdir/gvdb"
+  git -c protocol.file.allow=always submodule update
 }
 
 build() {
@@ -60,24 +64,14 @@ check() {
   dbus-run-session meson test -C build --print-errorlogs -t 3
 }
 
-_pick() {
-  local p="$1" f d; shift
-  for f; do
-    d="$srcdir/$p/${f#$pkgdir/}"
-    mkdir -p "$(dirname "$d")"
-    mv "$f" "$d"
-    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
-  done
-}
-
 package_tracker3() {
   optdepends=('libsoup: Alternative remoting backend')
   provides=(libtracker-sparql-3.0.so)
 
   meson install -C build --destdir "$pkgdir"
 
-  cd "$pkgdir"
-  _pick docs usr/share/{devhelp,doc}
+  mkdir -p docs/usr/share
+  mv {"$pkgdir",docs}/usr/share/doc
 }
 
 package_tracker3-docs() {
