@@ -2,8 +2,8 @@
 #Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=unison
-pkgver=2.53.0
-pkgrel=2
+pkgver=2.53.2
+pkgrel=1
 pkgdesc='File-synchronization tool'
 #url='https://github.com/bcpierce00/unison/'
 url='https://www.cis.upenn.edu/~bcpierce/unison/'
@@ -14,7 +14,7 @@ makedepends=('ocaml>=4.11.0' 'emacs' 'lablgtk3')
 source=("https://github.com/bcpierce00/unison/archive/v$pkgver/$pkgname-$pkgver.tar.gz"
         'large.patch'
         'desktop')
-sha512sums=('041398eeb3f5f67f80767cbfc8f1ff1561eb9433735cf3225fbb11bce9a6c068057a2dc749539d5e95a45a8d2fa475563729cf5acc2de1185bd0ecb8f98c17f1'
+sha512sums=('b08694fc277ac3367176f3372b608285232639c6bea0480e9013b79788f1c4b2081c2b447d14b06975346be48e323a066518d40a2c1464dd60bc06071573f62b'
             'e2f7a5e6e832ee9c694f36e399178652456d2047b22cba86603982cd6f6caf54e520fc87a8bde1940b2da46102cf3aa89f3e062c965efc77cd840b47e01b4d2f'
             '2043acd79dde45b9b724076e361f117a6b42ec0c0321a2d2836b55a7fe5b03c45d81200819f64bc3e7d446f979a5a4a66c3d8c3ac7bdf1fe469c480ae2ac9464')
 options=('!makeflags')
