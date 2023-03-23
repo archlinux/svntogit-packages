@@ -5,9 +5,15 @@
 # Contributor: userwithuid <userwithuid@gmail.com>
 
 pkgbase=rust
-pkgname=(rust lib32-rust-libs rust-musl rust-wasm rust-src)
+pkgname=(
+  rust
+  lib32-rust-libs
+  rust-musl
+  rust-wasm
+  rust-src
+)
 epoch=1
-pkgver=1.68.0
+pkgver=1.68.1
 pkgrel=1
 pkgdesc="Systems programming language focused on safety, speed and concurrency"
 url=https://www.rust-lang.org/
@@ -50,7 +56,7 @@ source=(
   0002-compiler-Change-LLVM-targets.patch
   0003-compiler-Use-wasm-ld-for-wasm-targets.patch
 )
-b2sums=('cff56d29a5325cfcc5a50d492f73c15d92434bfdfd5cabfa84be61f815e546d4ac8786c00c1db668e6c8216e1c00d898ef448f6cfd7ea2ffdeaf1a51de68b124'
+b2sums=('9f5db32005387043cc374aad8889b25b6a57dcc561977b451db929bb7d6b183cb1265853d9b7eba5155b5dcb38b922e9958281843c59b3ac40836e3128476973'
         'SKIP'
         'dce1c2340b172753b9d56dcc9d401e4cd9c66d64721c97e256974c18f17b0489e65e3732ef4e15538ea6e07c34f1269775a51c0c7c72e63a62f41ff258ce9ec2'
         '01dee52ef899c0545cde37b5e1ba3ecfd5def3785145ed9f440df12945885311b63ff974294c1efed65b25b01bdb5cea37d7830e8d9775daefec8c1bcd3e159b'
