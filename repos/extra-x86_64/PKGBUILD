@@ -3,31 +3,49 @@
 
 pkgbase=pygobject
 pkgname=(python-gobject)
-pkgver=3.42.2
+pkgver=3.44.0
 pkgrel=1
 pkgdesc="Python Bindings for GLib/GObject/GIO/GTK+"
 url="https://wiki.gnome.org/Projects/PyGObject"
 arch=(x86_64)
 license=(LGPL)
-depends=(gobject-introspection-runtime python)
-makedepends=(python-cairo gobject-introspection git meson)
-checkdepends=(python-pytest gtk3 xorg-server-xvfb)
+depends=(
+  gobject-introspection-runtime
+  python
+)
+makedepends=(
+  git
+  gobject-introspection
+  meson
+  python-cairo
+)
+checkdepends=(
+  gtk3
+  python-pytest
+  xorg-server-xvfb
+)
 optdepends=('cairo: Cairo bindings')
 provides=("pygobject-devel=$pkgver")
 conflicts=(pygobject-devel)
 replaces=('pygobject-devel<=3.36.1-1')
-options=(debug)
-_commit=f9c363a0c2fea08b140dbb9c9f072cbeb0cf1f10  # tags/3.42.2^0
-source=("git+https://gitlab.gnome.org/GNOME/pygobject.git#commit=$_commit")
-sha256sums=('SKIP')
+_commit=894f8b1dd3246bad6edb75aa86f61f6d83531a33  # tags/3.44.0^0
+source=(
+  "git+https://gitlab.gnome.org/GNOME/pygobject.git#commit=$_commit"
+  fix-test.diff
+)
+b2sums=('SKIP'
+        '841a54a068a4a654337f84548db6c836bdb037a52bed3c45d0ba5d5d55d07b9edb5814fccaf482f78bd2a717adb654ff10e638c25dc71ead5c7307df4b5bc753')
 
 pkgver() {
   cd pygobject
-  git describe --tags | sed 's/-/+/g'
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
   cd pygobject
+
+  # fix tests failing due to various warnings being upgraded to criticals
+  patch -Np1 -i ../fix-test.diff
 }
 
 build() {
@@ -36,7 +54,9 @@ build() {
 }
 
 check() {
-  xvfb-run -s '-nolisten local' meson test -C build --print-errorlogs
+  PYTEST_ADDOPTS="-v" PYGI_TEST_VERBOSE=1 \
+    xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
 }
 
 package_python-gobject() {
@@ -45,4 +65,4 @@ package_python-gobject() {
   python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
