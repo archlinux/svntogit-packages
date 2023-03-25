@@ -56,7 +56,11 @@ prepare() {
 }
 
 build() {
-  arch-meson tracker build -D tests_tap_protocol=true
+  local meson_options=(
+    -D tests_tap_protocol=true
+  )
+
+  arch-meson tracker-miners build "${meson_options[@]}"
   meson compile -C build
 }
 
