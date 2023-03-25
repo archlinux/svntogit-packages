@@ -5,10 +5,10 @@
 # Contributor: Bartlomiej Piotrowski <nospam@bpiotrowski.pl>
 
 pkgname=pkgconf
-pkgver=1.8.0
+pkgver=1.8.1
 pkgrel=1
 pkgdesc="Package compiler and linker metadata toolkit"
-url="https://github.com/pkgconf/pkgconf"
+url="https://gitea.treehouse.systems/ariadne/pkgconf"
 license=(custom:ISC)
 arch=(x86_64)
 depends=(glibc sh)
@@ -16,8 +16,7 @@ makedepends=(git meson)
 provides=(pkg-config pkgconfig libpkgconf.so)
 conflicts=(pkg-config)
 replaces=(pkg-config)
-groups=(base-devel)
-_commit=cef30268e1a3f79efd607c26abcf556aa314c9c4  # tags/pkgconf-1.8.0
+_commit=5436648cd4c890fa1e99be82adc333dad4f50eff  # tags/pkgconf-1.8.1
 source=("git+$url#commit=$_commit"
         i686-pc-linux-gnu.personality
         x86_64-pc-linux-gnu.personality)
