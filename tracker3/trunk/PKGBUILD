@@ -60,7 +60,7 @@ build() {
     -D tests_tap_protocol=true
   )
 
-  arch-meson tracker-miners build "${meson_options[@]}"
+  arch-meson tracker build "${meson_options[@]}"
   meson compile -C build
 }
 
