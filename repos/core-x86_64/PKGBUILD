@@ -3,12 +3,12 @@
 # Contributor: Tobias Powalowski <tpowa@archlinux.org>
 
 pkgname=btrfs-progs
-pkgver=6.2.1
+pkgver=6.2.2
 pkgrel=1
 pkgdesc='Btrfs filesystem utilities'
 arch=('x86_64')
 makedepends=('git' 'asciidoc' 'xmlto' 'systemd' 'python' 'python-setuptools' 'e2fsprogs' 'reiserfsprogs' 'python-sphinx')
-depends=('glibc' 'util-linux-libs' 'lzo' 'zlib' 'zstd' 'libgcrypt')
+depends=('glibc' 'util-linux-libs' 'lzo' 'zlib' 'zstd' 'libgcrypt' 'systemd-libs')
 optdepends=('python: libbtrfsutil python bindings'
             'e2fsprogs: btrfs-convert'
             'reiserfsprogs: btrfs-convert')
@@ -27,7 +27,7 @@ source=("https://www.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-
 install=btrfs-progs.install
 options=(!staticlibs)
 sha256sums=('SKIP'
-            'af55e3104cf5e52252bb940a291ed34852916224a50206600c94134664273299'
+            'e4888db8637d92e667448386992d0856b954cf2515b98d39b667da43c482d693'
             'bbe60b35d1b1e2efc1308a8f54f1fdc6808240a81c5f5b4d75321b7ee86e41f4'
             '35efeee8590d6d60c711ae9cdc918e4841ab61d10cb02359e65e36ebff95ffc5'
             'eaa7af92d28bfa8940bb551560fd7be777f9f175292eaa72b5f6ef00fb240252'
