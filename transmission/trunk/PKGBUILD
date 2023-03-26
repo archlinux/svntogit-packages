@@ -31,11 +31,20 @@ makedepends=(
 	systemd
 )
 source=(https://github.com/transmission/transmission/releases/download/$pkgver/transmission-$pkgver.tar.xz
+	    "$pkgbase-5289.patch::https://patch-diff.githubusercontent.com/raw/transmission/transmission/pull/5289.patch"
         transmission-cli.sysusers
         transmission-cli.tmpfiles)
 sha256sums=('39bf7a104a722805a9dc089cdaaffe33bf90b82230a7ea7f340cae59f00a2ee8'
+            '2df975cb08fdf2e53f6e461cc4dd8f8a7ca9d07ff215b66e9c954eaf355ea01f'
             '641310fb0590d40e00bea1b5b9c843953ab78edf019109f276be9c6a7bdaf5b2'
             '1266032bb07e47d6bcdc7dabd74df2557cc466c33bf983a5881316a4cc098451')
+
+prepare() {
+  cd $pkgbase-$pkgver
+  # Fix build failure with gtkmm 4.10
+  patch -p1 -i "$srcdir/$pkgbase-5289.patch"
+}
+
 build() {
   export CFLAGS+=" -ffat-lto-objects"
   cd $pkgbase-$pkgver
