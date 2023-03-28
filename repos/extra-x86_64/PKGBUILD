@@ -2,7 +2,7 @@
 # Contributor: Xavier Devlamynck <magicrhesus@ouranos.be>
 
 pkgname=libxfce4ui
-pkgver=4.18.2
+pkgver=4.18.3
 pkgrel=1
 pkgdesc="Widgets library for the Xfce desktop environment"
 arch=('x86_64')
@@ -12,7 +12,7 @@ depends=('libxfce4util' 'gtk3' 'xfconf' 'libsm' 'startup-notification'
          'libgtop' 'libepoxy' 'hicolor-icon-theme')
 makedepends=('intltool' 'gobject-introspection' 'vala')
 source=(https://archive.xfce.org/src/xfce/$pkgname/${pkgver%.*}/$pkgname-$pkgver.tar.bz2)
-sha256sums=('ad602d0427e6c40c3eb53db393c607151a039aec58f1f197712c169c5fe49407')
+sha256sums=('afa3a46eeed3ab612d2f7e1308edaf5819f6c33ccc16c13080efabd58f010abd')
 
 build() {
   cd $pkgname-$pkgver
