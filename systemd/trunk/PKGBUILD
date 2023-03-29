@@ -6,10 +6,10 @@ pkgname=('systemd'
          'systemd-resolvconf'
          'systemd-sysvcompat'
          'systemd-ukify')
-_tag='199399bb283701b6a4aaf5ace49f56f30f38e9a3' # git rev-parse v${_tag_name}
-_tag_name=253.1
+_tag='95ffbf3c175b58d4fcf14855a995d038009d3131' # git rev-parse v${_tag_name}
+_tag_name=253.2
 pkgver="${_tag_name/-/}"
-pkgrel=3
+pkgrel=1
 arch=('x86_64')
 url='https://www.github.com/systemd/systemd'
 makedepends=('acl' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
@@ -66,8 +66,6 @@ sha512sums=('SKIP'
             '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97')
 
 _backports=(
-  # Revert "hwdb: fix swapped buttons for Logitech Lift left"
-  'ae9f36397f45dff8e2181c6af5f763e51a7c9639'
 )
 
 _reverts=(
