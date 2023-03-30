@@ -1,0 +1,76 @@
+# Maintainer: Andreas Radke <andyrtr@archlinux.org>
+
+pkgbase=mesa-demos
+pkgname=('mesa-demos' 'mesa-utils')
+pkgver=9.0.0
+pkgrel=2
+arch=('x86_64')
+url="https://www.mesa3d.org/"
+license=('custom')
+#makedepends=('meson' 'mesa' 'glu' 'freeglut' 'wayland-protocols')
+makedepends=('meson' 'mesa' 'libxkbcommon-x11'
+             'libdecor' 'glu' 'freeglut'
+             'glslang' 'vulkan-headers' 'wayland-protocols')
+source=(https://mesa.freedesktop.org/archive/demos/mesa-demos-${pkgver}.tar.xz{,.sig}
+        'LICENSE')
+sha512sums=('af33ef72a521416e39d93370b2b4ccb768f08084c9e4c0aa62868210d9465c858e5cb8e5d23952295a3073946f609eb8723ee60b39dd9fb6696c4e45aafbb2c1'
+            'SKIP'
+            '25da77914dded10c1f432ebcbf29941124138824ceecaf1367b3deedafaecabc082d463abcfa3d15abff59f177491472b505bcb5ba0c4a51bb6b93b4721a23c2')
+#validpgpkeys=('E390B9700582FAEA959ACAD41EEF53D38A3A9C67') # "Andreas Boll <andreas.boll.dev@gmail.com>"
+validpgpkeys=('FF4CF638C624C3CF21ED2CF227EF763A2AA39F96') # Erik Faye-Lund <erik.faye-lund@collabora.com>
+
+build() {
+
+  arch-meson mesa-demos-$pkgver build \
+    -D gles1=disabled \
+    -D with-system-data-files=true
+
+  # Print config
+  meson configure build
+
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package_mesa-demos() {
+  pkgdesc="Mesa demos"
+  depends=('libgl' 'glu' 'freeglut' 'libdecor' 'libxkbcommon')
+  install=mesa-demos.install
+
+  DESTDIR="$pkgdir" meson install -C build
+
+  # remove utils
+  rm "${pkgdir}"/usr/bin/{glxinfo,glxgears,\
+eglinfo,eglgears_wayland,eglgears_x11,\
+eglkms,egltri_wayland,egltri_x11,\
+es2_info,es2gears_wayland,es2gears_x11,es2tri,\
+peglgears,xeglgears,\
+xeglthreads,vkgears}
+
+  install -Dm 0644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
+
+package_mesa-utils() {
+  pkgdesc="Essential Mesa utilities"
+  depends=('libgl' 'libdecor' 'libxkbcommon-x11')
+  provides=('glxinfo' 'glxgears' 
+            'eglinfo' 'eglgears' 
+            'es2info' 'es2gears')
+
+
+  install -Dm 0755 build/src/egl/opengl/\
+{eglinfo,eglgears_wayland,eglgears_x11,\
+eglkms,egltri_wayland,egltri_x11,\
+peglgears,xeglgears,xeglthreads} -t "${pkgdir}/usr/bin/"
+
+  install -Dm 0755 build/src/egl/opengles2/\
+{es2_info,es2gears_wayland,es2gears_x11,es2tri} -t "${pkgdir}/usr/bin/"
+
+  install -Dm 0755 build/src/xdemos/{glxinfo,glxgears} -t "${pkgdir}/usr/bin/"
+  install -Dm 0755 build/src/vulkan/vkgears -t "${pkgdir}/usr/bin/"
+
+  install -Dm 0644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}/"
+}
