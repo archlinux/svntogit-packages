@@ -4,24 +4,65 @@
 # Contributor: Hugo Doria <hugo@archlinux.org>
 
 pkgname=libcap
-pkgver=2.67
+pkgver=2.68
 pkgrel=1
 pkgdesc="POSIX 1003.1e capabilities"
 arch=(x86_64)
 url="https://sites.google.com/site/fullycapable/"
 license=(GPL2)
-depends=(glibc pam)
-makedepends=(linux-api-headers)
-provides=(libcap.so libpsx.so)
-source=(https://kernel.org/pub/linux/libs/security/linux-privs/${pkgname}2/$pkgname-$pkgver.tar.{xz,sign})
-sha512sums=('2e52c5a571cc1565e6829b0889f63216af10dfd9a86485f8ae7d0fcf4cc0db96aa21eb2ddea29e8dadf41a1194e91fb5961fe84ba07beb2ce950b6131be099d4'
-            'SKIP')
-b2sums=('bd9be22e439397a3c1726093cfee2410df93773b3139d50a1cdc10daecb666ddb9b64daded6e0ec9f2fd6defd16ea156dbd66bd55360ea266131f31ea0f0e989'
-        'SKIP')
+depends=(
+  gcc-libs
+  glibc
+  pam
+)
+makedepends=(
+  go
+  linux-api-headers
+)
+provides=(
+  libcap.so
+  libpsx.so
+)
+source=(
+  https://kernel.org/pub/linux/libs/security/linux-privs/${pkgname}2/$pkgname-$pkgver.tar.{xz,sign}
+  libcap-2.68-cgo_flags.patch  # provide flags to go build (sent upstream)
+)
+sha512sums=('ede3e1356aef22e18a46dc8ff0727500ab023bea698cf2bb822abb06625e272940afea52ad6457d0cd8cf1c7f435f1b568baf0a6bf0a08ae96fbf6d7502f9de2'
+            'SKIP'
+            '08db53f996a4d686fe54b43159def06b60f996277023e3729a1855dbc1f26d2279512183fdf852da787cc6b4c4b9a582d789e8dea6a4b6717359e7e08f20a173')
+b2sums=('659ee2b0f92ab7490e7f4c9ccd6aafa02ae36c509654fdb53a0b9da4d5ba8be2d1b5afd2073b2b1c75f9585a0593a9d3e70af59fe0c213e178782bbd11cd3b3d'
+        'SKIP'
+        '40c4e760efdb203d6a680b1c7f58e45ff7c971cade170a3619db620fdd39d75d9063e6ba1193172a29e3304a948d5e7a77abe803cb803d5124a2c0d8622b5a5a')
 validpgpkeys=(38A644698C69787344E954CE29EE848AE2CCF3F4) # Andrew G. Morgan <morgan@kernel.org>
 
+prepare() {
+  patch -Np1 -d $pkgname-$pkgver -i ../libcap-2.68-cgo_flags.patch
+}
+
 build() {
-  make DYNAMIC=yes KERNEL_HEADERS=/usr/include lib=lib prefix=/usr sbindir=bin -C $pkgname-$pkgver
+  export CGO_CPPFLAGS="$CPPFLAGS"
+  export CGO_CFLAGS="$CFLAGS"
+  export CGO_CXXFLAGS="$CXXFLAGS"
+  export CGO_LDFLAGS="$LDFLAGS"
+  export CGO_REQUIRED="1"
+  export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+
+  local make_options=(
+    CGO_CPPFLAGS="$CPPFLAGS"
+    CGO_CFLAGS="$CFLAGS"
+    CGO_CXXFLAGS="$CXXFLAGS"
+    CGO_LDFLAGS="$LDFLAGS"
+    CGO_REQUIRED="1"
+    GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+    DYNAMIC=yes
+    KERNEL_HEADERS=/usr/include
+    lib=lib
+    prefix=/usr
+    sbindir=bin
+    -C $pkgname-$pkgver
+  )
+
+  make "${make_options[@]}"
 }
 
 check() {
@@ -29,7 +70,17 @@ check() {
 }
 
 package() {
-  make DESTDIR="$pkgdir" RAISE_SETFCAP=no lib=lib prefix=/usr sbindir=bin install -C $pkgname-$pkgver
+  local make_options=(
+    DESTDIR="$pkgdir"
+    RAISE_SETFCAP=no
+    lib=lib
+    prefix=/usr
+    sbindir=bin
+    install
+    -C $pkgname-$pkgver
+  )
+
+  make "${make_options[@]}"
   install -vDm 644 $pkgname-$pkgver/{CHANGELOG,README} -t "$pkgdir/usr/share/doc/$pkgname/"
   install -vDm 644 $pkgname-$pkgver/pam_cap/capability.conf -t "$pkgdir/usr/share/doc/$pkgname/examples/"
 }
