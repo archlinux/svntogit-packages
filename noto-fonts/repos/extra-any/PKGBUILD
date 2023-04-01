@@ -2,8 +2,8 @@
 
 pkgbase=noto-fonts
 pkgname=(noto-fonts noto-fonts-extra)
-pkgver=20230301
-_commit=1e8d006c9aea72d565a7592aa303a85382b51ac8
+pkgver=20230401
+_commit=021feeb29f58d54a45449c89f53d17b5bfa9fd56
 pkgrel=1
 pkgdesc='Google Noto TTF fonts'
 arch=(any)
