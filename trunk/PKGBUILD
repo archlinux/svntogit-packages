@@ -5,7 +5,7 @@
 
 _name=pupnp
 pkgname=libupnp
-pkgver=1.14.15
+pkgver=1.14.16
 pkgrel=1
 pkgdesc='Portable Open Source UPnP Development Kit'
 arch=(x86_64)
@@ -14,28 +14,32 @@ license=(BSD)
 depends=(glibc)
 makedepends=(cmake)
 provides=(libixml.so libupnp.so)
-source=($pkgname-$pkgver.tar.gz::https://github.com/$_name/$_name/archive/release-$pkgver.tar.gz)
-sha512sums=('dde2563eaacdd288066012f001b819ec25ab51bc36aef23db71d2eb67eef778b6b2b10b35a2f6b3041ecef20167e873e1c54e17fc4a26e8d1d9f408e2050279d')
-b2sums=('5918f41b64fe5e4a0209058f4706d724d0fcad74c8e3bfc2a54d6d5a1af253d4461ec43b0c896f1da14dcb3fb0925cbae3bc6eb015380e1cd23a3d88e6ed656f')
+source=(https://github.com/$_name/$_name/archive/release-$pkgver/$_name-release-$pkgver.tar.gz)
+sha512sums=('f02d72415ec4891e019724b5774aed2bd470d64ff1f6c179140a3e61bfb34794f0e6069d5f4baf0d8260aae09eab607a61575f02c4f853616180aec7f701abd3')
+b2sums=('f9cebb6f0f5faea07e003f433100d4789e2f59d16a1d1733e1a644ca49ea8fc43b080359b6106c84e4681b6c491ecbbc6373766aaf962d6b97372dfd4abf4bd2')
 
 build() {
-  cmake -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_BUILD_TYPE=None \
-        -DUPNP_BUILD_STATIC=OFF \
-        -Dblocking_tcp_connections=OFF \
-        -Dreuseaddr=ON \
-        -Wno-dev \
-        -B build \
-        -S $_name-release-$pkgver
-  make VERBOSE=1 -C build
+  local cmake_options=(
+    -B build
+    -D CMAKE_BUILD_TYPE=None
+    -D CMAKE_INSTALL_PREFIX=/usr
+    -D UPNP_BUILD_STATIC=OFF
+    -D blocking_tcp_connections=OFF
+    -D reuseaddr=ON
+    -S $_name-release-$pkgver
+    -W no-dev
+  )
+
+  cmake "${cmake_options[@]}"
+  cmake --build build --verbose
 }
 
 check() {
-  make VERBOSE=1 test -C build
+  ctest --test-dir build --output-on-failure
 }
 
 package() {
-  make VERBOSE=1 DESTDIR="$pkgdir" install -C build
+  DESTDIR="$pkgdir" cmake --install build
   install -vDm 644 $_name-release-$pkgver/COPYING -t "$pkgdir/usr/share/licenses/$pkgname"
   install -vDm 644 $_name-release-$pkgver/{ChangeLog,README.md} -t "$pkgdir/usr/share/doc/$pkgname"
 }
