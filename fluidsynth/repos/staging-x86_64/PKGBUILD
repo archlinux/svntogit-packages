@@ -1,0 +1,83 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Ray Rashif <schiv@archlinux.org>
+# Contributor: damir <damir@archlinux.org>
+
+pkgname=fluidsynth
+pkgver=2.3.2
+pkgrel=1
+pkgdesc="A real-time software synthesizer based on the SoundFont 2 specifications"
+arch=(x86_64)
+url="https://www.fluidsynth.org/"
+license=(LGPL2.1)
+groups=(pro-audio)
+depends=(
+  gcc-libs
+  glibc
+  sdl2
+)
+makedepends=(
+  alsa-lib
+  cmake
+  dbus
+  doxygen
+  glib2
+  jack
+  ladspa
+  libinstpatch
+  libpipewire
+  libpulse
+  libsndfile
+  portaudio
+  readline
+  systemd-libs
+)
+provides=(
+  libfluidsynth.so
+  soundfont-synthesizer
+)
+backup=(etc/conf.d/$pkgname)
+source=($pkgname-$pkgver.tar.gz::https://github.com/$pkgname/$pkgname/archive/v$pkgver.tar.gz)
+sha512sums=('21798b5a80a7edd8ef02b983d9b230af45cc66b98b32d593228e12dbec15b12c6cf6c0f3692c12af66de1ba2049fa9d6ad2b68c7d1579347eec14d24870b0025')
+b2sums=('2d88e52223ff9c6bc5bcbcd8b15f30abb12632202b9a5c5eecc5eb95620aeaa2d7d9b80b76e6b26eef95ca92521bdc9e6d539f8235d90ca0429b12bb72db1a6f')
+
+build() {
+  local cmake_options=(
+    -B build
+    -D CMAKE_BUILD_TYPE=None
+    -D CMAKE_INSTALL_PREFIX=/usr
+    -D FLUID_DAEMON_ENV_FILE=/etc/conf.d/fluidsynth
+    -D LIB_SUFFIX=""
+    -D enable-ladspa=ON
+    -D enable-portaudio=ON
+    -S $pkgname-$pkgver
+    -W no-dev
+  )
+
+  cmake "${cmake_options[@]}"
+  cmake --build build --verbose
+}
+
+check() {
+  make check -k -C build
+}
+
+package() {
+  depends+=(
+    alsa-lib libasound.so
+    dbus libdbus-1.so
+    glib2 libglib-2.0.so libgmodule-2.0.so libgobject-2.0.so
+    jack libjack.so
+    libinstpatch libinstpatch-1.0.so
+    libpipewire libpipewire-0.3.so
+    libpulse libpulse-simple.so
+    libsndfile libsndfile.so
+    portaudio libportaudio.so
+    readline libreadline.so
+    systemd-libs libsystemd.so
+  )
+
+  DESTDIR="$pkgdir" cmake --install build
+  install -vDm 644 build/$pkgname.service -t "$pkgdir/usr/lib/systemd/user/"
+  install -vDm 644 build/$pkgname.conf "$pkgdir/etc/conf.d/$pkgname"
+  install -vDm 644 $pkgname-$pkgver/{AUTHORS,ChangeLog,{CONTRIBUTING,README}.md,THANKS,TODO} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
