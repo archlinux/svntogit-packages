@@ -1,0 +1,198 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Tom Newsom <Jeepster@gmx.co.uk>
+# Contributor: Paul Mattal <paul@archlinux.org>
+
+pkgname=ffmpeg4.4
+pkgver=4.4.3
+pkgrel=2
+pkgdesc='Complete solution to record, convert and stream audio and video'
+arch=(x86_64)
+url=https://ffmpeg.org/
+license=(GPL3)
+depends=(
+  alsa-lib
+  aom
+  bzip2
+  fontconfig
+  fribidi
+  gmp
+  gnutls
+  gsm
+  jack
+  lame
+  libass.so
+  libavc1394
+  libbluray.so
+  libdav1d.so
+  libdrm
+  libfreetype.so
+  libiec61883
+  libmfx
+  libmodplug
+  libpulse
+  librav1e.so
+  libraw1394
+  librsvg-2.so
+  libsoxr
+  libssh
+  libtheora
+  libva.so
+  libva-drm.so
+  libva-x11.so
+  libvdpau
+  libvidstab.so
+  libvorbisenc.so
+  libvorbis.so
+  libvpx.so
+  libwebp
+  libx11
+  libx264.so
+  libx265.so
+  libxcb
+  libxext
+  libxml2
+  libxv
+  libxvidcore.so
+  libzimg.so
+  opencore-amr
+  openjpeg2
+  opus
+  sdl2
+  speex
+  srt
+  svt-av1
+  v4l-utils
+  xz
+  zlib
+)
+makedepends=(
+  amf-headers
+  avisynthplus
+  clang
+  ffnvcodec-headers
+  git
+  ladspa
+  nasm
+)
+optdepends=(
+  'avisynthplus: AviSynthPlus support'
+  'intel-media-sdk: Intel QuickSync support'
+  'ladspa: LADSPA filters'
+  'nvidia-utils: Nvidia NVDEC/NVENC support'
+)
+provides=(
+  libavcodec.so
+  libavdevice.so
+  libavfilter.so
+  libavformat.so
+  libavutil.so
+  libpostproc.so
+  libswresample.so
+  libswscale.so
+)
+options=(
+  debug
+)
+_tag=4bc4cafaef8a55462138d7b6f7579c1522de26dc
+source=(git+https://git.ffmpeg.org/ffmpeg.git#tag=${_tag})
+b2sums=(SKIP)
+
+pkgver() {
+  cd ffmpeg
+  git describe --tags | sed 's/^n//'
+}
+
+prepare() {
+  cd ffmpeg
+  git cherry-pick -n 988f2e9eb063db7c1a678729f58aab6eba59a55b # fix nvenc on older gpus
+}
+
+build() {
+  cd ffmpeg
+
+  ./configure \
+    --prefix=/usr \
+    --incdir=/usr/include/ffmpeg4.4 \
+    --libdir=/usr/lib/ffmpeg4.4 \
+    --disable-debug \
+    --disable-doc \
+    --disable-programs \
+    --disable-static \
+    --disable-stripping \
+    --enable-amf \
+    --enable-avisynth \
+    --enable-cuda-llvm \
+    --enable-lto \
+    --enable-fontconfig \
+    --enable-gmp \
+    --enable-gnutls \
+    --enable-gpl \
+    --enable-ladspa \
+    --enable-libaom \
+    --enable-libass \
+    --enable-libbluray \
+    --enable-libdav1d \
+    --enable-libdrm \
+    --enable-libfreetype \
+    --enable-libfribidi \
+    --enable-libgsm \
+    --enable-libiec61883 \
+    --enable-libjack \
+    --enable-libmfx \
+    --enable-libmodplug \
+    --enable-libmp3lame \
+    --enable-libopencore_amrnb \
+    --enable-libopencore_amrwb \
+    --enable-libopenjpeg \
+    --enable-libopus \
+    --enable-libpulse \
+    --enable-librav1e \
+    --enable-librsvg \
+    --enable-libsoxr \
+    --enable-libspeex \
+    --enable-libsrt \
+    --enable-libssh \
+    --enable-libsvtav1 \
+    --enable-libtheora \
+    --enable-libv4l2 \
+    --enable-libvidstab \
+    --enable-libvorbis \
+    --enable-libvpx \
+    --enable-libwebp \
+    --enable-libx264 \
+    --enable-libx265 \
+    --enable-libxcb \
+    --enable-libxml2 \
+    --enable-libxvid \
+    --enable-libzimg \
+    --enable-nvdec \
+    --enable-nvenc \
+    --enable-shared \
+    --enable-version3
+
+  make
+  make tools/qt-faststart
+  make doc/ff{mpeg,play}.1
+}
+
+package() {
+  make DESTDIR="${pkgdir}" -C ffmpeg install
+
+  cd "${pkgdir}"
+
+  # Move libs to /usr/lib, except the .so symlinks
+  local f
+  for f in usr/lib/ffmpeg4.4/*; do
+    if [[ $f == *.so ]]; then
+      ln -srf -- usr/lib/"$(readlink "$f")" "$f"
+    elif [[ ! -d $f ]]; then
+      mv "$f" usr/lib
+    fi
+  done
+
+  rm -r usr/share
+}
+
+# vim:set sw=2 et:
