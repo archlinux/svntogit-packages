@@ -3,7 +3,7 @@
 pkgname=python-trove-classifiers
 pkgver=2023.3.9
 _commit=1d9c2fea820ec8d9c274248294871cbf5dba3511
-pkgrel=1
+pkgrel=2
 pkgdesc="Canonical source for classifiers on PyPI (pypi.org)"
 url="https://github.com/pypa/trove-classifiers"
 license=('Apache')
