@@ -4,7 +4,7 @@
 
 pkgname=meson
 pkgver=1.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="High productivity build system"
 url="https://mesonbuild.com/"
 arch=(any)
@@ -14,6 +14,7 @@ makedepends=(
   python-build
   python-installer
   python-wheel
+  python-setuptools
 )
 checkdepends=(
   boost
