@@ -5,7 +5,7 @@
 
 pkgname=python-pycparser
 pkgver=2.21
-pkgrel=3
+pkgrel=4
 pkgdesc='C parser and AST generator written in Python'
 url='https://github.com/eliben/pycparser'
 depends=('python-ply')
