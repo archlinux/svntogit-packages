@@ -6,7 +6,7 @@
 pkgbase=python-urllib3
 pkgname=(python-urllib3 python-urllib3-doc)
 pkgver=1.26.13
-pkgrel=1
+pkgrel=2
 pkgdesc="HTTP library with thread-safe connection pooling and file post support"
 arch=("any")
 url="https://github.com/urllib3/urllib3"
