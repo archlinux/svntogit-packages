@@ -1,0 +1,56 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Contributor: Anton Hvornum <anton@hvornum.se>
+# Contributor: demostanis worlds <demostanis@protonmail.com>
+
+pkgname=archinstall
+pkgver=2.5.5
+pkgrel=2
+pkgdesc="Just another guided/automated Arch Linux installer with a twist"
+arch=(any)
+url="https://github.com/archlinux/archinstall"
+license=(GPL3)
+depends=(
+  python
+  systemd
+)
+makedepends=(
+  python-build
+  python-installer
+  python-setuptools
+  python-sphinx
+  python-wheel
+)
+optdepends=(
+  'python-systemd: for systemd-journald support'
+)
+provides=(python-archinstall)
+source=(
+  $pkgname-v$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz
+  $pkgname-v$pkgver.tar.gz.sig::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz.sig
+)
+sha512sums=('0488e614ecf7e33035015b95b6ec86bd183288e85655452f31f364b906515c6854d841ac1bf60d08496065dc53c6e522d528998bf16e99ed87e93c848313f954'
+            'SKIP')
+b2sums=('9eaffc7b99ce2999ee55e312b59ee1b0fade3066c15f07f9dfc09b5b039c705f2ba4f4695592fddfcdc48e7c83f974fb372ca96565f8997a74b10e27c5f58fe2'
+        'SKIP')
+validpgpkeys=('256F73CEEFC6705C6BBAB20E5FBBB32941E3740A') # Anton Hvornum (Torxed) <anton@hvornum.se>
+
+prepare() {
+  cd $pkgname-$pkgver
+  # use real directories for examples and profiles, as symlinks do not work
+  # with flit or setuptools PEP517 backends
+  rm -fv $pkgname/{examples,profiles}
+  mv -v examples profiles $pkgname/
+}
+
+build() {
+  cd $pkgname-$pkgver
+  python -m build --wheel --no-isolation
+  PYTHONDONTWRITEBYTECODE=1 make man -C docs
+}
+
+package() {
+  cd $pkgname-$pkgver
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -vDm 644 docs/_build/man/archinstall.1 -t "$pkgdir/usr/share/man/man1/"
+}
