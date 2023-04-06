@@ -7,7 +7,7 @@ pkgname=(util-linux util-linux-libs)
 _pkgmajor=2.38
 _realver=${_pkgmajor}.1
 pkgver=${_realver/-/}
-pkgrel=3
+pkgrel=4
 pkgdesc='Miscellaneous system utilities for Linux'
 url='https://github.com/karelzak/util-linux'
 arch=('x86_64')
@@ -94,8 +94,8 @@ package_util-linux() {
   mv "$pkgdir"/usr/lib/lib*.so* util-linux-libs/lib/
   mv "$pkgdir"/usr/lib/pkgconfig util-linux-libs/lib/pkgconfig
   mv "$pkgdir"/usr/include util-linux-libs/include
-  mv "$pkgdir"/usr/lib/python3.10/site-packages util-linux-libs/site-packages
-  rmdir "$pkgdir"/usr/lib/python3.10
+  mv "$pkgdir"/usr/lib/python3.11/site-packages util-linux-libs/site-packages
+  rmdir "$pkgdir"/usr/lib/python3.11
   mv "$pkgdir"/usr/share/man/man3 util-linux-libs/man3
 
   # install systemd-sysusers
@@ -119,9 +119,9 @@ package_util-linux-libs() {
   replaces=('libutil-linux')
   optdepends=('python: python bindings to libmount')
 
-  install -d -m0755 "$pkgdir"/usr/{lib/python3.10/,share/man/}
+  install -d -m0755 "$pkgdir"/usr/{lib/python3.11/,share/man/}
   mv util-linux-libs/lib/* "$pkgdir"/usr/lib/
   mv util-linux-libs/include "$pkgdir"/usr/include
-  mv util-linux-libs/site-packages "$pkgdir"/usr/lib/python3.10/site-packages
+  mv util-linux-libs/site-packages "$pkgdir"/usr/lib/python3.11/site-packages
   mv util-linux-libs/man3 "$pkgdir"/usr/share/man/man3
 }
