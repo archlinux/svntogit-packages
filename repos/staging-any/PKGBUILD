@@ -1,0 +1,46 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Massimiliano Torromeo < massimiliano DOT torromeo AT gmail DOT com >
+
+pkgname=python-beaker
+pkgver=1.12.0
+pkgrel=2
+arch=('any')
+license=('custom')
+pkgdesc="Caching and sessions WSGI middleware for use with web applications and stand-alone Python scripts and applications"
+url="http://beaker.groovie.org/"
+depends=('python')
+makedepends=('python-setuptools')
+checkdepends=('python-pytest' 'python-mock' 'python-sqlalchemy'
+              'python-pycryptodome' 'python-coverage' 'python-webtest' 'python-redis'
+              'python-pymongo' 'python-pylibmc' 'redis' 'python-cryptography'
+              'python-memcached' 'memcached' 'pifpaf' 'python-mongomock')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/bbangert/beaker/archive/$pkgver.tar.gz")
+sha512sums=('d7ef5070f036ca7ea100c348df58aa98edad0ee8e361c0a600485b6e1de301f3381ecc782dcbc4b1b2735a4b54e8aff7fd516a7c9d655d2c10517e358ffe031c')
+
+prepare() {
+  # Use a fake MongoDB for tests
+  sed -e '/class TestMongoDB/i import mongomock' \
+      -e "s|'mongodb://localhost:27017/beaker_testdb'|mongomock.MongoClient('mongodb://localhost:27017/beaker_testdb')|" \
+      -i beaker-$pkgver/tests/test_managers/test_ext_mongodb.py
+
+  sed -i "s#/usr/bin/python#/usr/bin/python3#" beaker-$pkgver/beaker/crypto/pbkdf2.py
+}
+
+build() {
+  cd beaker-$pkgver
+  python3 setup.py build
+}
+
+check() {
+  cd beaker-$pkgver
+  # it_IT.UTF-8 is missing in test env
+  pifpaf run memcached --port 11211 -- pifpaf run redis -- \
+    pytest --deselect tests/test_cookie_expires.py::test_cookie_expires_different_locale
+}
+
+package() {
+  cd beaker-$pkgver
+  python setup.py install --root="$pkgdir" --optimize=1
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/python-beaker/
+}
