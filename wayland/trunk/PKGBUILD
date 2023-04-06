@@ -4,8 +4,8 @@
 
 pkgbase=wayland
 pkgname=(wayland wayland-docs)
-pkgver=1.21.0
-pkgrel=2
+pkgver=1.22.0
+pkgrel=1
 pkgdesc='A computer display server protocol'
 arch=('x86_64')
 url='https://wayland.freedesktop.org/'
@@ -15,8 +15,8 @@ makedepends=('meson' 'libxslt' 'doxygen' 'xmlto' 'graphviz' 'docbook-xsl')
 validpgpkeys=('C7223EBE4EF66513B892598911A30156E0E67611'  # Bryce Harrington
               'C0066D7DB8E9AC6844D728715E54498E697F11D7'  # Derek Foreman
               '34FF9526CFEF0E97A340E2E40FDE7BE0E88F5E48') # emersion <contact@emersion.fr>
-source=("https://gitlab.freedesktop.org/wayland/wayland/-/releases/1.21.0/downloads/wayland-$pkgver.tar.xz"{,.sig})
-sha256sums=('6dc64d7fc16837a693a51cfdb2e568db538bfdc9f457d4656285bb9594ef11ac'
+source=("https://gitlab.freedesktop.org/wayland/wayland/-/releases/$pkgver/downloads/wayland-$pkgver.tar.xz"{,.sig})
+sha256sums=('1540af1ea698a471c2d8e9d288332c7e0fd360c8f1d12936ebb7e7cbc2425842'
             'SKIP')
 
 build() {
