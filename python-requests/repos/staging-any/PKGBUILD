@@ -3,7 +3,7 @@
 
 pkgname=python-requests
 pkgver=2.28.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Python HTTP for Humans"
 arch=('any')
 url="https://requests.readthedocs.io/"
@@ -31,7 +31,7 @@ prepare() {
   sed -e '/certifi/d' \
       -e "s/,<.*'/'/" \
       -e '/charset_normalizer/d' \
-      -i setup.py
+      -i setup.py setup.cfg
   patch -p1 -i "$srcdir"/certs.patch
 }
 
