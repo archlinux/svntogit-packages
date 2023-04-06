@@ -4,7 +4,7 @@
 pkgbase=glib2
 pkgname=(glib2 glib2-docs)
 pkgver=2.76.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Low level core library"
 url="https://wiki.gnome.org/Projects/GLib"
 license=(LGPL)
@@ -40,12 +40,14 @@ source=(
   "git+https://gitlab.gnome.org/GNOME/glib.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git"
   0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+  $pkgbase-2.76.1-coreutils9.2.patch
   gio-querymodules.hook
   glib-compile-schemas.hook
 )
 b2sums=('SKIP'
         'SKIP'
         'bd7f881ae6054c363783bf45b1add5eef5e8347554e23b9fece526701469d07cdcb9871fa73dee473796a219e8aa513796a96da769949097ea207db038578d07'
+        '7af426042432274f4a72cd68cf218d6c36d375161d20db07dca59915949cccf90ecf15b840b21335ee41cf8e92b30de49f4c48b526d0b681b0220fc651c88672'
         '14c9211c0557f6d8d9a914f1b18b7e0e23f79f4abde117cb03ab119b95bf9fa9d7a712aa0a29beb266468aeb352caa3a9e4540503cfc9fe0bbaf764371832a96'
         'd30d349b4cb4407839d9074ce08f5259b8a5f3ca46769aabc621f17d15effdb89c4bf19bd23603f6df3d59f8d1adaded0f4bacd0333afcab782f2d048c882858')
 
@@ -60,6 +62,8 @@ prepare() {
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+  # fix test suite issues with coreutils >=9.2: https://gitlab.gnome.org/GNOME/glib/-/merge_requests/3358
+  git apply -3 ../$pkgbase-2.76.1-coreutils9.2.patch
 
   git submodule init
   git submodule set-url subprojects/gvdb "$srcdir/gvdb"
