@@ -2,7 +2,7 @@
 
 pkgname=python-hyperlink
 pkgver=21.0.0
-pkgrel=4
+pkgrel=5
 pkgdesc='A featureful, correct URL for Python'
 arch=('any')
 license=('BSD')
