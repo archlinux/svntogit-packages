@@ -2,7 +2,7 @@
 
 pkgname=python-constantly
 pkgver=15.1.0
-pkgrel=11
+pkgrel=12
 pkgdesc='Symbolic constants in Python'
 arch=('any')
 license=('MIT')
