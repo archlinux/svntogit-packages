@@ -31,7 +31,7 @@ prepare() {
   sed -e '/certifi/d' \
       -e "s/,<.*'/'/" \
       -e '/charset_normalizer/d' \
-      -i setup.py setup.cfg
+      -i setup.py
   patch -p1 -i "$srcdir"/certs.patch
 }
 
