@@ -1,0 +1,84 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=dleyna
+pkgname=(dleyna dleyna-docs)
+pkgver=0.8.2
+pkgrel=2
+pkgdesc="Services and D-Bus APIs to access UPnP and DLNA media devices"
+url="https://gitlab.gnome.org/World/dLeyna"
+arch=(x86_64)
+license=(LGPL2.1)
+depends=(
+  dbus
+  gupnp
+  gupnp-av
+  gupnp-dlna
+  libsoup3
+  libxml2
+)
+makedepends=(
+  git
+  meson
+  python-docutils
+  python-gobject
+  python-sphinx
+  python-sphinx_rtd_theme
+)
+_commit=9444b8eb9e48a3985340c7f7e0d3a63d2b352302  # tags/v0.8.2^0
+source=("git+https://gitlab.gnome.org/World/dLeyna.git#commit=$_commit")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd dLeyna
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd dLeyna
+}
+
+build() {
+  local meson_options=(
+    -D log_type=glib
+  )
+
+  arch-meson dLeyna build "${meson_options[@]}"
+  meson compile -C build
+  meson compile -C build docs
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package_dleyna() {
+  provides=(
+    dleyna-connector-dbus
+    dleyna-core
+    dleyna-renderer
+    dleyna-server
+    libdleyna-core-1.0.so
+  )
+  replaces=(
+    'dleyna-connector-dbus<=0.4.1-1'
+    'dleyna-core<=0.7.0-3'
+    'dleyna-renderer<=0.7.2-1'
+    'dleyna-server<=0.7.2-1'
+  )
+  conflicts=("${replaces[@]}")
+
+  meson install -C build --destdir "$pkgdir"
+
+  python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
+}
+
+package_dleyna-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mkdir -p "$pkgdir/usr/share/doc"
+  cp -a build/doc/docs "$pkgdir/usr/share/doc/$pkgbase"
+}
+
+# vim:set sw=2 sts=-1 et:
