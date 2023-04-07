@@ -1,0 +1,53 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Douglas Soares de Andrade <douglas@archlinux.org>
+
+pkgname=glade
+pkgver=3.40.0+r14+g1fbca367
+pkgrel=2
+pkgdesc="User Interface Builder for GTK+ applications"
+url="https://glade.gnome.org/"
+arch=(x86_64)
+license=(GPL LGPL)
+depends=(gtk3 libxml2)
+makedepends=(gtk-doc gobject-introspection itstool docbook-xsl git meson gjs
+             python-gobject webkit2gtk)
+checkdepends=(xorg-server-xvfb)
+optdepends=('devhelp: development help'
+            'gjs: gjs module'
+            'python-gobject: python module'
+            'webkit2gtk: webkit2gtk module')
+provides=(libgladeui-2.so)
+groups=(gnome-extra)
+_commit=1fbca367cf33991f1d8d20a256ca704eb778fca9  # master
+source=("git+https://gitlab.gnome.org/GNOME/glade.git#commit=$_commit"
+        fix-build.diff)
+sha256sums=('SKIP'
+            '0dd99583c4b7b6327e84a909614f46ec0062dbc9f67be733ea97dc294e40317b')
+
+pkgver() {
+  cd glade
+  git describe --tags | sed 's/^GLADE_//;s/_/./g;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd glade
+
+  # Fix missing dependency on vcs_tag
+  git apply -3 ../fix-build.diff
+}
+
+build() {
+  arch-meson glade build -D gtk_doc=true
+  meson compile -C build
+}
+
+check() {
+  dbus-run-session xvfb-run -s '-nolisten local' \
+    meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
