@@ -2,7 +2,7 @@
 
 pkgname=pyalpm
 pkgver=0.10.6
-pkgrel=4
+pkgrel=5
 pkgdesc="Python 3 bindings for libalpm"
 arch=('x86_64')
 url="https://gitlab.archlinux.org/archlinux/pyalpm"
@@ -24,7 +24,7 @@ build() {
 
 check() {
   cd "${pkgname}"
-  PYTHONPATH="$PWD/build/lib.linux-$CARCH-3.10" pytest
+  PYTHONPATH="$PWD/build/lib.linux-$CARCH-cpython-311" pytest
 }
 
 package() {
