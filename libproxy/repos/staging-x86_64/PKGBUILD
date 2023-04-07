@@ -1,0 +1,88 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=libproxy
+pkgname=(libproxy libproxy-webkit)
+pkgver=0.4.18
+pkgrel=3
+pkgdesc="Automatic proxy configuration management library"
+url="https://libproxy.github.io/libproxy/"
+arch=(x86_64)
+license=(LGPL)
+depends=(
+  dbus
+  duktape
+  gcc-libs
+  glib2
+  zlib
+)
+makedepends=(
+  cmake
+  git
+  ninja
+  perl
+  python
+  webkit2gtk
+)
+_commit=caccaf28e3df6ea612d2d4b39f781c4324019fdb  # tags/0.4.18
+source=("git+https://github.com/libproxy/libproxy#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd libproxy
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd libproxy
+}
+
+build() {
+  cmake -S libproxy -B build -G Ninja \
+    -DBIPR=0 \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_CXX_FLAGS="$CXXFLAGS" \
+    -DCMAKE_C_FLAGS="$CFLAGS" \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DLIBEXEC_INSTALL_DIR=/usr/lib \
+    -DPERL_VENDORINSTALL=yes \
+    -DWITH_{VALA,WEBKIT3}=ON
+  cmake --build build
+}
+
+check() {
+  cmake --build build --target test
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_libproxy() {
+  optdepends=('networkmanager: NetworkManager configuration module'
+              'perl: Perl bindings'
+              'python: Python 3.x bindings'
+              'libproxy-webkit: PAC proxy support (via WebKit)'
+              'pacrunner: PAC proxy support (via pacrunner)')
+  provides+=(libproxy.so)
+
+  DESTDIR="$pkgdir" cmake --install build
+
+  _pick webkit "$pkgdir"/usr/lib/libproxy/*/modules/pacrunner_webkit.so
+}
+
+package_libproxy-webkit() {
+  pkgdesc="JavaScriptCore-based PAC proxy support for libproxy"
+  depends=(libproxy webkit2gtk)
+  replaces=('libproxy-mozjs<0.4.16-1')
+  mv webkit/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
