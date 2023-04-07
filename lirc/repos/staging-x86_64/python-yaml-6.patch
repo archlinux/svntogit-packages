@@ -1,0 +1,78 @@
+From bb6a390633f32942ac10f9b7b7fc01dfbd395a48 Mon Sep 17 00:00:00 2001
+From: Alec Leamas <leamas.alec@nowhere.net>
+Date: Fri, 21 Jan 2022 14:00:54 +0100
+Subject: [PATCH] database.py: Handle new PyYAML interface.
+
+---
+ python-pkg/lirc/database.py | 12 ++++++++----
+ tools/check_configs.py      |  4 ++++
+ 2 files changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/python-pkg/lirc/database.py b/python-pkg/lirc/database.py
+index d464c2ab..d1f42c64 100644
+--- a/python-pkg/lirc/database.py
++++ b/python-pkg/lirc/database.py
+@@ -44,6 +44,10 @@ import sys
+ 
+ try:
+     import yaml
++    try:
++        from yaml import CLoader as Loader, CDumper as Dumper
++    except ImportError:
++        from yaml import Loader, Dumper
+ except ImportError:
+     _YAML_MSG = '''
+ "Cannot import the yaml library. Please install the python3
+@@ -66,7 +70,7 @@ def _load_kerneldrivers(configdir):
+     '''
+ 
+     with open(os.path.join(configdir, "kernel-drivers.yaml")) as f:
+-        cf = yaml.load(f.read())
++        cf = yaml.load(f.read(), Loader = Loader)
+     drivers = cf['drivers'].copy()
+     for driver in cf['drivers']:
+         if driver == 'default':
+@@ -132,14 +136,14 @@ class Database(object):
+             yamlpath = configdir
+         db = {}
+         with open(os.path.join(yamlpath, "confs_by_driver.yaml")) as f:
+-            cf = yaml.load(f.read())
++            cf = yaml.load(f.read(), Loader = Loader)
+         db['lircd_by_driver'] = cf['lircd_by_driver'].copy()
+         db['lircmd_by_driver'] = cf['lircmd_by_driver'].copy()
+ 
+         db['kernel-drivers'] = _load_kerneldrivers(configdir)
+         db['drivers'] = db['kernel-drivers'].copy()
+         with open(os.path.join(yamlpath, "drivers.yaml")) as f:
+-            cf = yaml.load(f.read())
++            cf = yaml.load(f.read(), Loader = Loader)
+         db['drivers'].update(cf['drivers'].copy())
+         for key, d in db['drivers'].items():
+             d['id'] = key
+@@ -158,7 +162,7 @@ class Database(object):
+         configs = {}
+         for path in glob.glob(configdir + '/*.conf'):
+             with open(path) as f:
+-                cf = yaml.load(f.read())
++                cf = yaml.load(f.read(), Loader = Loader)
+             configs[cf['config']['id']] = cf['config']
+         db['configs'] = configs
+         self.db = db
+diff --git a/tools/check_configs.py b/tools/check_configs.py
+index 1e0d831b..5e458de7 100755
+--- a/tools/check_configs.py
++++ b/tools/check_configs.py
+@@ -4,6 +4,10 @@
+ 
+ import glob
+ import yaml
++try:
++    from yaml import CLoader as Loader, CDumper as Dumper
++except ImportError:
++    from yaml import Loader, Dumper
+ 
+ def main():
+     configs = {}
+-- 
+2.34.1
+
