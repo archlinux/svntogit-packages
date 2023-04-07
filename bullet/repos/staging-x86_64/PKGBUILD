@@ -1,0 +1,130 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+# Contributor: Christoph Zeiler <archNOSPAM_at_moonblade.dot.org>
+
+pkgbase=bullet
+pkgname=('bullet' 'bullet-dp' 'bullet-docs' 'python-pybullet')
+pkgver=3.25
+_pkgver=3.25
+pkgrel=2
+pkgdesc="A 3D Collision Detection and Rigid Body Dynamics Library for games and animation"
+arch=('x86_64')
+url="http://www.bulletphysics.com/Bullet/"
+license=('custom:zlib')
+makedepends=('cmake' 'doxygen' 'graphviz' 'ttf-dejavu' 'mesa' 'glu' 'python' 'python-numpy' 'python-setuptools' 'ninja')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/bulletphysics/bullet3/archive/refs/tags/${_pkgver}.tar.gz"
+        bullet3_examplebrowser.sh)
+sha512sums=('7086e5fcf69635801bb311261173cb8d173b712ca1bd78be03df48fad884674e85512861190e45a1a62d5627aaad65cde08c175c44a3be9afa410d3dfd5358d4'
+            '8741ad94b6c46c226d89aebc8ab06d8a11bac3c04d3f0a2bf7a7524792a3375aa7bf7d295410b16fbeb4c348a31057b4570acdebe9bbaea251f44daca8d9fe81')
+
+prepare() {
+  cd bullet3-${_pkgver}
+  sed -i '/SET_TARGET_PROPERTIES(pybullet PROPERTIES PREFIX/d' examples/pybullet/CMakeLists.txt
+}
+
+build() {
+  cp -r bullet3-${_pkgver} bullet3-${_pkgver}-dp
+
+  export CXXFLAGS+=" -ffat-lto-objects"
+  cd bullet3-${_pkgver}
+  cmake \
+      -Bbuild \
+      -GNinja \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DBUILD_SHARED_LIBS=1 \
+      -DINSTALL_LIBS=1 \
+      -DINSTALL_EXTRA_LIBS=1 \
+      -DBUILD_PYBULLET=ON \
+      -DBUILD_PYBULLET_NUMPY=ON \
+      -DBUILD_OPENGL3_DEMOS=ON \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBULLET2_MULTITHREADING=ON \
+      -DCMAKE_SKIP_RPATH=YES
+  ninja -C build
+
+  # For Python and docs it doesn't matter whether we build multithreaded or not.
+  python setup.py build
+  doxygen
+
+  cd ../bullet3-${_pkgver}-dp
+  cmake \
+      -Bbuild \
+      -GNinja \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DBUILD_SHARED_LIBS=1 \
+      -DINSTALL_LIBS=1 \
+      -DINSTALL_EXTRA_LIBS=1 \
+      -DBUILD_PYBULLET=ON \
+      -DBUILD_PYBULLET_NUMPY=ON \
+      -DBUILD_OPENGL3_DEMOS=ON \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBULLET2_MULTITHREADING=ON \
+      -DUSE_DOUBLE_PRECISION=ON \
+      -DCMAKE_SKIP_RPATH=YES
+  ninja -C build
+}
+
+_package() {
+  DESTDIR="${pkgdir}" ninja -C build install
+
+  cd build
+
+  install -Dm755 examples/ExampleBrowser/libBulletExampleBrowserLib.so.${pkgver} "${pkgdir}"/usr/lib/libBulletExampleBrowserLib.so.${pkgver}
+  install -Dm755 examples/OpenGLWindow/libOpenGLWindow.so "${pkgdir}"/usr/lib/libOpenGLWindow.so
+  install -Dm755 examples/ThirdPartyLibs/Gwen/libgwen.so "${pkgdir}"/usr/lib/libgwen.so
+  install -Dm755 examples/ThirdPartyLibs/BussIK/libBussIK.so "${pkgdir}"/usr/lib/libBussIK.so
+  install -Dm755 "${srcdir}"/bullet3_examplebrowser.sh "${pkgdir}"/usr/bin/bullet3_examplebrowser
+  install -Dm755 examples/ExampleBrowser/App_ExampleBrowser "${pkgdir}"/opt/bullet/App_ExampleBrowser
+  cp -r data "${pkgdir}"/opt/bullet/
+
+  install -Dm644 ../LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
+
+package_bullet() {
+  optdepends=('glu: for the example browser'
+              'python: python bindings'
+              'python-numpy: python bindings'
+              'bullet-docs: documentation')
+
+  cd bullet3-${_pkgver}
+
+  _package
+}
+
+package_bullet-dp() {
+  pkgdesc="A 3D Collision Detection and Rigid Body Dynamics Library for games and animation (double precision)"
+  conflicts=("bullet")
+  provides=("bullet")
+  optdepends=('glu: for the example browser'
+              'python: python bindings'
+              'python-numpy: python bindings'
+              'bullet-docs: documentation')
+
+  cd bullet3-${_pkgver}-dp
+
+  _package
+}
+
+package_python-pybullet() {
+  pkgdesc="Bullet Python bindings"
+  depends+=('bullet' 'gcc-libs')
+
+  cd bullet3-${_pkgver}
+
+  install -Dm755 build/examples/pybullet/libpybullet.so.${pkgver} "${pkgdir}"/usr/lib/libpybullet.so.${pkgver}
+  python setup.py install --prefix=/usr --root="${pkgdir}" --optimize=1 --skip-build
+
+  install -Dm644 LICENSE.txt "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
+
+package_bullet-docs() {
+  pkgdesc="Documentation for bullet"
+
+  cd bullet3-${_pkgver}
+
+  # install docs
+  install -Dm644 docs/GPU_rigidbody_using_OpenCL.pdf "${pkgdir}"/usr/share/doc/bullet/GPU_rigidbody_using_OpenCL.pdf
+  install -Dm644 docs/Bullet_User_Manual.pdf "${pkgdir}"/usr/share/doc/bullet/Bullet_User_Manual.pdf
+  install -Dm644 docs/BulletQuickstart.pdf "${pkgdir}"/usr/share/doc/bullet/BulletQuickstart.pdf
+  cp -r html "${pkgdir}"/usr/share/doc/bullet/html
+}
+# vim: sw=2 ts=2 et:
