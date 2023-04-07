@@ -3,34 +3,50 @@
 # Contributor: Sergej Pupykin <sergej@aur.archlinux.org>
 # Contributor: Douglas Soares de Andrade <dsandrade@gmail.com>
 
+_name=urwid
 pkgname=python-urwid
-pkgver=2.1.2
-pkgrel=3
+pkgver=2.1.2.r41.g0c0ea37
+# somewhere past 2.1.2 as there has not been a release in years ;_;
+# https://github.com/urwid/urwid/issues/511
+_commit=0c0ea377ab9b418cbb5233fa6e178dd05f1f4e5a
+pkgrel=1
 pkgdesc='Curses-based user interface library'
-url='http://urwid.org/'
+url='https://urwid.org/'
 arch=('x86_64')
 license=('LGPL')
 depends=('python' 'glibc')
-makedepends=('glibc' 'python-setuptools')
-source=(https://pypi.org/packages/source/u/urwid/urwid-${pkgver}.tar.gz)
-sha256sums=('588bee9c1cb208d0906a9f73c613d2bd32c3ed3702012f51efe318a3f2127eae')
-sha512sums=('f102bdde5f5d39d4bce455020bbe4f18290589da0750a3b15b1e2bc8acf8a405f02295d7efa3009877801a36bfbfade92ec963086122e9b133db137d816a1ea5')
+makedepends=(
+  'git'
+  'python-build'
+  'python-installer'
+  'python-setuptools'
+  'python-wheel'
+)
+source=(
+  git+https://github.com/$_name/$_name.git#commit=$_commit
+)
+sha256sums=('SKIP')
+sha512sums=('SKIP')
+
+pkgver() {
+  cd $_name
+  git describe --long --abbrev=7 | sed 's/^release-//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
 
 build() {
-  cd urwid-${pkgver}
-    python setup.py build
+  cd $_name
+  python -m build --wheel --no-isolation
 }
 
 check() {
-  cd urwid-${pkgver}
-    python setup.py test
-  
+  cd $_name
+  python -m unittest discover -vs $_name/tests
 }
 
 package() {
-  cd urwid-${pkgver}
-  python setup.py install --prefix=/usr --root="${pkgdir}" -O1 --skip-build
-  rm -r "${pkgdir}"/usr/lib/python*/site-packages/urwid/tests
+  cd $_name
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  rm -rv "${pkgdir}"/usr/lib/python*/site-packages/urwid/tests
 }
 
 # vim: ts=2 sw=2 et:
