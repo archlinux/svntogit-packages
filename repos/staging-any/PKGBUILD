@@ -1,0 +1,123 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Hugo Doria <hugo@archlinux.org>
+
+pkgbase=deluge
+pkgname=(deluge deluge-gtk)
+pkgver=2.1.1
+pkgrel=4
+epoch=1
+pkgdesc="BitTorrent client with multiple user interfaces in a client/server model"
+url="https://deluge-torrent.org/"
+arch=(any)
+license=(GPL3)
+depends=(
+  # Follows DEPENDS.md
+  'python-twisted>=17.1' python-service-identity python-idna
+  'openssl>=1.0.1'
+  python-pyopenssl
+  'python-rencode>=1.0.2'
+  python-xdg
+  'python-zope-interface>=4.4.2' 
+  python-chardet 
+  python-setproctitle 
+  python-pillow
+  python-dbus
+  python-ifaddr
+  python-distro
+  'libtorrent-rasterbar>=1.1.1'
+  python-geoip
+  python-mako
+)
+makedepends=(
+  git
+  python-setuptools
+  python-wheel
+  intltool
+  python-rjsmin
+  gtk3
+  python-gobject
+  python-cairo
+  librsvg
+  xdg-utils
+  libappindicator-gtk3
+  python-pygame
+  libnotify
+)
+_tag=bad29eb302ebaae8306fc2ecf4a953926d401173  # tags/deluge-2.1.1
+source=("git+https://git.deluge-torrent.org/deluge?signed#tag=$_tag")
+b2sums=('SKIP')
+validpgpkeys=(EA01185D0E8AA00D6323A30890597A687B836BA3) # Calum Lind <calumlind@gmail.com>
+
+pkgver() {
+  cd deluge
+  git describe --tags | sed 's/^deluge-//;s/\.dev0-/dev/;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd deluge
+}
+
+build() {
+  cd deluge
+  python setup.py build
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_deluge() {
+  cd deluge
+  python setup.py install --root="$pkgdir" --optimize=1 --skip-build
+
+  install -Dt "$pkgdir/usr/lib/systemd/system" \
+    -m644 packaging/systemd/*.service
+  install -Dt "$pkgdir/usr/lib/systemd/user" \
+    -m644 packaging/systemd/user/*.service
+  install -Dt "$pkgdir/usr/lib/systemd/system/deluged.service.d" \
+    -m644 packaging/systemd/user.conf
+  install -Dt "$pkgdir/usr/lib/systemd/system/deluge-web.service.d" \
+    -m644 packaging/systemd/user.conf
+
+  echo 'u deluge - "Deluge BitTorrent daemon" /srv/deluge' |
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
+  echo 'd /srv/deluge 0770 deluge deluge' |
+    install -Dm644 /dev/stdin "$pkgdir/usr/lib/tmpfiles.d/$pkgname.conf"
+
+  cd "$pkgdir"
+
+  _pick gtk usr/bin/deluge-gtk usr/share/man/man1/deluge-gtk.1
+  _pick gtk usr/share/{appdata,applications,icons,pixmaps}
+
+  local sitedir="$(python -c 'import site; print(site.getsitepackages()[0])')"
+  _pick gtk "${sitedir#/}"/deluge/ui/gtk3
+}
+
+package_deluge-gtk() {
+  pkgdesc="GTK UI for Deluge"
+  depends=(
+    "deluge=$epoch:$pkgver-$pkgrel"
+    gtk3
+    librsvg
+    python-cairo
+    python-gobject
+    xdg-utils
+  )
+  optdepends=(
+    'libappindicator-gtk3: appindicator notifications'
+    'python-pygame: audible notifications'
+    'libnotify: desktop notifications'
+  )
+  replaces=('deluge<2.0.4.dev23+g2f1c008a2-2')
+
+  mv gtk/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
