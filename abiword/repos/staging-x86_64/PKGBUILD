@@ -1,0 +1,90 @@
+# Maintainer: Jan de Groot <jgc@archlinux.org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
+# Contributor: Maël Lavault <moimael@neuf.fr>
+
+pkgname=abiword
+pkgver=3.0.5
+pkgrel=3
+pkgdesc='Fully-featured word processor'
+arch=('x86_64')
+license=('GPL')
+url='https://www.abisource.com'
+depends=('fribidi' 'wv' 'goffice' 'librsvg' 'enchant' 'desktop-file-utils'
+         'redland' 'libical' 'gtk-update-icon-cache' 'loudmouth' 'libwpg' 'libwps' 'libwmf' 'link-grammar' 
+         'gtkmathview' 'aiksaurus' 'libxslt' 'libsoup' 'libots' 'libgsf' 'psiconv')
+makedepends=('pkgconfig' 'boost' 'gobject-introspection' 'libwpd' 'libwps' 'python-gobject' 'autoconf-archive')
+conflicts=('abiword-plugins')
+replaces=('abiword-plugins')
+options=('!makeflags')
+source=(https://www.abisource.com/downloads/$pkgname/$pkgver/source/$pkgname-$pkgver.tar.gz{,.asc}
+        abiword-3.0.0-librevenge.patch
+	abiword-3.0.1-libwps-0.4.patch
+        abiword-gcc11.patch::https://github.com/AbiWord/abiword/commit/ef29fc94.patch
+        aiksaurus-plugin.m4
+        command-plugin.m4
+        python-override.patch
+        enchant-2.1.patch
+        # https://github.com/AbiWord/abiword/commit/de5dc5fd94a5fe321791d44e88d209a4972264ba
+        boost-asio.patch)	
+sha256sums=('1257247e9970508d6d1456d3e330cd1909c4b42b25e0f0a1bc32526d6f3a21b4'
+            'SKIP'
+            '77b52a3722096cec3bfbe4fff3802f51b6c9e0ff7aaa30028c29825fd4e6a65f'
+            'f1375b2ab7af2959717cba0259ba546c8e75ef849e84263bdc253019e849cb2a'
+            'd0d9baa60349fa3e1e9f594f896b82285a9378141ff973f4265295ab8475c413'
+            '5f80a2f94f9929cdba9809c5e1a87cd5d537a2518bb879bfb9eab51a71c8dac1'
+            '2f26826e9d59d80dacd0dae4aceb815804eaa75954e47507a0897794f33e45be'
+            'dba1e3265cd42589f17b41fea1a39c8aa4b83c7203b9d5944b578d0ff9c858be'
+            '444dc2aadea3c80310a509b690097541573f6d2652c573d04da66a0f385fcfb2'
+            '3d119595c8080f90570ce09e02d6765a0cb84b16f4cc51ef8eee4ff289c19e77')
+validpgpkeys=('6C44DB3E0BF3EAF5B433239A5FEE05E6A56E15A3') # Hubert Figuiere <hub@figuiere.net>
+
+prepare() {
+  cd $pkgname-$pkgver
+
+  # fix build with librevenge based import filters
+  patch -Np0 -i ../abiword-3.0.0-librevenge.patch
+
+  # Fix libwpd 0.4 detection
+  patch -Np1 -i ../abiword-3.0.1-libwps-0.4.patch
+
+  # Fix build with GCC 11
+  patch -p1 -i ../abiword-gcc11.patch
+
+  # Fix python override code to work with Python 3.x
+  patch -Np1 -i ../python-override.patch
+
+  # Replace deprecated enchant functions
+  patch -Np1 -i ../enchant-2.1.patch
+
+  # Install missing m4 file
+  install -m644 ../aiksaurus-plugin.m4 plugins/aiksaurus/plugin.m4
+  install -m644 ../command-plugin.m4 plugins/command/plugin.m4
+
+  # Generate m4 file for configure
+  find plugins -name plugin.m4 | xargs cat > plugin-configure.m4
+
+  # enchant-2 naming change
+  sed -i 's/enchant >=/enchant-2 >=/' configure.ac
+
+  libtoolize --force
+  autoreconf -fi
+}
+
+
+build() {
+  cd $pkgname-$pkgver
+  ./configure --prefix=/usr \
+    --enable-shared \
+    --disable-static \
+    --enable-clipart \
+    --enable-templates \
+    --enable-plugins \
+    --enable-introspection
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="$pkgdir" install
+}
