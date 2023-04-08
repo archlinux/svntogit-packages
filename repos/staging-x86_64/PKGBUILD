@@ -1,0 +1,49 @@
+# Maintainer: Jan Alexander Steffens (heftig) <jan.steffens@gmail.com>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: György Balló <ballogy@freestart.hu>
+
+pkgname=zeitgeist
+pkgver=1.0.4
+pkgrel=2
+pkgdesc="Service logging user activities and events"
+arch=(x86_64)
+url="https://launchpad.net/zeitgeist/"
+license=(GPL2 LGPL2.1)
+depends=(json-glib telepathy-glib gtk3 xapian-core sqlite)
+makedepends=(gobject-introspection vala raptor python-rdflib git)
+provides=(zeitgeist-datahub)
+conflicts=(zeitgeist-datahub)
+replaces=(zeitgeist-datahub)
+_commit=8b89364c077b46734d193c5b8a80f83b0fc917dd
+source=("git+https://gitlab.freedesktop.org/zeitgeist/zeitgeist#commit=$_commit")
+sha256sums=('SKIP')
+validpgpkeys=('E4884AEEDE4CC02043C3D8045DECDBA89270E723') #Rico Tzschichholz <ricotz@ubuntu.com>
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^v//;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  autoreconf -fi
+}
+
+build() {
+  cd $pkgname
+  ./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+    --libexecdir=/usr/lib --enable-fts
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  cd $pkgname
+  # Log test fails in chroot, as we have no X and no proper dbus
+  make -k check || :
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
