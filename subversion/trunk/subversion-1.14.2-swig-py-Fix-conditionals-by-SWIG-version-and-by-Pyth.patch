@@ -1,0 +1,64 @@
+From 8ff4cfd06ce554e9df31a088c9d09f45278c6de4 Mon Sep 17 00:00:00 2001
+From: Yasuhito Futatsuki <futatuki@apache.org>
+Date: Tue, 20 Sep 2022 12:57:06 +0000
+Subject: [PATCH] swig-py: Fix conditionals by SWIG version and by Python
+version for proxy code.
+
+We are using different code for proxy object, by Python version and by SWIG
+version.  The distinguish between Python 2 and Python 3 was done by SWIG
+macro "SWIGPYTHON_PY3".  However, the macro was dropped since SWIG commit
+a343b7e[1], between SWIG 4.0.2 release and upcoming SWIG 4.1.0 release.
+
+As we already dropped support for the combination of SWIG >= 4.0 and Python 2,
+we should detect Python 2 only in SWIG < 4.0 case. So we can rely on the macro
+only in the case.
+
+* subversion/bindings/swig/include/proxy.swg ():
+Reorder the conditionals distinguish SWIG versions and Python versions,
+as described above.
+
+Found by: Jitka Plesnikova (jplesnik {_AT_} redhat.com)
+
+Suggested by: Julien Schueller (schueller {_AT_} phimeca.com) [2]
+
+[1] https://github.com/swig/swig/commit/a343b7e254567a64761bc1be7dc55b7b7424ec52
+[2] https://github.com/swig/swig/issues/2373#issuecomment-1250997124
+
+
+git-svn-id: https://svn.apache.org/repos/asf/subversion/trunk@1904167 13f79535-47bb-0310-9956-ffa450edef68
+---
+ subversion/bindings/swig/include/proxy.swg | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/subversion/bindings/swig/include/proxy.swg b/subversion/bindings/swig/include/proxy.swg
+index ac67d434ca..7d2d0dd033 100644
+--- a/subversion/bindings/swig/include/proxy.swg
++++ b/subversion/bindings/swig/include/proxy.swg
+@@ -66,7 +66,6 @@
+         fn()
+ 
+ %}
+-#if defined(SWIGPYTHON_PY3)
+ #if SWIG_VERSION >= 0x040000
+ %pythoncode %{
+   # -classic and -modern options have been dropped and this variable
+@@ -76,7 +75,7 @@
+   _set_instance_attr = _swig_setattr_nondynamic_instance_variable(object.__setattr__)
+ 
+ %}
+-#else
++#elif defined(SWIGPYTHON_PY3)
+ %pythoncode %{
+   # SWIG classes generated with -modern do not define this variable
+   try:
+@@ -90,7 +89,6 @@
+   _set_instance_attr = _swig_setattr_nondynamic_method(object.__setattr__)
+ 
+ %}
+-#endif
+ #else
+ %pythoncode %{
+   # SWIG classes generated with -classic do not define this variable,
+-- 
+2.37.3
+
