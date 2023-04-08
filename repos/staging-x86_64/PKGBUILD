@@ -1,0 +1,72 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Lukas Fleischer <lfleischer@archlinux.org>
+# Contributor: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=libgit2-glib
+pkgname=(libgit2-glib libgit2-glib-docs)
+_commit=274f81c596b7c248407c14d4a7d58d72fb12cedc  # tags/v1.1.0^{}
+pkgver=1.1.0
+pkgrel=3
+pkgdesc="GLib wrapper for libgit2"
+url="https://gitlab.gnome.org/GNOME/libgit2-glib"
+license=(LGPL2.1)
+arch=(x86_64)
+makedepends=(gi-docgen git glib2 gobject-introspection gtk-doc libgit2 meson
+python-gobject vala)
+source=(git+$url.git#commit=$_commit)
+sha256sums=('SKIP')
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/\([^-]*-g\)/r\1/;s/v//g;s/-/./g'
+}
+
+build() {
+  arch-meson $pkgname build -D gtk_doc=true
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package_libgit2-glib() {
+  depends=(
+    glib2 libgio-2.0.so libglib-2.0.so libgobject-2.0.so
+    glibc
+    libgit2 libgit2.so
+  )
+  optdepends=(
+    'libgit2-glib-docs: for developer documentation'
+    'python-gobject: for Python integration'
+  )
+  provides=(libgit2-glib-1.0.so)
+
+  meson install -C build --destdir "$pkgdir"
+  (
+    cd "$pkgdir"
+    _pick libgit2-glib-docs usr/share/gtk-doc
+  )
+
+  # strip $pkgdir from embedded paths:
+  python -m compileall -d "/usr/lib" "$pkgdir/usr/lib"
+  python -O -m compileall -d "/usr/lib" "$pkgdir/usr/lib"
+
+  install -vDm 644 $pkgname/{AUTHORS,ChangeLog,NEWS,README} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
+
+package_libgit2-glib-docs() {
+  pkgdesc+=" - documentation"
+
+  mv -v $pkgname/* "$pkgdir"
+}
