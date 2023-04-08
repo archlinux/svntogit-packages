@@ -1,0 +1,45 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+
+pkgbase=openbabel
+pkgname=(openbabel python-openbabel)
+pkgver=3.1.1
+pkgrel=7
+pkgdesc='A library designed to interconvert between many file formats used in molecular modeling and computational chemistry'
+arch=(x86_64)
+url='https://openbabel.org/wiki/Main_Page'
+license=(GPL)
+makedepends=(cmake eigen wxwidgets-gtk3 boost python swig maeparser rapidjson coordgen)
+source=(https://github.com/openbabel/openbabel/releases/download/openbabel-${pkgver//./-}/openbabel-$pkgver-source.tar.bz2
+        https://github.com/openbabel/openbabel/commit/c0570bfe.patch)
+sha256sums=('a6ec8381d59ea32a4b241c8b1fbd799acb52be94ab64cdbd72506fb4e2270e68'
+            '70e16fe1ae60806ef1a022e6b768e9ebd0b1d832d052d4ceea30cbb76354ca7c')
+
+prepare() {
+  patch -d openbabel-$pkgver -p1 < c0570bfe.patch # Fix build with GCC 12
+}
+
+build() {
+  cmake -B build -S openbabel-$pkgver \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DRUN_SWIG=ON \
+    -DPYTHON_BINDINGS=ON
+  cmake --build build
+
+  # To split python bindings
+  sed -i '/scripts.cmake_install.cmake/d' build/cmake_install.cmake
+}
+
+package_openbabel() {
+  depends=(libxml2 cairo coordgen)
+  optdepends=('wxwidgets-gtk3: GUI interface')
+
+  DESTDIR="$pkgdir" cmake --install build
+}
+
+package_python-openbabel() {
+  depends=(python openbabel)
+
+  DESTDIR="$pkgdir" cmake --install build/scripts
+}
