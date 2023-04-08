@@ -1,0 +1,88 @@
+# Maintainer: Florian Pritz <bluewind@xinu.at>
+# Contributor: Eric Bélanger <eric@archlinux.org>
+
+pkgname=syslog-ng
+pkgver=4.1.1
+pkgrel=1
+pkgdesc="Next-generation syslogd with advanced networking and filtering capabilities"
+arch=('x86_64')
+url="https://www.syslog-ng.com/products/open-source-log-management/"
+license=('GPL2' 'LGPL2.1')
+depends=(
+  'awk'
+  'bash'
+  'curl'
+  'glib2'
+  'glibc'
+  'json-c'
+  'libcap'
+  'libnet'
+  'libnsl'
+  'openssl'
+  'systemd-libs'
+)
+makedepends=('libxslt' 'mongo-c-driver' 'librabbitmq-c' 'python' 'libesmtp' 'hiredis'
+             'libdbi' 'libmaxminddb' 'net-snmp' 'librdkafka' 'systemd')
+checkdepends=('python-nose' 'python-ply')
+optdepends=('logrotate: for rotating log files'
+            'libdbi: for the SQL plugin'
+            'librabbitmq-c: for the AMQP plugin'
+            'mongo-c-driver: for the MongoDB plugin'
+            'libesmtp: for the SMTP plugin'
+            'hiredis: for the Redis plugin'
+            'libmaxminddb: for the GeoIP2 plugin'
+            'net-snmp: for the SNMP plugin'
+            'librdkafka: for the Kafka C plugin'
+            'python: for Python-based plugins'
+            'python-ply: for debugger CLI')
+conflicts=('eventlog')
+replaces=('eventlog')
+backup=('etc/syslog-ng/scl.conf'
+        'etc/syslog-ng/syslog-ng.conf'
+        'etc/logrotate.d/syslog-ng'
+        'etc/default/syslog-ng@default')
+source=(https://github.com/balabit/syslog-ng/releases/download/syslog-ng-$pkgver/$pkgname-$pkgver.tar.gz
+        syslog-ng.conf syslog-ng.logrotate)
+sha512sums=('89abb7a53570b6f7c0dc76905c97d207447117f1db1aa0c0da97c17366ea833b6404f9c7fc318436fd01be2bab032eccca9712063a7c683780026e7e52493dc8'
+            '36629a566a8343574dc07430e744e20ce90574be0cc856bc43340f834cd6642a8f08889b9ba15996d088aeebeee4bc3ca64411265046c17c8e125fbed8948ded'
+            'cd39f545a6a855c866a466bf846e33940b2c2dd1fc2eaf50cce29c68e1a5753c7c4b56411e4f01c152f32e155104a98dd755a96319767f47c73a8853f720b2cc')
+
+prepare() {
+  cd $pkgname-$pkgver
+  sed -i -e 's,/bin/,/usr/bin/,' -e 's,/sbin/,/bin/,' contrib/systemd/syslog-ng@.service
+  sed -i -e 's|/var/run|/run|g' contrib/systemd/syslog-ng@default
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+  # https://archlinux.org/todo/lto-fat-objects/
+  export CFLAGS+=" -ffat-lto-objects"
+  export CXXFLAGS+=" -ffat-lto-objects"
+
+
+  ./autogen.sh
+  ./configure --prefix=/usr --sysconfdir=/etc/syslog-ng --libexecdir=/usr/lib \
+    --sbindir=/usr/bin --localstatedir=/var/lib/syslog-ng --datadir=/usr/share \
+    --with-pidfile-dir=/run --enable-spoof-source --enable-ipv6 \
+    --enable-systemd --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --enable-manpages --enable-all-modules --disable-java --disable-java-modules  \
+    --disable-mqtt --disable-riemann --with-python=3 --with-jsonc=system
+  # prevent excessive overlinking due to libtool
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+# TODO: package criterion
+# check() {
+#   cd $pkgname-$pkgver
+#   make check
+# }
+
+package() {
+  make -C $pkgname-$pkgver DESTDIR="$pkgdir" install
+  install -dm755 "$pkgdir/var/lib/syslog-ng" "$pkgdir/etc/syslog-ng/patterndb.d"
+  install -Dm644 "$srcdir/syslog-ng.conf" "$pkgdir/etc/syslog-ng/syslog-ng.conf"
+  install -Dm644 "$srcdir/syslog-ng.logrotate" "$pkgdir/etc/logrotate.d/syslog-ng"
+  install -Dm644 "$srcdir"/$pkgname-$pkgver/contrib/systemd/syslog-ng@default -t "$pkgdir"/etc/default
+}
