@@ -5,7 +5,7 @@
 pkgname=qt6-base
 _qtver=6.5.0
 pkgver=${_qtver/-/}
-pkgrel=1
+pkgrel=2
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -50,10 +50,11 @@ build() {
     -DINSTALL_INCLUDEDIR=include/qt6 \
     -DINSTALL_MKSPECSDIR=lib/qt6/mkspecs \
     -DINSTALL_EXAMPLESDIR=share/doc/qt6/examples \
-    -DQT_FEATURE_journald=ON \
-    -DQT_FEATURE_openssl_linked=ON \
-    -DQT_FEATURE_system_sqlite=ON \
-    -DQT_FEATURE_system_xcb_xinput=ON \
+    -DFEATURE_journald=ON \
+    -DFEATURE_openssl_linked=ON \
+    -DFEATURE_system_sqlite=ON \
+    -DFEATURE_system_xcb_xinput=ON \
+    -DFEATURE_reduce_relocations=OFF \
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
     -DCMAKE_MESSAGE_LOG_LEVEL=STATUS
   cmake --build build
