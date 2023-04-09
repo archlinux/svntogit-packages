@@ -3,7 +3,7 @@
 
 pkgname=python-requests
 pkgver=2.28.2
-pkgrel=3
+pkgrel=4
 pkgdesc="Python HTTP for Humans"
 arch=('any')
 url="https://requests.readthedocs.io/"
