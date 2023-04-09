@@ -5,7 +5,7 @@
 pkgname=python-setuptools
 pkgver=67.6.1
 _commit=245d72a8aa4d47e1811425213aba2a06a0bb64fa
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Easily download, build, install, upgrade, and uninstall Python packages"
 arch=('any')
