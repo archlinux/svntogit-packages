@@ -4,7 +4,7 @@
 
 pkgname=python-zope-interface
 pkgver=6.0
-pkgrel=2
+pkgrel=3
 license=('ZPL')
 arch=('x86_64')
 url="https://pypi.python.org/pypi/zope.interface"
@@ -26,7 +26,7 @@ build() {
 
 check() {
   cd zope.interface-$pkgver
-  PYTHONPATH="$PWD/build/lib.linux-$CARCH-cpython-310" python setup.py test
+  PYTHONPATH="$PWD/build/lib.linux-$CARCH-cpython-311" python setup.py test
 }
 
 package() {
