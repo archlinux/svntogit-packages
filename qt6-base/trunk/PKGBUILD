@@ -57,6 +57,7 @@ build() {
     -DFEATURE_reduce_relocations=OFF \
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
     -DCMAKE_MESSAGE_LOG_LEVEL=STATUS
+# -DFEATURE_reduce_relocations=OFF for https://bugreports.qt.io/browse/QTBUG-112332
   cmake --build build
 }
 
