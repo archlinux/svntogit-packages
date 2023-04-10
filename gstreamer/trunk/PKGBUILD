@@ -26,7 +26,7 @@ pkgname=(
   gstreamer-docs
 )
 pkgver=1.22.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Multimedia graph framework"
 url="https://gstreamer.freedesktop.org/"
 arch=(x86_64)
@@ -76,13 +76,15 @@ source=(
   0001-HACK-meson-Disable-broken-tests.patch
   0002-zxing-update-to-2.0.0-tag.patch
   0003-imagesequencesrc-Properly-set-default-location.patch
+  0004-tests-allocators-Fix-fdmem-test.patch
 )
 b2sums=('SKIP'
         '9f8e55732a60aebc8f0f50ba41ef06a739c80290f552f19c80ce71206e1094aadec5dcc57c908a277b33770f505b8f6b6e0e196abc8237778a3d4880bcd6d89a'
         'SKIP'
         '7fa36829d5ebfb7b673a0fc36b8606d7e8e23975158e59406e9e31c2d82a6c774221b21ae6a49ef234f109e3a352ca04bf50d15f0e66b30667dd5df8cb80bc48'
         '9934ab83fb55e2c8b48ede8d1d018d3757725dc869bb9fe20bd66982d04ca164f41a07968c83105be96e4262fd05d9917ed365cd7eb360259174ee9ba6d8f1ad'
-        'fd5bfeaf5a08f225bfb81df1beac55c3d7332aa4ffb1ba0a3e662dccea6b5ca43eecee92578c54d2fc1e3aa2edc73eb09a02e9c0a8ac3ad2002995a6a0396fa2')
+        'fd5bfeaf5a08f225bfb81df1beac55c3d7332aa4ffb1ba0a3e662dccea6b5ca43eecee92578c54d2fc1e3aa2edc73eb09a02e9c0a8ac3ad2002995a6a0396fa2'
+        '6ff8ca454f9b4778c62163364ecda8346516de92f28cbeaa7ccb63010232e09cdc8c6cbcaa9cec7627cf03e434d78fba29b7e9e86aaf7101ba3c80b8527d720f')
 validpgpkeys=(D637032E45B8C6585B9456565D2EEE6F6F349D7C) # Tim Müller <tim@gstreamer-foundation.org>
 
 prepare() {
@@ -96,6 +98,9 @@ prepare() {
 
   # Fix crash
   git apply -3 ../0003-imagesequencesrc-Properly-set-default-location.patch
+
+  # Fix fdmem test
+  git apply -3 ../0004-tests-allocators-Fix-fdmem-test.patch
 }
 
 build() {
@@ -161,7 +166,7 @@ check() (
 
   # Flaky due to timeouts
   xvfb-run -s '-nolisten local' \
-    meson test -C build --print-errorlogs -t 3
+    meson test -C build --print-errorlogs -t 3 --num-processes 4
 )
 
 _install() {
