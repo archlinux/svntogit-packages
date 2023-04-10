@@ -1,45 +1,49 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=pahole
-pkgver=1.24+r29+g02d67c5
-pkgrel=2
+pkgver=1.25
+pkgrel=1
 epoch=1
 pkgdesc="Pahole and other DWARF utils"
 url="https://git.kernel.org/pub/scm/devel/pahole/pahole.git"
 arch=(x86_64)
 license=(GPL2)
-depends=(libelf python)
-makedepends=(git cmake ninja)
+depends=(
+  libelf
+  python-matplotlib
+)
+makedepends=(
+  cmake
+  ninja
+)
 provides=(libdwarves{,_emit,_reorganize}.so)
 _commit=02d67c51765dfbd5893087da63744c864c7cc9e0  # master
-source=("git+https://git.kernel.org/pub/scm/devel/pahole/pahole.git#commit=$_commit"
-        "git+https://github.com/libbpf/libbpf"
-        python.diff)
-sha256sums=('SKIP'
-            'SKIP'
-            '12f3d83bda3ec503aca910d0a4372ff8c72886a02aa512b2f37c3f1b21c690c7')
-
-pkgver() {
-  cd pahole
-  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
-}
+source=(
+  https://fedorapeople.org/~acme/dwarves/dwarves-$pkgver.tar.{xz,sign}
+  python.diff
+)
+b2sums=('1926fa1fa123fc3ad0f7f063406260b1e1e2611c563fedebee4c837e491164571fdb40408421c0c4ea2fd24e89c54a7a1ea669313b6dd6d7dcfa4934e2c1336e'
+        'SKIP'
+        'e88fcda77c0a6aaea0d83949cabbaaaf24f6a4b2324a14e459efc202b210c31b58f7a90c75c34ffd08911514b3b6db4be4423e3f8e0fb50b6d914da5be002319')
+validpgpkeys=(
+  2DBF5BAA46FB4DED338A335BD65016F35352AA40  # Arnaldo Carvalho de Melo <acme@kernel.org>
+)
 
 prepare() {
-  cd pahole
+  cd dwarves-$pkgver
 
   # https://bugs.archlinux.org/task/70013
-  git apply -3 ../python.diff
-
-  git submodule init
-  git submodule set-url lib/bpf "$srcdir/libbpf"
-  git -c protocol.file.allow=always submodule update
+  patch -Np1 -i ../python.diff
 }
 
 build() {
-  cmake -S pahole -B build -G Ninja \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_BUILD_TYPE=None \
+  local cmake_options=(
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_BUILD_TYPE=None
     -D__LIB=lib
+  )
+
+  cmake -S dwarves-$pkgver -B build -G Ninja "${cmake_options[@]}"
   cmake --build build
 }
 
@@ -55,4 +59,4 @@ package() {
   python -O -m compileall -d / "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
