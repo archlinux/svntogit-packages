@@ -4,7 +4,7 @@
 pkgname=qt6-quickeffectmaker
 _qtver=6.5.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -13,17 +13,31 @@ depends=(qt6-shadertools qt6-quick3d)
 makedepends=(cmake ninja)
 groups=(qt6)
 _pkgfn=${pkgname/6-/}-everywhere-src-$_qtver
-source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz)
-sha256sums=('4b32c672cad0f7890f56a59486bd79cf8fa4ad208fb0f7c25e14e0aa2fb29cd7')
+source=(https://download.qt.io/official_releases/qt/${pkgver%.*}/$_qtver/submodules/$_pkgfn.tar.xz
+        ae9e00fd.patch::https://code.qt.io/cgit/qt/qtquickeffectmaker.git/patch/?id=ae9e00fd)
+sha256sums=('4b32c672cad0f7890f56a59486bd79cf8fa4ad208fb0f7c25e14e0aa2fb29cd7'
+            '2194f0684e5cb3955b074f46eba07bbcdf83a4f7c63a3ec5b508ce97ad75d91a')
+
+prepare() {
+  patch -d $_pkgfn -p1 < ae9e00fd.patch # Set qqem as user-facing so it's symlinked in /usr/bin
+}
 
 build() {
   cmake -B build -S $_pkgfn -G Ninja \
-    -DCMAKE_MESSAGE_LOG_LEVEL=STATUS
+    -DCMAKE_MESSAGE_LOG_LEVEL=STATUS \
+    -DINSTALL_PUBLICBINDIR=usr/bin
   cmake --build build
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
+
+# Install symlinks for user-facing tools
+  cd "$pkgdir"
+  mkdir usr/bin
+  while read _line; do
+    ln -s $_line
+  done < "$srcdir"/build/user_facing_tool_links.txt
 
   install -d "$pkgdir"/usr/share/licenses
   ln -s /usr/share/licenses/qt6-base "$pkgdir"/usr/share/licenses/$pkgname
