@@ -5,7 +5,7 @@
 pkgname=qt6-base
 _qtver=6.5.0
 pkgver=${_qtver/-/}
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.qt.io'
 license=(GPL3 LGPL3 FDL custom)
@@ -54,10 +54,9 @@ build() {
     -DFEATURE_openssl_linked=ON \
     -DFEATURE_system_sqlite=ON \
     -DFEATURE_system_xcb_xinput=ON \
-    -DFEATURE_reduce_relocations=OFF \
+    -DFEATURE_no_direct_extern_access=ON \
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
     -DCMAKE_MESSAGE_LOG_LEVEL=STATUS
-# -DFEATURE_reduce_relocations=OFF for https://bugreports.qt.io/browse/QTBUG-112332
   cmake --build build
 }
 
