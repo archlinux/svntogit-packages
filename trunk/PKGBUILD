@@ -2,7 +2,7 @@
 
 pkgname=python-attrs
 pkgver=22.2.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Attributes without boilerplate."
 arch=('any')
 license=('MIT')
