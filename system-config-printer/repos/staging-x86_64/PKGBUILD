@@ -1,0 +1,48 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=system-config-printer
+pkgver=1.5.18
+pkgrel=2
+pkgdesc="A CUPS printer configuration tool and status applet"
+url="https://github.com/OpenPrinting/system-config-printer"
+arch=('x86_64')
+license=('GPL')
+depends=('python-pycups' 'python-dbus' 'python-pycurl' 'libnotify'
+         'python-gobject' 'gtk3' 'python-cairo' 'libusb')
+makedepends=('xmlto' 'docbook-xsl' 'desktop-file-utils' 'libsecret')
+optdepends=('libsecret: password management'
+            'python-pysmbc: SMB browser support'
+            'cups-pk-helper: PolicyKit helper to configure cups with fine-grained privileges')
+source=(https://github.com/OpenPrinting/system-config-printer/releases/download/v${pkgver}/system-config-printer-${pkgver}.tar.xz{,.asc})
+sha256sums=('b1a69e1b4ec2add569a87aeca811a37c5361ee6ae327ec852b79e64223e34bee'
+            'SKIP')
+validpgpkeys=('7082A0A50A2E92640F3880E0E4522DCC9B246FF7') # Zdenek Dohnal (The old 4D4227D7 key revoked) <zdohnal@redhat.com>
+
+build() {
+  cd ${pkgname}-${pkgver}
+
+  ./configure --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-udevdir=/usr/lib/udev \
+    --with-udev-rules \
+    --with-cups-serverbin-dir=/usr/lib/cups
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="$pkgdir" install
+
+  # Compile *.pyc
+  find "$pkgdir" -name '*.py' -exec python -mpy_compile {} +
+  # Compile *.pyo
+  find "$pkgdir" -name '*.py' -exec python -O -mpy_compile {} +
+  
+  # fix dbus policy location
+  install -dm755 "$pkgdir"/usr/share/dbus-1/system.d
+  mv "$pkgdir"/etc/dbus-1/system.d/* "$pkgdir"/usr/share/dbus-1/system.d
+  rm -rf "$pkgdir"/etc/dbus-1
+}
