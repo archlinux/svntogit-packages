@@ -4,7 +4,7 @@
 
 pkgname=meson
 pkgver=1.0.1
-pkgrel=2
+pkgrel=3
 pkgdesc="High productivity build system"
 url="https://mesonbuild.com/"
 arch=(any)
