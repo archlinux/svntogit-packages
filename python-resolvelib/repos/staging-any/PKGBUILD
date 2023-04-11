@@ -1,0 +1,49 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+_name=resolvelib
+pkgname=python-resolvelib
+pkgver=1.0.1
+pkgrel=1
+pkgdesc="Resolve abstract dependencies into concrete ones"
+url="https://github.com/sarugaku/resolvelib"
+license=(custom:ISC)
+arch=(any)
+depends=(python)
+makedepends=(
+  python-build
+  python-installer
+  python-setuptools
+  python-wheel
+)
+checkdepends=(
+  python-commentjson
+  python-packaging
+  python-pytest
+)
+# test files not in pypi sdist tarballs because of reasons: https://github.com/sarugaku/resolvelib/issues/108
+source=($_name-$pkgver.tar.gz::https://github.com/sarugaku/resolvelib/archive/refs/tags/$pkgver.tar.gz)
+sha512sums=('a35f7fdbc3aba5b44fdf6b9c55b082156ca641dfe5825611be6364622bcaaf45faafa2c45bdd13d1b5723a55732759a806905ab4b6f366fba0474d1f808d91bc')
+b2sums=('7715f61d262cb79ce08f0431650e6213def4582a0774cf36dab722d88013f7bc9c72a31a957d3782e35b315158982c3311fe3e06e26bbf9040fa96b239934661')
+
+build() {
+  cd $_name-$pkgver
+  python -m build --wheel --no-isolation
+}
+
+check() {
+  local _site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+
+  cd $_name-$pkgver
+  # install to temporary location
+  python -m installer --destdir=test_dir dist/*.whl
+  export PYTHONPATH="test_dir/$_site_packages:$PYTHONPATH"
+  pytest -vv
+}
+
+package() {
+  cd $_name-$pkgver
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+  install -vDm 644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
+}
