@@ -6,6 +6,7 @@
 pkgbase=plasma-workspace
 pkgname=(plasma-workspace plasma-wayland-session)
 pkgver=5.27.4.1
+_dirver=$(echo $pkgver | cut -d. -f1-3)
 pkgrel=1
 pkgdesc='KDE Plasma Workspace'
 arch=(x86_64)
@@ -17,7 +18,7 @@ depends=(knotifyconfig ksystemstats ktexteditor libqalculate kde-cli-tools appst
          accountsservice kio-extras kio-fuse qt5-tools oxygen-sounds)
 makedepends=(extra-cmake-modules kdoctools gpsd baloo networkmanager-qt plasma-wayland-protocols wayland-protocols kunitconversion)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/${pkgver%.*}/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
+source=(https://download.kde.org/stable/plasma/$_dirver/$pkgbase-$pkgver.tar.xz{,.sig} kde.pam)
 sha256sums=('cb3906ac954bfd0784614843b1aaf9abda640ea3ed944d8651aaa4149baf65a5'
             'SKIP'
             '00090291204baabe9d6857d3b1419832376dd2e279087d718b64792691e86739')
