@@ -4,6 +4,7 @@
 
 pkgname=khotkeys
 pkgver=5.27.4
+_dirver=$(echo $pkgver | cut -d. -f1-3)
 pkgrel=1
 pkgdesc='KHotKeys'
 arch=(x86_64)
@@ -12,7 +13,7 @@ license=(LGPL)
 depends=(plasma-workspace kdelibs4support)
 makedepends=(extra-cmake-modules kdoctools kdesignerplugin kinit)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig})
+source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig})
 sha256sums=('841224dea79b4607ecebe79b5c94e36bfbc290b623d5efe5dbe1cd566a921023'
             'SKIP')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
