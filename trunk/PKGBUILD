@@ -4,6 +4,7 @@
 
 pkgname=kwin
 pkgver=5.27.4.1
+_dirver=$(echo $pkgver | cut -d. -f1-3)
 pkgrel=1
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
@@ -15,7 +16,7 @@ makedepends=(extra-cmake-modules qt5-tools kdoctools krunner wayland-protocols p
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 replaces=(kwayland-server)
 groups=(plasma)
-source=(https://download.kde.org/stable/plasma/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig})
+source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig})
 install=$pkgname.install
 sha256sums=('b39f1d3cc528505213dbb72958e80d6cdad75617cb26c215607d6f12bf0e02b1'
             'SKIP')
