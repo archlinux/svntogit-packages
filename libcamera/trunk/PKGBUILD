@@ -10,7 +10,7 @@ pkgname=(
 )
 pkgver=0.0.4
 _commit=6a57d964abdb3f24608c0fc2839d96e02eebddeb  # refs/tags/v0.0.4
-pkgrel=3
+pkgrel=4
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
 url="https://libcamera.org/"
@@ -53,8 +53,12 @@ _pick() {
 
 prepare() {
   cd $pkgname
+
   # add version, so that utils/gen-version.sh may rely on it
   printf "%s\n" "$pkgver" > .tarball-version
+
+  # Fix exponential callback explosion
+  git cherry-pick -n a146e05125fdac75b8ffb6a818e00a446cec65dd
 }
 
 build() {
