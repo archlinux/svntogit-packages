@@ -1,0 +1,77 @@
+# Maintainer: AndyRTR <andyrtr@archlinux.org>
+
+# Contributor: Alexander Rødseth <rodseth@gmail.com>
+# Contributor: Mateusz Herych <heniekk@gmail.com>
+# Contributor: royrocks <royrocks13@gmail.com>
+
+pkgname=libpaper
+pkgver=2.1.0
+pkgrel=1
+pkgdesc="Library for handling paper characteristics"
+arch=('x86_64')
+url="https://github.com/rrthomas/libpaper"
+license=('LGPL2.1' 'GPL3')
+depends=('glibc')
+backup=('etc/papersize')
+source=(https://github.com/rrthomas/libpaper/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz
+        localepaper.c)
+sha256sums=('474e9575e1235a0d8e3661f072de0193bab6ea1023363772f698a2cc39d640cf'
+            '7e49c6ce67fbaea77929ab5849026412d0f91f692a902805c0134a071cccde22')
+provides=('paper')
+replaces=('paper')
+conflicts=('paper')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  cp ../localepaper.c src/
+  #autoreconf -vfi
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --sbindir=/usr/bin
+  make
+  # localepaper
+  pushd src
+  gcc $CFLAGS $LDFLAGS -I.. -Ilibgnu -o localepaper localepaper.c libgnu/.libs/libgnupaper.a
+  popd
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  make -k check
+}
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir" install
+  
+  # localepaper
+  install -Dt "$pkgdir/usr/lib" -m0755 src/localepaper 
+  
+
+  # add systemwide default papersize read by many office applications
+  install -dm 755 "$pkgdir"/etc
+  echo '# Simply write the paper name. See man 1 paper and "paper --no-size --all" for possible values' > "$pkgdir"/etc/papersize
+
+  # add libpaper.d directory other packages can use to store files
+  install -dm 755 "$pkgdir"/etc/libpaper.d
+
+  # https://github.com/rrthomas/libpaper/commit/b4f6846a3a9ae052a515ac0db913e5a68f947adf
+  # reintroduced deprecated paperconf binary
+#  # add paperconf executable, needed by libreoffice
+#  cat <<EOF > "${pkgdir}"/usr/bin/paperconf
+#exec paper --no-size "\$@"
+#EOF
+#  chmod 755 "${pkgdir}"/usr/bin/paperconf
+
+  # currently no localisation available
+#  pushd debian/po
+#  for i in `ls *.po`; do
+#	install -dm 755 "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/;
+#	msgfmt $i -o "${pkgdir}"/usr/share/locale/${i%.po}/LC_MESSAGES/${pkgname}.mo;
+#  done
+#  popd
+}
