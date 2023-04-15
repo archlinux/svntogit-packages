@@ -2,10 +2,10 @@
 
 set -eo pipefail
 
-readonly upstream=https://mailfud.org/geoip-legacy/
+readonly upstream=https://mailfud.org/geoip-legacy
 
-version=$(curl -s "$upstream/build.log" | grep -Po 'CSV_\K[0-9]{8}' |
-	sort -n | tail -1)
+lastmod=$(curl -sI "$upstream/GeoIP.dat.gz" | grep -i last-modified | cut -d: -f2)
+version=$(date -d "$lastmod" +%Y%m%d)
 
 if [[ ${#version} != 8 ]]; then
 	echo >&2 'Unable to determine upstream database version'
