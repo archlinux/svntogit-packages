@@ -1,9 +1,9 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-cryptography
-pkgver=40.0.1
-_commit=9dd0b26c48f567d5a7c4a0bc9f45ef2176a2d4a4
-pkgrel=3
+pkgver=40.0.2
+_commit=f816b457494e010b655cd7fdcd30e3446f86a703
+pkgrel=1
 pkgdesc="A package designed to expose cryptographic recipes and primitives to Python developers"
 arch=('x86_64')
 license=('Apache')
