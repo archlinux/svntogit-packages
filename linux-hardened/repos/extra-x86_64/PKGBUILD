@@ -4,7 +4,7 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=linux-hardened
-pkgver=6.1.24.hardened1
+pkgver=6.1.24.hardened2
 pkgrel=1
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
@@ -30,7 +30,7 @@ validpgpkeys=(
 )
 sha256sums=('aae6a7e38e33589011f5a5c0d7e087c8a26e3daf8d434432ee975ead90546504'
             'SKIP'
-            '8ade5aae62e95550ffb78eff31b7fea5dd29fa2aef83cac716210a894171efbb'
+            '38c1e8ecdc640ac280de760e41f10d27ba818d0a129f847db6136efc00964cae'
             'SKIP'
             '9ce2639b0ff8f007bb2b2d34702170a08bda95a84a43bce968e720dfc54cc8a1')
 
