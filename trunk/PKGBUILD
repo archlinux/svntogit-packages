@@ -69,6 +69,8 @@ package_util-linux() {
           etc/pam.d/su
           etc/pam.d/su-l)
 
+  _python_stdlib="$(python -c 'import sysconfig; print(sysconfig.get_paths()["stdlib"])')"
+
   make -C "${pkgbase}-${_realver}" DESTDIR="${pkgdir}" usrsbin_execdir=/usr/bin install
 
   # remove static libraries
@@ -94,8 +96,8 @@ package_util-linux() {
   mv "$pkgdir"/usr/lib/lib*.so* util-linux-libs/lib/
   mv "$pkgdir"/usr/lib/pkgconfig util-linux-libs/lib/pkgconfig
   mv "$pkgdir"/usr/include util-linux-libs/include
-  mv "$pkgdir"/usr/lib/python3.11/site-packages util-linux-libs/site-packages
-  rmdir "$pkgdir"/usr/lib/python3.11
+  mv "$pkgdir"/"${_python_stdlib}"/site-packages util-linux-libs/site-packages
+  rmdir "$pkgdir"/"${_python_stdlib}"
   mv "$pkgdir"/usr/share/man/man3 util-linux-libs/man3
 
   # install systemd-sysusers
@@ -119,9 +121,9 @@ package_util-linux-libs() {
   replaces=('libutil-linux')
   optdepends=('python: python bindings to libmount')
 
-  install -d -m0755 "$pkgdir"/usr/{lib/python3.11/,share/man/}
+  install -d -m0755 "$pkgdir"/{"${_python_stdlib}",usr/share/man/}
   mv util-linux-libs/lib/* "$pkgdir"/usr/lib/
   mv util-linux-libs/include "$pkgdir"/usr/include
-  mv util-linux-libs/site-packages "$pkgdir"/usr/lib/python3.11/site-packages
+  mv util-linux-libs/site-packages "$pkgdir"/"${_python_stdlib}"/site-packages
   mv util-linux-libs/man3 "$pkgdir"/usr/share/man/man3
 }
