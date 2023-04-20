@@ -4,37 +4,59 @@
 # Contributor: pumbur
 
 pkgbase=opus
-pkgname=(opus opus-docs)
-pkgver=1.3.1
-pkgrel=3
+pkgname=(
+  opus
+  opus-docs
+)
+pkgver=1.4
+pkgrel=1
 pkgdesc="Totally open, royalty-free, highly versatile audio codec"
 url="https://www.opus-codec.org/"
 arch=(x86_64)
 license=(BSD)
-depends=(glibc)
-makedepends=(doxygen)
-source=(https://archive.mozilla.org/pub/opus/opus-$pkgver.tar.gz)
-sha256sums=('65b58e1e25b2a114157014736a3d9dfeaad8d41be1c8179866f144a2fb44ff9d')
+depends=(
+  glibc
+)
+makedepends=(
+  doxygen
+  git
+  meson
+)
+_commit=82ac57d9f1aaf575800cf17373348e45b7ce6c0d  # tags/v1.4^0
+source=("git+https://github.com/xiph/opus#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd opus
+  git describe --tags | sed 's/^v//;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd opus
+}
 
 build() {
-  cd opus-$pkgver
-  ./configure --prefix=/usr --disable-static --enable-custom-modes
-  make
+  local meson_options=(
+    -D asm=disabled
+    -D custom-modes=true
+  )
+
+  arch-meson opus build "${meson_options[@]}"
+  meson compile -C build
 }
 
 check() {
-  cd opus-$pkgver
-  make check
+  meson test -C build --print-errorlogs
 }
 
 package_opus() {
   provides=(libopus.so)
 
-  cd opus-$pkgver
-  make DESTDIR="$pkgdir" install
-  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 COPYING
+  meson install -C build --destdir "$pkgdir"
+  install -Dt "$pkgdir/usr/share/aclocal" -m644 opus/opus.m4
 
-  cd ..
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 opus/COPYING
+
   mkdir -p doc/usr/share
   mv {"$pkgdir",doc}/usr/share/doc
 }
@@ -46,4 +68,4 @@ package_opus-docs() {
   mv doc/* "$pkgdir"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
