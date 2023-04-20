@@ -1,0 +1,283 @@
+# Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Alexander F Rødseth <xyproto@archlinux.org>
+# Contributor: Daniel Micay <danielmicay@gmail.com>
+# Contributor: userwithuid <userwithuid@gmail.com>
+
+pkgbase=rust
+pkgname=(
+  rust
+  lib32-rust-libs
+  rust-musl
+  rust-wasm
+  rust-src
+)
+epoch=1
+pkgver=1.69.0
+pkgrel=1
+pkgdesc="Systems programming language focused on safety, speed and concurrency"
+url=https://www.rust-lang.org/
+arch=(x86_64)
+license=(MIT Apache)
+options=(
+  !debug
+  !emptydirs
+  !lto
+  !strip
+)
+depends=(
+  curl
+  gcc
+  gcc-libs
+  libssh2
+  llvm-libs
+)
+makedepends=(
+  cmake
+  lib32-gcc-libs
+  libffi
+  lld
+  llvm
+  musl
+  ninja
+  perl
+  python
+  rust
+  wasi-libc
+)
+checkdepends=(
+  gdb
+  procps-ng
+)
+source=(
+  "https://static.rust-lang.org/dist/rustc-$pkgver-src.tar.gz"{,.asc}
+  0001-cargo-Change-libexec-dir.patch
+  0001-bootstrap-Change-libexec-dir.patch
+  0002-compiler-Change-LLVM-targets.patch
+  0003-compiler-Use-wasm-ld-for-wasm-targets.patch
+)
+b2sums=('1440ad3e7e52d1e31752c8a44f9e626b9c2b0388f7285ddbdf1d0f7802724e707daffe19c6ba4aec62c3dba0e60ec2426ebecf69268b1e20a0c89860964a64f3'
+        'SKIP'
+        'd1a029499dd221b24124b193f7d42e9cb766d4bb9c4faa61a4b60007550693c98f1d1ab6793dd16b9f5a229bc70f805d6cd5eca6e744b34c0fd2413701bc58b6'
+        '9752dc3b5fc2248c8bec4efbb3d927088d48d9416229d545a05180374549a0dda6e9d6d9a8d0a3b03437f2e3c54f9c153aab3281d46411f4c81559033b8fb04a'
+        'a92b1eb9bc4101e055f89d9810c99e6e6472b3bb27bb01f8ea8a4b35f7e25512858e1555c2807eb7e8175df22c2e7937753d6787013920f9c76587e71f8df2f4'
+        '9f3f911088a22101f8966dc16a1ecc65da5facaad5c169d9464e721aa452dd45968d359a5b35ae74ff23bd98d44c60cb04c0b8bc89e10fb99549c1670371c902')
+validpgpkeys=(108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE  # Rust Language (Tag and Release Signing Key) <rust-key@rust-lang.org>
+              474E22316ABF4785A88C6E8EA2C794A986419D8A) # Tom Stellard <tstellar@redhat.com>
+
+prepare() {
+  cd rustc-$pkgver-src
+
+  # Patch bootstrap and cargo so credential helpers
+  # are in /usr/lib instead of /usr/libexec
+  patch -d src/tools/cargo -Np1 < ../0001-cargo-Change-libexec-dir.patch
+  patch -Np1 -i ../0001-bootstrap-Change-libexec-dir.patch
+
+  # Use our *-pc-linux-gnu targets, making LTO with clang simpler
+  patch -Np1 -i ../0002-compiler-Change-LLVM-targets.patch
+
+  # Use our wasm-ld
+  patch -Np1 -i ../0003-compiler-Use-wasm-ld-for-wasm-targets.patch
+
+  cat >config.toml <<END
+changelog-seen = 2
+profile = "user"
+
+[llvm]
+link-shared = true
+
+[build]
+target = [
+  "x86_64-unknown-linux-gnu",
+  "i686-unknown-linux-gnu",
+  "x86_64-unknown-linux-musl",
+  "wasm32-unknown-unknown",
+  "wasm32-wasi",
+]
+cargo = "/usr/bin/cargo"
+rustc = "/usr/bin/rustc"
+rustfmt = "/usr/bin/rustfmt"
+locked-deps = true
+vendor = true
+tools = [
+  "cargo",
+  "rls",
+  "clippy",
+  "rustfmt",
+  "analysis",
+  "src",
+  "rust-demangler",
+]
+sanitizers = true
+profiler = true
+
+# Generating docs fails with the wasm32-* targets
+docs = false
+
+[install]
+prefix = "/usr"
+
+[rust]
+debuginfo-level-std = 2
+channel = "stable"
+description = "Arch Linux $pkgbase $epoch:$pkgver-$pkgrel"
+rpath = false
+backtrace-on-ice = true
+remap-debuginfo = true
+jemalloc = true
+
+# LLVM crashes when passing an object through ThinLTO twice.  This is triggered
+# when using rust code in cross-language LTO if libstd was built using ThinLTO.
+# http://blog.llvm.org/2019/09/closing-gap-cross-language-lto-between.html
+# https://github.com/rust-lang/rust/issues/54872
+codegen-units-std = 1
+
+# musl target produces warnings
+deny-warnings = false
+
+[dist]
+compression-formats = ["gz"]
+
+[target.x86_64-unknown-linux-gnu]
+cc = "/usr/bin/gcc"
+cxx = "/usr/bin/g++"
+ar = "/usr/bin/gcc-ar"
+ranlib = "/usr/bin/gcc-ranlib"
+llvm-config = "/usr/bin/llvm-config"
+
+[target.i686-unknown-linux-gnu]
+cc = "/usr/bin/gcc"
+cxx = "/usr/bin/g++"
+ar = "/usr/bin/gcc-ar"
+ranlib = "/usr/bin/gcc-ranlib"
+
+[target.x86_64-unknown-linux-musl]
+sanitizers = false
+musl-root = "/usr/lib/musl"
+
+[target.wasm32-unknown-unknown]
+sanitizers = false
+profiler = false
+
+[target.wasm32-wasi]
+sanitizers = false
+profiler = false
+wasi-root = "/usr/share/wasi-sysroot"
+END
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/$f"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+build() {
+  cd rustc-$pkgver-src
+
+  export RUST_BACKTRACE=1
+
+  DESTDIR="$srcdir/dest-rust" python ./x.py install -j "$(nproc)"
+
+  cd ../dest-rust
+
+  # delete unnecessary files, e.g. files only used for the uninstall script
+  rm usr/lib/rustlib/{components,install.log,rust-installer-version,uninstall.sh}
+  rm usr/lib/rustlib/manifest-*
+
+  # rustbuild always installs copies of the shared libraries to /usr/lib,
+  # overwrite them with symlinks to the per-architecture versions
+  mkdir -p usr/lib32
+  ln -srft usr/lib   usr/lib/rustlib/x86_64-unknown-linux-gnu/lib/*.so
+  ln -srft usr/lib32 usr/lib/rustlib/i686-unknown-linux-gnu/lib/*.so
+
+  mkdir -p usr/share/bash-completion
+  mv etc/bash_completion.d usr/share/bash-completion/completions
+
+  mkdir -p usr/share/licenses/rust
+  mv -t usr/share/licenses/rust usr/share/doc/rust/{COPYRIGHT,LICENSE*}
+
+  _pick dest-i686 usr/lib/rustlib/i686-unknown-linux-gnu usr/lib32
+  _pick dest-musl usr/lib/rustlib/x86_64-unknown-linux-musl
+  _pick dest-wasm usr/lib/rustlib/wasm32-*
+  _pick dest-src  usr/lib/rustlib/src
+}
+
+package_rust() {
+  optdepends=(
+    'gdb: rust-gdb script'
+    'lldb: rust-lldb script'
+  )
+  provides=(
+    cargo
+    rustfmt
+  )
+  conflicts=(
+    cargo
+    'rust-docs<1:1.56.1-3'
+    rustfmt
+  )
+  replaces=(
+    cargo
+    cargo-tree
+    'rust-docs<1:1.56.1-3'
+    rustfmt
+  )
+
+  cp -a dest-rust/* "$pkgdir"
+}
+
+package_lib32-rust-libs() {
+  pkgdesc="32-bit target and libraries for Rust"
+  depends=(
+    lib32-gcc-libs
+    rust
+  )
+  provides=(lib32-rust)
+  conflicts=(lib32-rust)
+  replaces=(lib32-rust)
+
+  cp -a dest-i686/* "$pkgdir"
+
+  mkdir -p "$pkgdir/usr/share/licenses"
+  ln -s rust "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_rust-musl() {
+  pkgdesc="Musl target for Rust"
+  depends=(rust)
+
+  cp -a dest-musl/* "$pkgdir"
+
+  mkdir -p "$pkgdir/usr/share/licenses"
+  ln -s rust "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_rust-wasm() {
+  pkgdesc="WebAssembly targets for Rust"
+  depends=(
+    lld
+    rust
+  )
+
+  cp -a dest-wasm/* "$pkgdir"
+
+  mkdir -p "$pkgdir/usr/share/licenses"
+  ln -s rust "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_rust-src() {
+  pkgdesc="Source code for the Rust standard library"
+  depends=(rust)
+
+  cp -a dest-src/* "$pkgdir"
+
+  mkdir -p "$pkgdir/usr/share/licenses"
+  ln -s rust "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+# vim:set ts=2 sw=2 et:
