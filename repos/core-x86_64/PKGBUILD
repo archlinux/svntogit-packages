@@ -4,7 +4,7 @@
 
 pkgname=pam
 pkgver=1.5.2
-pkgrel=1
+pkgrel=2
 pkgdesc="PAM (Pluggable Authentication Modules) library"
 arch=('x86_64')
 license=('GPL2')
