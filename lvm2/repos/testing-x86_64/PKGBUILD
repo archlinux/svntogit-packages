@@ -1,0 +1,126 @@
+# Maintainer: Eric Bélanger <eric@archlinux.org>
+# Maintainer: Thomas Bächler <thomas@archlinux.org>
+
+pkgbase=lvm2
+pkgname=('lvm2' 'device-mapper')
+_tag='a6c8d2429ce4d4a13750f271987702d3e2648904' # git rev-parse v${pkgver//./_}
+pkgver=2.03.21
+pkgrel=1
+arch=('x86_64')
+url='https://sourceware.org/lvm2/'
+license=('GPL2' 'LGPL2.1')
+makedepends=('git' 'systemd' 'libaio' 'thin-provisioning-tools')
+validpgpkeys=('88437EF5C077BD113D3B7224228191C1567E2C17'  # Alasdair G Kergon <agk@redhat.com>
+              'D501A478440AE2FD130A1BE8B9112431E509039F') # Marian Csontos <marian.csontos@gmail.com>
+source=("git+https://sourceware.org/git/lvm2.git#tag=${_tag}?signed"
+        '0001-udev-initcpio.patch'
+        'lvm2_install'
+        '11-dm-initramfs.rules')
+sha256sums=('SKIP'
+            '2b3a16ec05e2bc6678e9ebd5ffa8319ebfde29aa260ce004f79f9b8df57d73c9'
+            '8870091ef70b5ea18b18bfcc770f8bda7dcd9d7cc2cc4fe5e4c3ac1f35bbb66a'
+            'e10f24b57582d6e2da71f7c80732a62e0ee2e3b867fe84591ccdb53e80fa92e0')
+
+_backports=(
+)
+
+prepare() {
+  cd lvm2/
+
+  local _c
+  for _c in "${_backports[@]}"; do
+    git log --oneline -1 "${_c}"
+    git show "${_c}" -- ':(exclude)WHATS_NEW' | git apply
+  done
+
+  # prepare for non-systemd initcpio
+  patch -Np1 --output='udev/69-dm-lvm-initcpio.rules.in' < ../0001-udev-initcpio.patch
+
+  # remove install section from systemd units that are enabled by default
+  sed -i -e '/^\[Install\]$/,$d' \
+    scripts/dm_event_systemd_red_hat.socket.in \
+    scripts/lvm2_lvmpolld_systemd_red_hat.socket.in \
+    scripts/lvm2_monitoring_systemd_red_hat.service.in
+}
+
+build() {
+  # build system requires bash:
+  # https://www.redhat.com/archives/linux-lvm/2020-January/msg00004.html
+  # https://www.gnu.org/software/autoconf/manual/autoconf-2.69/html_node/Defining-Variables.html
+  export CONFIG_SHELL=/bin/bash
+
+  cd lvm2/
+
+  ./configure \
+    CONFIG_SHELL=/bin/bash \
+    --prefix=/usr \
+    --sbindir=/usr/bin \
+    --sysconfdir=/etc \
+    --localstatedir=/var \
+    --enable-cmdlib \
+    --enable-dmeventd \
+    --enable-lvmpolld \
+    --enable-pkgconfig \
+    --enable-readline \
+    --enable-udev_rules \
+    --enable-udev_sync \
+    --enable-write_install \
+    --with-cache=internal \
+    --with-default-dm-run-dir=/run \
+    --with-default-locking-dir=/run/lock/lvm \
+    --with-default-pid-dir=/run \
+    --with-default-run-dir=/run/lvm \
+    --with-systemdsystemunitdir=/usr/lib/systemd/system \
+    --with-thin=internal \
+    --with-udev-prefix=/usr
+  make
+
+  make -C udev/ 69-dm-lvm-initcpio.rules
+}
+
+package_device-mapper() {
+  pkgdesc="Device mapper userspace library and tools"
+  url="http://sourceware.org/dm/"
+  depends=('glibc' 'systemd-libs' 'libudev.so')
+  provides=('libdevmapper.so'
+    'libdevmapper-event.so')
+
+  cd lvm2/
+
+  make DESTDIR="${pkgdir}" install_device-mapper
+  # extra udev rule for device-mapper in initramfs
+  install -D -m0644 "${srcdir}/11-dm-initramfs.rules" "${pkgdir}/usr/lib/initcpio/udev/11-dm-initramfs.rules"
+  # Install dmeventd socket and service
+  make DESTDIR="${pkgdir}" install_systemd_units
+  rm -f "${pkgdir}/usr/lib/systemd/system/"{blk-availability.service,lvm2-*}
+  install -d -m0755 "${pkgdir}/usr/lib/systemd/system/sockets.target.wants"
+  ln -sf ../dm-event.socket "${pkgdir}/usr/lib/systemd/system/sockets.target.wants/dm-event.socket"
+}
+
+package_lvm2() {
+  pkgdesc="Logical Volume Manager 2 utilities"
+  depends=('bash' "device-mapper>=${pkgver}" 'systemd-libs'
+    'libudev.so' 'util-linux-libs' 'libblkid.so' 'readline' 'libreadline.so'
+    'thin-provisioning-tools' 'libaio' 'libaio.so')
+  conflicts=('lvm' 'mkinitcpio<0.7')
+  backup=('etc/lvm/lvm.conf'
+    'etc/lvm/lvmlocal.conf')
+
+  cd lvm2/
+
+  make DESTDIR="${pkgdir}" install_lvm2
+  # /etc directories
+  install -d "${pkgdir}"/etc/lvm/{archive,backup}
+  # mkinitcpio hook
+  install -D -m0644 "${srcdir}/lvm2_install" "${pkgdir}/usr/lib/initcpio/install/lvm2"
+  ln -s lvm2 "${pkgdir}/usr/lib/initcpio/install/sd-lvm2"
+  # extra udev rule for non-systemd initramfs
+  install -D -m0644 udev/69-dm-lvm-initcpio.rules "${pkgdir}/usr/lib/initcpio/udev/69-dm-lvm.rules"
+  # systemd support
+  make DESTDIR="${pkgdir}" install_systemd_units
+  rm -f "${pkgdir}/usr/lib/systemd/system/"dm-*
+  install -d -m0755 "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants"
+  ln -sf ../lvm2-lvmpolld.socket "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-lvmpolld.socket"
+  ln -sf ../lvm2-monitor.service "${pkgdir}/usr/lib/systemd/system/sysinit.target.wants/lvm2-monitor.service"
+  make DESTDIR="${pkgdir}" install_systemd_generators
+}
