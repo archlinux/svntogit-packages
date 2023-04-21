@@ -1,79 +1,7 @@
-From 044bd40bbd99b13d1813b3a09a14cbe31c3b2261 Mon Sep 17 00:00:00 2001
-From: Joan Bruguera <joanbrugueram@gmail.com>
-Date: Thu, 23 Mar 2023 02:24:30 +0000
-Subject: [PATCH 1/2] glocalfile: Sum apparent size only for files and symlinks
-
-Since GNU Coreutils 9.2 (commit 110bcd28386b1f47a4cd876098acb708fdcbbb25),
-`du --apparent-size` (including `du --bytes`) no longer counts all kinds of
-files (directories, FIFOs, etc.), but only those for which `st_size` in
-`struct stat` is defined by POSIX, namely regular files and symlinks
-(and also rarely supported memory objects).
-
-This aligns the behaviour of GLib's `G_FILE_MEASURE_APPARENT_SIZE` flag
-with the new GNU Coreutils `du` and correct POSIX use.
-
-Note that this may be a breaking change for some uses.
-
-Link: https://lists.gnu.org/archive/html/bug-coreutils/2023-03/msg00007.html
-Fixes: https://gitlab.gnome.org/GNOME/glib/-/issues/2965
----
- gio/glocalfile.c | 21 +++++++++++++++++++++
- 1 file changed, 21 insertions(+)
-
-diff --git a/gio/glocalfile.c b/gio/glocalfile.c
-index 67d4b99fb7..e53216962f 100644
---- a/gio/glocalfile.c
-+++ b/gio/glocalfile.c
-@@ -86,6 +86,9 @@
- #define FILE_READ_ONLY_VOLUME           0x00080000
- #endif
- 
-+#ifndef S_ISREG
-+#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
-+#endif
- #ifndef S_ISDIR
- #define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
- #endif
-@@ -2777,6 +2780,23 @@ g_local_file_measure_size_of_contents (gint           fd,
-                                        MeasureState  *state,
-                                        GError       **error);
- 
-+inline static gboolean _g_stat_is_size_usable (const GLocalFileStat *buf)
-+{
-+#ifndef HAVE_STATX
-+  // Memory objects are defined by POSIX, but are not supported by statx nor Windows
-+#ifdef S_TYPEISSHM
-+  if (S_TYPEISSHM (buf))
-+    return TRUE;
-+#endif
-+#ifdef S_TYPEISTMO
-+  if (S_TYPEISTMO (buf))
-+    return TRUE;
-+#endif
-+#endif
-+
-+  return S_ISREG (_g_stat_mode (buf)) || S_ISLNK (_g_stat_mode (buf));
-+}
-+
- static gboolean
- g_local_file_measure_size_of_file (gint           parent_fd,
-                                    GSList        *name,
-@@ -2836,6 +2856,7 @@ g_local_file_measure_size_of_file (gint           parent_fd,
-     state->disk_usage += _g_stat_blocks (&buf) * G_GUINT64_CONSTANT (512);
-   else
- #endif
-+  if (_g_stat_is_size_usable (&buf))
-     state->disk_usage += _g_stat_size (&buf);
- 
-   if (S_ISDIR (_g_stat_mode (&buf)))
--- 
-GitLab
-
-
-From 9722c2336c00a62ed2b772b78b6dba69d1d984e2 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Joan Bruguera <joanbrugueram@gmail.com>
 Date: Thu, 23 Mar 2023 02:19:03 +0000
-Subject: [PATCH 2/2] tests/file: Do not rely on du --bytes behaviour
+Subject: [PATCH] tests/file: Do not rely on du --bytes behaviour
 
 As explained in the previous commit, GNU Coreutils 9.2 changes the behaviour
 of `du --bytes` to only count regular files and symlinks.
@@ -93,10 +21,10 @@ Fixes: https://gitlab.gnome.org/GNOME/glib/-/issues/2965
  1 file changed, 3 insertions(+), 82 deletions(-)
 
 diff --git a/gio/tests/file.c b/gio/tests/file.c
-index d16eda5c0b..ad2f945f93 100644
+index d16eda5c0b8c..ad2f945f9397 100644
 --- a/gio/tests/file.c
 +++ b/gio/tests/file.c
-@@ -2515,75 +2515,10 @@ test_copy_preserve_mode (void)
+@@ -2515,105 +2515,33 @@ test_copy_preserve_mode (void)
  #endif
  }
  
@@ -172,7 +100,10 @@ index d16eda5c0b..ad2f945f93 100644
    guint64 num_bytes;
    guint64 num_dirs;
    guint64 num_files;
-@@ -2594,12 +2529,6 @@ test_measure (void)
+   GError *error = NULL;
+   gboolean ok;
+   gchar *path;
+ 
    path = g_test_build_filename (G_TEST_DIST, "desktop-files", NULL);
    file = g_file_new_for_path (path);
  
@@ -185,7 +116,12 @@ index d16eda5c0b..ad2f945f93 100644
    ok = g_file_measure_disk_usage (file,
                                    G_FILE_MEASURE_APPARENT_SIZE,
                                    NULL,
-@@ -2612,8 +2541,7 @@ test_measure (void)
+                                   NULL,
+                                   NULL,
+                                   &num_bytes,
+                                   &num_dirs,
+                                   &num_files,
+                                   &error);
    g_assert_true (ok);
    g_assert_no_error (error);
  
@@ -222,6 +158,3 @@ index d16eda5c0b..ad2f945f93 100644
    data->expected_dirs = 6;
    data->expected_files = 32;
  
--- 
-GitLab
-
