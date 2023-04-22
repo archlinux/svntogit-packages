@@ -5,7 +5,7 @@
 
 pkgname=dolphin
 pkgver=23.04.0
-pkgrel=1
+pkgrel=2
 pkgdesc='KDE File Manager'
 arch=(x86_64)
 url='https://apps.kde.org/dolphin/'
@@ -13,7 +13,8 @@ license=(LGPL)
 depends=(baloo-widgets knewstuff kio-extras kcmutils kparts kactivities kuserfeedback)
 makedepends=(extra-cmake-modules kdoctools)
 optdepends=('kde-cli-tools: for editing file type options' 'ffmpegthumbs: video thumbnails' 'kdegraphics-thumbnailers: PDF and PS thumbnails'
-            'konsole: terminal panel' 'purpose: share context menu')
+            'konsole: terminal panel' 'purpose: share context menu'
+            'kio-admin: for managing files as administrator')
 groups=(kde-applications kde-system)
 source=(https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz{,.sig})
 sha256sums=('cd49268a3b0309253587d424fbdffe25b26c951df7e6932a42f48cf34b006c50'
