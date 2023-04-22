@@ -1,9 +1,9 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-trove-classifiers
-pkgver=2023.4.18
-_commit=5bffa9b1fe77cd92a2bf4f75c26aa1ab0a450053
-pkgrel=2
+pkgver=2023.4.20
+_commit=54dfd982e81020acb213521fa6153e5482c02b80
+pkgrel=1
 pkgdesc="Canonical source for classifiers on PyPI (pypi.org)"
 url="https://github.com/pypa/trove-classifiers"
 license=('Apache')
