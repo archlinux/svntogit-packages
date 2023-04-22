@@ -5,20 +5,30 @@ _brotli_ver=1.0.9
 _openssl_ver=1.1.1s
 pkgbase=edk2
 pkgname=(edk2-arm edk2-aarch64 edk2-shell edk2-ovmf)
-pkgver=202211
-_commit=fff6d81270b57ee786ea18ad74f43149b9f03494  # refs/tags/edk2-stable202211
-pkgrel=3
+pkgver=202302
+_commit=f80f052277c88a67c55e107b550f504eeea947d3  # refs/tags/edk2-stable202302
+pkgrel=1
 pkgdesc="Modern, feature-rich firmware development environment for the UEFI specifications"
 arch=(any)
 url="https://github.com/tianocore/edk2"
 license=(BSD)
-makedepends=(aarch64-linux-gnu-gcc arm-none-eabi-gcc acpica git iasl util-linux-libs nasm python seabios)
+makedepends=(
+  aarch64-linux-gnu-gcc
+  arm-none-eabi-gcc
+  acpica
+  git
+  iasl
+  util-linux-libs
+  nasm
+  python
+  seabios
+)
 options=(!makeflags)
 source=(
   git+$url#tag=$_commit
   $pkgbase-softfloat::git+https://github.com/ucb-bar/berkeley-softfloat-3.git
   https://www.openssl.org/source/openssl-$_openssl_ver.tar.gz{,.asc}
-  brotli-$_brotli_ver.tar.gz::https://github.com/google/brotli/archive/v$_brotli_ver.tar.gz
+  https://github.com/google/brotli/archive/v$_brotli_ver/brotli-$_brotli_ver.tar.gz
   50-edk2-ovmf-i386-secure.json
   50-edk2-ovmf-i386-secure-4m.json
   50-edk2-ovmf-x86_64-secure.json
@@ -108,11 +118,19 @@ _arch_list=(ARM AARCH64 IA32 X64)
 _build_type=RELEASE
 _build_plugin=GCC5
 
+pkgver() {
+  cd $pkgbase
+  git describe --tags --abbrev=7 | sed 's/^edk2-stable//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
 prepare() {
   # patch to be able to use brotli 1.0.9
   patch -Np1 -d $pkgbase -i ../$pkgbase-202202-brotli.patch
 
   cd $pkgbase
+
+  # revert commit which breaks microvm blobs: https://github.com/tianocore/edk2/commit/173a7a7daaad560cd69e1000faca1d2b91774c46
+  git revert -n 173a7a7daaad560cd69e1000faca1d2b91774c46
 
   git submodule init
   git submodule deinit BaseTools/Source/C/BrotliCompress/brotli
