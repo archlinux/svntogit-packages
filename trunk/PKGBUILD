@@ -1,7 +1,7 @@
 # Maintainer: Sébastien Luttringer
 
 pkgname=bird
-pkgver=2.0.12
+pkgver=2.13
 pkgrel=1
 pkgdesc='RIP, OSPF, BGP, MPLS, BFD, Babel routing daemon'
 arch=('x86_64')
@@ -14,7 +14,7 @@ options=(!emptydirs)
 source=("https://bird.network.cz/download/$pkgname-$pkgver.tar.gz"
         'bird.service'
         )
-sha256sums=('3ec462a237d06d1f4455d6ec00a42f0b1686061fc988e5c89a841d01dd753b53'
+sha256sums=('8d895e3e311880e9efb888b4386cbec2f7e18bfb8334e8d4c8ca7c4341092638'
             '4aa1e8d41229badd276aa3747f613e7df34761892add2258c63bdb5097dfeb2b')
 
 prepare() {
