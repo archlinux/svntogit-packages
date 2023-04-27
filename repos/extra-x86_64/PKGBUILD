@@ -4,7 +4,7 @@
 
 pkgname=firefox
 pkgver=112.0.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Standalone web browser from mozilla.org"
 url="https://www.mozilla.org/firefox/"
 arch=(x86_64)
@@ -66,6 +66,7 @@ source=(
   https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
   $pkgname.desktop
   identity-icons-brand.svg
+  0001-Bug-1803016-Wayland-Don-t-commit-wl_buffer-if-buffer.patch
 )
 validpgpkeys=(
   '14F26682D0916CDD81E37B6D61B7B526D98F0353'  # Mozilla Software Releases <release@mozilla.com>
@@ -73,11 +74,13 @@ validpgpkeys=(
 sha256sums=('e6a4819a3b82b1ca6c45296e50e6c9ab653306eeb540e50ba8683e339565992e'
             'SKIP'
             '298eae9de76ec53182f38d5c549d0379569916eebf62149f9d7f4a7edef36abf'
-            'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9')
+            'a9b8b4a0a1f4a7b4af77d5fc70c2686d624038909263c795ecc81e0aec7711e9'
+            'bfe15651a99ac6d0037867c9db00a0d4340353cdc0ac4a39e43ad61cc2589ed6')
 b2sums=('44f2fae6c7260a1a6cad24ee31bbd52bc7efad15ac5b9f64f4bceabda7a371f20a490512cee324e53373b9a96fd218572c1478b76e5931383dbef00cc25743aa'
         'SKIP'
         'e18f2c22e394ca3b6758bc130245b254947e4d15921be3da443d6d7c3c4b0d22ead1b39fbc10a4f896edd19e2a1dffbd1cbb34dc4beb0621a6ddb70ccc53b3a7'
-        '63a8dd9d8910f9efb353bed452d8b4b2a2da435857ccee083fc0c557f8c4c1339ca593b463db320f70387a1b63f1a79e709e9d12c69520993e26d85a3d742e34')
+        '63a8dd9d8910f9efb353bed452d8b4b2a2da435857ccee083fc0c557f8c4c1339ca593b463db320f70387a1b63f1a79e709e9d12c69520993e26d85a3d742e34'
+        'ab11b185f32da7a10c22a075d2bf16adadfcfc2d197fc88bd61a03d1873d5cd914cd96edf8af9f054a3cab12629f3f5c29d70d0dce0f0f4bef85f1cfc5a219ee')
 
 # Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -94,6 +97,9 @@ _mozilla_api_key=e05d56db0a694edc8b5aaebda3f2db6a
 prepare() {
   mkdir mozbuild
   cd firefox-$pkgver
+
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1803016
+  patch -Np1 -i ../0001-Bug-1803016-Wayland-Don-t-commit-wl_buffer-if-buffer.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
