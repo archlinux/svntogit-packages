@@ -1,0 +1,64 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+
+pkgname=libdmapsharing
+pkgver=3.9.12
+pkgrel=1
+pkgdesc="A library that implements the DMAP family of protocols"
+url="https://www.flyn.org/projects/libdmapsharing/index.html"
+arch=(x86_64)
+license=(LGPL2.1)
+depends=(
+  avahi
+  gdk-pixbuf2
+  gst-plugins-base-libs
+  libsoup3
+)
+makedepends=(
+  git
+  gobject-introspection
+  gtk-doc
+  vala
+)
+provides=(libdmapsharing-4.0.so)
+_commit=2bcf6286fc81ff9c964e5b1bfe918c01a18e98c4  # tags/LIBDMAPSHARING_3_9_12^0
+source=("git+https://gitlab.gnome.org/GNOME/libdmapsharing.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^LIBDMAPSHARING_//;s/_/./g;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+  NOCONFIGURE=1 ./autogen.sh
+}
+
+build() {
+  local configure_args=(
+    --prefix=/usr
+    --sysconfdir=/etc
+    --localstatedir=/var
+    --with-mdns=avahi
+
+    # Disable tests; get built into the library, adding a dep on libcheck
+    --disable-tests
+
+    # GTK-docs are broken when tests are disabled
+    --disable-gtk-doc
+  )
+
+
+  cd $pkgname
+  ./configure "${configure_args[@]}"
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
+
+# vim:set sw=2 sts=-1 et:
