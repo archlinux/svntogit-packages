@@ -3,7 +3,7 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=43.4
+pkgver=43.5
 pkgrel=1
 epoch=1
 pkgdesc="Next generation desktop shell"
@@ -57,7 +57,7 @@ optdepends=(
   'switcheroo-control: Multi-GPU support'
 )
 groups=(gnome)
-_commit=83c44abe0084b6ea617f1f90de5d60c4ed30b965  # tags/43.4^0
+_commit=4b23dfb53519710fac643d214e661b1488505fda  # tags/43.5^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
@@ -68,12 +68,12 @@ b2sums=('SKIP'
         '5636fd813bc0aeafbdd52eb6335ef79b5801b800e332119b3d127a6cd188aa24051ebc718449f22bea7bedc37347ff98c7d491b35d84f573f0e4cff2046117d4')
 
 pkgver() {
-  cd gnome-shell
+  cd $pkgname
   git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd gnome-shell
+  cd $pkgname
 
   # https://bugs.archlinux.org/task/77572
   # https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2611
@@ -93,10 +93,14 @@ prepare() {
 }
 
 build() {
+  local meson_options=(
+    -D gtk_doc=true
+  )
+
   CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
   LDFLAGS+=" -Wl,-Bsymbolic-functions"
 
-  arch-meson gnome-shell build -D gtk_doc=true
+  arch-meson $pkgname build "${meson_options[@]}"
   meson compile -C build
 }
 
