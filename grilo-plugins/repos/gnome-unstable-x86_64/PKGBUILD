@@ -1,0 +1,78 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=grilo-plugins
+pkgver=0.3.16
+pkgrel=1
+epoch=1
+pkgdesc="A collection of plugins for the Grilo framework"
+url="https://gitlab.gnome.org/GNOME/grilo-plugins"
+arch=(x86_64)
+license=(LGPL)
+depends=(
+  chromaprint
+  gom
+  grilo
+  gst-plugins-bad
+  libdmapsharing
+  libgoa
+  libmediaart
+  lua
+  tracker3
+)
+makedepends=(
+  git
+  gperf
+  meson
+  yelp-tools
+)
+checkdepends=(
+  gst-plugins-base
+  gst-plugins-good
+  python-gobject
+  tracker3-miners
+)
+optdepends=(
+  'dleyna-server: DLNA plugin'
+  'tracker3-miners: Tracker plugin'
+)
+groups=(gnome)
+_commit=dff5616464b8e46f58b84a67cc945f3a6c72dd73  # tags/grilo-plugins-0.3.16^0
+source=(
+  "git+https://gitlab.gnome.org/GNOME/grilo-plugins.git#commit=$_commit"
+  no-tracker-test.diff
+)
+b2sums=('SKIP'
+        '7ef8315121f11f8fff3162cf535f5d03e2a1587aa8db86ebd481253d23aa3570e48fcb363049f0c393e5b6c8799c8765c33a32f73c098772e72e22ae13aae14d')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^grilo-plugins-//;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Tracker test broken in our containers because bubblewrap stopped working,
+  # also see https://bugs.archlinux.org/task/78033
+  git apply -3 ../no-tracker-test.diff
+}
+
+build() {
+  local meson_options=(
+    -D enable-tracker=no
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  dbus-run-session meson test -C build --print-errorlogs
+}
+
+package() {
+  depends+=(libgr{ilo,lnet,lpls}-0.3.so)
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
