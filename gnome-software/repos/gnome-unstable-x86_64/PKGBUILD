@@ -1,0 +1,76 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Fabian Bornschein <fabiscafe-cat-mailbox-dog-org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Contributor: Yosef Or Boczko <yoseforb@gnome.org>
+
+pkgname=gnome-software
+pkgver=44.1
+pkgrel=1
+pkgdesc="GNOME Software Tools"
+url="https://wiki.gnome.org/Apps/Software/"
+arch=(x86_64)
+license=(GPL)
+depends=(
+  appstream
+  gnome-online-accounts
+  gsettings-desktop-schemas
+  gtk4
+  libadwaita
+  libsoup3
+  libsysprof-capture
+  libxmlb
+)
+makedepends=(
+  docbook-xsl
+  flatpak
+  fwupd
+  git
+  gobject-introspection
+  gtk-doc
+  libglib-testing
+  malcontent
+  meson
+)
+optdepends=(
+  'flatpak: Flatpak support plugin'
+  'fwupd: fwupd support plugin'
+  'malcontent: Parental control plugin'
+)
+groups=(gnome)
+_commit=9afc9643998f39817b9c70f772535178da45b95d  # tags/44.1^0
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gnome-software.git#commit=$_commit"
+  "git+https://gitlab.gnome.org/mwleeds/gnome-pwa-list.git"
+)
+b2sums=('SKIP'
+        'SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git submodule set-url subprojects/gnome-pwa-list "$srcdir/gnome-pwa-list"
+  git -c protocol.file.allow=always submodule update
+}
+
+build() {
+  local meson_options=(
+    -D packagekit=false
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
+  meson compile -C build
+}
+
+# Not running tests - need root and a D-Bus system bus
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
