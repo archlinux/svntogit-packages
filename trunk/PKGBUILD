@@ -3,9 +3,8 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Yosef Or Boczko <yoseforb@gnome.org>
 
-pkgbase=gnome-software
-pkgname=(gnome-software gnome-software-packagekit-plugin)
-pkgver=43.5
+pkgname=gnome-software
+pkgver=44.1
 pkgrel=1
 pkgdesc="GNOME Software Tools"
 url="https://wiki.gnome.org/Apps/Software/"
@@ -17,7 +16,6 @@ depends=(
   gsettings-desktop-schemas
   gtk4
   libadwaita
-  libpackagekit-glib
   libsoup3
   libsysprof-capture
   libxmlb
@@ -33,7 +31,13 @@ makedepends=(
   malcontent
   meson
 )
-_commit=0bdd1b721abb71dd6736952c1f7b3b5b971635ff  # tags/43.5^0
+optdepends=(
+  'flatpak: Flatpak support plugin'
+  'fwupd: fwupd support plugin'
+  'malcontent: Parental control plugin'
+)
+groups=(gnome)
+_commit=9afc9643998f39817b9c70f772535178da45b95d  # tags/44.1^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-software.git#commit=$_commit"
   "git+https://gitlab.gnome.org/mwleeds/gnome-pwa-list.git"
@@ -42,12 +46,12 @@ b2sums=('SKIP'
         'SKIP')
 
 pkgver() {
-  cd $pkgbase
+  cd $pkgname
   git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgbase
+  cd $pkgname
 
   git submodule init
   git submodule set-url subprojects/gnome-pwa-list "$srcdir/gnome-pwa-list"
@@ -55,45 +59,18 @@ prepare() {
 }
 
 build() {
-  arch-meson $pkgbase build
+  local meson_options=(
+    -D packagekit=false
+  )
+
+  arch-meson $pkgname build "${meson_options[@]}"
   meson compile -C build
 }
 
 # Not running tests - need root and a D-Bus system bus
 
-_pick() {
-  local p="$1" f d; shift
-  for f; do
-    d="$srcdir/$p/${f#$pkgdir/}"
-    mkdir -p "$(dirname "$d")"
-    mv "$f" "$d"
-    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
-  done
-}
-
-package_gnome-software() {
-  groups=(gnome)
-  optdepends=(
-    'flatpak: Flatpak support plugin'
-    'fwupd: fwupd support plugin'
-    'malcontent: Parental control plugin'
-  )
-
+package() {
   meson install -C build --destdir "$pkgdir"
-
-  local pkglibdir="$pkgdir/usr/lib/gnome-software"
-  _pick packagekit-plugin "$pkglibdir"/plugins-*/libgs_plugin_packagekit*.so
-}
-
-package_gnome-software-packagekit-plugin() {
-  pkgdesc="PackageKit support plugin for GNOME Software"
-  depends=(
-    archlinux-appstream-data
-    gnome-software
-    packagekit
-  )
-
-  mv packagekit-plugin/* "$pkgdir"
 }
 
 # vim:set sw=2 sts=-1 et:
