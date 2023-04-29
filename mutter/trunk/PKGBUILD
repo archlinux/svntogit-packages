@@ -3,8 +3,11 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgbase=mutter
-pkgname=(mutter mutter-docs)
-pkgver=43.5
+pkgname=(
+  mutter
+  mutter-docs
+)
+pkgver=44.1
 pkgrel=1
 pkgdesc="Window manager and compositor for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -13,7 +16,7 @@ license=(GPL)
 depends=(
   colord
   dconf
-  gnome-desktop
+  gnome-desktop-4
   gnome-settings-daemon
   graphene
   gsettings-desktop-schemas
@@ -45,7 +48,7 @@ checkdepends=(
   xorg-server-xvfb
   zenity
 )
-_commit=eedb556bb42a3de1423ec77ca11b7f014462c9e7  # tags/43.5^0
+_commit=28a6447ff060ae1fbac8f20a13908d6e230eddc2  # tags/44.1^0
 source=("git+https://gitlab.gnome.org/GNOME/mutter.git#commit=$_commit")
 b2sums=('SKIP')
 
@@ -56,10 +59,6 @@ pkgver() {
 
 prepare() {
   cd mutter
-
-  # Fix crash on resume from suspend
-  # https://gitlab.gnome.org/GNOME/mutter/-/issues/2570
-  git cherry-pick -n c1ab3f39d73a041b488acf7296456840fa83c0da
 }
 
 build() {
@@ -109,7 +108,7 @@ _pick() {
 }
 
 package_mutter() {
-  provides=(libmutter-11.so)
+  provides=(libmutter-12.so)
 
   meson install -C build --destdir "$pkgdir"
 
