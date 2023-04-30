@@ -1,0 +1,78 @@
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+# NOTE: requires rebuilt with each new gcc version
+
+pkgname=libtool
+_commit=1ec8fa28dcb29500d485c136db28315671ec4c3b
+pkgver=2.4.7+4+g1ec8fa28
+pkgrel=3
+_gccver=13.1.1
+pkgdesc='A generic library support script'
+arch=(x86_64)
+url='https://www.gnu.org/software/libtool'
+license=(GPL)
+depends=(sh tar glibc)
+makedepends=("gcc>=$_gccver" git help2man)
+checkdepends=(gcc-fortran)
+provides=("libltdl=$pkgver" "libtool-multilib=$pkgver")
+conflicts=(libltdl libtool-multilib)
+replaces=(libltdl libtool-multilib)
+source=(git+https://git.savannah.gnu.org/git/libtool.git#commit=$_commit
+        git+https://git.savannah.gnu.org/git/gnulib.git
+        gnulib-bootstrap::git+https://github.com/gnulib-modules/bootstrap.git
+        no_hostname.patch
+        disable-lto-link-order2.patch
+        grep_3.8_fix.patch)
+sha256sums=('SKIP'
+            'SKIP'
+            'SKIP'
+            '693aabb24a6e7ce21fe0b5d14394e19edcb8476663b5afa4463f9fa0df24d946'
+            'b6dce6681f223b18a90614edbcdeb00f228abd1216e22c4bd07285321cd2ceb7'
+            '0a31d3ed91d97a18e17942c85018899c0233493a54c885f4c133454de522ef50')
+
+pkgver() {
+  cd libtool
+  git describe --tags | sed 's/-/+/g;s/^v//'
+}
+
+prepare() {
+  cd libtool
+
+  patch -Np1 -i "${srcdir}"/no_hostname.patch
+
+  # test 67 is broken with lto
+  # this patch removes the -flto flag for this very test
+  # adapt when -ffat-lto-objects is enabled by Arch
+  patch -Np1 -i "${srcdir}"/disable-lto-link-order2.patch
+
+  # test 66 is broken with grep 3.8
+  # see https://bugzilla.opensuse.org/show_bug.cgi?id=1203097
+  patch -Np1 -i "${srcdir}"/grep_3.8_fix.patch
+
+  git submodule init
+  git config --local submodule.gnulib.url "${srcdir}"/gnulib
+  git config --local submodule.gl-mod/bootstrap.url "${srcdir}"/gnulib-bootstrap
+  git -c protocol.file.allow=always submodule update
+
+  ./bootstrap
+}
+
+build() {
+  cd libtool
+  ./configure --prefix=/usr lt_cv_sys_lib_dlsearch_path_spec="/usr/lib /usr/lib32"
+  make
+}
+
+check() {
+  cd libtool
+  make check gl_public_submodule_commit=
+}
+
+package() {
+  cd libtool
+  make DESTDIR="$pkgdir" install
+}
