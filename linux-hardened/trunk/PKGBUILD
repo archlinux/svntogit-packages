@@ -5,7 +5,7 @@
 
 pkgbase=linux-hardened
 pkgver=6.1.25.hardened1
-pkgrel=2
+pkgrel=3
 pkgdesc='Security-Hardened Linux'
 url='https://github.com/anthraxx/linux-hardened'
 arch=(x86_64)
@@ -21,6 +21,7 @@ _srctag=${pkgver%.*}-${pkgver##*.}
 source=(
   https://www.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.{xz,sign}
   https://github.com/anthraxx/${pkgbase}/releases/download/${_srctag}/${pkgbase}-${_srctag}.patch{,.sig}
+  gcc13-compat.patch
   config         # the main kernel config file
 )
 validpgpkeys=(
@@ -32,6 +33,7 @@ sha256sums=('cb72436ceb15086ae3df65e590592030692a9237a37d64105478eb5a72493091'
             'SKIP'
             'a71365d35e561df88f70a8f5271cb171b77721b7a7e214d6794b55fb2de92ee9'
             'SKIP'
+            'c6c5f6be7ae0ef5a8bdfea0a5578f096db38113774e08dc7b78fc48034c7b211'
             'f9dcbe8f48d64fab2d38ac60a056ff31d5b05d2dce0113be115f7e6295dbf7b7')
 
 export KBUILD_BUILD_HOST=archlinux
