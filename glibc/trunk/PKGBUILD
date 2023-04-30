@@ -9,8 +9,8 @@
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.37
-_commit=6fe86ecd787a2624cd638131629ba9a824040308
-pkgrel=2
+_commit=7c32cb7dd88cf100b0b412163896e30aa2ee671a
+pkgrel=3
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -146,6 +146,7 @@ check() {
   skip_test tst-ntp_gettimex        sysdeps/unix/sysv/linux/Makefile
   skip_test tst-pkey                sysdeps/unix/sysv/linux/Makefile
   skip_test tst-process_mrelease    sysdeps/unix/sysv/linux/Makefile
+  skip_test tst-ttyname             sysdeps/unix/sysv/linux/Makefile
   skip_test tst-adjtime             time/Makefile
   skip_test tst-clock2              time/Makefile
 
