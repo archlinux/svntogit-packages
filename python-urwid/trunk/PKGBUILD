@@ -5,16 +5,21 @@
 
 _name=urwid
 pkgname=python-urwid
-pkgver=2.1.2.r41.g0c0ea37
+pkgver=2.1.2.r55.gbac20db
 # somewhere past 2.1.2 as there has not been a release in years ;_;
 # https://github.com/urwid/urwid/issues/511
-_commit=0c0ea377ab9b418cbb5233fa6e178dd05f1f4e5a
+# https://github.com/urwid/urwid/issues/548
+_commit=bac20db87eaeb0b7a0026807d7e6dbe391b08580
 pkgrel=1
 pkgdesc='Curses-based user interface library'
 url='https://urwid.org/'
 arch=('x86_64')
 license=('LGPL')
-depends=('python' 'glibc')
+depends=(
+  'glibc'
+  'python'
+  'python-typing-extensions'
+)
 makedepends=(
   'git'
   'python-build'
