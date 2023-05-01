@@ -1,22 +1,26 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
-pkgname=pahole
+pkgbase=pahole
+pkgname=(
+  pahole
+  ostra-cg
+)
 pkgver=1.25
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc="Pahole and other DWARF utils"
 url="https://git.kernel.org/pub/scm/devel/pahole/pahole.git"
 arch=(x86_64)
 license=(GPL2)
-depends=(
-  libelf
-  python-matplotlib
-)
 makedepends=(
+  bash
   cmake
+  libelf
   ninja
+  python
+  python-matplotlib
+  zlib
 )
-provides=(libdwarves{,_emit,_reorganize}.so)
 _commit=02d67c51765dfbd5893087da63744c864c7cc9e0  # master
 source=(
   https://fedorapeople.org/~acme/dwarves/dwarves-$pkgver.tar.{xz,sign}
@@ -52,11 +56,42 @@ check() {
   ctest --output-on-failure --stop-on-failure -j$(nproc)
 }
 
-package() {
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_pahole() {
+  depends=(
+    bash
+    libelf
+    zlib
+  )
+  optdepends=('ostra-cg: Generate call graphs from encoded traces')
+  provides=(libdwarves{,_emit,_reorganize}.so)
+
   DESTDIR="$pkgdir" cmake --install build
 
-  python -m compileall -d / "$pkgdir"
-  python -O -m compileall -d / "$pkgdir"
+  _pick ostra "$pkgdir"/usr/{bin/ostra-cg,lib/python*}
+}
+
+package_ostra-cg() {
+  pkgdesc="Generate call graphs from encoded traces"
+  depends=(
+    pahole
+    python
+    python-matplotlib
+  )
+
+  mv ostra/* "$pkgdir"
+
+  python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
 }
 
 # vim:set sw=2 sts=-1 et:
