@@ -3,21 +3,48 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
 pkgbase=evolution
-pkgname=(evolution evolution-bogofilter evolution-spamassassin)
-pkgver=3.46.4
+pkgname=(
+  evolution
+  evolution-bogofilter
+  evolution-spamassassin
+)
+pkgver=3.48.1
 pkgrel=1
 pkgdesc="Manage your email, contacts and schedule"
 url="https://wiki.gnome.org/Apps/Evolution"
 arch=(x86_64)
 license=(GPL)
-depends=(gnome-desktop evolution-data-server libcanberra libpst libytnef gspell
-         gnome-autoar libgweather-4 enchant cmark webkit2gtk-4.1)
-makedepends=(intltool itstool docbook-xsl networkmanager bogofilter
-             spamassassin highlight gtk-doc yelp-tools git cmake ninja)
+depends=(
+  cmark
+  enchant
+  evolution-data-server
+  gnome-autoar
+  gnome-desktop
+  gspell
+  libcanberra
+  libgweather-4
+  libpst
+  libytnef
+  webkit2gtk-4.1
+)
+makedepends=(
+  bogofilter
+  cmake
+  docbook-xsl
+  git
+  gtk-doc
+  highlight
+  intltool
+  itstool
+  networkmanager
+  ninja
+  spamassassin
+  yelp-tools
+)
 options=(!emptydirs)
-_commit=0373b7d11cfcb558b6b0330fdb3c2592244bfe85  # tags/3.46.4^0
+_commit=1645ae84c7a25892f3e4042101b9abf47ee903b5  # tags/3.48.1^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution.git#commit=$_commit")
-sha256sums=('SKIP')
+b2sums=('SKIP')
 
 pkgver() {
   cd $pkgbase
@@ -29,12 +56,16 @@ prepare() {
 }
 
 build() {
-  cmake -S $pkgbase -B build -G Ninja \
-    -DCMAKE_INSTALL_PREFIX=/usr \
-    -DLIBEXEC_INSTALL_DIR=/usr/lib \
-    -DSYSCONF_INSTALL_DIR=/etc \
-    -DENABLE_SMIME=ON \
+  local cmake_options=(
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DLIBEXEC_INSTALL_DIR=/usr/lib
+    -DSYSCONF_INSTALL_DIR=/etc
+
     -DENABLE_GTK_DOC=ON
+    -DENABLE_SMIME=ON
+  )
+
+  cmake -S $pkgbase -B build -G Ninja "${cmake_options[@]}"
   cmake --build build
 }
 
@@ -49,11 +80,19 @@ _pick() {
 }
 
 package_evolution() {
-  depends+=(libcamel-1.2.so libebook-1.2.so libebook-contacts-1.2.so
-            libecal-2.0.so libedataserver-1.2.so libedataserverui-1.2.so)
-  optdepends=('highlight: text highlight plugin'
-              'evolution-spamassassin: Spamassassin spam check plugin'
-              'evolution-bogofilter: Bogofilter spam check plugin')
+  depends+=(
+    libcamel-1.2.so
+    libebook-1.2.so
+    libebook-contacts-1.2.so
+    libecal-2.0.so
+    libedataserver-1.2.so
+    libedataserverui-1.2.so
+  )
+  optdepends=(
+    'evolution-bogofilter: Bogofilter spam check plugin'
+    'evolution-spamassassin: Spamassassin spam check plugin'
+    'highlight: text highlight plugin'
+  )
   groups=(gnome-extra)
 
   DESTDIR="$pkgdir" cmake --install build
@@ -68,13 +107,21 @@ package_evolution() {
 
 package_evolution-bogofilter() {
   pkgdesc="Spam filtering for Evolution, using Bogofilter"
-  depends=("evolution=$pkgver" bogofilter)
+  depends=(
+    "evolution=$pkgver"
+    bogofilter
+  )
+
   mv bogofilter/* "$pkgdir"
 }
 
 package_evolution-spamassassin() {
   pkgdesc="Spam filtering for Evolution, using SpamAssassin"
-  depends=("evolution=$pkgver" spamassassin)
+  depends=(
+    "evolution=$pkgver"
+    spamassassin
+  )
+
   mv spamassassin/* "$pkgdir"
 }
 
