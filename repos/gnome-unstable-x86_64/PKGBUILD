@@ -1,0 +1,66 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=gnome-notes
+pkgver=40.1
+pkgrel=4
+pkgdesc="Write out notes, every detail matters"
+url="https://wiki.gnome.org/Apps/Notes"
+arch=(x86_64)
+license=(GPL)
+depends=(
+  curl
+  evolution-data-server
+  glib2
+  gnome-online-accounts
+  gtk3
+  json-glib
+  libhandy
+  libxml2
+  tracker3
+  webkit2gtk-4.1
+)
+makedepends=(
+  git
+  meson
+  yelp-tools
+)
+provides=("bijiben=$pkgver")
+conflicts=(bijiben)
+replaces=(bijiben)
+groups=(gnome-extra)
+_commit=b5189e213b50cac50f5602945836dc4d85b17959  # tags/BIJIBEN_40_1^0
+source=("git+https://gitlab.gnome.org/GNOME/gnome-notes.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/^BIJIBEN_//;s/_/./g;s/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+
+  # Fix build with Meson 0.61
+  git cherry-pick -n 994af76ce5144062d55d141129bf6bf5fab002ee
+
+  # Remove libuuid dep
+  git cherry-pick -n cbadb5e8b7d3e5e6672e8acab82276c174999a12
+
+  # Soup 3
+  git cherry-pick -n 8471369c54f9aa777857e2a42d82ab502c071520
+}
+
+build() {
+  arch-meson $pkgname build -D update_mimedb=false
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
