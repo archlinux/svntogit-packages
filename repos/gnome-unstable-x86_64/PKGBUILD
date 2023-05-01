@@ -1,0 +1,88 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=malcontent
+pkgname=(malcontent libmalcontent)
+pkgver=0.11.1
+pkgrel=2
+pkgdesc="Parental control support for applications"
+url="https://gitlab.freedesktop.org/pwithnall/malcontent"
+arch=(x86_64)
+license=(LGPL2.1)
+depends=(
+  accountsservice
+  appstream
+  dbus
+  flatpak
+  glib2
+  gtk4
+  libadwaita
+  polkit
+  python-gobject
+)
+makedepends=(
+  git
+  gobject-introspection
+  gtk-doc
+  libglib-testing
+  meson
+  yelp-tools
+)
+_commit=0979e6056745efe4bdfbcd1b31ef7546c367838f  # tags/0.11.1^0
+source=("git+https://gitlab.freedesktop.org/pwithnall/malcontent.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd $pkgname
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_malcontent() {
+  depends+=("libmalcontent=$pkgver-$pkgrel")
+  provides=(libmalcontent-ui-1.so)
+  groups=(gnome)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick libs usr/include/malcontent-0
+  _pick libs usr/lib/girepository-1.0/Malcontent-0.typelib
+  _pick libs usr/lib/libmalcontent-0.so*
+  _pick libs usr/lib/pkgconfig/malcontent-0.pc
+  _pick libs usr/share/gir-1.0/Malcontent-0.gir
+
+  install -d -o root -g 102 -m 750 usr/share/polkit-1/rules.d
+}
+
+package_libmalcontent() {
+  pkgdesc="Parental control library"
+  depends=(libg{lib,object,io}-2.0.so gcc-libs)
+  provides=(libmalcontent-0.so)
+
+  mv libs/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
