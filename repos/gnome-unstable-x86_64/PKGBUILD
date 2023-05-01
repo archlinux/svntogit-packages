@@ -1,0 +1,70 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Fabian Bornschein <fabiscafe-cat-mailbox-dog-org>
+
+pkgbase=libdex
+pkgname=(
+  libdex
+  libdex-docs
+)
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="A library supporting 'Deferred Execution'"
+url="https://gitlab.gnome.org/chergert/libdex"
+arch=(x86_64)
+license=(LGPL)
+depends=(
+  libsoup3
+  liburing
+)
+makedepends=(
+  gi-docgen
+  git
+  gobject-introspection
+  libsysprof-capture
+  meson
+  vala
+)
+_commit=c59ec85110954d8e9a1bf31322944225e1dc6874  # tags/0.2.0^0
+source=("git+https://gitlab.gnome.org/chergert/libdex.git#commit=$_commit")
+b2sums=('SKIP')
+
+pkgver() {
+  cd $pkgbase
+  git describe --tags | sed -r 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+prepare() {
+  cd $pkgbase
+}
+
+build() {
+  local meson_options=(
+    -D docs=true
+    -D sysprof=true
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() (
+  meson test -C build --print-errorlogs
+)
+
+package_libdex() {
+  provides=(libdex-1.so)
+
+  meson install -C build --destdir "$pkgdir"
+
+  mkdir -p doc/usr/share
+  mv {"$pkgdir",doc}/usr/share/doc
+}
+
+package_libdex-docs() {
+  pkgdesc+=" (documentation)"
+  depends=()
+
+  mv doc/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
