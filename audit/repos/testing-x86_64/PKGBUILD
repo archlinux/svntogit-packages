@@ -9,14 +9,28 @@
 
 pkgbase=audit
 _name=audit-userspace
-pkgname=(audit python-audit)
-pkgver=3.1
-pkgrel=2
+pkgname=(
+  audit
+  python-audit
+)
+pkgver=3.1.1
+pkgrel=1
 pkgdesc='Userspace components of the audit framework'
 url='https://people.redhat.com/sgrubb/audit'
 arch=(x86_64)
-makedepends=(glibc krb5 libcap-ng libldap linux-api-headers python swig)
-license=(GPL2 LGPL2.1)
+license=(
+  GPL2
+  LGPL2.1
+)
+makedepends=(
+  glibc
+  krb5
+  libcap-ng
+  libldap
+  linux-api-headers
+  python
+  swig
+)
 options=(emptydirs)
 source=(
   https://github.com/linux-audit/$_name/archive/v$pkgver/$_name-v$pkgver.tar.gz
@@ -24,11 +38,11 @@ source=(
   $pkgbase-3.0.9-flex_array_workaround.patch
   $pkgbase-3.0.9-undo_flex_array_workaround.patch
 )
-sha512sums=('c21be7da557a2f0f2576645db23626785955190599e1b417252424eaefa7284da8e2e915cf2599f28078ee507d83497eb6cbbdb1b1459a0fabd62e235b34e7b9'
+sha512sums=('58a8bb5f4432e035f2abcd336927b92789fe1f43dd5a71c508c3d79b94cbae2f979a02d79164f813fef4e42f7ad747b0d868f186d2197dd5987b0b98234399f9'
             'bc699123f810abcf9300728bf61d7fcfcc83677b75fbeb713fb24cc11b2f9edf687661aab70766acde7c3c41c6a62f8e0a54cdfb49d1c7ce2246b67fbe3feec5'
             '442bffac895abbd0abe455c36ebc03ed5a9faee16b57347ef1f37c0d9c33777e204da917be3bbe11c56173c2ec96eed60646ac7214da47f828eef5fa104c1ebb'
             '92ba0f9b3d3721bf64b56e2f3e2ac4e54b2b6acd9d5646a5ee97eea244cb165e19a56c362de16834925ae063c79e6505687749f1dd67dd0f2997919aea7cb2ef')
-b2sums=('62c92a933c6eefeb3dfe1ec2950de624b7bdfe6f990528314108ad07d4d5a58fb53e0e5edc2f411b1f0a0140bfe96742a7ffadc72c06d1f3f34cb3cbea4e5f4d'
+b2sums=('36f632550dd34ac130be408562aeaeea07c513e3ac76ba1689eb2c588e3312772dae99510584cd8b5e3878905a1695f907fa7216b7f9ab208b48d14d0cfe5f7a'
         '50be1b4f76ace20d8d14b4c57a9bb69daa3da35fd654aca8730bc287682fe38f1c1917b37469fb087daf9f309ffc15cca15f54166ece0a055f540c2604778fc6'
         '2241c3dd29c803493ac8e85afd6031749a46b583514829b8761c24ae12061999b7c95107ec2948dd7edb239f805ca088b7b24229abb5445a4767702539779b0f'
         'd89110c32da33c2ca9292391ead930352e4c8935aa86111640130d9e3fbc0ebe27b069a83812530dfbbf28f4ddd33545658c8061d87bfac9a9d3a6a5ff0be4b8')
@@ -81,7 +95,14 @@ package_audit() {
     krb5 libkrb5.so libgssapi_krb5.so
     libcap-ng libcap-ng.so
   )
-  provides=(libaudit.so libauparse.so)
+  optdepends=(
+    'libldap: for audispd-zos-remote'
+    'sh: for augenrules'
+  )
+  provides=(
+    libaudit.so
+    libauparse.so
+  )
   backup=(
     etc/libaudit.conf
     etc/audit/audit-stop.rules
@@ -115,8 +136,12 @@ package_audit() {
 }
 
 package_python-audit() {
-  depends=(audit libaudit.so libauparse.so glibc python)
-  pkgdesc+=' (python bindings)'
+  pkgdesc+=' - Python bindings'
+  depends=(
+    audit libaudit.so libauparse.so
+    glibc
+    python
+  )
 
   mv -v $pkgname/* "$pkgdir"
 }
