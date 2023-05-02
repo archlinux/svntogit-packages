@@ -5,18 +5,18 @@
 pkgbase=opencv
 pkgname=(opencv opencv-samples python-opencv opencv-cuda)
 pkgver=4.7.0
-pkgrel=9
+pkgrel=10
 pkgdesc='Open Source Computer Vision Library'
 arch=(x86_64)
 license=(BSD)
 url='https://opencv.org/'
 depends=(tbb openexr gst-plugins-base libdc1394 cblas lapack libgphoto2 openjpeg2 ffmpeg protobuf)
-makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt5-base vtk glew ant java-environment
+makedepends=(cmake python-numpy python-setuptools mesa eigen hdf5 lapacke qt6-5compat vtk glew ant java-environment
              pugixml openmpi cudnn fmt nlohmann-json)
 optdepends=('opencv-samples: samples'
             'vtk: for the viz module'
             'glew: for the viz module'
-            'qt5-base: for the HighGUI module'
+            'qt6-base: for the HighGUI module'
             'hdf5: for the HDF5 module'
             'opencl-icd-loader: For coding with OpenCL'
             'java-runtime: Java interface')
@@ -36,6 +36,7 @@ build() {
   # cmake's FindLAPACK doesn't add cblas to LAPACK_LIBRARIES, so we need to specify them manually
   _opts="-DWITH_OPENCL=ON \
          -DWITH_OPENGL=ON \
+         -DOpenGL_GL_PREFERENCE=LEGACY \
          -DWITH_TBB=ON \
          -DWITH_VULKAN=ON \
          -DWITH_QT=ON \
@@ -105,7 +106,7 @@ package_opencv-samples() {
 
 package_python-opencv() {
   pkgdesc='Python bindings for OpenCV'
-  depends=(python-numpy opencv vtk glew qt5-base hdf5 jsoncpp openmpi pugixml fmt)
+  depends=(python-numpy opencv vtk glew qt6-base hdf5 jsoncpp openmpi pugixml fmt)
   unset optdepends
 
   DESTDIR="$pkgdir" cmake --install build/modules/python3
