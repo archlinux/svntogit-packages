@@ -3,7 +3,7 @@
 
 pkgname=clang
 pkgver=15.0.7
-pkgrel=6
+pkgrel=8
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
 url="https://clang.llvm.org/"
@@ -22,6 +22,8 @@ source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
         $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         $pkgname-linker-wrapper-tool.patch::https://github.com/llvm/llvm-project/commit/c2aabcfc8395.patch
+        $pkgname-structured-bindings-r1.patch::https://github.com/llvm/llvm-project/commit/127bf4438542.patch
+        $pkgname-bitfield-value-capture.patch::https://github.com/llvm/llvm-project/commit/a1a71b7dc97b.patch
         enable-fstack-protector-strong-by-default.patch)
 sha256sums=('a6b673ef15377fb46062d164e8ddc4d05c348ff8968f015f7f4af03f51000067'
             'SKIP'
@@ -32,6 +34,8 @@ sha256sums=('a6b673ef15377fb46062d164e8ddc4d05c348ff8968f015f7f4af03f51000067'
             '8986f29b634fdaa9862eedda78513969fe9788301c9f2d938f4c10a3e7a3e7ea'
             'SKIP'
             '640ac4858c68cc6d52226afe01a67ad017f95511636b631d826b791c5b11a47e'
+            '6092fa872e2a706de12d1efb0626a4e9ef9854014edc68edb5ebac2ad27e2d9f'
+            'd432e706fd99e7817ea0cbb02795918a781a11e4f5e6d304d53fffec9856b6f4'
             '7a9ce949579a3b02d4b91b6835c4fb45adc5f743007572fb0e28e6433e48f3a5')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
@@ -67,6 +71,13 @@ prepare() {
 
   # https://reviews.llvm.org/D145862
   patch -Np2 -l -i ../$pkgname-linker-wrapper-tool.patch
+
+  # https://reviews.llvm.org/D122768 (needed for Chromium 113)
+  sed 's|clang-tools-extra|clang/tools/extra|g' \
+    ../$pkgname-structured-bindings-r1.patch | patch -Np2
+
+  # https://reviews.llvm.org/D131202 (regression caused by the above)
+  patch -Np2 -i ../$pkgname-bitfield-value-capture.patch
 
   # Attempt to convert script to Python 3
   2to3 -wn --no-diffs \
