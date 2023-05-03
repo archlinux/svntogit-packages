@@ -26,7 +26,7 @@ makedepends=(
   gobject-introspection
   gtk-doc
   iproute2
-  iptables-nft
+  iptables
   iwd
   jansson
   libmm-glib
