@@ -1,24 +1,48 @@
-# Maintainer: Dan McGee <dan@archlinux.org>
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Dan McGee <dan@archlinux.org>
 # Contributor: Daniele Paolella <dp@mcrservice.it>
 
 pkgname=python-virtualenv
-pkgver=20.17.1
+pkgver=20.21.0
 pkgrel=1
 pkgdesc="Virtual Python Environment builder"
 url="https://virtualenv.pypa.io/"
 arch=('any')
 license=('MIT')
-depends=('python-distlib' 'python-filelock' 'python-platformdirs')
-makedepends=('python-setuptools' 'python-setuptools-scm' 'python-sphinx' 'python-sphinx_rtd_theme'
-             'python-sphinx-argparse' 'towncrier' 'python-importlib-metadata')
-checkdepends=('python-pytest-freezegun' 'python-pytest-mock' 'python-pip' 'python-coverage' 'fish'
-              'xonsh' 'python-flaky')  # 'tcsh' removed: randomly hangs tests
+depends=(
+  'python'
+  'python-distlib'
+  'python-filelock'
+  'python-platformdirs'
+)
+makedepends=(
+  'python-build'
+  'python-installer'
+  'python-hatchling'
+  'python-hatch-vcs'
+  'python-importlib-metadata'
+  'python-sphinx'
+  'python-sphinx-argparse'
+  'python-sphinxcontrib-towncrier'
+  'python-wheel'
+  'towncrier'
+)
+checkdepends=(
+  'fish'
+  'python-coverage'
+  'python-flaky'
+  'python-pip'
+  'python-pytest-freezegun'
+  'python-pytest-mock'
+  # 'tcsh'  # NOTE: randomly hangs tests (e.g. tests/unit/test_util.py::test_reentrant_file_lock_is_thread_safe)
+  'xonsh'
+)
 replaces=('virtualenv')
 conflicts=('virtualenv')
 options=('!makeflags')
 source=(https://github.com/pypa/virtualenv/archive/$pkgver/$pkgname-$pkgver.tar.gz)
-sha512sums=('336d597b51c7aa4161f4cf6161e07368a7f5071a4e8c84385149f37545825bd724da9cd69c211abf43b86c4edd4b119fb49397ba02a73d8a42f2b13b46b1d41b')
+sha512sums=('c02ba29677c3b6405d2849bba7243b7a61a49f83b0d309a288876754762f81a1d111ae5176e4c20623e263ceef73c4c0c76fd7a84043ee8a220b5620b31fc2e7')
+b2sums=('5e8ac9e29af0251a247b7f80465e975c13fcaa722ad4859cba046783819a2540307f31a3799146316a07490e4c55fca0a77ee84238865412517832766e2ee200')
 
 export SETUPTOOLS_SCM_PRETEND_VERSION=$pkgver
 
@@ -28,23 +52,35 @@ prepare() {
 }
 
 build() {
-  (cd virtualenv-$pkgver
-    python setup.py build egg_info
-    export PYTHONPATH="$PWD/build/lib:$PWD/src"
-    sphinx-build -b man docs docs/_build/man
-  )
+  local site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+
+  cd virtualenv-$pkgver
+  python -m build --wheel --no-isolation
+  # NOTE: install to tmp dir for documentation and tests
+  python -m installer --destdir=test_dir dist/*.whl
+  export PYTHONPATH="$PWD/test_dir/$site_packages:$PYTHONPATH"
+  sphinx-build -b man docs docs/_build/man
 }
 
 check() {
+  local pytest_options=(
+    -vv
+    # tests try to find python2
+    --deselect tests/unit/create/test_creator.py::test_py_pyc_missing[True-False]
+    --deselect tests/unit/create/test_creator.py::test_py_pyc_missing[False-False]
+    --deselect tests/unit/discovery/py_info/test_py_info.py::test_fallback_existent_system_executable
+  )
+  local site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+
   cd virtualenv-$pkgver
-  # tests/unit/create/test_creator.py::test_py_pyc_missing: asking for Python 2.x
-  PYTHONPATH="$PWD/build/lib:$PWD/src" python -m pytest --deselect tests/unit/create/test_creator.py::test_py_pyc_missing
+  export PYTHONPATH="$PWD/test_dir/$site_packages:$PYTHONPATH"
+  pytest "${pytest_options[@]}"
 }
 
 package() {
   cd virtualenv-$pkgver
-  python setup.py install --prefix=/usr --root="$pkgdir" --skip-build
-  install -Dm 644 docs/_build/man/virtualenv.1 "${pkgdir}/usr/share/man/man1/virtualenv.1"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm 644 docs/_build/man/virtualenv.1 -t "${pkgdir}/usr/share/man/man1/"
   ln -s virtualenv.1.gz "${pkgdir}/usr/share/man/man1/virtualenv3.1.gz"
 
   # link to a version with 3 suffix as well
