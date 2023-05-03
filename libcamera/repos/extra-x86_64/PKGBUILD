@@ -8,13 +8,16 @@ pkgname=(
   libcamera-tools
   gst-plugin-libcamera
 )
-pkgver=0.0.4
-_commit=6a57d964abdb3f24608c0fc2839d96e02eebddeb  # refs/tags/v0.0.4
-pkgrel=4
+pkgver=0.0.5
+_commit=5fa37d7623053ef5a693b276986a44d010d057e5  # refs/tags/v0.0.5
+pkgrel=1
 pkgdesc="A complex camera support library for Linux, Android, and ChromeOS"
 arch=(x86_64)
 url="https://libcamera.org/"
-license=(LGPL2.1 GPL2)
+license=(
+  LGPL2.1
+  GPL2
+)
 depends=(glibc)
 makedepends=(
   doxygen
@@ -38,8 +41,14 @@ makedepends=(
   systemd
   texlive-core
 )
-source=(git+https://git.libcamera.org/$pkgname/$pkgname.git#tag=$_commit)
-sha256sums=('SKIP')
+source=(
+  git+https://git.libcamera.org/$pkgbase/$pkgbase.git#tag=$_commit
+  $pkgbase-0.0.5-sphinx.patch
+)
+sha512sums=('SKIP'
+            '52abec885c0a38c042622bc1bb106f7cefc19e3d8d0b6dcba7c4fadae3ad9303d5ae74447a72abe710598bc2162d57900be54bfe0de18d4c0842160c1c65b35a')
+b2sums=('SKIP'
+        'e43847222ad644a23761f7f601891971f499552156d8dfd5922732d134e5a09202c6c4fa3880e13c1ae950d34c5a3617ada12fabc06368e3201110ac5455af7f')
 
 _pick() {
   local p="$1" f d; shift
@@ -52,13 +61,14 @@ _pick() {
 }
 
 prepare() {
-  cd $pkgname
+  cd $pkgbase
 
   # add version, so that utils/gen-version.sh may rely on it
   printf "%s\n" "$pkgver" > .tarball-version
 
-  # Fix exponential callback explosion
-  git cherry-pick -n a146e05125fdac75b8ffb6a818e00a446cec65dd
+  # fix use of python-sphinx
+  # https://github.com/sphinx-doc/sphinx/pull/11381
+  git apply -v ../$pkgbase-0.0.5-sphinx.patch
 }
 
 build() {
@@ -68,7 +78,7 @@ build() {
     -D test=true
   )
 
-  arch-meson $pkgname build "${meson_options[@]}"
+  arch-meson $pkgbase build "${meson_options[@]}"
   meson compile -C build
 }
 
