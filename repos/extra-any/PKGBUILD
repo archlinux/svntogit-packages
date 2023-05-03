@@ -2,7 +2,7 @@
 
 pkgname=gyp
 pkgver=20220404.9ecf45e3
-pkgrel=1
+pkgrel=2
 pkgdesc='"Generate Your Projects" Meta-Build system'
 url="https://gyp.gsrc.io/"
 arch=(any)
