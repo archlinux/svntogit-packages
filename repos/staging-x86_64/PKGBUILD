@@ -1,0 +1,62 @@
+# Maintainer: Rémy Oudompheng <remy@archlinux.org>
+# Contributor: Firmicus <francois.archlinux.org>
+# Contributor: bender02 at gmx dot com
+
+pkgname=asymptote
+pkgver=2.85
+pkgrel=1
+pkgdesc="A vector graphics language (like metapost)"
+arch=('x86_64')
+url="http://asymptote.sourceforge.net/"
+license=("GPL3")
+depends=('texlive-core' 'gc' 'freeglut' 'gsl' 'fftw' 'libsigsegv')
+makedepends=('ghostscript' 'imagemagick'
+             'mesa'               # For OpenGL headers
+             'texlive-plainextra' # For texinfo
+             'texlive-latexextra'
+             'python-pyqt5'       # For xasy GUI generation
+             'glm'
+             'glu')
+optdepends=('python-pyqt5: for the xasy GUI'
+            'python-cson:  for the xasy GUI')
+source=("https://downloads.sourceforge.net/sourceforge/${pkgname}/${pkgname}-${pkgver}.src.tgz")
+sha256sums=('4c0559b62c41f947b5fbf044b4d091bd3cf0abe599c85138087069809875ec87')
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  ./autogen.sh
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  export CXXFLAGS+=" -I${srcdir}/${pkgname}-${pkgver}"
+  ./configure --enable-gc=/usr \
+              --prefix=/usr \
+              --with-latex=/usr/share/texmf/tex/latex \
+              --with-context=/usr/share/texmf/tex/context \
+              --enable-offscreen
+  make all
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make check-all
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  make -j1 DESTDIR="${pkgdir}" install-all
+  # this dir contains png files that are already embedded in the pdf documentation:
+  rm -rf "${pkgdir}/usr/share/info/asymptote"
+
+  # copy some data files to their correct location
+  mkdir -p "$pkgdir"/usr/share/emacs/site-lisp
+  cp "$pkgdir"/usr/share/asymptote/*.el "$pkgdir"/usr/share/emacs/site-lisp
+  mkdir -p "$pkgdir"/usr/share/vim/vimfiles/syntax
+  cp "$pkgdir"/usr/share/asymptote/*.vim "$pkgdir"/usr/share/vim/vimfiles/syntax
+  mkdir -p "$pkgdir"/usr/share/org.kde.syntax-highlighting/syntax
+  cd "$pkgdir"/usr/share/asymptote/
+  sh asy-kate.sh
+  mv asymptote.xml "$pkgdir"/usr/share/org.kde.syntax-highlighting/syntax
+}
