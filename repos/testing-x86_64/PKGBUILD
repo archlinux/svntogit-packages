@@ -1,0 +1,80 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Contributor: Ronald van Haren <ronald.archlinux.org>
+# Contributor: Tom Killian <tom.archlinux.org>
+# Contributor: Judd Vinet <jvinet.zeroflux.org>
+
+pkgname=dhcpcd
+pkgver=10.0.1
+pkgrel=1
+pkgdesc="DHCP/ IPv4LL/ IPv6RA/ DHCPv6 client"
+url="https://roy.marples.name/projects/dhcpcd/"
+arch=(x86_64)
+license=(BSD)
+depends=(
+  glibc
+  sh
+  systemd-libs
+)
+optdepends=('openresolv: resolvconf support')
+provides=(dhcp-client)
+backup=(etc/$pkgname.conf)
+# we need /var/lib/dhcpcd
+options=(emptydirs)
+source=(
+  https://github.com/NetworkConfiguration/$pkgname/releases/download/v$pkgver/$pkgname-$pkgver.tar.xz{,.asc}
+  ${pkgname}_.service
+  $pkgname.service
+  $pkgname.sysusers
+  $pkgname.tmpfiles
+)
+sha256sums=('6e9f6a5c47fcd8a763cfa26f1ca6eedf1e534992224a01d6c1ab8abb154af972'
+            'SKIP'
+            'a2495b4a4632f9ee6d5d40877eb9667aaa3f64e035dbd8ccfc029a3a2339f069'
+            '843913ee4cd77ca51ab1f1d21eb13650df3791db2b8526a9b0c9acf2d6b9c63f'
+            '06788ad9f5f7ccb5d2a2da6f0322ff5771f8de82cfbe8b9ad954f2c38265e21b'
+            '1ca593a91d537766d073e71cfab87881e6f6a2ccb5236a45531d5520b3af7a31')
+b2sums=('f1e93285d040b98bede86bb2e87e372afc0d1d124e7a6580c23d8d228a34ee17001fc3c2d9091b16fb082fe2f2ad7ba50c0dd7b0db2b2237ab1cff9ca152100a'
+        'SKIP'
+        '7589109b275c823b80002cbb273113d0e1b5635fc79859bbfc55c287d3d1ce9a539116e33f60d118f6251d7301b6376c40ff9346d5947b02f75cb9261c6488ef'
+        'ceb051db7d43464992ffd804f95fb6c96ba6f450a0ec7a97d595f0700299916d1ebb049a1b97671e4b58f8829510bc44af2a36bfdccb79f9c34330162e6fdedb'
+        '1f4ad7d27a33ea9d317b95817898bc853bda8ef6bf1b09d86b7a5b25a0dae89c246fdb919c62b677d25148c8b4cf8c02e99cf3fa583c3a63bd04d1817bf47872'
+        'fab9f56a694b2bcaa26ebd4040984778ea4a3cccd57f17a0eb724a9fc4750157d97d9d0db747932c3b386938fe2bf1d6a4ba609cc5cc3a6b0e1ae39404ba21be')
+validpgpkeys=('A785ED2755955D9E93EA59F6597F97EA9AD45549')  # Roy Marples (NetBSD) <roy@NetBSD.org>
+
+prepare() {
+  printf "# Don't attempt to obtain an IPv4LL address if we failed to get one via DHCP.  See RFC 3927.\nnoipv4ll\n" >> $pkgname-$pkgver/src/$pkgname.conf
+}
+
+build() {
+  local configure_options=(
+    --dbdir=/var/lib/$pkgname
+    --libexecdir=/usr/lib/$pkgname
+    --prefix=/usr
+    --privsepuser=$pkgname
+    --runstatedir=/run
+    --sbindir=/usr/bin
+    --sysconfdir=/etc
+  )
+
+  cd $pkgname-$pkgver
+  ./configure "${configure_options[@]}"
+  make
+}
+
+check() {
+  make test -C $pkgname-$pkgver
+}
+
+package() {
+  make DESTDIR="$pkgdir" install -C $pkgname-$pkgver
+  install -vDm 644 $pkgname-$pkgver/LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -Dm644 $pkgname.service -t "$pkgdir/usr/lib/systemd/system/"
+  install -Dm644 ${pkgname}_.service "$pkgdir/usr/lib/systemd/system/$pkgname@.service"
+  install -Dm644 $pkgname.sysusers "$pkgdir/usr/lib/sysusers.d/$pkgname.conf"
+  install -Dm644 $pkgname.tmpfiles "$pkgdir/usr/lib/tmpfiles.d/$pkgname.conf"
+
+  # strip files that somehow won't get stripped automatically
+  strip "$pkgdir/usr/bin/$pkgname"
+  strip "$pkgdir/usr/lib/$pkgname/dev/udev.so"
+}
