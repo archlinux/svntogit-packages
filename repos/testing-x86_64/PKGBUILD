@@ -4,7 +4,7 @@
 
 pkgname=gnome-shell
 pkgver=44.1
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -24,7 +24,7 @@ depends=(
   libgdm
   libgweather-4
   libibus
-  libnma
+  libnma-gtk4
   libsecret
   libsoup3
   mutter
