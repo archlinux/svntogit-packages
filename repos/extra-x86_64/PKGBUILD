@@ -5,11 +5,12 @@
 
 _name=urwid
 pkgname=python-urwid
-pkgver=2.1.2.r55.gbac20db
-# somewhere past 2.1.2 as there has not been a release in years ;_;
+pkgver=2.1.2.r56.gabc098c
+# somewhere past 2.1.2 as there has not been a release in years to have Python 3.11 support without bricking dependents
 # https://github.com/urwid/urwid/issues/511
 # https://github.com/urwid/urwid/issues/548
-_commit=bac20db87eaeb0b7a0026807d7e6dbe391b08580
+# https://github.com/urwid/urwid/issues/550
+_commit=abc098c3400220b51aeb6fec14175e1bfa1f8bfb
 pkgrel=1
 pkgdesc='Curses-based user interface library'
 url='https://urwid.org/'
