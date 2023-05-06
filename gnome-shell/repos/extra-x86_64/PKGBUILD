@@ -3,8 +3,8 @@
 # Contributor: Flamelab <panosfilip@gmail.com
 
 pkgname=gnome-shell
-pkgver=43.5
-pkgrel=1
+pkgver=44.1
+pkgrel=3
 epoch=1
 pkgdesc="Next generation desktop shell"
 url="https://wiki.gnome.org/Projects/GnomeShell"
@@ -24,7 +24,7 @@ depends=(
   libgdm
   libgweather-4
   libibus
-  libnma
+  libnma-gtk4
   libsecret
   libsoup3
   mutter
@@ -44,6 +44,7 @@ makedepends=(
 )
 checkdepends=(
   appstream-glib
+  python-dbusmock
   xorg-server-xvfb
 )
 optdepends=(
@@ -57,15 +58,13 @@ optdepends=(
   'switcheroo-control: Multi-GPU support'
 )
 groups=(gnome)
-_commit=4b23dfb53519710fac643d214e661b1488505fda  # tags/43.5^0
+_commit=b0ca64e7775225b7c5d049571a44ef40bf516406  # tags/44.1^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-shell.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
-  0001-main-Leak-the-GJS-context-and-ShellGlobal.patch
 )
 b2sums=('SKIP'
-        'SKIP'
-        '5636fd813bc0aeafbdd52eb6335ef79b5801b800e332119b3d127a6cd188aa24051ebc718449f22bea7bedc37347ff98c7d491b35d84f573f0e4cff2046117d4')
+        'SKIP')
 
 pkgver() {
   cd $pkgname
@@ -74,18 +73,6 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-
-  # https://bugs.archlinux.org/task/77572
-  # https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2611
-  git cherry-pick -n a9e6e44ef898671229388938cc3ed511fa394dfc
-
-  # https://bugs.archlinux.org/task/74434
-  # https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2621
-  git cherry-pick -n 266a19f05cad26d97c659493cd34ba196ef6eeb2
-
-  # https://bugs.archlinux.org/task/71250
-  # https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/5560#note_1636124
-  git apply -3 ../0001-main-Leak-the-GJS-context-and-ShellGlobal.patch
 
   git submodule init
   git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
@@ -105,10 +92,10 @@ build() {
 }
 
 _check() (
-  export XDG_RUNTIME_DIR="$PWD/runtime-dir"
+  export XDG_RUNTIME_DIR="$PWD/rdir"
   mkdir -p -m 700 "$XDG_RUNTIME_DIR"
 
-  meson test -C build --print-errorlogs
+  meson test -C build --print-errorlogs -t 3
 )
 
 check() {
@@ -117,7 +104,7 @@ check() {
 }
 
 package() {
-  depends+=(libmutter-11.so)
+  depends+=(libmutter-12.so)
   meson install -C build --destdir "$pkgdir"
 }
 
