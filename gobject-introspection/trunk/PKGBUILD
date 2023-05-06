@@ -8,12 +8,12 @@ pkgname=(
   libgirepository
 )
 pkgver=1.76.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Introspection system for GObject-based libraries"
 url="https://wiki.gnome.org/Projects/GObjectIntrospection"
 arch=(x86_64)
 license=(LGPL GPL)
-_glibver=2.76.1
+_glibver=2.76.2
 makedepends=(
   cairo
   git
