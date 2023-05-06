@@ -1,0 +1,75 @@
+# Contributor: Daniel Isenmann <daniel@archlinux.org>
+# Contributor: William Rea <sillywilly@gmail.com>
+
+pkgname=libgpod
+pkgver=0.8.3
+pkgrel=15
+pkgdesc="A shared library to access the contents of an iPod"
+url="http://www.gtkpod.org/libgpod/"
+arch=(x86_64)
+license=(LGPL)
+depends=(
+  gdk-pixbuf2
+  libimobiledevice
+  libplist
+  sg3_utils
+  sqlite
+  usbmuxd
+)
+makedepends=(
+  docbook-xsl
+  gtk-doc
+  intltool
+)
+provides=(libgpod.so)
+options=(!emptydirs)
+source=(
+  https://downloads.sourceforge.net/sourceforge/gtkpod/${pkgname}-${pkgver}.tar.bz2
+  0001-323-Segmentation-fault-when-opening-ipod.patch
+  libgpod-0.8.2-pkgconfig_overlinking.patch
+  libgpod-0.8.3-pkgconfig_sharp.patch
+  libgpod-udev.patch
+)
+sha256sums=('638a7959d04e95f1e62abad02bd33702e4e8dfef98485ac7d9d50395c37e955d'
+            'b181131ee5b42673074f8217155b4f147623cc63dd382ee4bfa2cb81cd281b20'
+            '02daa2b46d0cfdee14c9d96eabf903ba4638694e669c5cb0ec462076837ac2ff'
+            '8e61c2a26c9144f2d76dae84ebb0b6ac9a73c53e4411fd4046c3938e0bbe5e23'
+            '35786054ebbfab1d247d51e7c7dc7618f8ed9fc17ad3c8b590d89190728452ea')
+b2sums=('e9bc54d23be7f54a17eea3f8a07d7bf6a28224d9c0b0f90fb9d44d97af6cf64c31096de5d9fa4b446e1a9463a6e8f3a59929d73bf52ad8d638732868c3c1b7d0'
+        '4d984ba1d0a8da1e9a28e06cfebe5501a580ffe528a851e3470855f298db78067fedb14c5cb48c6165f0b571e27259cb30bb848d4b9a4724174a25eaa695ff3f'
+        '74d924d61ce33c4fd0219e8dedb505bd66cd40e9912efb2dbbb5df31c2bea943ea4a4eb8b9e9baf2762966b02efae3f77c73293f8a4a581f6a43be4cc22eb727'
+        'd3cb8ceaf14811c7bdee072229c838a4b9d7bd8c53ec76d2d0177c954730271b75174e559657d0948ccb5f921170e4d6636d4f1a36b329970f6b32da236ce390'
+        'cbf5e305dd2b219149c09763eaf405f9e50944a2a12310caec31770378828241ce06b1747ba78552261724e37de052eefa145589600c77aeefdcc3a86a0b8a23')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../0001-323-Segmentation-fault-when-opening-ipod.patch
+  patch -Np1 -i ../libgpod-0.8.2-pkgconfig_overlinking.patch
+  patch -Np1 -i ../libgpod-0.8.3-pkgconfig_sharp.patch
+  patch -Np0 -i ../libgpod-udev.patch
+  sed -e 's|libplist >= 1.0|libplist-2.0 >= 2.2|' -i configure.ac # support libplist 2.2
+  sed -e 's|plist_dict_insert_item|plist_dict_set_item|' -i tools/ipod-lockdown.c # support libplist 2.3
+  autoreconf -vi
+}
+
+build() {
+  local configure_options=(
+    --prefix=/usr
+    --enable-udev
+    --with-mono=no
+    --with-python=no
+    --with-udev-dir=/usr/lib/udev
+  )
+
+  cd $pkgname-$pkgver
+  ./configure "${configure_options[@]}"
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+  make DESTDIR="${pkgdir}" install
+}
+
+# vim:set sw=2 sts=-1 et:
