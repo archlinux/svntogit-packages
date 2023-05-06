@@ -1,24 +1,29 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Jan de Groot <jgc@archlinux.org>
 
-pkgname=evolution-data-server
-pkgver=3.46.4
+pkgbase=evolution-data-server
+pkgname=(
+  evolution-data-server
+  libedataserverui4
+  evolution-data-server-docs
+)
+pkgver=3.48.1
 pkgrel=1
-pkgdesc="Centralized access to appointments and contacts"
+pkgdesc="Unified contacts, tasks and calendar backend"
 url="https://wiki.gnome.org/Apps/Evolution"
 arch=(x86_64)
 depends=(
-  gcr-4
-  gnome-online-accounts
+  gtk3
   krb5
   libcanberra
+  libgoa
   libgweather-4
   libical
   libphonenumber
+  libsecret
   nss
   sqlite
   webkit2gtk-4.1
-  webkit2gtk-5.0
 )
 makedepends=(
   boost
@@ -29,31 +34,21 @@ makedepends=(
   gtk-doc
   ninja
   vala
+  webkitgtk-6.0
 )
-provides=(
-  libcamel-1.2.so
-  libebackend-1.2.so
-  libebook-1.2.so
-  libebook-contacts-1.2.so
-  libecal-2.0.so
-  libedata-book-1.2.so
-  libedata-cal-2.0.so
-  libedataserver-1.2.so
-  libedataserverui-1.2.so
-  libedataserverui4-1.0.so
-)
+checkdepends=(db)
 license=(GPL)
-_commit=1c768051909d309420c2a9e27912ceaa64caaac2  # tags/3.46.4^0
+_commit=fc0a280168a5ec8aaeae7f9e34c46f10914c7c84  # tags/3.48.1^0
 source=("git+https://gitlab.gnome.org/GNOME/evolution-data-server.git#commit=$_commit")
-sha256sums=('SKIP')
+b2sums=('SKIP')
 
 pkgver() {
-  cd $pkgname
+  cd $pkgbase
   git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
 }
 
 prepare() {
-  cd $pkgname
+  cd $pkgbase
 }
 
 build() {
@@ -69,7 +64,7 @@ build() {
     -DWITH_PHONENUMBER=ON
   )
 
-  cmake -S $pkgname -B build -G Ninja "${cmake_options[@]}"
+  cmake -S $pkgbase -B build -G Ninja "${cmake_options[@]}"
   cmake --build build
 }
 
@@ -78,8 +73,60 @@ check() {
   ctest --output-on-failure --stop-on-failure
 }
 
-package() {
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_evolution-data-server() {
+  provides=(
+    libcamel-1.2.so
+    libebackend-1.2.so
+    libebook-1.2.so
+    libebook-contacts-1.2.so
+    libecal-2.0.so
+    libedata-book-1.2.so
+    libedata-cal-2.0.so
+    libedataserver-1.2.so
+    libedataserverui-1.2.so
+  )
+
   DESTDIR="$pkgdir" cmake --install build
+
+  cd "$pkgdir"
+
+  _pick ui4 usr/include/evolution-data-server/libedataserverui4
+  _pick ui4 usr/lib/libedataserverui4-1.0.so*
+  _pick ui4 usr/lib/pkgconfig/libedataserverui4-1.0.pc
+  _pick ui4 usr/lib/girepository-1.0/EDataServerUI4-1.0.typelib
+  _pick ui4 usr/share/gir-1.0/EDataServerUI4-1.0.gir
+  _pick ui4 usr/share/vala/vapi/libedataserverui4-1.0.*
+
+  _pick docs usr/share/gtk-doc
+}
+
+package_libedataserverui4() {
+  pkgdesc+=" - GTK 4 UI library"
+  depends=(
+    "evolution-data-server=$pkgver-$pkgrel"
+    libgtk-4.so
+    libwebkitgtk-6.0.so
+  )
+  provides=(libedataserverui4-1.0.so)
+
+  mv ui4/* "$pkgdir"
+}
+
+package_evolution-data-server-docs() {
+  pkgdesc+=" - documentation"
+  depends=()
+
+  mv docs/* "$pkgdir"
 }
 
 # vim:set sw=2 sts=-1 et:
