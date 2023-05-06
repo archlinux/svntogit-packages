@@ -1,22 +1,36 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
-pkgname=gnome-online-accounts
-pkgver=3.46.0
-pkgrel=1
+pkgbase=gnome-online-accounts
+pkgname=(
+  gnome-online-accounts
+  libgoa
+)
+pkgver=3.48.0
+pkgrel=2
 pkgdesc="Single sign-on framework for GNOME"
 url="https://wiki.gnome.org/Projects/GnomeOnlineAccounts"
 arch=(x86_64)
 license=(LGPL)
-depends=(webkit2gtk-4.1 json-glib libnotify librest libsecret krb5 gcr)
-makedepends=(gobject-introspection gtk-doc vala git meson)
-optdepends=('gvfs-goa: Virtual file systems, e.g. OwnCloud'
-            'gvfs-google: Google Drive')
-provides=(libgoa-1.0.so libgoa-backend-1.0.so)
-options=(debug)
-_commit=05d9df2822e8d7ce482c46e43cb6fe038e5e488a  # tags/3.46.0^0
+depends=(
+  gcr
+  json-glib
+  krb5
+  libnotify
+  librest
+  libsecret
+  webkit2gtk-4.1
+)
+makedepends=(
+  git
+  gobject-introspection
+  gtk-doc
+  meson
+  vala
+)
+_commit=ebab108d4d8505b56cc313acad341520ed18df8f  # tags/3.48.0^0
 source=("git+https://gitlab.gnome.org/GNOME/gnome-online-accounts.git#commit=$_commit")
-sha256sums=('SKIP')
+b2sums=('SKIP')
 
 pkgver() {
   cd $pkgname
@@ -42,8 +56,44 @@ check() {
   meson test -C build --print-errorlogs
 }
 
-package() {
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_gnome-online-accounts() {
+  depends+=("libgoa=$pkgver-$pkgrel")
+  optdepends=(
+    'gvfs-goa: Virtual file systems, e.g. OwnCloud'
+    'gvfs-google: Google Drive'
+  )
+  provides=(libgoa-backend-1.0.so)
+
   meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick goa usr/include/goa-1.0/goa
+  _pick goa usr/lib/libgoa-1.0.so*
+  _pick goa usr/lib/girepository-1.0/Goa-1.0.typelib
+  _pick goa usr/lib/goa-1.0/include
+  _pick goa usr/lib/pkgconfig/goa-1.0.pc
+  _pick goa usr/share/gir-1.0/Goa-1.0.gir
+  _pick goa usr/share/vala/vapi/goa-1.0.*
+  _pick goa usr/share/gtk-doc
+}
+
+package_libgoa() {
+  pkgdesc+=" - client library"
+  depends=(libg{lib,object,io}-2.0.so)
+  provides=(libgoa-1.0.so)
+
+  mv goa/* "$pkgdir"
 }
 
 # vim:set sw=2 sts=-1 et:
