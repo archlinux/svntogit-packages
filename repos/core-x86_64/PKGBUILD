@@ -3,7 +3,7 @@
 
 pkgbase=nss
 pkgname=(nss ca-certificates-mozilla)
-pkgver=3.89
+pkgver=3.89.1
 pkgrel=1
 pkgdesc="Network Security Services"
 url="https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS"
@@ -25,7 +25,7 @@ makedepends=(
   perl
   python
 )
-_revision=4e4ebb9ad0d4391035c76c26967682c148ff0fd7
+_revision=c8e02a52aa1979e28bdba814df1b72fc743d66d4
 source=(
   "hg+https://hg.mozilla.org/projects/nss#revision=$_revision"
   bundle.sh
@@ -46,6 +46,15 @@ prepare() {
 }
 
 build() {
+  local buildsh_options=(
+    --disable-tests
+    --enable-libpkix
+    --opt
+    --system-nspr
+    --system-sqlite
+    --target x64
+  )
+
   cd certs
   ../certdata2pem.py
 
@@ -53,24 +62,18 @@ build() {
   ./bundle.sh
 
   cd nss
-  ./build.sh \
-    --target x64 \
-    --opt \
-    --system-sqlite \
-    --system-nspr \
-    --enable-libpkix \
-    --disable-tests
+  ./build.sh "${buildsh_options[@]}"
 }
 
 package_nss() {
   local nsprver="$(pkg-config --modversion nspr)"
-  local libdir=/usr/lib
+  local libdir=/usr/lib includedir=/usr/include/nss
 
   sed nss/pkg/pkg-config/nss.pc.in \
-    -e "s,%libdir%,$libdir,g" \
     -e "s,%prefix%,/usr,g" \
-    -e "s,%exec_prefix%,/usr/bin,g" \
-    -e "s,%includedir%,/usr/include/nss,g" \
+    -e "s,%exec_prefix%,\${prefix},g" \
+    -e "s,%libdir%,$libdir,g" \
+    -e "s,%includedir%,$includedir,g" \
     -e "s,%NSPR_VERSION%,$nsprver,g" \
     -e "s,%NSS_VERSION%,$pkgver,g" |
     install -Dm644 /dev/stdin "$pkgdir$libdir/pkgconfig/nss.pc"
@@ -84,10 +87,10 @@ package_nss() {
     < <(awk '/#define.*NSS_V(MAJOR|MINOR|PATCH)/ {print $3}' nss/lib/nss/nss.h)
 
   sed nss/pkg/pkg-config/nss-config.in \
+    -e "s,@prefix@,/usr,g" \
+    -e "s,@exec_prefix@,/usr,g" \
     -e "s,@libdir@,$libdir,g" \
-    -e "s,@prefix@,/usr/bin,g" \
-    -e "s,@exec_prefix@,/usr/bin,g" \
-    -e "s,@includedir@,/usr/include/nss,g" \
+    -e "s,@includedir@,$includedir,g" \
     -e "s,@MOD_MAJOR_VERSION@,$vmajor,g" \
     -e "s,@MOD_MINOR_VERSION@,$vminor,g" \
     -e "s,@MOD_PATCH_VERSION@,$vpatch,g" |
@@ -96,7 +99,7 @@ package_nss() {
   install -Dt "$pkgdir/usr/bin" \
     dist/Release/bin/{*util,shlibsign,signtool,signver,ssltap}
 
-  install -Dt "$pkgdir/usr/include/nss" -m644 dist/public/nss/*.h
+  install -Dt "$pkgdir$includedir" -m644 dist/public/nss/*.h
 
   install -Dt "$pkgdir/usr/share/man/man1" -m644 \
     nss/doc/nroff/{*util,signtool,signver,ssltap}.1
