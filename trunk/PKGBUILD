@@ -3,7 +3,7 @@
 
 pkgname=libheif
 pkgver=1.16.1
-pkgrel=1
+pkgrel=2
 pkgdesc='HEIF file format decoder and encoder'
 arch=(x86_64)
 url='https://github.com/strukturag/libheif'
@@ -13,7 +13,7 @@ depends=(libde265 x265 aom dav1d)
 optdepends=('libjpeg: for heif-convert and heif-enc' 'libpng: for heif-convert and heif-enc'
             'svt-av1: svt-av1 encoder' 'rav1e: rav1e encoder')
 source=(https://github.com/strukturag/libheif/releases/download/v$pkgver/libheif-$pkgver.tar.gz)
-sha256sums=('7760110c76844a4c2d77cc1efe186f1b8c55b16189f97ed258e3c006db84b8e3')
+sha256sums=('ac15b54b6d7c315710e156d119b8a1bfc89f29621e99222b2750b1f31c9c3558')
 
 build() {
   cmake -B build -S $pkgname-$pkgver\
