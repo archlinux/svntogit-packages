@@ -37,15 +37,16 @@ makedepends=(
   gi-docgen
   git
   gobject-introspection
+  gtk3
   meson
   sysprof
   wayland-protocols
   xorg-server
+  xorg-server-xvfb
 )
 checkdepends=(
   python-dbusmock
   wireplumber
-  xorg-server-xvfb
   zenity
 )
 _commit=28a6447ff060ae1fbac8f20a13908d6e230eddc2  # tags/44.1^0
