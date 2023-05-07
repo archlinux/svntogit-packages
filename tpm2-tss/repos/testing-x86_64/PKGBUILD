@@ -1,0 +1,53 @@
+# Maintainer: Jonas Witschel <diabonas@archlinux.org>
+# Contributor: Bruno Pagani <archange@archlinux.org>
+pkgname=tpm2-tss
+pkgver=4.0.1
+pkgrel=1
+pkgdesc='Implementation of the TCG Trusted Platform Module 2.0 Software Stack (TSS2)'
+arch=('x86_64')
+url='https://github.com/tpm2-software/tpm2-tss'
+license=('BSD')
+depends=('curl' 'json-c' 'openssl' 'libjson-c.so')
+makedepends=('cmocka' 'doxygen' 'libtpms')
+checkdepends=('iproute2' 'swtpm' 'uthash')
+provides=('libtss2-esys.so' 'libtss2-fapi.so' 'libtss2-mu.so' 'libtss2-rc.so' 'libtss2-sys.so' 'libtss2-tctildr.so')
+backup=('etc/tpm2-tss/fapi-config.json'
+        'etc/tpm2-tss/fapi-profiles/P_ECCP256SHA256.json'
+        'etc/tpm2-tss/fapi-profiles/P_RSA2048SHA256.json')
+options=('!emptydirs' '!lto')
+source=("$url/releases/download/$pkgver/$pkgname-$pkgver.tar.gz"{,.asc}
+        'https://raw.githubusercontent.com/tpm2-software/tpm2-tss/e237e4d33cbf280292a480edd8ad061dcd3a37a2/lib/tss2-tcti-libtpms.map'
+        'https://github.com/tpm2-software/tpm2-tss/commit/218c0da8.patch')
+sha512sums=('ed6ddc52cb0e8c1082a4bb001e1225eb9905fd2380da88db5fd69ff5b5d9d43a93eb67b634e49d53eb5d586832da3aef2c4c7e5f18d51bb730481f8913319d7d'
+            'SKIP'
+            '55be966eb320c96ca49b3aaa0635815076fe1a21149d1a0f95654778c8359bd16f18a10c0cabe955a366d4a14e2645a8150878b601085d987727de40831e50ab'
+            '5c6f57ddf43b0c767578ecbad1df960ef0d77417eb1db0c9c492636a4b07c0b5b29cc031d5352d83aec4a8e1d67276587db24e7e188dfeecff5d7ed7c55cc30c')
+validpgpkeys=('D6B4D8BAC7E0CC97DCD4AC7272E88B53F7A95D84'  # Andreas Fuchs <andreas.fuchs@sit.fraunhofer.de>
+              '5B482B8E3E19DA7C978E1D016DE2E9078E1F50C1') # William Roberts (Bill Roberts) <william.c.roberts@intel.com>
+
+prepare() {
+	cd "$pkgname-$pkgver"
+	# Add file missing from release tarball (https://github.com/tpm2-software/tpm2-tss/issues/2313)
+	cp "$srcdir/tss2-tcti-libtpms.map" lib
+	patch -p1 -i ../218c0da8.patch # Fix tests
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var \
+	            --with-runstatedir=/run --with-sysusersdir=/usr/lib/sysusers.d \
+	            --with-tmpfilesdir=/usr/lib/tmpfiles.d --with-udevrulesprefix=60- \
+	            --enable-unit $( ((CHECKFUNC)) && echo --enable-integration)
+	make
+}
+
+check() {
+	cd "$pkgname-$pkgver"
+	make check
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+	make DESTDIR="$pkgdir" install
+	install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+}
