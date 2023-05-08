@@ -3,12 +3,12 @@
 pkgname=python-validate-pyproject
 pkgver=0.12.2
 _commit=2940279970c3de0992b3c44aff7dc19e6bb1043e
-pkgrel=3
+pkgrel=4
 pkgdesc="Validation library and CLI tool for checking on 'pyproject.toml' files using JSON Schema"
 url="https://github.com/abravalheri/validate-pyproject"
 license=('MPL')
 arch=('any')
-depends=('python-fastjsonschema' 'python-packaging' 'python-trove-classifiers' 'python-tomli')
+depends=('python-fastjsonschema' 'python-packaging' 'python-trove-classifiers')
 makedepends=('git' 'python-build' 'python-installer' 'python-wheel' 'python-setuptools-scm')
 checkdepends=('python-pytest')
 source=("git+https://github.com/abravalheri/validate-pyproject.git#commit=$_commit")
