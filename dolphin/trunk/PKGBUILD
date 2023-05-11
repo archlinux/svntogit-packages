@@ -4,8 +4,8 @@
 # Contributor: Pierre Schmitz <pierre@archlinux.de>
 
 pkgname=dolphin
-pkgver=23.04.0
-pkgrel=3
+pkgver=23.04.1
+pkgrel=1
 pkgdesc='KDE File Manager'
 arch=(x86_64)
 url='https://apps.kde.org/dolphin/'
@@ -16,18 +16,12 @@ optdepends=('kde-cli-tools: for editing file type options' 'ffmpegthumbs: video 
             'konsole: terminal panel' 'purpose: share context menu'
             'kio-admin: for managing files as administrator')
 groups=(kde-applications kde-system)
-source=(https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz{,.sig}
-        https://invent.kde.org/system/dolphin/-/commit/33587415.patch)
-sha256sums=('cd49268a3b0309253587d424fbdffe25b26c951df7e6932a42f48cf34b006c50'
-            'SKIP'
-            'aa4c3652278accbaf27e8861c273778fe7fe96535218e577e95c3545803702e5')
+source=(https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz{,.sig})
+sha256sums=('3813d0fb06d62dfa049e716654ca361f83a689dd1434b4ba335f5d271d3605dd'
+            'SKIP')
 validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
               F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87  # Christoph Feck <cfeck@kde.org>
               D81C0CB38EB725EF6691C385BB463350D6EF31EF) # Heiko Becker <heiko.becker@kde.org>
-
-prepare() {
-  patch -d $pkgname-$pkgver -p1 < 33587415.patch # Fix activating selection mode
-}
 
 build() {
   cmake -B build -S $pkgname-$pkgver \
