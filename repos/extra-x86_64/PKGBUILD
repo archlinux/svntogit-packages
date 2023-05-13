@@ -7,7 +7,7 @@ pkgname=(
   tracker3
   tracker3-docs
 )
-pkgver=3.5.1
+pkgver=3.5.2
 pkgrel=1
 pkgdesc="Desktop-neutral user information store, search tool and indexer"
 url="https://wiki.gnome.org/Projects/Tracker"
@@ -37,7 +37,7 @@ makedepends=(
   systemd
   vala
 )
-_commit=0619c65273da0ca2644e43596fe3d61c1d8b0737  # tags/3.5.1^0
+_commit=11d90648022edb45fbabf43f0f64809ed53aeeab  # tags/3.5.2^0
 source=(
   "git+https://gitlab.gnome.org/GNOME/tracker.git#commit=$_commit"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git"
