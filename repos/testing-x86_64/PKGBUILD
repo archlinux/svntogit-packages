@@ -1,0 +1,62 @@
+# Maintainer: Evangelos Foutras <evangelos@foutrelis.com>
+# Contributor: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: Thayer Williams <thayer@archlinux.org>
+# Contributor: Alexander Fehr <pizzapunk gmail com>
+# Contributor: Hugo Ideler <hugoideler@dse.nl>
+
+pkgname=slim
+pkgver=1.4.0
+pkgrel=1
+pkgdesc="Simple Login Manager resurrected"
+arch=('x86_64')
+url="https://slim-fork.sourceforge.io/"
+license=('GPL2')
+depends=('gcc-libs' 'libjpeg' 'libpng' 'libx11' 'libxext' 'libxft' 'libxmu'
+         'libxrandr' 'pam' 'ttf-font' 'xorg-sessreg' 'xorg-xauth')
+makedepends=('cmake')
+backup=('etc/logrotate.d/slim'
+        'etc/pam.d/slim'
+        'etc/slim.conf'
+        'etc/slimlock.conf')
+source=(https://downloads.sourceforge.net/project/slim-fork/$pkgname-$pkgver.tar.gz
+        slim.pam
+        slimlock.pam
+        slim.logrotate
+        default-path.patch)
+sha256sums=('350b31d5070002e9729ea63e1d62f97596ba0062151c0f3ee16f02af67753204'
+            'b9a77a614c451287b574c33d41e28b5b149c6d2464bdb3a5274799842bca51a4'
+            'dfe35488b50f19fd96526374edc16850ed37dac919834dd579392b1a7518f2ab'
+            '5bf44748b5003f2332d8b268060c400120b9100d033fa9d35468670d827f6def'
+            '408337b006760b8029b1aeec37b103b1d02a23a85328cf9e2ac9c1a89faab279')
+
+prepare() {
+  cd $pkgname-$pkgver
+  patch -Np1 -i ../default-path.patch
+}
+
+build() {
+  cd $pkgname-$pkgver
+
+  cmake \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DBUILD_SLIMLOCK=ON \
+    -DUSE_CONSOLEKIT=OFF \
+    -DUSE_PAM=ON
+  make
+}
+
+package() {
+  cd $pkgname-$pkgver
+
+  make DESTDIR="$pkgdir" install
+  install -Dm644 slim.service -t "$pkgdir/usr/lib/systemd/system"
+  install -Dm644 slimlock.conf -t "$pkgdir/etc"
+
+  install -Dm644 ../slim.pam "$pkgdir/etc/pam.d/slim"
+  install -Dm644 ../slimlock.pam "$pkgdir/etc/pam.d/slimlock"
+  install -Dm644 ../slim.logrotate "$pkgdir/etc/logrotate.d/slim"
+}
+
+# vim:set ts=2 sw=2 et:
