@@ -1,0 +1,86 @@
+# Maintainer:  David Runge <dvzrv@archlinux.org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Hugo Doria <hugo@archlinux.org>
+
+pkgname=libcap
+pkgver=2.69
+pkgrel=1
+pkgdesc="POSIX 1003.1e capabilities"
+arch=(x86_64)
+url="https://sites.google.com/site/fullycapable/"
+license=(GPL2)
+depends=(
+  gcc-libs
+  glibc
+  pam
+)
+makedepends=(
+  go
+  linux-api-headers
+)
+provides=(
+  libcap.so
+  libpsx.so
+)
+source=(
+  https://kernel.org/pub/linux/libs/security/linux-privs/${pkgname}2/$pkgname-$pkgver.tar.{xz,sign}
+  libcap-2.68-cgo_flags.patch  # provide flags to go build (sent upstream)
+)
+sha512sums=('647c307dc451517da9d089495ab959b4a6fbbe41c79f4e1e9bb663569dad630ead0c2e413dfb393319e3ea14dc9848c81b392107fe3382ce1813d278c3394a7f'
+            'SKIP'
+            '08db53f996a4d686fe54b43159def06b60f996277023e3729a1855dbc1f26d2279512183fdf852da787cc6b4c4b9a582d789e8dea6a4b6717359e7e08f20a173')
+b2sums=('94d1fef7666a1c383a8b96f1f6092bd242164631532868b628d2f5de71b42a371d041a978ef7fbadfee3eeb433165444995d1078cd790275bc0433a7875a697e'
+        'SKIP'
+        '40c4e760efdb203d6a680b1c7f58e45ff7c971cade170a3619db620fdd39d75d9063e6ba1193172a29e3304a948d5e7a77abe803cb803d5124a2c0d8622b5a5a')
+validpgpkeys=(38A644698C69787344E954CE29EE848AE2CCF3F4) # Andrew G. Morgan <morgan@kernel.org>
+
+prepare() {
+  patch -Np1 -d $pkgname-$pkgver -i ../libcap-2.68-cgo_flags.patch
+}
+
+build() {
+  export CGO_CPPFLAGS="$CPPFLAGS"
+  export CGO_CFLAGS="$CFLAGS"
+  export CGO_CXXFLAGS="$CXXFLAGS"
+  export CGO_LDFLAGS="$LDFLAGS"
+  export CGO_REQUIRED="1"
+  export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+
+  local make_options=(
+    CGO_CPPFLAGS="$CPPFLAGS"
+    CGO_CFLAGS="$CFLAGS"
+    CGO_CXXFLAGS="$CXXFLAGS"
+    CGO_LDFLAGS="$LDFLAGS"
+    CGO_REQUIRED="1"
+    GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+    DYNAMIC=yes
+    KERNEL_HEADERS=/usr/include
+    lib=lib
+    prefix=/usr
+    sbindir=bin
+    -C $pkgname-$pkgver
+  )
+
+  make "${make_options[@]}"
+}
+
+check() {
+  make test -k -C $pkgname-$pkgver
+}
+
+package() {
+  local make_options=(
+    DESTDIR="$pkgdir"
+    RAISE_SETFCAP=no
+    lib=lib
+    prefix=/usr
+    sbindir=bin
+    install
+    -C $pkgname-$pkgver
+  )
+
+  make "${make_options[@]}"
+  install -vDm 644 $pkgname-$pkgver/{CHANGELOG,README} -t "$pkgdir/usr/share/doc/$pkgname/"
+  install -vDm 644 $pkgname-$pkgver/pam_cap/capability.conf -t "$pkgdir/usr/share/doc/$pkgname/examples/"
+}
