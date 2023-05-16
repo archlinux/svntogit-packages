@@ -1,0 +1,63 @@
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+
+pkgname=kbd
+pkgver=2.5.1
+pkgrel=2
+pkgdesc="Keytable files and keyboard utilities"
+arch=('x86_64')
+url="http://www.kbd-project.org"
+license=('GPL')
+depends=('glibc' 'pam')
+makedepends=('check' 'git')
+#source=(https://www.kernel.org/pub/linux/utils/${pkgname}/${pkgname}-${pkgver}.tar.gz
+#        https://www.kernel.org/pub/linux/utils/kbd/${pkgname}-${pkgver}.tar.sign
+source=(git+https://git.kernel.org/pub/scm/linux/kernel/git/legion/kbd.git#tag=v$pkgver?signed
+        'fix-euro2.patch'
+	'vlock.pam')
+backup=('etc/pam.d/vlock')
+provides=('vlock')
+conflicts=('vlock')
+replaces=('vlock')
+sha256sums=('SKIP'
+            'a5e0167b6a82a9eb4d581d56baab930c2d80f5541dc34630460b73e1115384b8'
+            '5c2d377a87121e7c399534fb91e2ffc0cc1e75d44a8f07ee6f55c9c089bc81e4')
+validpgpkeys=(
+              '7F2A3D07298149A0793C9A4EA45ABA544CFFD434' #Alexey Gladkov 
+             )
+
+prepare() {
+  cd ${pkgname}
+  # rename keymap files with the same names
+  # this is needed because when only name of keymap is specified
+  # loadkeys loads the first keymap it can find, which is bad (see FS#13837)
+  # this should be removed when upstream adopts the change
+  mv data/keymaps/i386/qwertz/cz{,-qwertz}.map
+  mv data/keymaps/i386/olpc/es{,-olpc}.map
+  mv data/keymaps/i386/olpc/pt{,-olpc}.map
+  mv data/keymaps/i386/fgGIod/trf{,-fgGIod}.map
+  mv data/keymaps/i386/colemak/{en-latin9,colemak}.map
+  # fix euro2 #28213
+  patch -Np1 -i ../fix-euro2.patch
+  autoreconf -if
+}
+
+build() {
+  cd ${pkgname}
+  ./configure --prefix=/usr --sysconfdir=/etc --datadir=/usr/share/kbd --mandir=/usr/share/man --enable-optional-progs
+  make KEYCODES_PROGS=yes RESIZECONS_PROGS=yes
+}
+
+check() {
+  cd ${pkgname}
+
+# This test is expected to fail since kbd-fix-loadkmap-compat.patch modifies the binary format
+  sed -e 's|dumpkeys-bkeymap ||' -i tests/Makefile
+
+  make check
+}
+
+package() {
+  cd ${pkgname}
+  make KEYCODES_PROGS=yes RESIZECONS_PROGS=yes DESTDIR="${pkgdir}" install
+  install -Dm644 ../vlock.pam "${pkgdir}"/etc/pam.d/vlock
+}
