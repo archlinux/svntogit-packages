@@ -1,0 +1,3318 @@
+From 9cdf1d7ef3071bdc1143f95edc08bc5a52f39a4f Mon Sep 17 00:00:00 2001
+From: Jacques Garrigue <garrigue@math.nagoya-u.ac.jp>
+Date: Thu, 6 Oct 2022 12:26:50 +0900
+Subject: [PATCH 1/5] Adapt to deprecations in 5.0
+
+---
+ CHANGES            |    5 +-
+ config.make.in     |    4 +
+ configure          |   16 +-
+ configure.in       |   14 +-
+ src/Makefile       |   15 +-
+ src/lablgtk2.in    |    4 +-
+ src/ml_gdk.h       |    6 +-
+ src/ml_gdkpixbuf.c |   13 +-
+ src/ml_gobject.c   |    4 +-
+ src/propcc.ml      | 1970 ++++++++++++++++++++++++--------------------
+ src/propcc.ml4     |   10 +-
+ src/varcc.ml       |  741 ++++++++++-------
+ src/varcc.ml4      |   16 +-
+ src/wrappers.c     |    4 +-
+ src/wrappers.h     |   60 +-
+ 15 files changed, 1649 insertions(+), 1233 deletions(-)
+
+diff --git a/CHANGES b/CHANGES
+index 93da3f11..37b49a4e 100644
+--- a/CHANGES
++++ b/CHANGES
+@@ -1,8 +1,11 @@
+ LablGTK changes log
+ 
++2022.10.06 [Jacques]
++  * Adapt to deprecations in 5.0 and the splitting of camlp-streams
++
+ In Lablgtk-2.18.12:
+ 
+-2021.12.24[Jacques]
++2021.12.24 [Jacques]
+   * Remove naked pointers and Obj.truncate for compatibility with 5.00 (#145)
+ 
+ 2021.12.18 [Jacques]
+diff --git a/config.make.in b/config.make.in
+index d2107a9b..e3809655 100644
+--- a/config.make.in
++++ b/config.make.in
+@@ -54,6 +54,10 @@ HAS_PRINTEXC_BACKTRACE=@HAS_PRINTEXC_BACKTRACE@
+ # if using ocaml >= 4.09, add a -D HAS_MODIFY_ARGV (for ocamlc)
+ HAS_MODIFY_ARGV=@HAS_MODIFY_ARGV@
+ 
++# camlp-streams
++STREAMSINC=@STREAMSINC@
++STREAMSLINK=@STREAMSLINK@
++
+ # where to install the binaries
+ prefix=@prefix@
+ exec_prefix=@exec_prefix@
+diff --git a/configure b/configure
+index 177e9547..30c4d04a 100755
+--- a/configure
++++ b/configure
+@@ -678,6 +678,8 @@ RANLIB
+ HAS_MODIFY_ARGV
+ HAS_PRINTEXC_BACKTRACE
+ ODOC_DEF
++STREAMSLINK
++STREAMSINC
+ OCAMLFIND
+ CAMLP4O
+ CAMLMKLIB
+@@ -3112,6 +3114,18 @@ OCAMLLDCONF="`ocamlfind printconf ldconf | tr -d '\\r'`"
+ echo "$OCAMLFIND ldconf path is $OCAMLLDCONF"
+ fi
+ 
++if test "$OCAMLFIND" != no && $OCAMLFIND query camlp-streams > /dev/null 2>1
++then
++  STREAMSDIR=`$OCAMLFIND query camlp-streams`
++  STREAMSINC="-I $STREAMSDIR"
++  STREAMSLINK="-I $STREAMSDIR camlp_streams.cma"
++else
++  STREAMSINC=
++  STREAMSLINK=
++fi
++
++
++
+ if expr "$OCAMLVERSION" '>=' '4' > /dev/null ; then
+    ODOC_DEF="-D OCAML_400"
+ fi
+@@ -7255,6 +7269,6 @@ echo $ECHO_N "	debug   $ECHO_C"
+ if test -n "$DEBUG" ; then echo "	yes" ; else echo "	no" ; fi
+ echo  "	C compiler	$CC"
+ echo  "	Camlp4		$CAMLP4O"
+-
++echo  "	camlp-streams   $STREAMSLINK"
+ 
+ 
+diff --git a/configure.in b/configure.in
+index 3c8c9937..eac9cd45 100644
+--- a/configure.in
++++ b/configure.in
+@@ -170,6 +170,18 @@ OCAMLLDCONF="`ocamlfind printconf ldconf | tr -d '\\r'`"
+ echo "$OCAMLFIND ldconf path is $OCAMLLDCONF"
+ fi
+ 
++if test "$OCAMLFIND" != no && $OCAMLFIND query camlp-streams > /dev/null 2>1
++then
++  STREAMSDIR=`$OCAMLFIND query camlp-streams`
++  STREAMSINC="-I $STREAMSDIR"
++  STREAMSLINK="-I $STREAMSDIR camlp_streams.cma"
++else
++  STREAMSINC=
++  STREAMSLINK=
++fi
++AC_SUBST(STREAMSINC)
++AC_SUBST(STREAMSLINK)
++
+ if expr "$OCAMLVERSION" '>=' '4' > /dev/null ; then
+    ODOC_DEF="-D OCAML_400"
+ fi
+@@ -432,5 +444,5 @@ echo $ECHO_N "	debug   $ECHO_C"
+ if test -n "$DEBUG" ; then echo "	yes" ; else echo "	no" ; fi
+ echo  "	C compiler	$CC"
+ echo  "	Camlp4		$CAMLP4O"
+-
++echo  "	camlp-streams   $STREAMSLINK"
+ 
+diff --git a/src/Makefile b/src/Makefile
+index 3dc031ec..9813a1d9 100755
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -1,8 +1,8 @@
+ # Makefile for lablgtk.
+ 
+-COMPILER = $(CAMLC) $(MLFLAGS) $(MLBYTEFLAGS) -w s-3+52 -c
+-LINKER = $(CAMLC) $(MLFLAGS) $(MLBYTEFLAGS)
+-COMPOPT = $(CAMLOPT) $(MLFLAGS) -w s -c
++COMPILER = $(CAMLC) $(MLFLAGS) $(MLBYTEFLAGS) -w s-3-6+52 -c
++LINKER = $(CAMLC) $(MLFLAGS) $(MLBYTEFLAGS) -w s-3-6+52
++COMPOPT = $(CAMLOPT) $(MLFLAGS) -w s-3-6+52 -c
+ LINKOPT = $(CAMLOPT) $(MLFLAGS)
+ LIBRARIAN = $(CAMLMKLIB) -verbose -ocamlc "$(CAMLC)" -ocamlopt "$(CAMLOPT)"
+ TOPLEVEL = $(CAMLMKTOP) $(MLFLAGS)
+@@ -30,6 +30,7 @@ uninstall: findlib-uninstall
+ MLLIBS = lablgtk.cma
+ CLIBS = liblablgtk2$(XA)
+ #MLLINK = unix.cma str.cma
++MLFLAGS = -I +unix
+ 
+ # For -DG_LOG_DOMAIN=\"LablGTK\"
+ ifneq ($(TOOLCHAIN),msvc)
+@@ -533,12 +534,12 @@ xml_lexer.ml: xml_lexer.mll
+ 	$(CAMLLEX) xml_lexer.mll
+ xml_lexer.cmo xml_lexer.cmx : xml_lexer.cmi
+ 
+-varcc$(XE): varcc.cmo
+-	$(LINKER) -o $@ $<
++varcc$(XE): varcc.ml
++	$(LINKER) $(STREAMSLINK) -o $@ $<
+ 	rm -f *_tags.h *_tags.c
+ 
+-propcc$(XE): propcc.cmo
+-	$(LINKER) -o $@ $<
++propcc$(XE): propcc.ml
++	$(LINKER) $(STREAMSLINK) -o $@ $<
+ 
+ check_externals$(XE): check_externals.cmo
+ 	$(LINKER) -o $@ $<
+diff --git a/src/lablgtk2.in b/src/lablgtk2.in
+index 8e0fb612..c0df8f72 100755
+--- a/src/lablgtk2.in
++++ b/src/lablgtk2.in
+@@ -59,7 +59,7 @@ fi
+ if test $thread = yes; then
+     case "$threads_lib" in
+     no)     echo "Threads are not supported on this platform"; exit 2 ;;
+-    system) libpath="$libpath -I +threads"
++    system) libpath="$libpath -I +threads -I +unix"
+             libraries="unix.cma threads.cma $libraries @THOBJS@" ;;
+     *)      libpath="$libpath -I +vmthreads"
+             usedll="no" ;; # use different stdlib.cma
+@@ -82,4 +82,4 @@ if test $init = yes; then
+ fi
+ 
+ if test $verbose = yes; then echo $toplevel -w s $libpath $libraries $*; fi
+-exec $toplevel -w s $libpath $libraries $*
++exec $toplevel -w s-6 $libpath $libraries $*
+diff --git a/src/ml_gdk.h b/src/ml_gdk.h
+index 4aa178a1..dbc31eaa 100644
+--- a/src/ml_gdk.h
++++ b/src/ml_gdk.h
+@@ -87,14 +87,14 @@ CAMLexport value Val_GdkEvent (GdkEvent *);
+ #define GdkNativeWindow_val Pointer_val
+ #define Val_GdkNativeWindow Val_pointer
+ #else
+-#define Val_GdkNativeWindow copy_int32
++#define Val_GdkNativeWindow caml_copy_int32
+ #define GdkNativeWindow_val Int32_val
+ #endif
+ 
+ #ifdef _WIN32
+-#define Val_XID(id) copy_int32((long) id)
++#define Val_XID(id) caml_copy_int32((long) id)
+ #else
+-#define Val_XID copy_int32
++#define Val_XID caml_copy_int32
+ #endif
+ #define XID_val Int32_val
+ 
+diff --git a/src/ml_gdkpixbuf.c b/src/ml_gdkpixbuf.c
+index 4e26c232..d70757ee 100644
+--- a/src/ml_gdkpixbuf.c
++++ b/src/ml_gdkpixbuf.c
+@@ -32,6 +32,7 @@
+ #include <caml/callback.h>
+ #include <caml/fail.h>
+ #include <caml/intext.h>
++#include <caml/printexc.h>
+ 
+ #include "wrappers.h"
+ #include "ml_glib.h"
+@@ -66,8 +67,8 @@ static void ml_GdkPixbuf_serialize (value v, unsigned long *wsize_32, unsigned l
+   guint len;
+   pixels = gdk_pixdata_from_pixbuf (&pixdata, pb, pixbuf_marshal_use_rle);
+   stream = gdk_pixdata_serialize (&pixdata, &len);
+-  serialize_int_4 (len);
+-  serialize_block_1 (stream, len);
++  caml_serialize_int_4 (len);
++  caml_serialize_block_1 (stream, len);
+   g_free (stream);
+   g_free (pixels);
+   *wsize_32 = 4;
+@@ -82,9 +83,9 @@ static unsigned long ml_GdkPixbuf_deserialize (void *dst)
+   guint8 *stream;
+   guint len;
+ 
+-  len = deserialize_uint_4();
++  len = caml_deserialize_uint_4();
+   stream = stat_alloc (len);
+-  deserialize_block_1 (stream, len);
++  caml_deserialize_block_1 (stream, len);
+   gdk_pixdata_deserialize (&pixdata, len, stream, &error);
+   if (error) goto out;
+   pb = gdk_pixbuf_from_pixdata (&pixdata, TRUE, &error);
+@@ -100,7 +101,7 @@ static unsigned long ml_GdkPixbuf_deserialize (void *dst)
+       GEnumValue *val   = g_enum_get_value (class, error->code);
+       msg = val ? (char*)val->value_name : "";
+       g_error_free (error);
+-      deserialize_error (msg);
++      caml_deserialize_error (msg);
+     }
+   return sizeof pb;
+ }
+@@ -350,7 +351,7 @@ ml_gdkpixbuf_savefunc (const gchar *buf, gsize count, GError **error, gpointer d
+   if (Is_exception_result (res))
+     {
+       g_set_error (error, GDK_PIXBUF_ERROR, GDK_PIXBUF_ERROR_FAILED,
+-		   "%s", format_caml_exception(Extract_exception(res)));
++		   "%s", caml_format_exception(Extract_exception(res)));
+       return FALSE;
+     }
+   else
+diff --git a/src/ml_gobject.c b/src/ml_gobject.c
+index f654312d..ff51f134 100644
+--- a/src/ml_gobject.c
++++ b/src/ml_gobject.c
+@@ -176,7 +176,7 @@ Make_Val_final_pointer_ext(GClosure, _sink , g_closure_ref_and_sink,
+ static void notify_destroy(gpointer unit, GClosure *c)
+ {
+     // printf("release %p\n", &c->data);
+-    remove_global_root((value*)&c->data);
++    caml_remove_global_root((value*)&c->data);
+ }
+ 
+ static void marshal_core (GClosure *closure, GValue *ret,
+@@ -213,7 +213,7 @@ CAMLprim value ml_g_closure_new (value clos)
+ {
+     GClosure* closure = g_closure_new_simple(sizeof(GClosure), (gpointer)clos);
+     // printf("register %p\n", &closure->data);
+-    register_global_root((value*)&closure->data);
++    caml_register_global_root((value*)&closure->data);
+     g_closure_add_invalidate_notifier(closure, NULL, notify_destroy);
+     g_closure_set_marshal(closure, marshal);
+     return Val_GClosure_sink(closure);
+diff --git a/src/propcc.ml b/src/propcc.ml
+index 6dc7bd21..77e3fbed 100644
+--- a/src/propcc.ml
++++ b/src/propcc.ml
+@@ -1,955 +1,1173 @@
+ (* -*- caml -*- *)
+ (* $Id$ *)
+-
+ open StdLabels
++  
+ open MoreLabels
+-
+-let caml_keywords = ["type", "kind"; "class", "classe"; "list", "liste"]
+-let caml_modules = ["List", "Liste"]
+-
+-let is_not_uppercase =
+-  function
+-    'A'..'Z' -> false
+-  | _ -> true
++  
++let caml_keywords =
++  [ ("type", "kind"); ("class", "classe"); ("list", "liste") ]
++  
++let caml_modules = [ ("List", "Liste") ]
++  
++let is_not_uppercase = function | 'A' .. 'Z' -> false | _ -> true
++  
+ let camlize id =
+-  let b = Buffer.create (String.length id + 4) in
+-  for i = 0 to String.length id - 1 do
+-    match id.[i] with
+-      'A'..'Z' as c ->
+-        if i > 0 &&
+-           (is_not_uppercase id.[i-1] ||
+-            i < String.length id - 1 && is_not_uppercase id.[i+1])
+-        then
+-          Buffer.add_char b '_';
+-        Buffer.add_char b (Char.lowercase c)
+-    | '-' -> Buffer.add_char b '_'
+-    | c -> Buffer.add_char b c
+-  done;
+-  let s = Buffer.contents b in
+-  try List.assoc s caml_keywords with Not_found -> s
+-
+-let camlizeM s = try List.assoc s caml_modules with Not_found -> s
+-
++  let b = Buffer.create ((String.length id) + 4)
++  in
++    (for i = 0 to (String.length id) - 1 do
++       (match id.[i] with
++        | ('A' .. 'Z' as c) ->
++            (if
++               (i > 0) &&
++                 ((is_not_uppercase id.[i - 1]) ||
++                    ((i < ((String.length id) - 1)) &&
++                       (is_not_uppercase id.[i + 1])))
++             then Buffer.add_char b '_'
++             else ();
++             Buffer.add_char b (Char.lowercase_ascii c))
++        | '-' -> Buffer.add_char b '_'
++        | c -> Buffer.add_char b c)
++     done;
++     let s = Buffer.contents b
++     in try List.assoc s caml_keywords with | Not_found -> s)
++  
++let camlizeM s = try List.assoc s caml_modules with | Not_found -> s
++  
+ let check_suffix s suff =
+   let len1 = String.length s
+-  and len2 = String.length suff in
+-  len1 > len2 && String.sub s (len1 - len2) len2 = suff
+-
++  and len2 = String.length suff
++  in (len1 > len2) && ((String.sub s (len1 - len2) len2) = suff)
++  
+ (* Arity of a caml type. Doesn't handle object types... *)
+ let arity s =
+   let parens = ref 0
+-  and arity = ref 0 in
+-  for i = 0 to String.length s - 1 do
+-    if s.[i] = '(' || s.[i] = '[' then incr parens
+-    else if s.[i] = ')' || s.[i] = ']' then decr parens
+-    else if !parens = 0 && s.[i] = '-' && s.[i+1] = '>' then incr arity
+-  done;
+-  if !parens <> 0 then failwith ("bad type : " ^ s);
+-  !arity
+-
++  and arity = ref 0
++  in
++    (for i = 0 to (String.length s) - 1 do
++       if (s.[i] = '(') || (s.[i] = '[')
++       then incr parens
++       else
++         if (s.[i] = ')') || (s.[i] = ']')
++         then decr parens
++         else
++           if (!parens = 0) && ((s.[i] = '-') && (s.[i + 1] = '>'))
++           then incr arity
++           else ()
++     done;
++     if !parens <> 0 then failwith ("bad type : " ^ s) else ();
++     !arity)
++  
+ let rec min_labelled =
+   function
+-    [] -> []
++  | [] -> []
+   | a :: l ->
+-      let l = min_labelled l in if l = [] && a = "" then [] else a :: l
+-
+-
++      let l = min_labelled l in if (l = []) && (a = "") then [] else a :: l
++  
+ (* The real data *)
+ let conversions = Hashtbl.create 17
+-
++  
+ let enums =
+-  ["Gtk", "GtkEnums",
+-   ["Justification"; "ArrowType"; "ShadowType"; "ResizeMode"; "ReliefStyle";
+-    "ImageType"; "WindowType"; "WindowPosition"; "ButtonsType"; "MessageType";
+-    "ButtonBoxStyle"; "PositionType"; "Orientation"; "ToolbarStyle";
+-    "IconSize"; "PolicyType"; "CornerType"; "SelectionMode"; "SortType";
+-    "WrapMode"; "SpinButtonUpdatePolicy"; "UpdateType"; "ProgressBarStyle";
+-    "ProgressBarOrientation"; "CellRendererMode"; "CellRendererAccelMode";
+-    "TreeViewColumnSizing"; "SortType"; "TextDirection"; "SizeGroupMode";
+-    (* in signals *)
+-    "MovementStep";
+-    "ScrollStep"; "ScrollType"; "MenuDirectionType"; "DeleteType";
+-    "StateType";
+-    (* for canvas *)
+-    "AnchorType";
+-    "DirectionType"];
+-   "Gdk", "GdkEnums",
+-   ["ExtensionMode"; "WindowTypeHint"; "EventMask";
+-    (* for canvas *)
+-    "CapStyle";
+-    "JoinStyle"; "LineStyle"];
+-   "Pango", "PangoEnums",
+-   ["Stretch"; "Style"; "Underline"; "Variant"; "EllipsizeMode"; "WrapMode"];
+-   (* GtkSourceView *)
+-   "Gtk", "SourceView2Enums",
+-   ["SourceSmartHomeEndType"; "SourceDrawSpacesFlags"]]
+-
++  [ ("Gtk", "GtkEnums",
++     [ "Justification"; "ArrowType"; "ShadowType"; "ResizeMode";
++       "ReliefStyle"; "ImageType"; "WindowType"; "WindowPosition";
++       "ButtonsType"; "MessageType"; "ButtonBoxStyle"; "PositionType";
++       "Orientation"; "ToolbarStyle"; "IconSize"; "PolicyType"; "CornerType";
++       "SelectionMode"; "SortType"; "WrapMode"; "SpinButtonUpdatePolicy";
++       "UpdateType"; "ProgressBarStyle"; "ProgressBarOrientation";
++       "CellRendererMode"; "CellRendererAccelMode"; "TreeViewColumnSizing";
++       "SortType"; "TextDirection"; "SizeGroupMode"; (* in signals *)
++       "MovementStep"; "ScrollStep"; "ScrollType"; "MenuDirectionType";
++       "DeleteType"; "StateType"; (* for canvas *) "AnchorType";
++       "DirectionType" ]);
++    ("Gdk", "GdkEnums",
++     [ "ExtensionMode"; "WindowTypeHint"; "EventMask"; (* for canvas *)
++       "CapStyle"; "JoinStyle"; "LineStyle" ]);
++    ("Pango", "PangoEnums",
++     [ "Stretch"; "Style"; "Underline"; "Variant"; "EllipsizeMode";
++       "WrapMode" ]);
++    (* GtkSourceView *)
++    ("Gtk", "SourceView2Enums",
++     [ "SourceSmartHomeEndType"; "SourceDrawSpacesFlags" ]) ]
++  
+ (* These types must be registered with g_boxed_register! *)
+ let boxeds =
+-  ["Gdk", ["Color"; "Font"]; "Pango", ["FontDescription"];
+-   "Gtk", ["IconSet"; "SelectionData"; "TextIter"; "TreePath"; "TreeIter"]]
+-
++  [ ("Gdk", [ "Color"; "Font" ]); ("Pango", [ "FontDescription" ]);
++    ("Gtk",
++     [ "IconSet"; "SelectionData"; "TextIter"; "TreePath"; "TreeIter" ]) ]
++  
+ let classes =
+-  ["Gdk", ["Image"; "Pixmap"; "Bitmap"; "Screen"; "DragContext"];
+-   "Gtk", ["Style"; "TreeStore"; "TreeModel"; "TreeModelFilter"; "Tooltip"]]
+-
++  [ ("Gdk", [ "Image"; "Pixmap"; "Bitmap"; "Screen"; "DragContext" ]);
++    ("Gtk",
++     [ "Style"; "TreeStore"; "TreeModel"; "TreeModelFilter"; "Tooltip" ]) ]
++  
+ let specials =
+-  ["GtkWidget", "GObj.conv_widget";
+-   "GtkWidget_opt", "GObj.conv_widget_option";
+-   "GtkAdjustment", "GData.conv_adjustment";
+-   "GtkAdjustment_opt", "GData.conv_adjustment_option"]
+-
++  [ ("GtkWidget", "GObj.conv_widget");
++    ("GtkWidget_opt", "GObj.conv_widget_option");
++    ("GtkAdjustment", "GData.conv_adjustment");
++    ("GtkAdjustment_opt", "GData.conv_adjustment_option") ]
++  
+ let add_pointer conv gtk name =
+-  Hashtbl.add conversions gtk
+-    (Printf.sprintf "(%s : %s data_conv)" conv name);
+-  Hashtbl.add conversions (gtk ^ "_opt")
+-    (Printf.sprintf "(%s_option : %s option data_conv)" conv name)
+-
++  (Hashtbl.add conversions gtk
++     (Printf.sprintf "(%s : %s data_conv)" conv name);
++   Hashtbl.add conversions (gtk ^ "_opt")
++     (Printf.sprintf "(%s_option : %s option data_conv)" conv name))
++  
+ let add_object = add_pointer "gobject"
+-let add_boxed = add_pointer "unsafe_pointer" (* the type is not used *)
+-
++  
++let add_boxed = add_pointer "unsafe_pointer"
++  
++(* the type is not used *)
+ let () =
+-  List.iter ~f:(fun t -> Hashtbl.add conversions ("g" ^ t) t)
+-    ["boolean"; "char"; "uchar"; "int"; "uint"; "long"; "ulong"; "int32";
+-     "uint32"; "int64"; "uint64"; "float"; "double"];
+-  List.iter ~f:(fun (gtype, conv) -> Hashtbl.add conversions gtype conv)
+-    ["gchararray", "string"; "gchararray_opt", "string_option";
+-     "string", "string"; "bool", "boolean"; "int", "int"; "int32", "int32";
+-     "float", "float"];
+-  List.iter enums
+-    ~f:(fun (pre, modu, l) ->
+-       List.iter l
+-         ~f:(fun name ->
+-            Hashtbl.add conversions (pre ^ name)
+-              (Printf.sprintf "%s.%s_conv" modu (camlize name))));
+-  List.iter boxeds
+-    ~f:(fun (pre, l) ->
+-       List.iter l
+-         ~f:(fun name -> add_boxed (pre ^ name) (pre ^ "." ^ camlize name)));
+-  List.iter classes
+-    ~f:(fun (pre, l) ->
+-       List.iter l
+-         ~f:(fun t -> add_object (pre ^ t) (pre ^ "." ^ camlize t)));
+-  add_object "GObject" "unit obj";
+-  add_object "GtkWidget" "Gtk.widget obj"
+-
++  (List.iter ~f: (fun t -> Hashtbl.add conversions ("g" ^ t) t)
++     [ "boolean"; "char"; "uchar"; "int"; "uint"; "long"; "ulong"; "int32";
++       "uint32"; "int64"; "uint64"; "float"; "double" ];
++   List.iter ~f: (fun (gtype, conv) -> Hashtbl.add conversions gtype conv)
++     [ ("gchararray", "string"); ("gchararray_opt", "string_option");
++       ("string", "string"); ("bool", "boolean"); ("int", "int");
++       ("int32", "int32"); ("float", "float") ];
++   List.iter enums
++     ~f:
++       (fun (pre, modu, l) ->
++          List.iter l
++            ~f:
++              (fun name ->
++                 Hashtbl.add conversions (pre ^ name)
++                   (Printf.sprintf "%s.%s_conv" modu (camlize name))));
++   List.iter boxeds
++     ~f:
++       (fun (pre, l) ->
++          List.iter l
++            ~f:
++              (fun name ->
++                 add_boxed (pre ^ name) (pre ^ ("." ^ (camlize name)))));
++   List.iter classes
++     ~f:
++       (fun (pre, l) ->
++          List.iter l
++            ~f: (fun t -> add_object (pre ^ t) (pre ^ ("." ^ (camlize t)))));
++   add_object "GObject" "unit obj";
++   add_object "GtkWidget" "Gtk.widget obj")
++  
+ open Genlex
+-
++  
+ let lexer =
+-  make_lexer ["{"; "}"; ":"; "/"; "("; ")"; "->"; "method"; "signal"]
+-
+-let rec star ?(acc = []) p (strm__ : _ Stream.t) =
+-  match try Some (p strm__) with Stream.Failure -> None with
+-    Some x -> let s = strm__ in star ~acc:(x :: acc) p s
++  make_lexer [ "{"; "}"; ":"; "/"; "("; ")"; "->"; "method"; "signal" ]
++  
++let rec star ?(acc = []) p (__strm : _ Stream.t) =
++  match try Some (p __strm) with | Stream.Failure -> None with
++  | Some x -> let s = __strm in star ~acc: (x :: acc) p s
+   | _ -> List.rev acc
+-
+-let may_token tok s = if Stream.peek s = Some tok then Stream.junk s
+-
+-let ident (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident id) -> Stream.junk strm__; id
++  
++let may_token tok s =
++  if (Stream.peek s) = (Some tok) then Stream.junk s else ()
++  
++let ident (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident id) -> (Stream.junk __strm; id)
+   | _ -> raise Stream.Failure
+-
+-let string (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (String s) -> Stream.junk strm__; s
++  
++let string (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (String s) -> (Stream.junk __strm; s)
+   | _ -> raise Stream.Failure
+-
+-let may_colon p def (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd ":") -> Stream.junk strm__; p strm__
++  
++let may_colon p def (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd ":") -> (Stream.junk __strm; p __strm)
+   | _ -> def
+-
+-let may_string def (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (String s) -> Stream.junk strm__; s
++  
++let may_string def (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (String s) -> (Stream.junk __strm; s)
+   | _ -> def
+-
+-let may_name s (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "(") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident id) ->
+-          Stream.junk strm__;
+-          begin match Stream.peek strm__ with
+-            Some (Kwd ")") -> Stream.junk strm__; id
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let may_name s (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "(") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident id) ->
++            (Stream.junk __strm;
++             (match Stream.peek __strm with
++              | Some (Kwd ")") -> (Stream.junk __strm; id)
++              | _ -> raise (Stream.Error "")))
++        | _ -> raise (Stream.Error "")))
+   | _ -> camlize s
+-
+-let next_attr (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "/") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident id) ->
+-          Stream.junk strm__;
+-          let ids =
+-            try star ~acc:[id] ident strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          String.concat ~sep:"" ids
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let next_attr (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "/") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident id) ->
++            (Stream.junk __strm;
++             let ids =
++               (try star ~acc: [ id ] ident __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in String.concat ~sep: "" ids)
++        | _ -> raise (Stream.Error "")))
+   | _ -> raise Stream.Failure
+-
++  
+ let attributes =
+-  ["Read"; "Write"; "Construct"; "ConstructOnly"; "NoSet"; "Set"; "NoWrap";
+-   "Wrap"; "NoGet"; "VSet"; "NoVSet"]
+-
+-let label_type2 id (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd ":") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident ty) -> Stream.junk strm__; id, ty
+-      | _ -> raise (Stream.Error "")
+-      end
+-  | _ -> "", id
+-let label_type (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident id) ->
+-      Stream.junk strm__;
+-      begin try label_type2 id strm__ with
+-        Stream.Failure -> raise (Stream.Error "")
+-      end
++  [ "Read"; "Write"; "Construct"; "ConstructOnly"; "NoSet"; "Set"; "NoWrap";
++    "Wrap"; "NoGet"; "VSet"; "NoVSet" ]
++  
++let label_type2 id (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd ":") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident ty) -> (Stream.junk __strm; (id, ty))
++        | _ -> raise (Stream.Error "")))
++  | _ -> ("", id)
++  
++let label_type (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident id) ->
++      (Stream.junk __strm;
++       (try label_type2 id __strm
++        with | Stream.Failure -> raise (Stream.Error "")))
+   | _ -> raise Stream.Failure
+-
++  
+ type marshal =
+-    Function of string
+-  | Types of (string list * string list * string)
++  | Function of string | Types of ((string list) * (string list) * string)
+ 
+-let return_type (l, types) (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "->") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident ret) -> Stream.junk strm__; Types (l, types, ret)
+-      | _ -> raise (Stream.Error "")
+-      end
++let return_type (l, types) (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "->") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident ret) -> (Stream.junk __strm; Types (l, types, ret))
++        | _ -> raise (Stream.Error "")))
+   | _ -> Types (l, types, "")
+-
+-let marshaller (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (String s) -> Stream.junk strm__; Function s
++  
++let marshaller (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (String s) -> (Stream.junk __strm; Function s)
+   | Some (Kwd ":") ->
+-      Stream.junk strm__;
+-      let types =
+-        try star label_type strm__ with
+-          Stream.Failure -> raise (Stream.Error "")
+-      in
+-      return_type (List.split types) strm__
++      (Stream.junk __strm;
++       let types =
++         (try star label_type __strm
++          with | Stream.Failure -> raise (Stream.Error "")) in
++       let s = __strm in return_type (List.split types) s)
+   | _ -> Types ([], [], "")
+-
+-let simple_attr (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "/") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident s) -> Stream.junk strm__; s
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let simple_attr (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "/") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident s) -> (Stream.junk __strm; s)
++        | _ -> raise (Stream.Error "")))
+   | _ -> raise Stream.Failure
+-
+-let field (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (String name) ->
+-      Stream.junk strm__;
+-      let mlname =
+-        try may_name name strm__ with
+-          Stream.Failure -> raise (Stream.Error "")
+-      in
+-      begin match Stream.peek strm__ with
+-        Some (Ident gtype) ->
+-          Stream.junk strm__;
+-          begin match Stream.peek strm__ with
+-            Some (Kwd ":") ->
+-              Stream.junk strm__;
+-              begin match Stream.peek strm__ with
+-                Some (Ident attr0) ->
+-                  Stream.junk strm__;
+-                  let attrs =
+-                    try star ~acc:[attr0] next_attr strm__ with
+-                      Stream.Failure -> raise (Stream.Error "")
+-                  in
+-                  if not (List.for_all attrs ~f:(List.mem ~set:attributes))
+-                  then
+-                    raise (Stream.Error "bad attribute");
+-                  `Prop (name, mlname, gtype, attrs)
+-              | _ -> raise (Stream.Error "")
+-              end
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let field (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (String name) ->
++      (Stream.junk __strm;
++       let mlname =
++         (try may_name name __strm
++          with | Stream.Failure -> raise (Stream.Error ""))
++       in
++         (match Stream.peek __strm with
++          | Some (Ident gtype) ->
++              (Stream.junk __strm;
++               (match Stream.peek __strm with
++                | Some (Kwd ":") ->
++                    (Stream.junk __strm;
++                     (match Stream.peek __strm with
++                      | Some (Ident attr0) ->
++                          (Stream.junk __strm;
++                           let attrs =
++                             (try star ~acc: [ attr0 ] next_attr __strm
++                              with
++                              | Stream.Failure -> raise (Stream.Error ""))
++                           in
++                             (if
++                                not
++                                  (List.for_all attrs
++                                     ~f: (List.mem ~set: attributes))
++                              then raise (Stream.Error "bad attribute")
++                              else ();
++                              `Prop (name, mlname, gtype, attrs)))
++                      | _ -> raise (Stream.Error "")))
++                | _ -> raise (Stream.Error "")))
++          | _ -> raise (Stream.Error "")))
+   | Some (Kwd "method") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident name) ->
+-          Stream.junk strm__;
+-          let ty =
+-            try may_colon string "unit" strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          let attrs =
+-            try star simple_attr strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          if not (List.for_all attrs ~f:(List.mem ~set:["Wrap"])) then
+-            raise (Stream.Error "bad attribute");
+-          `Method (name, ty, attrs)
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident name) ->
++            (Stream.junk __strm;
++             let ty =
++               (try may_colon string "unit" __strm
++                with | Stream.Failure -> raise (Stream.Error "")) in
++             let attrs =
++               (try star simple_attr __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in
++               (if not (List.for_all attrs ~f: (List.mem ~set: [ "Wrap" ]))
++                then raise (Stream.Error "bad attribute")
++                else ();
++                `Method (name, ty, attrs)))
++        | _ -> raise (Stream.Error "")))
+   | Some (Kwd "signal") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident name) ->
+-          Stream.junk strm__;
+-          let m =
+-            try marshaller strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          let l =
+-            try star simple_attr strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          if not (List.for_all l ~f:(List.mem ~set:["Wrap"; "NoWrap"])) then
+-            raise (Stream.Error "bad attribute");
+-          `Signal (name, m, l)
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident name) ->
++            (Stream.junk __strm;
++             let m =
++               (try marshaller __strm
++                with | Stream.Failure -> raise (Stream.Error "")) in
++             let l =
++               (try star simple_attr __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in
++               (if
++                  not
++                    (List.for_all l ~f: (List.mem ~set: [ "Wrap"; "NoWrap" ]))
++                then raise (Stream.Error "bad attribute")
++                else ();
++                `Signal (name, m, l)))
++        | _ -> raise (Stream.Error "")))
+   | _ -> raise Stream.Failure
+-
++  
+ let split_fields l =
+-  List.fold_right l ~init:([], [], [])
+-    ~f:(fun field (props, meths, sigs) ->
+-       match field with
+-         `Prop p -> p :: props, meths, sigs
+-       | `Method m -> props, m :: meths, sigs
+-       | `Signal s -> props, meths, s :: sigs)
+-
++  List.fold_right l ~init: ([], [], [])
++    ~f:
++      (fun field (props, meths, sigs) ->
++         match field with
++         | `Prop p -> ((p :: props), meths, sigs)
++         | `Method m -> (props, (m :: meths), sigs)
++         | `Signal s -> (props, meths, (s :: sigs)))
++  
+ let verb_braces = ref 0
+-
+-let rec verbatim buf (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some '}' ->
+-      Stream.junk strm__;
+-      let s = strm__ in
+-      if !verb_braces = 0 then Buffer.contents buf
+-      else begin decr verb_braces; Buffer.add_char buf '}'; verbatim buf s end
++  
++let rec verbatim buf (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some '}' ->
++      (Stream.junk __strm;
++       let s = __strm
++       in
++         if !verb_braces = 0
++         then Buffer.contents buf
++         else (decr verb_braces; Buffer.add_char buf '}'; verbatim buf s))
+   | Some '{' ->
+-      Stream.junk strm__;
+-      let s = strm__ in
+-      Buffer.add_char buf '{'; incr verb_braces; verbatim buf s
++      (Stream.junk __strm;
++       let s = __strm
++       in (Buffer.add_char buf '{'; incr verb_braces; verbatim buf s))
+   | Some '\\' ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some c ->
+-          Stream.junk strm__;
+-          let s = strm__ in
+-          if c <> '}' && c <> '{' then Buffer.add_char buf '\\';
+-          Buffer.add_char buf c;
+-          verbatim buf s
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some c ->
++            (Stream.junk __strm;
++             let s = __strm
++             in
++               (if (c <> '}') && (c <> '{')
++                then Buffer.add_char buf '\\'
++                else ();
++                Buffer.add_char buf c;
++                verbatim buf s))
++        | _ -> raise (Stream.Error "")))
+   | Some c ->
+-      Stream.junk strm__;
+-      let s = strm__ in Buffer.add_char buf c; verbatim buf s
++      (Stream.junk __strm;
++       let s = __strm in (Buffer.add_char buf c; verbatim buf s))
+   | _ -> raise Stream.Failure
+-
+-let read_pair (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident cls) ->
+-      Stream.junk strm__;
+-      let data =
+-        try may_string (camlize cls) strm__ with
+-          Stream.Failure -> raise (Stream.Error "")
+-      in
+-      cls, data
++  
++let read_pair (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident cls) ->
++      (Stream.junk __strm;
++       let data =
++         (try may_string (camlize cls) __strm
++          with | Stream.Failure -> raise (Stream.Error ""))
++       in (cls, data))
+   | _ -> raise Stream.Failure
+-
+-let qualifier (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident id) ->
+-      Stream.junk strm__;
+-      let data =
+-        try may_string "" strm__ with
+-          Stream.Failure -> raise (Stream.Error "")
+-      in
+-      id, data
++  
++let qualifier (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident id) ->
++      (Stream.junk __strm;
++       let data =
++         (try may_string "" __strm
++          with | Stream.Failure -> raise (Stream.Error ""))
++       in (id, data))
+   | _ -> raise Stream.Failure
+-
++  
+ let prefix = ref ""
++  
+ let tagprefix = ref ""
++  
+ let decls = ref []
++  
+ let headers = ref []
++  
+ let oheaders = ref []
++  
+ let checks = ref false
++  
+ let class_qualifiers =
+-  ["abstract"; "notype"; "hv"; "set"; "wrap"; "wrapset"; "vset"; "tag";
+-   "wrapsig"; "type"; "gobject"]
+-
+-let process_phrase ~chars (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident "class") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident name) ->
+-          Stream.junk strm__;
+-          let gtk_name =
+-            try may_string (!prefix ^ name) strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          let attrs =
+-            try star qualifier strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          let parent =
+-            try may_colon ident "" strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          begin match Stream.peek strm__ with
+-            Some (Kwd "{") ->
+-              Stream.junk strm__;
+-              let fields =
+-                try star field strm__ with
+-                  Stream.Failure -> raise (Stream.Error "")
+-              in
+-              begin match Stream.peek strm__ with
+-                Some (Kwd "}") ->
+-                  Stream.junk strm__;
+-                  if List.exists attrs
+-                       ~f:(fun (x, _) -> not (List.mem x class_qualifiers))
+-                  then
+-                    raise (Stream.Error "bad qualifier");
+-                  let attrs = ("parent", parent) :: attrs in
+-                  let attrs =
+-                    if parent = "GObject" then ("gobject", "") :: attrs
+-                    else attrs
+-                  in
+-                  let (props, meths, sigs) = split_fields fields in
+-                  decls :=
+-                    (name, gtk_name, attrs, props, meths, sigs) :: !decls
+-              | _ -> raise (Stream.Error "")
+-              end
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
++  [ "abstract"; "notype"; "hv"; "set"; "wrap"; "wrapset"; "vset"; "tag";
++    "wrapsig"; "type"; "gobject" ]
++  
++let process_phrase ~chars (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident "class") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident name) ->
++            (Stream.junk __strm;
++             let gtk_name =
++               (try may_string (!prefix ^ name) __strm
++                with | Stream.Failure -> raise (Stream.Error "")) in
++             let attrs =
++               (try star qualifier __strm
++                with | Stream.Failure -> raise (Stream.Error "")) in
++             let parent =
++               (try may_colon ident "" __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in
++               (match Stream.peek __strm with
++                | Some (Kwd "{") ->
++                    (Stream.junk __strm;
++                     let fields =
++                       (try star field __strm
++                        with | Stream.Failure -> raise (Stream.Error ""))
++                     in
++                       (match Stream.peek __strm with
++                        | Some (Kwd "}") ->
++                            (Stream.junk __strm;
++                             if
++                               List.exists attrs
++                                 ~f:
++                                   (fun (x, _) ->
++                                      not (List.mem x class_qualifiers))
++                             then raise (Stream.Error "bad qualifier")
++                             else ();
++                             let attrs = ("parent", parent) :: attrs in
++                             let attrs =
++                               if parent = "GObject"
++                               then ("gobject", "") :: attrs
++                               else attrs in
++                             let (props, meths, sigs) = split_fields fields
++                             in
++                               decls :=
++                                 (name, gtk_name, attrs, props, meths, sigs) ::
++                                   !decls)
++                        | _ -> raise (Stream.Error "")))
++                | _ -> raise (Stream.Error "")))
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "header") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Kwd "{") ->
+-          Stream.junk strm__;
+-          let h = verbatim (Buffer.create 1000) chars in
+-          headers := !headers @ [h]
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Kwd "{") ->
++            (Stream.junk __strm;
++             let h = verbatim (Buffer.create 1000) chars
++             in headers := !headers @ [ h ])
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "oheader") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Kwd "{") ->
+-          Stream.junk strm__;
+-          let h = verbatim (Buffer.create 1000) chars in
+-          oheaders := !oheaders @ [h]
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Kwd "{") ->
++            (Stream.junk __strm;
++             let h = verbatim (Buffer.create 1000) chars
++             in oheaders := !oheaders @ [ h ])
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "prefix") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (String id) -> Stream.junk strm__; prefix := id
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (String id) -> (Stream.junk __strm; prefix := id)
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "tagprefix") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (String id) -> Stream.junk strm__; tagprefix := id
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (String id) -> (Stream.junk __strm; tagprefix := id)
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "conversions") ->
+-      Stream.junk strm__;
+-      let pre1 =
+-        try may_string "" strm__ with
+-          Stream.Failure -> raise (Stream.Error "")
+-      in
+-      let pre2 =
+-        try may_string pre1 strm__ with
+-          Stream.Failure -> raise (Stream.Error "")
+-      in
+-      begin match Stream.peek strm__ with
+-        Some (Kwd "{") ->
+-          Stream.junk strm__;
+-          let l =
+-            try star read_pair strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          begin match Stream.peek strm__ with
+-            Some (Kwd "}") ->
+-              Stream.junk strm__;
+-              List.iter l
+-                ~f:(fun (k, d) ->
+-                   Hashtbl.add conversions (pre1 ^ k)
+-                     (if pre2 = "" then d else pre2 ^ "." ^ d))
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       let pre1 =
++         (try may_string "" __strm
++          with | Stream.Failure -> raise (Stream.Error "")) in
++       let pre2 =
++         (try may_string pre1 __strm
++          with | Stream.Failure -> raise (Stream.Error ""))
++       in
++         (match Stream.peek __strm with
++          | Some (Kwd "{") ->
++              (Stream.junk __strm;
++               let l =
++                 (try star read_pair __strm
++                  with | Stream.Failure -> raise (Stream.Error ""))
++               in
++                 (match Stream.peek __strm with
++                  | Some (Kwd "}") ->
++                      (Stream.junk __strm;
++                       List.iter l
++                         ~f:
++                           (fun (k, d) ->
++                              Hashtbl.add conversions (pre1 ^ k)
++                                (if pre2 = "" then d else pre2 ^ ("." ^ d))))
++                  | _ -> raise (Stream.Error "")))
++          | _ -> raise (Stream.Error "")))
+   | Some (Ident "classes") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Kwd "{") ->
+-          Stream.junk strm__;
+-          let l =
+-            try star read_pair strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          begin match Stream.peek strm__ with
+-            Some (Kwd "}") ->
+-              Stream.junk strm__;
+-              List.iter l ~f:(fun (k, d) -> add_object k d)
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Kwd "{") ->
++            (Stream.junk __strm;
++             let l =
++               (try star read_pair __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in
++               (match Stream.peek __strm with
++                | Some (Kwd "}") ->
++                    (Stream.junk __strm;
++                     List.iter l ~f: (fun (k, d) -> add_object k d))
++                | _ -> raise (Stream.Error "")))
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "boxed") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Kwd "{") ->
+-          Stream.junk strm__;
+-          let l =
+-            try star read_pair strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          begin match Stream.peek strm__ with
+-            Some (Kwd "}") ->
+-              Stream.junk strm__; List.iter l ~f:(fun (k, d) -> add_boxed k d)
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
+-  | Some _ -> Stream.junk strm__; raise (Stream.Error "")
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Kwd "{") ->
++            (Stream.junk __strm;
++             let l =
++               (try star read_pair __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in
++               (match Stream.peek __strm with
++                | Some (Kwd "}") ->
++                    (Stream.junk __strm;
++                     List.iter l ~f: (fun (k, d) -> add_boxed k d))
++                | _ -> raise (Stream.Error "")))
++        | _ -> raise (Stream.Error "")))
++  | Some _ -> (Stream.junk __strm; raise (Stream.Error ""))
+   | _ -> raise End_of_file
+-
++  
+ let all_props = Hashtbl.create 137
++  
+ let all_pnames = Hashtbl.create 137
++  
+ let outfile = ref ""
++  
+ let ooutfile = ref ""
+-
++  
+ let process_file f =
+   let base = Filename.chop_extension f in
+-  let baseM = String.capitalize base in
+-  prefix := baseM;
+-  (* Input *)
+-  (* Redefining saves space in bytecode! *)
+-  headers := ["open Gobject"; "open Data"; "module Object = GtkObject"];
+-  oheaders :=
+-    ["open GtkSignal"; "open Gobject"; "open Data"; "let set = set";
+-     "let get = get"; "let param = param"];
+-  let ic = open_in f in
+-  let chars = Stream.of_channel ic in
+-  let s = lexer chars in
+-  begin try while true do process_phrase ~chars s done with
+-    End_of_file -> ()
+-  | Stream.Error _ | Stream.Failure ->
+-      Printf.eprintf "Parse error in file `%s' before char %d\n" f
+-        (Stream.count chars);
+-      exit 2
+-  | exn ->
+-      Printf.eprintf "Exception %s in file `%s' before char %d\n"
+-        (Printexc.to_string exn) f (Stream.count chars);
+-      exit 2
+-  end;
+-  (* Preproccess *)
+-  let type_name name ~attrs =
+-    try List.assoc "type" attrs with
+-      Not_found ->
+-        if List.mem_assoc "gobject" attrs then camlize name
+-        else if !prefix <> "" then !prefix ^ "." ^ camlize name ^ " obj"
+-        else camlize name ^ " obj"
++  let baseM = String.capitalize_ascii base
+   in
+-  let decls = List.rev !decls in
+-  let decls =
+-    List.filter decls
+-      ~f:(fun (_, _, attrs, _, _, _) -> not (List.mem_assoc "notype" attrs))
+-  in
+-  List.iter decls
+-    ~f:(fun (name, gtk_name, attrs, _, _, _) ->
+-       add_object gtk_name (type_name name ~attrs));
+-  (* Output modules *)
+-  if !outfile = "" then outfile := base ^ "Props.ml";
+-  let oc = open_out !outfile in
+-  let ppf = Format.formatter_of_out_channel oc in
+-  let out fmt = Format.fprintf ppf fmt in
+-  List.iter !headers ~f:(fun s -> out "%s@." s);
+-  let decls =
+-    List.map decls
+-      ~f:(fun (name, gtk_name, attrs, props, meths, sigs) ->
+-         name, gtk_name, attrs,
+-         List.filter props
+-           ~f:(fun (name, _, gtype, _) ->
+-              try
+-                ignore (Hashtbl.find conversions gtype);
+-                try
+-                  let (count, _) = Hashtbl.find all_props (name, gtype) in
+-                  incr count; true
+-                with Not_found ->
+-                  Hashtbl.add all_props (name, gtype) (ref 1, ref ""); true
+-              with Not_found ->
+-                prerr_endline
+-                  ("Warning: no conversion for type " ^ gtype ^ " in class " ^
+-                   gtk_name);
+-                false),
+-         meths,
+-         List.filter sigs
+-           ~f:(function
+-              _, Function _, _ -> true
+-            | _, Types (_, l, ret), _ ->
+-                List.for_all (if ret = "" then l else ret :: l)
+-                  ~f:(fun ty ->
+-                     if Hashtbl.mem conversions ty then true
+-                     else
+-                       begin
+-                         prerr_endline
+-                           ("Warning: no conversion for type " ^ ty ^
+-                            " in class " ^ gtk_name);
+-                         false
+-                       end)))
+-  in
+-  let defprop ~name ~mlname ~gtype ~tag =
+-    let conv = Hashtbl.find conversions gtype in
+-    out "@ @[<hv2>let %s " mlname;
+-    if tag <> "gtk" then out ": ([>`%s],_) property " tag;
+-    out "=@ @[<hov1>{name=\"%s\";@ conv=%s}@]@]" name conv
+-  in
+-  let shared_props =
+-    Hashtbl.fold all_props ~init:[]
+-      ~f:(fun ~key:(name, gtype) ~data:(count, rpname) acc ->
+-         if !count <= 1 then acc
+-         else
+-           let pname = camlize name in
+-           let pname =
+-             if Hashtbl.mem all_pnames pname then pname ^ "_" ^ gtype
+-             else begin Hashtbl.add all_pnames pname (); pname end
++    (* Input *)
++    (* Redefining saves space in bytecode! *)
++    (prefix := baseM;
++     headers := [ "open Gobject"; "open Data"; "module Object = GtkObject" ];
++     oheaders :=
++       [ "open GtkSignal"; "open Gobject"; "open Data"; "let set = set";
++         "let get = get"; "let param = param" ];
++     let ic = open_in f in
++     let chars = Stream.of_channel ic in
++     let s = lexer chars
++     in
++       ((try while true do process_phrase ~chars s done
++         with | End_of_file -> ()
++         | Stream.Error _ | Stream.Failure ->
++             (Printf.eprintf "Parse error in file `%s' before char %d\n" f
++                (Stream.count chars);
++              exit 2)
++         | exn ->
++             (Printf.eprintf "Exception %s in file `%s' before char %d\n"
++                (Printexc.to_string exn) f (Stream.count chars);
++              exit 2));
++        (* Preproccess *)
++        let type_name name ~attrs =
++          try List.assoc "type" attrs
++          with
++          | Not_found ->
++              if List.mem_assoc "gobject" attrs
++              then camlize name
++              else
++                if !prefix <> ""
++                then !prefix ^ ("." ^ ((camlize name) ^ " obj"))
++                else (camlize name) ^ " obj" in
++        let decls = List.rev !decls in
++        let decls =
++          List.filter decls
++            ~f:
++              (fun (_, _, attrs, _, _, _) ->
++                 not (List.mem_assoc "notype" attrs))
++        in
++          (* Output modules *)
++          (List.iter decls
++             ~f:
++               (fun (name, gtk_name, attrs, _, _, _) ->
++                  add_object gtk_name (type_name name ~attrs));
++           if !outfile = "" then outfile := base ^ "Props.ml" else ();
++           let oc = open_out !outfile in
++           let ppf = Format.formatter_of_out_channel oc in
++           let out fmt = Format.fprintf ppf fmt
+            in
+-           rpname := "PrivateProps." ^ pname; (pname, name, gtype) :: acc)
+-  in
+-  if shared_props <> [] then
+-    begin
+-      out "@[<hv2>module PrivateProps = struct";
+-      List.iter (List.sort compare shared_props)
+-        ~f:(fun (pname, name, gtype) -> defprop ~name ~mlname:pname ~gtype ~tag:"gtk");
+-      out "@]\nend\n@."
+-    end;
+-  (* Redefining saves space in bytecode! *)
+-  out "let may_cons = Property.may_cons\n";
+-  out "let may_cons_opt = Property.may_cons_opt\n@.";
+-  let may_cons_props props =
+-    if props <> [] then
+-      begin
+-        out "@ @[<hv2>let pl = ";
+-        List.iter props
+-          ~f:(fun (name, mlname, gtype, _) ->
+-             let op =
+-               if check_suffix gtype "_opt" then "may_cons_opt"
+-               else "may_cons"
+-             in
+-             out "(@;<0>%s P.%s %s " op (camlize name) mlname);
+-        out "pl";
+-        for k = 1 to List.length props do out ")" done;
+-        out " in@]"
+-      end
+-  in
+-  let omarshaller ~gtk_class ~name ppf (l, tyl, ret) =
+-    let out fmt = Format.fprintf ppf fmt in
+-    out "fun f ->@ @[<hov2>marshal%d" (List.length l);
+-    if ret <> "" then out "_ret@ ~ret:%s" (Hashtbl.find conversions ret);
+-    List.iter tyl ~f:(fun ty -> out "@ %s" ty);
+-    out "@ \"%s::%s\"" gtk_class name;
+-    if List.for_all l ~f:((=) "") then out " f"
+-    else
+-      begin let l = min_labelled l in
+-        out "@ @[<hov2>(fun ";
+-        for i = 1 to List.length l do out "x%d " i done;
+-        out "->@ f";
+-        let i = ref 0 in
+-        List.iter l
+-          ~f:(fun p -> incr i; if p = "" then out "@ x%d" !i else out "@ ~%s:x%d" p !i);
+-        out ")@]"
+-      end;
+-    out "@]"
+-  in
+-  List.iter decls
+-    ~f:(fun (name, gtk_class, attrs, props, meths, sigs) ->
+-       out "@[<hv2>module %s = struct" (camlizeM name);
+-       out "@ @[<hv2>let cast w : %s =@ try_cast w \"%s\"@]"
+-         (type_name name ~attrs) gtk_class;
+-       let tag =
+-         try List.assoc "tag" attrs with
+-           Not_found -> !tagprefix ^ String.lowercase name
+-       in
+-       if props <> [] then
+-         begin
+-           out "@ @[<hv2>module P = struct";
+-           List.iter props
+-             ~f:(fun (name, _, gtype, attrs) ->
+-                let (count, rpname) = Hashtbl.find all_props (name, gtype) in
+-                if !count > 1 then
+-                  out "@ let %s : ([>`%s],_) property = %s" (camlize name) tag
+-                    !rpname
+-                else defprop ~name ~mlname:(camlize name) ~gtype ~tag);
+-           out "@]@ end"
+-         end;
+-       if sigs <> [] then
+-         begin
+-           out "@ @[<hv2>module S = struct@ open GtkSignal";
+-           List.iter sigs
+-             ~f:(fun (name, marshaller, _) ->
+-                out "@ @[<hv2>let %s =" (camlize name);
+-                out "@ @[<hov1>{name=\"%s\";@ classe=`%s;@ marshaller=" name
+-                  tag;
+-                begin match marshaller with
+-                  Function s -> out "%s" s
+-                | Types ([], [], "") -> out "marshal_unit"
+-                | Types ([], [], ret) ->
+-                    out "fun f -> marshal0_ret ~ret:%s f"
+-                      (Hashtbl.find conversions ret)
+-                | Types (l, tyl, ret) ->
+-                    omarshaller ~gtk_class ~name ppf
+-                      (l, List.map (Hashtbl.find conversions) tyl, ret)
+-                end;
+-                out "}@]@]");
+-           out "@]@ end"
+-         end;
+-       if not (List.mem_assoc "abstract" attrs) then
+-         begin let cprops =
+-           List.filter props
+-             ~f:(fun (_, _, _, a) -> List.mem "ConstructOnly" a && not (List.mem "NoSet" a))
+-         in
+-           out "@ @[<hv2>let create";
+-           List.iter cprops ~f:(fun (_, name, _, _) -> out " ?%s" name);
+-           if List.mem_assoc "hv" attrs then
+-             begin
+-               out " (dir : Gtk.Tags.orientation) pl : %s ="
+-                 (type_name name ~attrs);
+-               may_cons_props cprops;
+-               out "@ @[<hov2>Object.make";
+-               out
+-                 "@ (if dir = `HORIZONTAL then \"%sH%s\" else \"%sV%s\")@  pl"
+-                 !prefix name !prefix name;
+-               out "@]@]"
+-             end
+-           else
+-             begin
+-               out " pl : %s =" (type_name name ~attrs);
+-               may_cons_props cprops;
+-               if List.mem_assoc "gobject" attrs then
+-                 out "@ Gobject.unsafe_create"
+-               else out "@ Object.make";
+-               out " \"%s\" pl@]" gtk_class
+-             end
+-         end;
+-       List.iter meths
+-         ~f:(fun (name, typ, attrs) ->
+-            out "@ @[<hov2>external %s :" name;
+-            out "@ @[<hv>[>`%s] obj ->@ %s@]" tag typ;
+-            let cname = camlize ("ml" ^ gtk_class) ^ "_" ^ name in
+-            out "@ = \"";
+-            if arity typ > 4 then out "%s_bc\" \"" cname;
+-            out "%s\"@]" cname);
+-       let set_props =
+-         let set = List.mem_assoc "set" attrs in
+-         List.filter props
+-           ~f:(fun (_, _, _, a) ->
+-              (set || List.mem "Set" a) && List.mem "Write" a &&
+-              not (List.mem "ConstructOnly" a || List.mem "NoSet" a))
+-       in
+-       if set_props <> [] then
+-         begin let props = set_props in
+-           out "@ @[<hv2>@[<hov4>let make_params ~cont pl";
+-           List.iter props ~f:(fun (_, name, _, _) -> out "@ ?%s" name);
+-           out " =@]";
+-           may_cons_props props;
+-           out "@ cont pl@]"
+-         end;
+-       if !checks && (props <> [] || sigs <> []) then
+-         begin
+-           if List.mem_assoc "abstract" attrs then
+-             out "@ @[<hv2>let check w ="
+-           else
+-             begin
+-               out "@ @[<hv2>let check () =";
+-               out "@ let w = create%s [] in"
+-                 (if List.mem_assoc "hv" attrs then " `HORIZONTAL" else "")
+-             end;
+-           if props <> [] then out "@ let c p = Property.check w p in";
+-           if sigs <> [] then
+-             begin
+-               out "@ let closure = Closure.create ignore in";
+-               out "@ let s name = GtkSignal.connect_by_name";
+-               out " w ~name ~closure ~after:false in"
+-             end;
+-           out "@ @[<hov>";
+-           List.iter props
+-             ~f:(fun (name, _, gtype, attrs) ->
+-                if List.mem "Read" attrs then out "c P.%s;@ " (camlize name));
+-           List.iter sigs ~f:(fun (name, _, _) -> out "s %s;@ " name);
+-           out "()@]"
+-         end;
+-       out "@]@.end\n@.");
+-  close_out oc;
+-  (* Output classes *)
+-  if !ooutfile = "" then ooutfile := "o" ^ !outfile;
+-  let oc = open_out !ooutfile in
+-  let ppf = Format.formatter_of_out_channel oc in
+-  let out fmt = Format.fprintf ppf fmt in
+-  List.iter !oheaders ~f:(fun s -> out "%s@." s);
+-  out "open %s@." (String.capitalize (Filename.chop_extension !outfile));
+-  out "@[<hv>";
+-  let oprop ~name ~gtype ppf pname =
+-    try
+-      let conv = List.assoc gtype specials in
+-      Format.fprintf ppf "{%s.P.%s with conv=%s}" (camlizeM name)
+-        (camlize pname) conv
+-    with Not_found ->
+-      Format.fprintf ppf "%s.P.%s" (camlizeM name) (camlize pname)
+-  in
+-  List.iter decls
+-    ~f:(fun (name, gtk_class, attrs, props, meths, sigs) ->
+-       let wrap = List.mem_assoc "wrap" attrs in
+-       let wrapset = wrap || List.mem_assoc "wrapset" attrs in
+-       let wr_props =
+-         List.filter props
+-           ~f:(fun (_, _, _, set) ->
+-              let has = List.mem ~set in
+-              (wrapset || has "Wrap") && has "Write" &&
+-              not (has "ConstructOnly" || has "NoWrap"))
+-       and rd_props =
+-         List.filter props
+-           ~f:(fun (_, _, _, set) ->
+-              let has = List.mem ~set in
+-              (wrap || has "Wrap") && has "Read" &&
+-              not (has "NoWrap" || has "NoGet"))
+-       and wr_meths =
+-         List.filter meths ~f:(fun (_, _, attrs) -> List.mem "Wrap" attrs)
+-       in
+-       if wr_props <> [] || rd_props <> [] || wr_meths <> [] then
+-         begin
+-           (* pre 3.10
+-           out "@ @[<hv2>class virtual %s_props = object (self)" (camlize name);
+-           out "@ method private virtual obj : _ obj";
+-           List.iter wr_props ~f:(fun (pname,mlname,gtype,_) ->
+-             out "@ @[<hv2>method set_%s =@ set %a self#obj@]"
+-               mlname (oprop ~name ~gtype) pname);
+-           List.iter rd_props ~f:(fun (pname,mlname,gtype,_) ->
+-             out "@ @[<hv2>method %s =@ get %a self#obj@]"
+-               mlname (oprop ~name ~gtype) pname);
+-           List.iter wr_meths ~f:(fun (mname,typ,_) ->
+-             out "@ @[<hv2>method %s %s=@ %s.%s self#obj@]"
+-               mname (if typ = "unit" then "() " else "") (camlizeM name) mname);
+-           *)
+-           (* post 3.10 *)
+-           out "@ @[<hv2>class virtual %s_props = object" (camlize name);
+-           out "@ val virtual obj : _ obj";
+-           List.iter wr_props
+-             ~f:(fun (pname, mlname, gtype, _) ->
+-                out "@ @[<hv2>method set_%s =@ set %a obj@]" mlname
+-                  (oprop ~name ~gtype) pname);
+-           List.iter rd_props
+-             ~f:(fun (pname, mlname, gtype, _) ->
+-                out "@ @[<hv2>method %s =@ get %a obj@]" mlname
+-                  (oprop ~name ~gtype) pname);
+-           List.iter wr_meths
+-             ~f:(fun (mname, typ, _) ->
+-                out "@ @[<hv2>method %s %s=@ %s.%s obj@]" mname
+-                  (if typ = "unit" then "() " else "") (camlizeM name) mname);
+-           out "@]@ end@ ";
+-           (* #notify: easy connection to the "foo::notify" signal for the "foo"
+-            * properties. *)
+-           out "@ @[<hv2>class virtual %s_notify obj = object (self)"
+-             (camlize name);
+-           out "@ val obj : 'a obj = obj";
+-           out "@ method private notify : 'b. ('a, 'b) property ->";
+-           out "@   callback:('b -> unit) -> _ =";
+-           out "@ fun prop ~callback -> GtkSignal.connect_property obj";
+-           out "@   ~prop ~callback";
+-           List.iter rd_props
+-             ~f:(fun (pname, mlname, gtype, _) ->
+-                out "@ @[<hv2>method %s =@ self#notify %a@]" mlname
+-                  (oprop ~name ~gtype) pname);
+-           out "@]@ end@ "
+-         end;
+-       let vset = List.mem_assoc "vset" attrs in
+-       let vprops =
+-         List.filter props
+-           ~f:(fun (_, _, _, set) ->
+-              let has = List.mem ~set in
+-              (vset || has "VSet") && has "Write" &&
+-              not (has "ConstructOnly" || has "NoVSet"))
+-       in
+-       if vprops <> [] then
+-         begin
+-           out "@ @[<hv2>let %s_param = function" (camlize name);
+-           List.iter vprops
+-             ~f:(fun (pname, mlname, gtype, _) ->
+-                out "@ @[<hv4>| `%s p ->@ param %a p@]"
+-                  (String.uppercase mlname) (oprop ~name ~gtype) pname);
+-           out "@]@ "
+-         end;
+-       let wsig = List.mem_assoc "wrapsig" attrs in
+-       let wsigs =
+-         List.filter sigs
+-           ~f:(fun (_, _, attrs) ->
+-              List.mem "Wrap" attrs || wsig && not (List.mem "NoWrap" attrs))
+-       in
+-       if wsigs <> [] then
+-         begin
+-           out "@ @[<hv2>class virtual %s_sigs = object (self)"
+-             (camlize name);
+-           out "@ @[<hv2>method private virtual connect :";
+-           out "@ 'b. ('a,'b) GtkSignal.t -> callback:'b -> GtkSignal.id@]";
+-           out "@ @[<hv2>method private virtual notify :";
+-           out
+-             "@ 'b. ('a,'b) property -> callback:('b -> unit) -> GtkSignal.id@]";
+-           List.iter wsigs
+-             ~f:(fun (sname, types, _) ->
+-                match types with
+-                  Types (l, tyl, ret)
+-                  when List.exists tyl ~f:(List.mem_assoc ~map:specials) ->
+-                    let convs =
+-                      List.map tyl
+-                        ~f:(fun ty ->
+-                           try List.assoc ty specials with
+-                             Not_found -> Hashtbl.find conversions ty)
++             (List.iter !headers ~f: (fun s -> out "%s@." s);
++              let decls =
++                List.map decls
++                  ~f:
++                    (fun (name, gtk_name, attrs, props, meths, sigs) ->
++                       (name, gtk_name, attrs,
++                        (List.filter props
++                           ~f:
++                             (fun (name, _, gtype, _) ->
++                                try
++                                  (ignore (Hashtbl.find conversions gtype);
++                                   try
++                                     let (count, _) =
++                                       Hashtbl.find all_props (name, gtype)
++                                     in (incr count; true)
++                                   with
++                                   | Not_found ->
++                                       (Hashtbl.add all_props (name, gtype)
++                                          ((ref 1), (ref ""));
++                                        true))
++                                with
++                                | Not_found ->
++                                    (prerr_endline
++                                       ("Warning: no conversion for type " ^
++                                          (gtype ^ (" in class " ^ gtk_name)));
++                                     false))),
++                        meths,
++                        (List.filter sigs
++                           ~f:
++                             (function
++                              | (_, Function _, _) -> true
++                              | (_, Types (_, l, ret), _) ->
++                                  List.for_all
++                                    (if ret = "" then l else ret :: l)
++                                    ~f:
++                                      (fun ty ->
++                                         if Hashtbl.mem conversions ty
++                                         then true
++                                         else
++                                           (prerr_endline
++                                              ("Warning: no conversion for type "
++                                                 ^
++                                                 (ty ^
++                                                    (" in class " ^ gtk_name)));
++                                            false)))))) in
++              let defprop ~name ~mlname ~gtype ~tag =
++                let conv = Hashtbl.find conversions gtype
++                in
++                  (out "@ @[<hv2>let %s " mlname;
++                   if tag <> "gtk"
++                   then out ": ([>`%s],_) property " tag
++                   else ();
++                   out "=@ @[<hov1>{name=\"%s\";@ conv=%s}@]@]" name conv) in
++              let shared_props =
++                Hashtbl.fold all_props ~init: []
++                  ~f:
++                    (fun ~key: ((name, gtype)) ~data: ((count, rpname)) acc
++                       ->
++                       if !count <= 1
++                       then acc
++                       else
++                         (let pname = camlize name in
++                          let pname =
++                            if Hashtbl.mem all_pnames pname
++                            then pname ^ ("_" ^ gtype)
++                            else (Hashtbl.add all_pnames pname (); pname)
++                          in
++                            (rpname := "PrivateProps." ^ pname;
++                             (pname, name, gtype) :: acc)))
++              in
++                (* Redefining saves space in bytecode! *)
++                (if shared_props <> []
++                 then
++                   (out "@[<hv2>module PrivateProps = struct";
++                    List.iter (List.sort compare shared_props)
++                      ~f:
++                        (fun (pname, name, gtype) ->
++                           defprop ~name ~mlname: pname ~gtype ~tag: "gtk");
++                    out "@]\nend\n@.")
++                 else ();
++                 out "let may_cons = Property.may_cons\n";
++                 out "let may_cons_opt = Property.may_cons_opt\n@.";
++                 let may_cons_props props =
++                   if props <> []
++                   then
++                     (out "@ @[<hv2>let pl = ";
++                      List.iter props
++                        ~f:
++                          (fun (name, mlname, gtype, _) ->
++                             let op =
++                               if check_suffix gtype "_opt"
++                               then "may_cons_opt"
++                               else "may_cons"
++                             in
++                               out "(@;<0>%s P.%s %s " op (camlize name)
++                                 mlname);
++                      out "pl";
++                      for k = 1 to List.length props do out ")" done;
++                      out " in@]")
++                   else () in
++                 let omarshaller ~gtk_class ~name ppf (l, tyl, ret) =
++                   let out fmt = Format.fprintf ppf fmt
++                   in
++                     (out "fun f ->@ @[<hov2>marshal%d" (List.length l);
++                      if ret <> ""
++                      then out "_ret@ ~ret:%s" (Hashtbl.find conversions ret)
++                      else ();
++                      List.iter tyl ~f: (fun ty -> out "@ %s" ty);
++                      out "@ \"%s::%s\"" gtk_class name;
++                      if List.for_all l ~f: (( = ) "")
++                      then out " f"
++                      else
++                        (let l = min_labelled l
++                         in
++                           (out "@ @[<hov2>(fun ";
++                            for i = 1 to List.length l do out "x%d " i done;
++                            out "->@ f";
++                            let i = ref 0
++                            in
++                              (List.iter l
++                                 ~f:
++                                   (fun p ->
++                                      (incr i;
++                                       if p = ""
++                                       then out "@ x%d" !i
++                                       else out "@ ~%s:x%d" p !i));
++                               out ")@]")));
++                      out "@]")
++                 in
++                   (* Output classes *)
++                   (List.iter decls
++                      ~f:
++                        (fun (name, gtk_class, attrs, props, meths, sigs) ->
++                           (out "@[<hv2>module %s = struct" (camlizeM name);
++                            out
++                              "@ @[<hv2>let cast w : %s =@ try_cast w \"%s\"@]"
++                              (type_name name ~attrs) gtk_class;
++                            let tag =
++                              try List.assoc "tag" attrs
++                              with
++                              | Not_found ->
++                                  !tagprefix ^ (String.lowercase_ascii name)
++                            in
++                              (if props <> []
++                               then
++                                 (out "@ @[<hv2>module P = struct";
++                                  List.iter props
++                                    ~f:
++                                      (fun (name, _, gtype, attrs) ->
++                                         let (count, rpname) =
++                                           Hashtbl.find all_props
++                                             (name, gtype)
++                                         in
++                                           if !count > 1
++                                           then
++                                             out
++                                               "@ let %s : ([>`%s],_) property = %s"
++                                               (camlize name) tag !rpname
++                                           else
++                                             defprop ~name
++                                               ~mlname: (camlize name) ~gtype
++                                               ~tag);
++                                  out "@]@ end")
++                               else ();
++                               if sigs <> []
++                               then
++                                 (out
++                                    "@ @[<hv2>module S = struct@ open GtkSignal";
++                                  List.iter sigs
++                                    ~f:
++                                      (fun (name, marshaller, _) ->
++                                         (out "@ @[<hv2>let %s ="
++                                            (camlize name);
++                                          out
++                                            "@ @[<hov1>{name=\"%s\";@ classe=`%s;@ marshaller="
++                                            name tag;
++                                          (match marshaller with
++                                           | Function s -> out "%s" s
++                                           | Types ([], [], "") ->
++                                               out "marshal_unit"
++                                           | Types ([], [], ret) ->
++                                               out
++                                                 "fun f -> marshal0_ret ~ret:%s f"
++                                                 (Hashtbl.find conversions
++                                                    ret)
++                                           | Types (l, tyl, ret) ->
++                                               omarshaller ~gtk_class ~name
++                                                 ppf
++                                                 (l,
++                                                  (List.map
++                                                     (Hashtbl.find
++                                                        conversions)
++                                                     tyl),
++                                                  ret));
++                                          out "}@]@]"));
++                                  out "@]@ end")
++                               else ();
++                               if not (List.mem_assoc "abstract" attrs)
++                               then
++                                 (let cprops =
++                                    List.filter props
++                                      ~f:
++                                        (fun (_, _, _, a) ->
++                                           (List.mem "ConstructOnly" a) &&
++                                             (not (List.mem "NoSet" a)))
++                                  in
++                                    (out "@ @[<hv2>let create";
++                                     List.iter cprops
++                                       ~f:
++                                         (fun (_, name, _, _) ->
++                                            out " ?%s" name);
++                                     if List.mem_assoc "hv" attrs
++                                     then
++                                       (out
++                                          " (dir : Gtk.Tags.orientation) pl : %s ="
++                                          (type_name name ~attrs);
++                                        may_cons_props cprops;
++                                        out "@ @[<hov2>Object.make";
++                                        out
++                                          "@ (if dir = `HORIZONTAL then \"%sH%s\" else \"%sV%s\")@  pl"
++                                          !prefix name !prefix name;
++                                        out "@]@]")
++                                     else
++                                       (out " pl : %s ="
++                                          (type_name name ~attrs);
++                                        may_cons_props cprops;
++                                        if List.mem_assoc "gobject" attrs
++                                        then out "@ Gobject.unsafe_create"
++                                        else out "@ Object.make";
++                                        out " \"%s\" pl@]" gtk_class)))
++                               else ();
++                               List.iter meths
++                                 ~f:
++                                   (fun (name, typ, attrs) ->
++                                      (out "@ @[<hov2>external %s :" name;
++                                       out "@ @[<hv>[>`%s] obj ->@ %s@]" tag
++                                         typ;
++                                       let cname =
++                                         (camlize ("ml" ^ gtk_class)) ^
++                                           ("_" ^ name)
++                                       in
++                                         (out "@ = \"";
++                                          if (arity typ) > 4
++                                          then out "%s_bc\" \"" cname
++                                          else ();
++                                          out "%s\"@]" cname)));
++                               let set_props =
++                                 let set = List.mem_assoc "set" attrs
++                                 in
++                                   List.filter props
++                                     ~f:
++                                       (fun (_, _, _, a) ->
++                                          (set || (List.mem "Set" a)) &&
++                                            ((List.mem "Write" a) &&
++                                               (not
++                                                  ((List.mem "ConstructOnly"
++                                                      a)
++                                                     || (List.mem "NoSet" a)))))
++                               in
++                                 (if set_props <> []
++                                  then
++                                    (let props = set_props
++                                     in
++                                       (out
++                                          "@ @[<hv2>@[<hov4>let make_params ~cont pl";
++                                        List.iter props
++                                          ~f:
++                                            (fun (_, name, _, _) ->
++                                               out "@ ?%s" name);
++                                        out " =@]";
++                                        may_cons_props props;
++                                        out "@ cont pl@]"))
++                                  else ();
++                                  if
++                                    !checks &&
++                                      ((props <> []) || (sigs <> []))
++                                  then
++                                    (if List.mem_assoc "abstract" attrs
++                                     then out "@ @[<hv2>let check w ="
++                                     else
++                                       (out "@ @[<hv2>let check () =";
++                                        out "@ let w = create%s [] in"
++                                          (if List.mem_assoc "hv" attrs
++                                           then " `HORIZONTAL"
++                                           else ""));
++                                     if props <> []
++                                     then
++                                       out
++                                         "@ let c p = Property.check w p in"
++                                     else ();
++                                     if sigs <> []
++                                     then
++                                       (out
++                                          "@ let closure = Closure.create ignore in";
++                                        out
++                                          "@ let s name = GtkSignal.connect_by_name";
++                                        out
++                                          " w ~name ~closure ~after:false in")
++                                     else ();
++                                     out "@ @[<hov>";
++                                     List.iter props
++                                       ~f:
++                                         (fun (name, _, gtype, attrs) ->
++                                            if List.mem "Read" attrs
++                                            then
++                                              out "c P.%s;@ " (camlize name)
++                                            else ());
++                                     List.iter sigs
++                                       ~f:
++                                         (fun (name, _, _) ->
++                                            out "s %s;@ " name);
++                                     out "()@]")
++                                  else ();
++                                  out "@]@.end\n@."))));
++                    close_out oc;
++                    if !ooutfile = "" then ooutfile := "o" ^ !outfile else ();
++                    let oc = open_out !ooutfile in
++                    let ppf = Format.formatter_of_out_channel oc in
++                    let out fmt = Format.fprintf ppf fmt
+                     in
+-                    out "@ @[<hov2>method %s =@ self#connect" sname;
+-                    out "@ @[<hov1>{%s.S.%s with@ marshaller = %a}@]@]"
+-                      (camlizeM name) sname
+-                      (omarshaller ~gtk_class ~name:sname) (l, convs, ret)
+-                | _ ->
+-                    out "@ @[<hv2>method %s =@ self#connect %s.S.%s@]" sname
+-                      (camlizeM name) sname);
+-           (* notify: easy connection to "foo::notify" signals for "foo"
+-            * properties. *)
+-           List.iter rd_props
+-             ~f:(fun (pname, mlname, gtype, _) ->
+-                out "@ @[<hov2>method notify_%s ~callback =" mlname;
+-                out "@ @[<hov1>self#notify %a ~callback@]@]"
+-                  (oprop ~name ~gtype) pname);
+-           out "@]@ end@ "
+-         end);
+-  out "@.";
+-  close_out oc;
+-  outfile := "";
+-  ooutfile := ""
+-
++                      (List.iter !oheaders ~f: (fun s -> out "%s@." s);
++                       out "open %s@."
++                         (String.capitalize_ascii
++                            (Filename.chop_extension !outfile));
++                       out "@[<hv>";
++                       let oprop ~name ~gtype ppf pname =
++                         try
++                           let conv = List.assoc gtype specials
++                           in
++                             Format.fprintf ppf "{%s.P.%s with conv=%s}"
++                               (camlizeM name) (camlize pname) conv
++                         with
++                         | Not_found ->
++                             Format.fprintf ppf "%s.P.%s" (camlizeM name)
++                               (camlize pname)
++                       in
++                         (* pre 3.10
++        out "@ @[<hv2>class virtual %s_props = object (self)" (camlize name);
++        out "@ method private virtual obj : _ obj";
++        List.iter wr_props ~f:(fun (pname,mlname,gtype,_) ->
++          out "@ @[<hv2>method set_%s =@ set %a self#obj@]"
++            mlname (oprop ~name ~gtype) pname);
++        List.iter rd_props ~f:(fun (pname,mlname,gtype,_) ->
++          out "@ @[<hv2>method %s =@ get %a self#obj@]"
++            mlname (oprop ~name ~gtype) pname);
++        List.iter wr_meths ~f:(fun (mname,typ,_) ->
++          out "@ @[<hv2>method %s %s=@ %s.%s self#obj@]"
++            mname (if typ = "unit" then "() " else "") (camlizeM name) mname);
++        *)
++                         (* post 3.10 *)
++                         (* #notify: easy connection to the "foo::notify" signal for the "foo"
++         * properties. *)
++                         (* notify: easy connection to "foo::notify" signals for "foo"
++         * properties. *)
++                         (List.iter decls
++                            ~f:
++                              (fun
++                                 (name, gtk_class, attrs, props, meths, sigs)
++                                 ->
++                                 let wrap = List.mem_assoc "wrap" attrs in
++                                 let wrapset =
++                                   wrap || (List.mem_assoc "wrapset" attrs) in
++                                 let wr_props =
++                                   List.filter props
++                                     ~f:
++                                       (fun (_, _, _, set) ->
++                                          let has = List.mem ~set
++                                          in
++                                            (wrapset || (has "Wrap")) &&
++                                              ((has "Write") &&
++                                                 (not
++                                                    ((has "ConstructOnly") ||
++                                                       (has "NoWrap")))))
++                                 and rd_props =
++                                   List.filter props
++                                     ~f:
++                                       (fun (_, _, _, set) ->
++                                          let has = List.mem ~set
++                                          in
++                                            (wrap || (has "Wrap")) &&
++                                              ((has "Read") &&
++                                                 (not
++                                                    ((has "NoWrap") ||
++                                                       (has "NoGet")))))
++                                 and wr_meths =
++                                   List.filter meths
++                                     ~f:
++                                       (fun (_, _, attrs) ->
++                                          List.mem "Wrap" attrs)
++                                 in
++                                   (if
++                                      (wr_props <> []) ||
++                                        ((rd_props <> []) || (wr_meths <> []))
++                                    then
++                                      (out
++                                         "@ @[<hv2>class virtual %s_props = object"
++                                         (camlize name);
++                                       out "@ val virtual obj : _ obj";
++                                       List.iter wr_props
++                                         ~f:
++                                           (fun (pname, mlname, gtype, _) ->
++                                              out
++                                                "@ @[<hv2>method set_%s =@ set %a obj@]"
++                                                mlname (oprop ~name ~gtype)
++                                                pname);
++                                       List.iter rd_props
++                                         ~f:
++                                           (fun (pname, mlname, gtype, _) ->
++                                              out
++                                                "@ @[<hv2>method %s =@ get %a obj@]"
++                                                mlname (oprop ~name ~gtype)
++                                                pname);
++                                       List.iter wr_meths
++                                         ~f:
++                                           (fun (mname, typ, _) ->
++                                              out
++                                                "@ @[<hv2>method %s %s=@ %s.%s obj@]"
++                                                mname
++                                                (if typ = "unit"
++                                                 then "() "
++                                                 else "")
++                                                (camlizeM name) mname);
++                                       out "@]@ end@ ";
++                                       out
++                                         "@ @[<hv2>class virtual %s_notify obj = object (self)"
++                                         (camlize name);
++                                       out "@ val obj : 'a obj = obj";
++                                       out
++                                         "@ method private notify : 'b. ('a, 'b) property ->";
++                                       out "@   callback:('b -> unit) -> _ =";
++                                       out
++                                         "@ fun prop ~callback -> GtkSignal.connect_property obj";
++                                       out "@   ~prop ~callback";
++                                       List.iter rd_props
++                                         ~f:
++                                           (fun (pname, mlname, gtype, _) ->
++                                              out
++                                                "@ @[<hv2>method %s =@ self#notify %a@]"
++                                                mlname (oprop ~name ~gtype)
++                                                pname);
++                                       out "@]@ end@ ")
++                                    else ();
++                                    let vset = List.mem_assoc "vset" attrs in
++                                    let vprops =
++                                      List.filter props
++                                        ~f:
++                                          (fun (_, _, _, set) ->
++                                             let has = List.mem ~set
++                                             in
++                                               (vset || (has "VSet")) &&
++                                                 ((has "Write") &&
++                                                    (not
++                                                       ((has "ConstructOnly")
++                                                          || (has "NoVSet")))))
++                                    in
++                                      (if vprops <> []
++                                       then
++                                         (out
++                                            "@ @[<hv2>let %s_param = function"
++                                            (camlize name);
++                                          List.iter vprops
++                                            ~f:
++                                              (fun (pname, mlname, gtype, _)
++                                                 ->
++                                                 out
++                                                   "@ @[<hv4>| `%s p ->@ param %a p@]"
++                                                   (String.uppercase_ascii
++                                                      mlname)
++                                                   (oprop ~name ~gtype) pname);
++                                          out "@]@ ")
++                                       else ();
++                                       let wsig =
++                                         List.mem_assoc "wrapsig" attrs in
++                                       let wsigs =
++                                         List.filter sigs
++                                           ~f:
++                                             (fun (_, _, attrs) ->
++                                                (List.mem "Wrap" attrs) ||
++                                                  (wsig &&
++                                                     (not
++                                                        (List.mem "NoWrap"
++                                                           attrs))))
++                                       in
++                                         if wsigs <> []
++                                         then
++                                           (out
++                                              "@ @[<hv2>class virtual %s_sigs = object (self)"
++                                              (camlize name);
++                                            out
++                                              "@ @[<hv2>method private virtual connect :";
++                                            out
++                                              "@ 'b. ('a,'b) GtkSignal.t -> callback:'b -> GtkSignal.id@]";
++                                            out
++                                              "@ @[<hv2>method private virtual notify :";
++                                            out
++                                              "@ 'b. ('a,'b) property -> callback:('b -> unit) -> GtkSignal.id@]";
++                                            List.iter wsigs
++                                              ~f:
++                                                (fun (sname, types, _) ->
++                                                   match types with
++                                                   | Types (l, tyl, ret) when
++                                                       List.exists tyl
++                                                         ~f:
++                                                           (List.mem_assoc
++                                                              ~map: specials)
++                                                       ->
++                                                       let convs =
++                                                         List.map tyl
++                                                           ~f:
++                                                             (fun ty ->
++                                                                try
++                                                                  List.assoc
++                                                                    ty
++                                                                    specials
++                                                                with
++                                                                | Not_found
++                                                                    ->
++                                                                    Hashtbl.
++                                                                    find
++                                                                    conversions
++                                                                    ty)
++                                                       in
++                                                         (out
++                                                            "@ @[<hov2>method %s =@ self#connect"
++                                                            sname;
++                                                          out
++                                                            "@ @[<hov1>{%s.S.%s with@ marshaller = %a}@]@]"
++                                                            (camlizeM name)
++                                                            sname
++                                                            (omarshaller
++                                                               ~gtk_class
++                                                               ~name: sname)
++                                                            (l, convs, ret))
++                                                   | _ ->
++                                                       out
++                                                         "@ @[<hv2>method %s =@ self#connect %s.S.%s@]"
++                                                         sname
++                                                         (camlizeM name)
++                                                         sname);
++                                            List.iter rd_props
++                                              ~f:
++                                                (fun
++                                                   (pname, mlname, gtype, _)
++                                                   ->
++                                                   (out
++                                                      "@ @[<hov2>method notify_%s ~callback ="
++                                                      mlname;
++                                                    out
++                                                      "@ @[<hov1>self#notify %a ~callback@]@]"
++                                                      (oprop ~name ~gtype)
++                                                      pname));
++                                            out "@]@ end@ ")
++                                         else ())));
++                          out "@.";
++                          close_out oc;
++                          outfile := "";
++                          ooutfile := ""))))))))
++  
+ let main () =
+   Arg.parse
+-    ["-checks", Arg.Set checks, "generate code for checks";
+-     "-o", Arg.String (fun s -> outfile := s), "basic output file name";
+-     "-oo", Arg.String (fun s -> ooutfile := s), "wrappers output file name"]
++    [ ("-checks", (Arg.Set checks), "generate code for checks");
++      ("-o", (Arg.String (fun s -> outfile := s)), "basic output file name");
++      ("-oo", (Arg.String (fun s -> ooutfile := s)),
++       "wrappers output file name") ]
+     process_file "usage: propcc <options> file.props ..."
+-
++  
+ let () = Printexc.print main ()
++  
++
+diff --git a/src/propcc.ml4 b/src/propcc.ml4
+index 3a527085..467e534b 100644
+--- a/src/propcc.ml4
++++ b/src/propcc.ml4
+@@ -19,7 +19,7 @@ let camlize id =
+ 	  (is_not_uppercase id.[i-1] || 
+ 	  (i < String.length id - 1 && is_not_uppercase id.[i+1]))
+ 	then Buffer.add_char b '_' ;
+-	Buffer.add_char b (Char.lowercase c)
++	Buffer.add_char b (Char.lowercase_ascii c)
+     | '-' ->
+ 	Buffer.add_char b '_'
+     | c ->
+@@ -285,7 +285,7 @@ let ooutfile = ref ""
+ 
+ let process_file f =
+   let base = Filename.chop_extension f in
+-  let baseM = String.capitalize base in
++  let baseM = String.capitalize_ascii base in
+   prefix := baseM;
+   (* Input *)
+   (* Redefining saves space in bytecode! *)
+@@ -428,7 +428,7 @@ let process_file f =
+         (type_name name ~attrs) gtk_class;
+       let tag =
+         try List.assoc "tag" attrs
+-        with Not_found -> !tagprefix ^ String.lowercase name
++        with Not_found -> !tagprefix ^ String.lowercase_ascii name
+       in
+       if props <> [] then begin
+         out "@ @[<hv2>module P = struct";
+@@ -540,7 +540,7 @@ let process_file f =
+   let ppf = Format.formatter_of_out_channel oc in
+   let out fmt = Format.fprintf ppf fmt in
+   List.iter !oheaders ~f:(fun s -> out "%s@." s);
+-  out "open %s@." (String.capitalize (Filename.chop_extension !outfile));
++  out "open %s@." (String.capitalize_ascii (Filename.chop_extension !outfile));
+   out "@[<hv>";
+   let oprop ~name ~gtype ppf pname =
+     try
+@@ -621,7 +621,7 @@ let process_file f =
+         out "@ @[<hv2>let %s_param = function" (camlize name);
+         List.iter vprops ~f:(fun (pname,mlname,gtype,_) ->
+           out "@ @[<hv4>| `%s p ->@ param %a p@]"
+-            (String.uppercase mlname) (oprop ~name ~gtype) pname);
++            (String.uppercase_ascii mlname) (oprop ~name ~gtype) pname);
+         out "@]@ ";
+       end;
+       let wsig = List.mem_assoc "wrapsig" attrs in
+diff --git a/src/varcc.ml b/src/varcc.ml
+index d0eded9b..e32d6981 100644
+--- a/src/varcc.ml
++++ b/src/varcc.ml
+@@ -1,346 +1,449 @@
+ (* -*- caml -*- *)
+ (* $Id$ *)
+-
+-(* Compile a list of variant tags into CPP defines *) 
+-
++(* Compile a list of variant tags into CPP defines *)
+ open StdLabels
+-
++  
+ (* hash_variant, from ctype.ml *)
+-
+ let hash_variant s =
+-  let accu = ref 0 in
+-  for i = 0 to String.length s - 1 do
+-    accu := 223 * !accu + Char.code s.[i]
+-  done;
+-  (* reduce to 31 bits *)
+-  accu := !accu land (1 lsl 31 - 1);
+-  (* make it signed for 64 bits architectures *)
+-  if !accu > 0x3FFFFFFF then !accu - 1 lsl 31 else !accu
+-
++  let accu = ref 0
++  in
++    (* reduce to 31 bits *)
++    (for i = 0 to (String.length s) - 1 do
++       accu := (223 * !accu) + (Char.code s.[i])
++     done;
++     accu := !accu land ((1 lsl 31) - 1);
++     (* make it signed for 64 bits architectures *)
++     if !accu > 0x3FFFFFFF then !accu - (1 lsl 31) else !accu)
++  
+ let camlize id =
+-  let b = Buffer.create (String.length id + 4) in
+-  for i = 0 to String.length id - 1 do
+-    if id.[i] >= 'A' && id.[i] <= 'Z' then
+-      begin
+-        if i > 0 then Buffer.add_char b '_';
+-        Buffer.add_char b (Char.lowercase id.[i])
+-      end
+-    else Buffer.add_char b id.[i]
+-  done;
+-  Buffer.contents b
+-
++  let b = Buffer.create ((String.length id) + 4)
++  in
++    (for i = 0 to (String.length id) - 1 do
++       if (id.[i] >= 'A') && (id.[i] <= 'Z')
++       then
++         (if i > 0 then Buffer.add_char b '_' else ();
++          Buffer.add_char b (Char.lowercase_ascii id.[i]))
++       else Buffer.add_char b id.[i]
++     done;
++     Buffer.contents b)
++  
+ open Genlex
+-
+-let lexer = make_lexer ["type"; "="; "["; "]"; "`"; "|"]
+-
+-let may_string (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (String s) -> Stream.junk strm__; s
++  
++let lexer = make_lexer [ "type"; "="; "["; "]"; "`"; "|" ]
++  
++let may_string (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (String s) -> (Stream.junk __strm; s)
+   | _ -> ""
+-
+-let may_bar (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "|") -> Stream.junk strm__; ()
++  
++let may_bar (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "|") -> (Stream.junk __strm; ())
+   | _ -> ()
+-
+-let rec ident_list (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "`") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident x) ->
+-          Stream.junk strm__;
+-          let trans =
+-            try may_string strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          let _ =
+-            try may_bar strm__ with Stream.Failure -> raise (Stream.Error "")
+-          in
+-          (x, trans) :: ident_list strm__
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let rec ident_list (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "`") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident x) ->
++            (Stream.junk __strm;
++             let trans =
++               (try may_string __strm
++                with | Stream.Failure -> raise (Stream.Error "")) in
++             let _ =
++               (try may_bar __strm
++                with | Stream.Failure -> raise (Stream.Error ""))
++             in (x, trans) :: (ident_list __strm))
++        | _ -> raise (Stream.Error "")))
+   | _ -> []
+-
++  
+ let static = ref false
+-
+-let rec star ?(acc = []) p (strm__ : _ Stream.t) =
+-  match try Some (p strm__) with Stream.Failure -> None with
+-    Some x -> let s = strm__ in star ~acc:(x :: acc) p s
++  
++let rec star ?(acc = []) p (__strm : _ Stream.t) =
++  match try Some (p __strm) with | Stream.Failure -> None with
++  | Some x -> let s = __strm in star ~acc: (x :: acc) p s
+   | _ -> List.rev acc
+-
+-let flag (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident ("public" | "private" | "noconv" | "flags" as s)) ->
+-      Stream.junk strm__; s
++  
++let flag (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident (("public" | "private" | "noconv" | "flags" as s))) ->
++      (Stream.junk __strm; s)
+   | _ -> raise Stream.Failure
+-
+-let protect (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Ident "protect") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (Ident m) -> Stream.junk strm__; Some m
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let protect (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Ident "protect") ->
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (Ident m) -> (Stream.junk __strm; Some m)
++        | _ -> raise (Stream.Error "")))
+   | _ -> None
+-
+-let may o f =
+-  match o with
+-    Some v -> f v
+-  | None -> ()
+-
++  
++let may o f = match o with | Some v -> f v | None -> ()
++  
+ open Printf
+-
++  
+ let hashes = Hashtbl.create 57
+-
++  
+ let all_convs = ref []
++  
+ let package = ref ""
++  
+ let pkgprefix = ref ""
+-
+-let declaration ~hc ~cc (strm__ : _ Stream.t) =
+-  match Stream.peek strm__ with
+-    Some (Kwd "type") ->
+-      Stream.junk strm__;
+-      let flags =
+-        try star flag strm__ with Stream.Failure -> raise (Stream.Error "")
+-      in
+-      let guard =
+-        try protect strm__ with Stream.Failure -> raise (Stream.Error "")
+-      in
+-      begin match Stream.peek strm__ with
+-        Some (Ident mlname) ->
+-          Stream.junk strm__;
+-          let name =
+-            try may_string strm__ with
+-              Stream.Failure -> raise (Stream.Error "")
+-          in
+-          begin match Stream.peek strm__ with
+-            Some (Kwd "=") ->
+-              Stream.junk strm__;
+-              let prefix =
+-                try may_string strm__ with
+-                  Stream.Failure -> raise (Stream.Error "")
+-              in
+-              begin match Stream.peek strm__ with
+-                Some (Kwd "[") ->
+-                  Stream.junk strm__;
+-                  let _ =
+-                    try may_bar strm__ with
+-                      Stream.Failure -> raise (Stream.Error "")
+-                  in
+-                  let tags =
+-                    try ident_list strm__ with
+-                      Stream.Failure -> raise (Stream.Error "")
+-                  in
+-                  begin match Stream.peek strm__ with
+-                    Some (Kwd "]") ->
+-                      Stream.junk strm__;
+-                      let suffix =
+-                        try may_string strm__ with
+-                          Stream.Failure -> raise (Stream.Error "")
+-                      in
+-                      let oh x = fprintf hc x
+-                      and oc x = fprintf cc x in
+-                      let name =
+-                        if name = "" then !pkgprefix ^ mlname else name
+-                      in
+-                      (* Output tag values to headers *)
+-                      let first = ref true in
+-                      List.iter tags
+-                        ~f:(fun (tag, _) ->
+-                           let hash = hash_variant tag in
+-                           try
+-                             let tag' = Hashtbl.find hashes hash in
+-                             if tag <> tag' then
+-                               failwith
+-                                 (String.concat ~sep:" "
+-                                    ["Doublon tag:"; tag; "and"; tag'])
+-                           with Not_found ->
+-                             Hashtbl.add hashes hash tag;
+-                             if !first then
+-                               begin
+-                                 oh "/* %s : tags and macros */\n" name;
+-                                 first := false
+-                               end;
+-                             oh "#define MLTAG_%s\t((value)(%d*2+1))\n" tag
+-                               hash);
+-                      if List.mem "noconv" flags then ()
+-                      else
+-                        let ctag tag trans =
+-                          if trans <> "" then trans
+-                          else
+-                            let tag =
+-                              if tag.[0] = '_' then
+-                                String.sub tag ~pos:1
+-                                  ~len:(String.length tag - 1)
+-                              else tag
+-                            in
+-                            match
+-                              if prefix = "" then None, ""
+-                              else
+-                                Some prefix.[String.length prefix - 1],
+-                                String.sub prefix ~pos:0
+-                                  ~len:(String.length prefix - 1)
+-                            with
+-                              Some '#', prefix ->
+-                                prefix ^ String.uncapitalize tag ^ suffix
+-                            | Some '^', prefix ->
+-                                prefix ^ String.uppercase tag ^ suffix
+-                            | _ -> prefix ^ tag ^ suffix
+-                        and cname = String.capitalize name in
+-                        all_convs :=
+-                          (name, mlname, tags, flags) :: !all_convs;
+-                        let tags =
+-                          List.sort tags
+-                            ~cmp:(fun (tag1, _) (tag2, _) -> compare (hash_variant tag1) (hash_variant tag2))
+-                        in
+-                        (* Output table to code file *)
+-                        oc "/* %s : conversion table */\n" name;
+-                        let static =
+-                          if !static && not (List.mem "public" flags) ||
+-                             List.mem "private" flags
+-                          then
+-                            "static "
+-                          else ""
+-                        in
+-                        oc "%sconst lookup_info ml_table_%s[] = {\n" static
+-                          name;
+-                        may guard (fun m -> oc "#ifdef %s\n" m);
+-                        oc "  { 0, %d },\n" (List.length tags);
+-                        List.iter tags
+-                          ~f:(fun (tag, trans) -> oc "  { MLTAG_%s, %s },\n" tag (ctag tag trans));
+-                        may guard
+-                          (fun m ->
+-                             oc "#else\n  {0, 0 }\n#endif /* %s */\n" m);
+-                        oc "};\n\n";
+-                        (* Output macros to headers *)
+-                        if not !first then oh "\n";
+-                        if static = "" then
+-                          oh "extern const lookup_info ml_table_%s[];\n" name;
+-                        oh
+-                          "#define Val_%s(data) ml_lookup_from_c (ml_table_%s, data)\n"
+-                          name name;
+-                        oh
+-                          "#define %s_val(key) ml_lookup_to_c (ml_table_%s, key)\n\n"
+-                          cname name
+-                  | _ -> raise (Stream.Error "")
+-                  end
+-              | _ -> raise (Stream.Error "")
+-              end
+-          | _ -> raise (Stream.Error "")
+-          end
+-      | _ -> raise (Stream.Error "")
+-      end
++  
++let declaration ~hc ~cc (__strm : _ Stream.t) =
++  match Stream.peek __strm with
++  | Some (Kwd "type") ->
++      (Stream.junk __strm;
++       let flags =
++         (try star flag __strm
++          with | Stream.Failure -> raise (Stream.Error "")) in
++       let guard =
++         (try protect __strm with | Stream.Failure -> raise (Stream.Error ""))
++       in
++         (match Stream.peek __strm with
++          | Some (Ident mlname) ->
++              (Stream.junk __strm;
++               let name =
++                 (try may_string __strm
++                  with | Stream.Failure -> raise (Stream.Error ""))
++               in
++                 (match Stream.peek __strm with
++                  | Some (Kwd "=") ->
++                      (Stream.junk __strm;
++                       let prefix =
++                         (try may_string __strm
++                          with | Stream.Failure -> raise (Stream.Error ""))
++                       in
++                         (match Stream.peek __strm with
++                          | Some (Kwd "[") ->
++                              (Stream.junk __strm;
++                               let _ =
++                                 (try may_bar __strm
++                                  with
++                                  | Stream.Failure -> raise (Stream.Error "")) in
++                               let tags =
++                                 (try ident_list __strm
++                                  with
++                                  | Stream.Failure -> raise (Stream.Error ""))
++                               in
++                                 (match Stream.peek __strm with
++                                  | Some (Kwd "]") ->
++                                      (Stream.junk __strm;
++                                       let suffix =
++                                         (try may_string __strm
++                                          with
++                                          | Stream.Failure ->
++                                              raise (Stream.Error "")) in
++                                       let oh x = fprintf hc x
++                                       and oc x = fprintf cc x in
++                                       let name =
++                                         if name = ""
++                                         then !pkgprefix ^ mlname
++                                         else name in
++                                       (* Output tag values to headers *)
++                                       let first = ref true
++                                       in
++                                         (List.iter tags
++                                            ~f:
++                                              (fun (tag, _) ->
++                                                 let hash = hash_variant tag
++                                                 in
++                                                   try
++                                                     let tag' =
++                                                       Hashtbl.find hashes
++                                                         hash
++                                                     in
++                                                       if tag <> tag'
++                                                       then
++                                                         failwith
++                                                           (String.concat
++                                                              ~sep: " "
++                                                              [ "Doublon tag:";
++                                                                tag; "and";
++                                                                tag' ])
++                                                       else ()
++                                                   with
++                                                   | Not_found ->
++                                                       (Hashtbl.add hashes
++                                                          hash tag;
++                                                        if !first
++                                                        then
++                                                          (oh
++                                                             "/* %s : tags and macros */\n"
++                                                             name;
++                                                           first := false)
++                                                        else ();
++                                                        oh
++                                                          "#define MLTAG_%s\t((value)(%d*2+1))\n"
++                                                          tag hash));
++                                          if List.mem "noconv" ~set: flags
++                                          then ()
++                                          else (* compute C name *)
++                                            (let ctag tag trans =
++                                               if trans <> ""
++                                               then trans
++                                               else
++                                                 (let tag =
++                                                    if tag.[0] = '_'
++                                                    then
++                                                      String.sub tag 
++                                                        ~pos: 1
++                                                        ~len:
++                                                          ((String.length tag)
++                                                             - 1)
++                                                    else tag
++                                                  in
++                                                    match if prefix = ""
++                                                          then (None, "")
++                                                          else
++                                                            ((Some
++                                                                prefix.
++                                                                [
++                                                                 (String.
++                                                                    length
++                                                                    prefix)
++                                                                   - 1
++                                                                ]),
++                                                             (String.sub
++                                                                prefix
++                                                                ~pos: 0
++                                                                ~len:
++                                                                  ((String.
++                                                                    length
++                                                                    prefix) -
++                                                                    1)))
++                                                    with
++                                                    | (Some '#', prefix) ->
++                                                        prefix ^
++                                                          ((String.
++                                                              uncapitalize_ascii
++                                                              tag)
++                                                             ^ suffix)
++                                                    | (Some '^', prefix) ->
++                                                        prefix ^
++                                                          ((String.
++                                                              uppercase_ascii
++                                                              tag)
++                                                             ^ suffix)
++                                                    | _ ->
++                                                        prefix ^
++                                                          (tag ^ suffix))
++                                             and cname =
++                                               String.capitalize_ascii name
++                                             in
++                                               (all_convs :=
++                                                  (name, mlname, tags, flags) ::
++                                                    !all_convs;
++                                                let tags =
++                                                  List.sort tags
++                                                    ~cmp:
++                                                      (fun (tag1, _)
++                                                         (tag2, _) ->
++                                                         compare
++                                                           (hash_variant tag1)
++                                                           (hash_variant tag2))
++                                                in
++                                                  (* Output table to code file *)
++                                                  (oc
++                                                     "/* %s : conversion table */\n"
++                                                     name;
++                                                   let static =
++                                                     if
++                                                       (!static &&
++                                                          (not
++                                                             (List.mem
++                                                                "public"
++                                                                ~set: flags)))
++                                                         ||
++                                                         (List.mem "private"
++                                                            ~set: flags)
++                                                     then "static "
++                                                     else ""
++                                                   in
++                                                     (* Output macros to headers *)
++                                                     (oc
++                                                        "%sconst lookup_info ml_table_%s[] = {\n"
++                                                        static name;
++                                                      may guard
++                                                        (fun m ->
++                                                           oc "#ifdef %s\n" m);
++                                                      oc "  { 0, %d },\n"
++                                                        (List.length tags);
++                                                      List.iter tags
++                                                        ~f:
++                                                          (fun (tag, trans)
++                                                             ->
++                                                             oc
++                                                               "  { MLTAG_%s, %s },\n"
++                                                               tag
++                                                               (ctag tag
++                                                                  trans));
++                                                      may guard
++                                                        (fun m ->
++                                                           oc
++                                                             "#else\n  {0, 0 }\n#endif /* %s */\n"
++                                                             m);
++                                                      oc "};\n\n";
++                                                      if not !first
++                                                      then oh "\n"
++                                                      else ();
++                                                      if static = ""
++                                                      then
++                                                        oh
++                                                          "extern const lookup_info ml_table_%s[];\n"
++                                                          name
++                                                      else ();
++                                                      oh
++                                                        "#define Val_%s(data) ml_lookup_from_c (ml_table_%s, data)\n"
++                                                        name name;
++                                                      oh
++                                                        "#define %s_val(key) ml_lookup_to_c (ml_table_%s, key)\n\n"
++                                                        cname name))))))
++                                  | _ -> raise (Stream.Error "")))
++                          | _ -> raise (Stream.Error "")))
++                  | _ -> raise (Stream.Error "")))
++          | _ -> raise (Stream.Error "")))
+   | Some (Ident "package") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (String s) -> Stream.junk strm__; package := s
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (String s) -> (Stream.junk __strm; package := s)
++        | _ -> raise (Stream.Error "")))
+   | Some (Ident "prefix") ->
+-      Stream.junk strm__;
+-      begin match Stream.peek strm__ with
+-        Some (String s) -> Stream.junk strm__; pkgprefix := s
+-      | _ -> raise (Stream.Error "")
+-      end
++      (Stream.junk __strm;
++       (match Stream.peek __strm with
++        | Some (String s) -> (Stream.junk __strm; pkgprefix := s)
++        | _ -> raise (Stream.Error "")))
+   | _ -> raise End_of_file
+-
+-
++  
+ let process ic ~hc ~cc =
+-  all_convs := [];
+-  let chars = Stream.of_channel ic in
+-  let s = lexer chars in
+-  try while true do declaration s ~hc ~cc done with
+-    End_of_file ->
+-      if !all_convs <> [] && !package <> "" then
+-        let oc x = fprintf cc x in
+-        let convs = List.rev !all_convs in
+-        let len = List.length convs in
+-        oc "CAMLprim value ml_%s_get_tables ()\n{\n" (camlize !package);
+-        oc "  CAMLparam0 ();\n";
+-        oc "  CAMLlocal1 (ml_lookup_tables);\n";
+-        oc "  ml_lookup_tables = caml_alloc_tuple(%d);\n" len;
+-        List.iteri convs
+-          ~f:(fun i (s, _, _, _) ->
+-             oc
+-               "  Field(ml_lookup_tables,%d) = Val_lookup_info(ml_table_%s);\n"
+-               i s);
+-        (* When we have only one conversion, we must return it directly instead
+-           of a one-value array that would be invalid as a tuple *)
+-        if List.length convs = 1 then
+-          oc "  CAMLreturn (Field(ml_lookup_tables,0));\n"
+-        else oc "  CAMLreturn (ml_lookup_tables);\n";
+-        oc "}\n";
+-        let mlc = open_out (!package ^ "Enums.ml") in
+-        let ppf = Format.formatter_of_out_channel mlc in
+-        let out fmt = Format.fprintf ppf fmt in
+-        out "(** %s enums *)\n\n" !package;
+-        out "open Gpointer\n@.";
+-        List.iter convs
+-          ~f:(fun (_, name, tags, _) ->
+-             out "@[<hv 2>type %s =@ @[<hov>[ `%s" name (fst (List.hd tags));
+-             List.iter (List.tl tags) ~f:(fun (s, _) -> out "@ | `%s" s);
+-             out " ]@]@]@.");
+-        out "\n(**/**)\n";
+-        out "\nexternal _get_tables : unit ->\n";
+-        let (_, name0, _, _) = List.hd convs in
+-        out "    %s variant_table\n" name0;
+-        List.iter (List.tl convs)
+-          ~f:(fun (_, s, _, _) -> out "  * %s variant_table\n" s);
+-        out "  = \"ml_%s_get_tables\"\n\n" (camlize !package);
+-        out "@[<hov 4>let %s" name0;
+-        List.iter (List.tl convs) ~f:(fun (_, s, _, _) -> out ",@ %s" s);
+-        out " = _get_tables ()@]\n@.";
+-        let enum =
+-          if List.length convs > 10 then
+-            begin out "let _make_enum = Gobject.Data.enum@."; "_make_enum" end
+-          else "Gobject.Data.enum"
+-        in
+-        List.iter convs
+-          ~f:(fun (_, s, _, flags) ->
+-             let conv =
+-               if List.mem "flags" flags then "Gobject.Data.flags" else enum
+-             in
+-             out "let %s_conv = %s %s@." s conv s);
+-        close_out mlc
+-  | Stream.Error err ->
+-      failwith
+-        (Printf.sprintf "Parsing error \"%s\" at character %d on input stream"
+-           err (Stream.count chars))
+-
++  (all_convs := [];
++   let chars = Stream.of_channel ic in
++   let s = lexer chars
++   in
++     try while true do declaration s ~hc ~cc done
++     with
++     | End_of_file ->
++         if (!all_convs <> []) && (!package <> "")
++         then
++           (let oc x = fprintf cc x in
++            let convs = List.rev !all_convs in
++            let len = List.length convs
++            in
++              (* When we have only one conversion, we must return it directly instead
++         of a one-value array that would be invalid as a tuple *)
++              (oc "CAMLprim value ml_%s_get_tables ()\n{\n"
++                 (camlize !package);
++               oc "  CAMLparam0 ();\n";
++               oc "  CAMLlocal1 (ml_lookup_tables);\n";
++               oc "  ml_lookup_tables = caml_alloc_tuple(%d);\n" len;
++               List.iteri convs
++                 ~f:
++                   (fun i (s, _, _, _) ->
++                      oc
++                        "  Field(ml_lookup_tables,%d) = Val_lookup_info(ml_table_%s);\n"
++                        i s);
++               if (List.length convs) = 1
++               then oc "  CAMLreturn (Field(ml_lookup_tables,0));\n"
++               else oc "  CAMLreturn (ml_lookup_tables);\n";
++               oc "}\n";
++               let mlc = open_out (!package ^ "Enums.ml") in
++               let ppf = Format.formatter_of_out_channel mlc in
++               let out fmt = Format.fprintf ppf fmt
++               in
++                 (out "(** %s enums *)\n\n" !package;
++                  out "open Gpointer\n@.";
++                  List.iter convs
++                    ~f:
++                      (fun (_, name, tags, _) ->
++                         (out "@[<hv 2>type %s =@ @[<hov>[ `%s" name
++                            (fst (List.hd tags));
++                          List.iter (List.tl tags)
++                            ~f: (fun (s, _) -> out "@ | `%s" s);
++                          out " ]@]@]@."));
++                  out "\n(**/**)\n";
++                  out "\nexternal _get_tables : unit ->\n";
++                  let (_, name0, _, _) = List.hd convs
++                  in
++                    (out "    %s variant_table\n" name0;
++                     List.iter (List.tl convs)
++                       ~f:
++                         (fun (_, s, _, _) -> out "  * %s variant_table\n" s);
++                     out "  = \"ml_%s_get_tables\"\n\n" (camlize !package);
++                     out "@[<hov 4>let %s" name0;
++                     List.iter (List.tl convs)
++                       ~f: (fun (_, s, _, _) -> out ",@ %s" s);
++                     out " = _get_tables ()@]\n@.";
++                     let enum =
++                       if (List.length convs) > 10
++                       then
++                         (out "let _make_enum = Gobject.Data.enum@.";
++                          "_make_enum")
++                       else "Gobject.Data.enum"
++                     in
++                       (List.iter convs
++                          ~f:
++                            (fun (_, s, _, flags) ->
++                               let conv =
++                                 if List.mem "flags" ~set: flags
++                                 then "Gobject.Data.flags"
++                                 else enum
++                               in out "let %s_conv = %s %s@." s conv s);
++                        close_out mlc)))))
++         else ()
++     | Stream.Error err ->
++         failwith
++           (Printf.sprintf
++              "Parsing error \"%s\" at character %d on input stream" err
++              (Stream.count chars)))
++  
+ let main () =
+   let inputs = ref [] in
+   let header = ref "" in
+-  let code = ref "" in
+-  Arg.parse
+-    ["-h", Arg.String ((:=) header), "file to output macros (file.h)";
+-     "-c", Arg.String ((:=) code),
+-     "file to output conversion tables (file.c)";
+-     "-static", Arg.Set static, "do not export conversion tables"]
+-    (fun s -> inputs := s :: !inputs) "usage: varcc [options] file.var";
+-  let inputs = List.rev !inputs in
+-  begin match inputs with
+-    [] ->
+-      if !header = "" then header := "a.h"; if !code = "" then code := "a.c"
+-  | ip :: _ ->
+-      let rad =
+-        if Filename.check_suffix ip ".var" then Filename.chop_extension ip
+-        else ip
+-      in
+-      if !header = "" then header := rad ^ ".h";
+-      if !code = "" then code := rad ^ ".c"
+-  end;
+-  let hc = open_out !header
+-  and cc = open_out !code in
+-  if inputs = [] then process stdin ~hc ~cc
+-  else
+-    List.iter inputs
+-      ~f:(fun file ->
+-         let ic = open_in file in
+-         try process ic ~hc ~cc; close_in ic with
+-           exn -> close_in ic; prerr_endline ("Error in " ^ file); raise exn);
+-  close_out hc;
+-  close_out cc
+-
++  let code = ref ""
++  in
++    (Arg.parse
++       [ ("-h", (Arg.String (( := ) header)),
++          "file to output macros (file.h)");
++         ("-c", (Arg.String (( := ) code)),
++          "file to output conversion tables (file.c)");
++         ("-static", (Arg.Set static), "do not export conversion tables") ]
++       (fun s -> inputs := s :: !inputs) "usage: varcc [options] file.var";
++     let inputs = List.rev !inputs
++     in
++       ((match inputs with
++         | [] ->
++             (if !header = "" then header := "a.h" else ();
++              if !code = "" then code := "a.c" else ())
++         | ip :: _ ->
++             let rad =
++               if Filename.check_suffix ip ".var"
++               then Filename.chop_extension ip
++               else ip
++             in
++               (if !header = "" then header := rad ^ ".h" else ();
++                if !code = "" then code := rad ^ ".c" else ()));
++        let hc = open_out !header
++        and cc = open_out !code
++        in
++          (if inputs = []
++           then process stdin ~hc ~cc
++           else
++             List.iter inputs
++               ~f:
++                 (fun file ->
++                    let ic = open_in file
++                    in
++                      try (process ic ~hc ~cc; close_in ic)
++                      with
++                      | exn ->
++                          (close_in ic;
++                           prerr_endline ("Error in " ^ file);
++                           raise exn));
++           close_out hc;
++           close_out cc)))
++  
+ let _ = Printexc.print main ()
++  
++
+diff --git a/src/varcc.ml4 b/src/varcc.ml4
+index f9878eac..07ac9517 100644
+--- a/src/varcc.ml4
++++ b/src/varcc.ml4
+@@ -22,7 +22,7 @@ let camlize id =
+   for i = 0 to String.length id - 1 do
+     if id.[i] >= 'A' && id.[i] <= 'Z' then begin
+       if i > 0 then Buffer.add_char b '_';
+-      Buffer.add_char b (Char.lowercase id.[i])
++      Buffer.add_char b (Char.lowercase_ascii id.[i])
+     end
+     else Buffer.add_char b id.[i]
+   done;
+@@ -94,7 +94,7 @@ let declaration ~hc ~cc = parser
+           end;
+ 	  oh "#define MLTAG_%s\t((value)(%d*2+1))\n" tag hash;
+       end;
+-    if List.mem "noconv" flags then () else
++    if List.mem "noconv" ~set:flags then () else
+     (* compute C name *)
+     let ctag tag trans =
+       if trans <> "" then trans else
+@@ -110,13 +110,13 @@ let declaration ~hc ~cc = parser
+ 	  String.sub prefix ~pos:0 ~len:(String.length prefix - 1)
+       with
+ 	Some '#', prefix ->
+-	  prefix ^ String.uncapitalize tag ^ suffix
++	  prefix ^ String.uncapitalize_ascii tag ^ suffix
+       |	Some '^', prefix ->
+-	  prefix ^ String.uppercase tag ^ suffix
++	  prefix ^ String.uppercase_ascii tag ^ suffix
+       |	_ ->
+ 	  prefix ^ tag ^ suffix
+     and cname =
+-      String.capitalize name
++      String.capitalize_ascii name
+     in
+     all_convs := (name, mlname, tags, flags) :: !all_convs;
+     let tags =
+@@ -127,7 +127,8 @@ let declaration ~hc ~cc = parser
+     (* Output table to code file *)
+     oc "/* %s : conversion table */\n" name;
+     let static =
+-      if !static && not (List.mem "public" flags) || List.mem "private" flags
++      if !static && not (List.mem "public" ~set:flags)
++      || List.mem "private" ~set:flags
+       then "static " else "" in
+     oc "%sconst lookup_info ml_table_%s[] = {\n" static name;
+     may guard
+@@ -211,7 +212,8 @@ let process ic ~hc ~cc =
+       List.iter convs ~f:
+         begin fun (_,s,_,flags) ->
+           let conv =
+-            if List.mem "flags" flags then "Gobject.Data.flags" else enum in
++            if List.mem "flags" ~set:flags then "Gobject.Data.flags" else enum
++          in
+           out "let %s_conv = %s %s@." s conv s
+         end;
+       close_out mlc
+diff --git a/src/wrappers.c b/src/wrappers.c
+index 3835ba66..3fff913d 100644
+--- a/src/wrappers.c
++++ b/src/wrappers.c
+@@ -131,13 +131,13 @@ CAMLprim value *ml_global_root_new (value v)
+ {
+     value *p = stat_alloc(sizeof(value));
+     *p = v;
+-    register_global_root (p);
++    caml_register_global_root (p);
+     return p;
+ }
+ 
+ CAMLexport void ml_global_root_destroy (void *data)
+ {
+-    remove_global_root ((value *)data);
++    caml_remove_global_root ((value *)data);
+     stat_free (data);
+ }
+ 
+diff --git a/src/wrappers.h b/src/wrappers.h
+index 8e2b2b8e..f1924c36 100644
+--- a/src/wrappers.h
++++ b/src/wrappers.h
+@@ -27,7 +27,7 @@
+ 
+ /* Yell if a caml callback raised an exception */
+ #define CAML_EXN_LOG(name) g_critical("%s: callback raised an exception", name)
+-#define CAML_EXN_LOG_VERBOSE(name,exn) g_critical("%s: callback raised exception %s", name, format_caml_exception(Extract_exception(exn)))
++#define CAML_EXN_LOG_VERBOSE(name,exn) g_critical("%s: callback raised exception %s", name, caml_format_exception(Extract_exception(exn)))
+ 
+ #include <caml/misc.h>
+ #include <caml/mlvalues.h>
+@@ -41,6 +41,64 @@
+ #define Bytes_val String_val
+ #endif
+ 
++/* We are still using the compatibility layer */
++#ifdef CAML_NAME_SPACE
++/* **** alloc.c */
++#define alloc caml_alloc /*SP*/
++#define alloc_small caml_alloc_small
++#define alloc_tuple caml_alloc_tuple
++#define alloc_string caml_alloc_string
++#define alloc_final caml_alloc_final
++#define copy_string caml_copy_string
++#define alloc_array caml_alloc_array
++#define copy_string_array caml_copy_string_array
++#define convert_flag_list caml_convert_flag_list
++/* **** callback.c */
++#define callback_depth caml_callback_depth
++#define callbackN_exn caml_callbackN_exn
++#define callback_exn caml_callback_exn
++#define callback2_exn caml_callback2_exn
++#define callback3_exn caml_callback3_exn
++#define callback caml_callback
++#define callback2 caml_callback2
++#define callback3 caml_callback3
++#define callbackN caml_callbackN
++/* **** custom.c */
++#define alloc_custom caml_alloc_custom
++#define register_custom_operations caml_register_custom_operations
++/* **** ints.c */
++#define copy_int32 caml_copy_int32
++#define copy_int64 caml_copy_int64
++#define copy_nativeint caml_copy_nativeint
++/* **** fail.c */
++#define external_raise caml_external_raise
++#define mlraise caml_raise /*SP*/
++#define raise_constant caml_raise_constant
++#define raise_with_arg caml_raise_with_arg
++#define raise_with_string caml_raise_with_string
++#define failwith caml_failwith
++#define invalid_argument caml_invalid_argument
++#define array_bound_error caml_array_bound_error /*SP*/
++#define raise_out_of_memory caml_raise_out_of_memory
++#define raise_stack_overflow caml_raise_stack_overflow
++#define raise_sys_error caml_raise_sys_error
++#define raise_end_of_file caml_raise_end_of_file
++#define raise_zero_divide caml_raise_zero_divide
++#define raise_not_found caml_raise_not_found
++#define raise_sys_blocked_io caml_raise_sys_blocked_io
++/* **** floats.c */
++#define copy_double caml_copy_double
++/* **** memory.c */
++#define alloc_shr caml_alloc_shr
++#define initialize caml_initialize
++#define modify caml_modify
++#define stat_alloc caml_stat_alloc
++#define stat_free caml_stat_free
++#define stat_resize caml_stat_resize
++/* **** str.c */
++#define string_length caml_string_length
++#endif
++
+ CAMLexport value copy_memblock_indirected (void *src, asize_t size);
+ value alloc_memblock_indirected (asize_t size);
+ CAMLexport value ml_alloc_custom(struct custom_operations * ops,
+-- 
+2.40.1
+
