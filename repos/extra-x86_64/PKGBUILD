@@ -2,7 +2,7 @@
 
 pkgbase='ocaml'
 pkgname=('ocaml' 'ocaml-compiler-libs')
-pkgver=4.14.0
+pkgver=5.0.0
 pkgrel=1
 pkgdesc="A functional language with OO extensions"
 arch=('x86_64')
@@ -11,7 +11,7 @@ url="https://caml.inria.fr/"
 makedepends=('ncurses>=5.6-7')
 optdepends=('ncurses: advanced ncurses features' 'tk: advanced tk features')
 source=(https://caml.inria.fr/distrib/ocaml-${pkgver%.*}/${pkgname}-${pkgver}.tar.xz)
-sha512sums=('0fae5b8752ce900bc69f71ebdc82faa588272fd3dce6795aa03467e89e1e376f127a288221761e353191fb5941b563e183098c0c74b18374aa0ca1c8e0715e97')
+sha512sums=('1ddc5ae1cbdccdb44dd1bb9878470bbac3ba225d4339aae35220cac99dda2640c74d48e536111ee47e7fe2a9848db8581966a6f1e182bb102ffade0454dc4ecd')
 options=('!makeflags' '!emptydirs' 'staticlibs')
 
 
@@ -20,7 +20,7 @@ build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
   CFLAGS+=' -ffat-lto-objects'
   CXXFLAGS+=' -ffat-lto-objects'
-  ./configure --prefix /usr --mandir /usr/share/man --disable-force-safe-string --enable-frame-pointers
+  ./configure --prefix /usr --mandir /usr/share/man -enable-frame-pointers
   make --debug=v world.opt
 }
 
@@ -48,11 +48,8 @@ optdepends=()
   cd "${srcdir}/${pkgbase}-${pkgver}"
   make DESTDIR="${pkgdir}" install
   # Remove non-compiler-libs
-  rm -rf   "${pkgdir}/usr/bin"  "${pkgdir}/usr/lib/ocaml/caml" \
-     "${pkgdir}/usr/lib/ocaml/ocamldoc" "${pkgdir}/usr/lib/ocaml/stublibs" \
-     "${pkgdir}/usr/lib/ocaml/threads" "${pkgdir}/usr/share"
-  find "${pkgdir}/usr/lib/ocaml/" -maxdepth 1 -type f -delete
-
+  find "${pkgdir}/usr/lib/ocaml/" -mindepth 1 -maxdepth 1 -not -name "compiler-libs" -execdir rm -rf "{}" "+"
+  rm -rf   "${pkgdir}/usr/bin" "${pkgdir}/usr/share"
   install -m755 -d "${pkgdir}/usr/share/licenses/${pkgname}"
   install -m644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/"
 }
